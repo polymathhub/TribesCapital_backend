@@ -1,0 +1,412 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                    String      @id @default(cuid())
+  email                 String      @unique
+  firstName             String
+  lastName              String
+  password              String
+  avatar                String?
+  bio                   String?
+  isActive              Boolean     @default(true)
+  emailVerified         Boolean     @default(false)
+  emailVerificationToken String?
+  lastLogin             DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  roles                 Role[]      @relation("UserRoles")
+  permissions           Permission[] @relation("UserPermissions")
+  
+  enrollments           Enrollment[]
+  progress              Progress[]
+  courseCreated         Course[]    @relation("CourseCreator")
+  courseInstructor      Course[]    @relation("CourseInstructor")
+  lessonCreated         Lesson[]    @relation("LessonCreator")
+  
+  eventCreated          Event[]     @relation("EventCreator")
+  eventRsvps            RSVP[]
+  
+  projectCreated        Project[]   @relation("ProjectCreator")
+  projectTeam           Project[]   @relation("ProjectTeam")
+  
+  documentCreated       Document[]  @relation("DocumentCreator")
+  documentAuthor        Document[]  @relation("DocumentAuthor")
+  
+  communityPostCreated  CommunityPost[] @relation("PostCreator")
+  communityComments     CommunityComment[] @relation("CommentCreator")
+  
+  notifications         Notification[]
+  notificationRead      NotificationRead[]
+  
+  analyticsEvents       AnalyticsEvent[]
+
+  @@index([email])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model Role {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  users       User[]      @relation("UserRoles")
+  permissions Permission[] @relation("RolePermissions")
+
+  @@index([name])
+}
+
+model Permission {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  resource    String
+  action      String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  users       User[]      @relation("UserPermissions")
+  roles       Role[]      @relation("RolePermissions")
+
+  @@unique([resource, action])
+  @@index([resource])
+}
+
+model Course {
+  id              String      @id @default(cuid())
+  title           String
+  description     String
+  thumbnail       String?
+  category        String
+  level           String      @default("beginner")
+  duration        Int
+  isPublished     Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  creatorId       String
+  creator         User        @relation("CourseCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  instructorId    String
+  instructor      User        @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
+
+  lessons         Lesson[]
+  enrollments     Enrollment[]
+
+  @@index([creatorId])
+  @@index([instructorId])
+  @@index([isPublished])
+  @@index([category])
+}
+
+model Lesson {
+  id              String      @id @default(cuid())
+  title           String
+  description     String?
+  content         String
+  videoUrl        String?
+  order           Int
+  duration        Int
+  isPublished     Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  courseId        String
+  course          Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  creatorId       String
+  creator         User        @relation("LessonCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  progress        Progress[]
+
+  @@index([courseId])
+  @@index([creatorId])
+  @@index([order])
+}
+
+model Enrollment {
+  id              String      @id @default(cuid())
+  enrolledAt      DateTime    @default(now())
+  completedAt     DateTime?
+  progress        Float       @default(0)
+  status          String      @default("active")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  courseId        String
+  course          Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+}
+
+model Progress {
+  id              String      @id @default(cuid())
+  completionPercentage Float @default(0)
+  lastAccessedAt  DateTime    @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  lessonId        String
+  lesson          Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+}
+
+model Event {
+  id              String      @id @default(cuid())
+  title           String
+  description     String?
+  thumbnail       String?
+  location        String?
+  isVirtual       Boolean     @default(false)
+  startDate       DateTime
+  endDate         DateTime
+  capacity        Int
+  registrationDeadline DateTime?
+  isPublished     Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  creatorId       String
+  creator         User        @relation("EventCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  rsvps           RSVP[]
+
+  @@index([creatorId])
+  @@index([startDate])
+  @@index([isPublished])
+}
+
+model RSVP {
+  id              String      @id @default(cuid())
+  status          String      @default("attending")
+  guestCount      Int         @default(1)
+  rsvpedAt        DateTime    @default(now())
+  cancelledAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  eventId         String
+  event           Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([status])
+}
+
+model Project {
+  id              String      @id @default(cuid())
+  title           String
+  description     String?
+  thumbnail       String?
+  status          String      @default("planning")
+  startDate       DateTime?
+  endDate         DateTime?
+  budget          Float?
+  isPublished     Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  creatorId       String
+  creator         User        @relation("ProjectCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  teamMembers     User[]      @relation("ProjectTeam")
+
+  stages          ProjectStage[]
+  marketplaceItem MarketplaceItem?
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([isPublished])
+}
+
+model ProjectStage {
+  id              String      @id @default(cuid())
+  name            String
+  description     String?
+  order           Int
+  targetDate      DateTime?
+  status          String      @default("pending")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  projectId       String
+  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([order])
+}
+
+model MarketplaceItem {
+  id              String      @id @default(cuid())
+  title           String
+  description     String?
+  price           Float
+  category        String
+  tags            String[]
+  isActive        Boolean     @default(true)
+  views           Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  projectId       String      @unique
+  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([isActive])
+  @@index([price])
+}
+
+model Document {
+  id              String      @id @default(cuid())
+  title           String
+  content         String
+  type            String
+  tags            String[]
+  status          String      @default("draft")
+  version         Int         @default(1)
+  isPublished     Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  creatorId       String
+  creator         User        @relation("DocumentCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  authorId        String?
+  author          User?       @relation("DocumentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  versions        DocumentVersion[]
+
+  @@index([creatorId])
+  @@index([authorId])
+  @@index([isPublished])
+  @@index([type])
+}
+
+model DocumentVersion {
+  id              String      @id @default(cuid())
+  content         String
+  version         Int
+  changeLog       String?
+  createdAt       DateTime    @default(now())
+
+  documentId      String
+  document        Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([version])
+}
+
+model CommunityPost {
+  id              String      @id @default(cuid())
+  title           String
+  content         String
+  upvotes         Int         @default(0)
+  downvotes       Int         @default(0)
+  isPinned        Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  creatorId       String
+  creator         User        @relation("PostCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  comments        CommunityComment[]
+
+  @@index([creatorId])
+  @@index([isPinned])
+  @@index([createdAt])
+}
+
+model CommunityComment {
+  id              String      @id @default(cuid())
+  content         String
+  upvotes         Int         @default(0)
+  downvotes       Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  postId          String
+  post            CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  creatorId       String
+  creator         User        @relation("CommentCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([creatorId])
+}
+
+model Notification {
+  id              String      @id @default(cuid())
+  type            String
+  title           String
+  message         String
+  data            Json?
+  isRead          Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  readRecords     NotificationRead[]
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model NotificationRead {
+  id              String      @id @default(cuid())
+  readAt          DateTime    @default(now())
+
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  notificationId  String
+  notification    Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+  @@index([userId])
+  @@index([notificationId])
+}
+
+model AnalyticsEvent {
+  id              String      @id @default(cuid())
+  eventName       String
+  eventData       Json
+  metadata        Json?
+  createdAt       DateTime    @default(now())
+
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventName])
+  @@index([userId])
+  @@index([createdAt])
+}
