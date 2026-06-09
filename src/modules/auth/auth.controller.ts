@@ -1,6 +1,7 @@
 import { Controller, Post, Body, HttpCode } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, TokenResponseDto, RefreshTokenDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, TokenResponseDto, RefreshTokenDto, GoogleAuthDto } from './dto/auth.dto';
+import { Public } from '@common/decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -15,6 +16,13 @@ export class AuthController {
   @HttpCode(200)
   async login(@Body() loginDto: LoginDto): Promise<TokenResponseDto> {
     return this.authService.login(loginDto);
+  }
+
+  @Public()
+  @Post('google')
+  @HttpCode(200)
+  async googleAuth(@Body() googleAuthDto: GoogleAuthDto): Promise<TokenResponseDto> {
+    return this.authService.authenticateWithGoogle(googleAuthDto);
   }
 
   @Post('refresh')

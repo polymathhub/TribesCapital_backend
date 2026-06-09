@@ -23,6 +23,14 @@ export class LoginDto {
   password: string;
 }
 
+export class GoogleAuthDto {
+  @IsString()
+  idToken: string;
+
+  @IsString()
+  accessToken: string;
+}
+
 export class RefreshTokenDto {
   @IsString()
   refreshToken: string;
@@ -32,10 +40,12 @@ export class TokenResponseDto {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  youtubeToken?: string;
   user: {
     id: string;
     email: string;
     firstName: string;
     lastName: string;
+    googleId?: string;
   };
 }

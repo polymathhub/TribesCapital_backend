@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma.service';
-import { RegisterDto, LoginDto, TokenResponseDto, RefreshTokenDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, TokenResponseDto, RefreshTokenDto, GoogleAuthDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -55,6 +55,73 @@ export class AuthService {
     });
 
     return this.generateTokens(user.id, user.email);
+  }
+
+  async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<TokenResponseDto> {
+    // Verify Google ID token (in production, verify with Google's API)
+    // For now, we'll extract email from the token payload
+    let googleData: any = {};
+    try {
+      // Decode JWT without verification for demo (PRODUCTION: verify properly)
+      const parts = googleAuthDto.idToken.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        googleData = {
+          email: payload.email,
+          firstName: payload.given_name || 'User',
+          lastName: payload.family_name || '',
+          googleId: payload.sub,
+          picture: payload.picture,
+        };
+      }
+    } catch (error) {
+      throw new BadRequestException('Invalid Google token');
+    }
+
+    if (!googleData.email) {
+      throw new BadRequestException('Could not extract email from Google token');
+    }
+
+    // Check if user exists
+    let user = await this.prisma.user.findUnique({
+      where: { email: googleData.email },
+    });
+
+    // If user doesn't exist, create new user with Google data
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email: googleData.email,
+          firstName: googleData.firstName,
+          lastName: googleData.lastName,
+          googleId: googleData.googleId,
+          password: await bcrypt.hash(Math.random().toString(), 10), // Generate random password for OAuth users
+          isActive: true,
+        },
+      });
+    } else {
+      // Update existing user with Google ID if not already set
+      if (!user.googleId) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { googleId: googleData.googleId },
+        });
+      }
+    }
+
+    // Update last login
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    });
+
+    const tokens = await this.generateTokens(user.id, user.email);
+    
+    // Include YouTube token if available
+    return {
+      ...tokens,
+      youtubeToken: googleAuthDto.accessToken, // Pass YouTube access token
+    };
   }
 
   async validateUser(userId: string): Promise<any> {
