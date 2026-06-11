@@ -2,7 +2,7 @@ import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 export class CreateLessonDto {
   @IsString()
-  title: string;
+  title!: string;
 
   @IsOptional()
   @IsString()
@@ -32,15 +32,15 @@ export class UpdateLessonDto {
 }
 
 export class LessonResponseDto {
-  id: string;
-  title: string;
+  id!: string;
+  title!: string;
   description?: string;
   duration?: number;
   videoUrl?: string;
-  order: number;
-  courseId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  order!: number;
+  courseId!: string;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export class LessonWithVideoUrlDto extends LessonResponseDto {

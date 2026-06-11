@@ -9,8 +9,15 @@ export class EventsService {
   async create(organizerId: string, createEventDto: CreateEventDto): Promise<EventResponseDto> {
     const event = await this.prisma.event.create({
       data: {
-        ...createEventDto,
-        organizerId,
+        title: createEventDto.title,
+        description: createEventDto.description,
+        location: createEventDto.location,
+        isVirtual: createEventDto.isVirtual || false,
+        startDate: new Date(createEventDto.startDate),
+        endDate: new Date(createEventDto.endDate),
+        capacity: createEventDto.capacity || 100,
+        isPublished: false,
+        creatorId: organizerId,
       },
       include: {
         rsvps: true,
@@ -86,7 +93,6 @@ export class EventsService {
         userId,
         eventId,
         guestCount: createRsvpDto.guestCount,
-        notes: createRsvpDto.notes,
       },
     });
 

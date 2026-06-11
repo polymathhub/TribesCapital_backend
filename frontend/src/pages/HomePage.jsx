@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import LearningHub from "./LearningHub";
 import OfficeHoursEvents from "./OfficeHoursEvents";
+import DueDiligencePage from "./DueDiligencePage";
 import Logo, { LogoMark, LogoFull } from "../components/Logo";
 
 /* ─── DESIGN TOKENS ─────────────────────────────────── */
@@ -47,14 +48,8 @@ const NAV = [
   { label:'Home',                    key:'home' },
   { label:'Learning Hub',            key:'learning' },
   { label:'Due Diligence Vault',     key:'vault' },
-  { label:'Project Pipeline',        key:'pipeline' },
-  { label:'Reporting Library',       key:'reporting' },
   { label:'Office Hours & Events',   key:'events' },
   null, // divider
-  { label:'Member Circles',          key:'circles' },
-  { label:'Toolkits & Templates',    key:'toolkits' },
-  { label:'Partner Marketplace',     key:'marketplace' },
-  null,
   { label:'Announcements & Feedback',key:'announcements' },
   { label:'Help',                    key:'help' },
 ];
@@ -85,8 +80,7 @@ function Icon({ name, size=15, color=T3 }) {
   };
   const NAV_ICONS = {
     'Home':'home','Learning Hub':'book','Due Diligence Vault':'folder',
-    'Project Pipeline':'chart','Reporting Library':'file','Office Hours & Events':'calendar',
-    'Member Circles':'users','Toolkits & Templates':'monitor','Partner Marketplace':'globe',
+    'Office Hours & Events':'calendar',
     'Announcements & Feedback':'bell','Help':'help',
   };
   const iconName = NAV_ICONS[name] || name;
@@ -885,7 +879,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 ))}
               </div>
             </div>
-            {/* Animated Pie Chart */}
+            {/* animated design on the frontend */}
             <div style={{ position: 'relative', width: 180, height: 180, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <svg
                 width="180"
@@ -1162,35 +1156,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           )}
           
           {currentPage === 'vault' && (
-            <div style={{ padding:'24px 0' }}>
-              <h1 style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 24px' }}>Due Diligence Vault</h1>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:24, maxWidth:800 }}>
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:48, textAlign:'center', position:'relative', overflow:'hidden' }}>
-                  <div style={{ position:'relative', zIndex:1 }}>
-                    <div style={{ fontSize:64, marginBottom:20 }}>🔐</div>
-                    <h2 style={{ fontSize:24, fontWeight:700, color:P, margin:'0 0 12px' }}>Coming Soon</h2>
-                    <p style={{ fontSize:14, color:T2, margin:'0 0 24px', lineHeight:1.6 }}>
-                      Our Due Diligence Vault is being built to give you secure access to document management, legal resources, and technical assessments for clean energy projects.
-                    </p>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12 }}>
-                      <div style={{ width:8, height:8, background:P, borderRadius:'50%', animation:'pulse 2s infinite' }}/>
-                      <span style={{ fontSize:13, color:P, fontWeight:500 }}>Launching Q3 2024</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:24 }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 12px' }}>Features coming to the Vault:</h3>
-                  <ul style={{ margin:0, paddingLeft:20, fontSize:13, color:T2, lineHeight:1.8 }}>
-                    <li>Secure document storage & management</li>
-                    <li>Project technical assessments</li>
-                    <li>Legal & compliance resources</li>
-                    <li>Investment memorandums</li>
-                    <li>Due diligence checklists</li>
-                    <li>Real-time collaboration tools</li>
-                  </ul>
-                </div>
-              </div>
+            <div style={{ padding:'0' }}>
+              <DueDiligencePage />
             </div>
           )}
           
@@ -1270,7 +1237,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:40, textAlign:'center' }}>
                 <div style={{ fontSize:48, marginBottom:16 }}>📢</div>
                 <h2 style={{ fontSize:20, fontWeight:600, color:T1, margin:'0 0 8px' }}>Announcements & Feedback</h2>
-                <p style={{ fontSize:14, color:T2, margin:0 }}>Stay updated and share feedback here.</p>
+                <p style={{ fontSize:14, color:T2, margin:0 }}>Stay updated and share feedback here.</p>wha
               </div>
             </div>
           )}

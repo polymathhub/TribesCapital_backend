@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LogoFull, LogoMark } from "../components/Logo";
+import { authAPI } from "../api/endpoints";
 
 /* ── DESIGN TOKENS (from uploaded design) ─────────────────── */
 const C = {
@@ -29,7 +29,21 @@ const baseInput = {
 function Logo() {
   return (
     <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:28}}>
-      <LogoMark size={54} animate={true}/>
+      {/* Tribes Capital circular logo - purple design */}
+      <svg width={54} height={54} viewBox="0 0 100 100" fill="none">
+        {/* Purple gradient background circle */}
+        <defs>
+          <linearGradient id="purpleGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7C3AED"/>
+            <stop offset="100%" stopColor="#5B21B6"/>
+          </linearGradient>
+        </defs>
+        <circle cx={50} cy={50} r={48} fill="url(#purpleGrad1)"/>
+        {/* Inner ring */}
+        <circle cx={50} cy={50} r={42} fill="none" stroke="white" strokeWidth="2" opacity={0.7}/>
+        {/* Center letter T */}
+        <text x="50" y="65" fontSize="48" fontWeight="900" fill="white" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">T</text>
+      </svg>
       <div style={{display:'flex', flexDirection:'column'}}>
         <span style={{fontSize:16, fontWeight:800, color:C.text, letterSpacing:1.2, textTransform:'uppercase', lineHeight:1.1}}>
           Tribes
@@ -45,7 +59,17 @@ function Logo() {
 function SmallLogo() {
   return (
     <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:24}}>
-      <LogoMark size={42} animate={true}/>
+      <svg width={42} height={42} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="purpleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7C3AED"/>
+            <stop offset="100%" stopColor="#5B21B6"/>
+          </linearGradient>
+        </defs>
+        <circle cx={50} cy={50} r={48} fill="url(#purpleGrad2)"/>
+        <circle cx={50} cy={50} r={42} fill="none" stroke="white" strokeWidth="2" opacity={0.7}/>
+        <text x="50" y="65" fontSize="48" fontWeight="900" fill="white" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">T</text>
+      </svg>
       <span style={{fontSize:13, fontWeight:700, color:C.text, letterSpacing:1.2, textTransform:'uppercase'}}>
         Tribes Capital
       </span>
@@ -361,17 +385,28 @@ function LoginPage({ onNavigate, onLogin }) {
   const [emailErr, setEmailErr] = useState('');
   const [focusPw,  setFocusPw]  = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const valid = email.includes('@') && email.includes('.');
     if (!valid) { setEmailErr('Please enter a valid email'); return; }
+    if (!password) { setEmailErr('Password is required'); return; }
     setEmailErr('');
     setLoading(true);
-    setTimeout(() => {
-      const userName = email.split('@')[0];
-      localStorage.setItem('accessToken', 'mock-token-' + Date.now());
-      localStorage.setItem('userEmail', email);
-      onLogin({ email, name: userName });
-    }, 800);
+    try {
+      const response = await authAPI.login({ email, password });
+      const data = response.data;
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      if (data.youtubeToken) localStorage.setItem('youtubeToken', data.youtubeToken);
+      localStorage.setItem('userEmail', data.user.email);
+      onLogin({ 
+        email: data.user.email, 
+        name: `${data.user.firstName} ${data.user.lastName}`.trim() 
+      });
+    } catch (error) {
+      setEmailErr(error.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -412,28 +447,20 @@ function LoginPage({ onNavigate, onLogin }) {
 
   const handleGoogleCallback = async (response) => {
     try {
-      // Send Google token to backend
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idToken: response.credential,
-          accessToken: response.access_token || '',
-        }),
+      const res = await authAPI.googleAuth({
+        idToken: response.credential,
+        accessToken: response.access_token || '',
       });
-      
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('youtubeToken', data.youtubeToken || '');
-        localStorage.setItem('userEmail', data.user.email);
-        onLogin({ 
-          email: data.user.email, 
-          name: `${data.user.firstName} ${data.user.lastName}`.trim(),
-          googleId: data.user.googleId,
-        });
-      }
+      const data = res.data;
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      if (data.youtubeToken) localStorage.setItem('youtubeToken', data.youtubeToken);
+      localStorage.setItem('userEmail', data.user.email);
+      onLogin({ 
+        email: data.user.email, 
+        name: `${data.user.firstName} ${data.user.lastName}`.trim(),
+        googleId: data.user.googleId,
+      });
     } catch (error) {
       console.error('Google Sign-In error:', error);
       alert('Google Sign-In failed. Please try again.');
@@ -565,15 +592,35 @@ function SignupPage({ onNavigate, onLogin }) {
     setStrength({ ...levels[score], score });
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
+    if (!fullName.trim()) { alert('Full name is required'); return; }
+    if (!email.includes('@') || !email.includes('.')) { alert('Valid email is required'); return; }
+    if (password.length < 8) { alert('Password must be at least 8 characters'); return; }
     if (!agreed) { alert('Please agree to the Terms of Use to continue.'); return; }
     setLoading(true);
-    setTimeout(() => {
-      const displayName = fullName || email.split('@')[0];
-      localStorage.setItem('accessToken', 'mock-token-' + Date.now());
-      localStorage.setItem('userEmail', email);
-      onLogin({ email, name: displayName });
-    }, 800);
+    try {
+      const [firstName, ...lastNameParts] = fullName.trim().split(' ');
+      const lastName = lastNameParts.join(' ') || 'User';
+      const response = await authAPI.register({ 
+        email, 
+        firstName: firstName || 'User',
+        lastName,
+        password 
+      });
+      const data = response.data;
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      if (data.youtubeToken) localStorage.setItem('youtubeToken', data.youtubeToken);
+      localStorage.setItem('userEmail', data.user.email);
+      onLogin({ 
+        email: data.user.email, 
+        name: fullName 
+      });
+    } catch (error) {
+      alert(error.response?.data?.message || 'Sign up failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignUp = async () => {
@@ -727,18 +774,22 @@ function ForgotPage({ onNavigate, onSetEmail }) {
   const [loading,  setLoading]  = useState(false);
   const [emailErr, setEmailErr] = useState('');
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!email.includes('@') || !email.includes('.')) {
       setEmailErr('Please enter a valid email');
       return;
     }
     setEmailErr('');
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await authAPI.forgotPassword(email);
       setLoading(false);
-      onSetEmail(email);       // lift email to root
-      onNavigate('verify');    // go to OTP verification
-    }, 1800);
+      onSetEmail(email);
+      onNavigate('verify');
+    } catch (error) {
+      setEmailErr(error.response?.data?.message || 'Error sending reset code');
+      setLoading(false);
+    }
   };
 
   return (
@@ -826,10 +877,19 @@ function VerifyPage({ email, onNavigate }) {
     e.preventDefault();
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (code.join('').length < 6) { setError('Please enter all 6 digits'); return; }
-    setError(''); setLoading(true);
-    setTimeout(() => { setLoading(false); onNavigate('reset-password'); }, 1500);
+    setError(''); 
+    setLoading(true);
+    try {
+      await authAPI.verifyCode(email, code.join(''));
+      localStorage.setItem('resetCode', code.join(''));
+      setLoading(false);
+      onNavigate('reset-password');
+    } catch (error) {
+      setError(error.response?.data?.message || 'Invalid code');
+      setLoading(false);
+    }
   };
 
   const handleResend = () => {
@@ -931,7 +991,7 @@ function VerifyPage({ email, onNavigate }) {
 
 /* ══ RESET PASSWORD PAGE ═════════════════════════════════════ */
 /* Set new password with strength bar + confirm field */
-function ResetPasswordPage({ onNavigate }) {
+function ResetPasswordPage({ email, onNavigate }) {
   const [newPw,    setNewPw]    = useState('');
   const [confPw,   setConfPw]   = useState('');
   const [showNew,  setShowNew]  = useState(false);
@@ -942,6 +1002,7 @@ function ResetPasswordPage({ onNavigate }) {
   const [focusNew, setFocusNew] = useState(false);
   const [focusConf,setFocusConf]= useState(false);
   const [strength, setStrength] = useState({pct:0,color:C.border,hint:'Use 8+ characters with a mix of letters, numbers & symbols',score:0});
+  const resetCode = localStorage.getItem('resetCode') || '';
 
   const checkStrength = val => {
     let s = 0;
@@ -959,11 +1020,20 @@ function ResetPasswordPage({ onNavigate }) {
     setStrength({...lvl[s], score:s});
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (newPw.length < 8)    { setError('Password must be at least 8 characters'); return; }
     if (newPw !== confPw)    { setError("Passwords don't match"); return; }
-    setError(''); setLoading(true);
-    setTimeout(() => { setLoading(false); setDone(true); }, 1800);
+    setError(''); 
+    setLoading(true);
+    try {
+      await authAPI.resetPassword(email, resetCode, newPw);
+      localStorage.removeItem('resetCode');
+      setLoading(false);
+      setDone(true);
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to reset password');
+      setLoading(false);
+    }
   };
 
   /* ── Success state ── */
@@ -1120,7 +1190,7 @@ export default function AuthPage({ onLogin }) {
         {page === 'signup'         && <SignupPage         onNavigate={setPage} onLogin={onLogin}/>}
         {page === 'forgot'         && <ForgotPage         onNavigate={setPage} onSetEmail={setForgotEmail}/>}
         {page === 'verify'         && <VerifyPage         onNavigate={setPage} email={forgotEmail}/>}
-        {page === 'reset-password' && <ResetPasswordPage  onNavigate={setPage}/>}
+        {page === 'reset-password' && <ResetPasswordPage  onNavigate={setPage} email={forgotEmail}/>}
       </div>
     </div>
   );

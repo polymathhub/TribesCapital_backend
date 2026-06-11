@@ -18,6 +18,9 @@ model User {
   isActive              Boolean     @default(true)
   emailVerified         Boolean     @default(false)
   emailVerificationToken String?
+  googleId              String?     @unique
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
   lastLogin             DateTime?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
@@ -47,6 +50,15 @@ model User {
   notificationRead      NotificationRead[]
   
   analyticsEvents       AnalyticsEvent[]
+
+  dueDiligenceCreated   DueDiligence[]    @relation("DDCreator")
+  dueDiligenceAssigned  DueDiligence[]    @relation("DDAssigned")
+  dueDiligenceItems     DueDiligenceItem[] @relation("DDItemAssigned")
+  dueDiligenceDocUploaded DueDiligenceDocument[] @relation("DDDocUploader")
+  dueDiligenceDocReviewed DueDiligenceDocument[] @relation("DDDocReviewer")
+  dueDiligenceComments  DueDiligenceComment[] @relation("DDCommentAuthor")
+  dueDiligenceApprovals DueDiligenceApproval[] @relation("DDApprover")
+  dueDiligenceAuditLogs DueDiligenceAuditLog[] @relation("DDAuditActor")
 
   @@index([email])
   @@index([isActive])
@@ -408,5 +420,190 @@ model AnalyticsEvent {
 
   @@index([eventName])
   @@index([userId])
+  @@index([createdAt])
+}
+
+model DueDiligence {
+  id                  String      @id @default(cuid())
+  title               String
+  description         String?
+  type                String      @default("investment")
+  status              String      @default("draft")
+  priority            String      @default("medium")
+  completionPercent   Float       @default(0)
+  
+  targetName          String
+  targetType          String?
+  targetMetadata      Json?
+  
+  score               Float?
+  recommendation      String?
+  riskLevel           String?
+  
+  startDate           DateTime    @default(now())
+  targetDeadline      DateTime?
+  completedAt         DateTime?
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  creatorId           String
+  creator             User        @relation("DDCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  assignedTo          User?       @relation("DDAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId        String?
+
+  items               DueDiligenceItem[]
+  documents           DueDiligenceDocument[]
+  comments            DueDiligenceComment[]
+  auditLogs           DueDiligenceAuditLog[]
+  approvals           DueDiligenceApproval[]
+
+  @@index([status])
+  @@index([creatorId])
+  @@index([assignedToId])
+  @@index([completionPercent])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model DueDiligenceItem {
+  id                  String      @id @default(cuid())
+  title               String
+  description         String?
+  category            String
+  priority            String      @default("medium")
+  status              String      @default("pending")
+  
+  score               Float?
+  weightage           Float       @default(1.0)
+  maxScore            Float       @default(10.0)
+  
+  notes               String?
+  evidence            String?
+  
+  assignedTo          User?       @relation("DDItemAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId        String?
+  
+  dueDate             DateTime?
+  completedAt         DateTime?
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  dueDiligenceId      String
+  dueDiligence        DueDiligence @relation(fields: [dueDiligenceId], references: [id], onDelete: Cascade)
+
+  @@index([dueDiligenceId])
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([assignedToId])
+}
+
+model DueDiligenceDocument {
+  id                  String      @id @default(cuid())
+  fileName            String
+  fileUrl             String
+  fileType            String
+  fileSize            Int
+  category            String
+  description         String?
+  tags                String[]
+  
+  uploadedBy          User        @relation("DDDocUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  uploadedById        String
+  
+  annotations         Json?
+  status              String      @default("pending_review")
+  reviewedBy          User?       @relation("DDDocReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById        String?
+  reviewedAt          DateTime?
+  reviewNotes         String?
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  dueDiligenceId      String
+  dueDiligence        DueDiligence @relation(fields: [dueDiligenceId], references: [id], onDelete: Cascade)
+
+  @@index([dueDiligenceId])
+  @@index([category])
+  @@index([uploadedById])
+  @@index([status])
+}
+
+model DueDiligenceComment {
+  id                  String      @id @default(cuid())
+  content             String
+  mentions            String[]
+  attachments         String[]
+  
+  author              User        @relation("DDCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId            String
+  
+  parentId            String?
+  replies             DueDiligenceComment[] @relation("DDCommentReplies")
+  parent              DueDiligenceComment?  @relation("DDCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  
+  isResolved          Boolean     @default(false)
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  dueDiligenceId      String
+  dueDiligence        DueDiligence @relation(fields: [dueDiligenceId], references: [id], onDelete: Cascade)
+
+  @@index([dueDiligenceId])
+  @@index([authorId])
+  @@index([isResolved])
+}
+
+model DueDiligenceApproval {
+  id                  String      @id @default(cuid())
+  status              String      @default("pending")
+  level               Int         @default(1)
+  approverRole        String
+  
+  approver            User?       @relation("DDApprover", fields: [approverId], references: [id], onDelete: SetNull)
+  approverId          String?
+  
+  approvalNotes       String?
+  approvedAt          DateTime?
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  dueDiligenceId      String
+  dueDiligence        DueDiligence @relation(fields: [dueDiligenceId], references: [id], onDelete: Cascade)
+
+  @@index([dueDiligenceId])
+  @@index([status])
+  @@index([approverId])
+}
+
+model DueDiligenceAuditLog {
+  id                  String      @id @default(cuid())
+  action              String
+  entity              String
+  entityId            String?
+  oldValue            Json?
+  newValue            Json?
+  reason              String?
+  
+  actor               User?       @relation("DDAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId             String?
+  
+  ipAddress           String?
+  userAgent           String?
+  
+  createdAt           DateTime    @default(now())
+
+  dueDiligenceId      String
+  dueDiligence        DueDiligence @relation(fields: [dueDiligenceId], references: [id], onDelete: Cascade)
+
+  @@index([dueDiligenceId])
+  @@index([action])
+  @@index([actorId])
   @@index([createdAt])
 }

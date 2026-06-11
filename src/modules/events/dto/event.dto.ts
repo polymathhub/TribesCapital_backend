@@ -2,20 +2,20 @@ import { IsString, IsOptional, IsDateString, IsNumber, IsBoolean } from 'class-v
 
 export class CreateEventDto {
   @IsString()
-  title: string;
+  title!: string;
 
   @IsOptional()
   @IsString()
   description?: string;
 
   @IsString()
-  slug: string;
+  slug!: string;
 
   @IsDateString()
-  startDate: string;
+  startDate!: string;
 
   @IsDateString()
-  endDate: string;
+  endDate!: string;
 
   @IsOptional()
   @IsString()
@@ -36,7 +36,7 @@ export class CreateEventDto {
 
 export class CreateRsvpDto {
   @IsNumber()
-  guestCount: number;
+  guestCount!: number;
 
   @IsOptional()
   @IsString()
@@ -44,28 +44,28 @@ export class CreateRsvpDto {
 }
 
 export class EventResponseDto {
-  id: string;
-  title: string;
+  id!: string;
+  title!: string;
   description?: string;
-  slug: string;
-  startDate: Date;
-  endDate: Date;
+  slug!: string;
+  startDate!: Date;
+  endDate!: Date;
   location?: string;
-  isVirtual: boolean;
+  isVirtual!: boolean;
   capacity?: number;
-  rsvpCount: number;
-  organizerId: string;
-  isPublished: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  rsvpCount!: number;
+  organizerId!: string;
+  isPublished!: boolean;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export class RsvpResponseDto {
-  id: string;
-  userId: string;
-  eventId: string;
-  status: string;
-  guestCount: number;
+  id!: string;
+  userId!: string;
+  eventId!: string;
+  status!: string;
+  guestCount!: number;
   notes?: string;
-  rsvpedAt: Date;
+  rsvpedAt!: Date;
 }

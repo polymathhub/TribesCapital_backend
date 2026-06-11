@@ -1,8 +1,8 @@
 export class CreateUserDto {
-  email: string;
-  firstName: string;
-  lastName: string;
-  password: string;
+  email!: string;
+  firstName!: string;
+  lastName!: string;
+  password!: string;
 }
 
 export class UpdateUserDto {
@@ -13,12 +13,12 @@ export class UpdateUserDto {
 }
 
 export class UserResponseDto {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
+  id!: string;
+  email!: string;
+  firstName!: string;
+  lastName!: string;
   avatar?: string;
   bio?: string;
-  isActive: boolean;
-  createdAt: Date;
+  isActive!: boolean;
+  createdAt!: Date;
 }

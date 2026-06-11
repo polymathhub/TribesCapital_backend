@@ -2,7 +2,7 @@ import { IsString, IsOptional } from 'class-validator';
 
 export class CreateRoleDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsOptional()
   @IsString()
@@ -11,21 +11,21 @@ export class CreateRoleDto {
 
 export class AssignRoleDto {
   @IsString()
-  userId: string;
+  userId!: string;
 
   @IsString()
-  roleId: string;
+  roleId!: string;
 }
 
 export class CreatePermissionDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
-  resource: string;
+  resource!: string;
 
   @IsString()
-  action: string;
+  action!: string;
 
   @IsOptional()
   @IsString()

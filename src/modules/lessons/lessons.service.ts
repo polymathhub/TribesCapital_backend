@@ -34,10 +34,12 @@ export class LessonsService {
       data: {
         title: createLessonDto.title,
         description: createLessonDto.description,
-        duration: createLessonDto.duration,
+        content: '',
+        duration: createLessonDto.duration || 0,
         videoUrl,
         courseId,
         order: createLessonDto.order || 1,
+        creatorId: userId,
       },
     });
 
@@ -163,11 +165,9 @@ export class LessonsService {
       create: {
         userId,
         lessonId,
-        completed: true,
         completedAt: new Date(),
       },
       update: {
-        completed: true,
         completedAt: new Date(),
       },
     });

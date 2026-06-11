@@ -3,7 +3,11 @@ import apiClient from './client';
 export const authAPI = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   register: (data) => apiClient.post('/auth/register', data),
-  refreshToken: () => apiClient.post('/auth/refresh'),
+  googleAuth: (googleData) => apiClient.post('/auth/google', googleData),
+  refreshToken: () => apiClient.post('/auth/refresh', { refreshToken: localStorage.getItem('refreshToken') }),
+  forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
+  verifyCode: (email, code) => apiClient.post('/auth/verify-code', { email, code }),
+  resetPassword: (email, code, password) => apiClient.post('/auth/reset-password', { email, code, password }),
   logout: () => apiClient.post('/auth/logout'),
 };
 
@@ -81,3 +85,44 @@ export const communityAPI = {
   getStats: () => apiClient.get('/community/stats'),
   listMembers: (params) => apiClient.get('/community/members', { params }),
 };
+
+/* ════════════════════════════════════════════════════════════ */
+/*               DUE DILIGENCE API CLIENT                       */
+/* ════════════════════════════════════════════════════════════ */
+
+export const dueDiligenceAPI = {
+  // Main CRUD
+  list: (params) => apiClient.get('/due-diligence', { params }),
+  getById: (id) => apiClient.get(`/due-diligence/${id}`),
+  create: (data) => apiClient.post('/due-diligence', data),
+  update: (id, data) => apiClient.put(`/due-diligence/${id}`, data),
+  delete: (id) => apiClient.delete(`/due-diligence/${id}`),
+
+  // Items
+  createItem: (dueDiligenceId, data) => apiClient.post(`/due-diligence/${dueDiligenceId}/items`, data),
+  updateItem: (dueDiligenceId, itemId, data) =>
+    apiClient.put(`/due-diligence/${dueDiligenceId}/items/${itemId}`, data),
+  deleteItem: (dueDiligenceId, itemId) =>
+    apiClient.delete(`/due-diligence/${dueDiligenceId}/items/${itemId}`),
+
+  // Documents
+  uploadDocument: (dueDiligenceId, data) =>
+    apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  reviewDocument: (dueDiligenceId, docId, data) =>
+    apiClient.put(`/due-diligence/${dueDiligenceId}/documents/${docId}/review`, data),
+
+  // Comments
+  addComment: (dueDiligenceId, data) =>
+    apiClient.post(`/due-diligence/${dueDiligenceId}/comments`, data),
+  deleteComment: (dueDiligenceId, commentId) =>
+    apiClient.delete(`/due-diligence/${dueDiligenceId}/comments/${commentId}`),
+
+  // Approvals
+  createApproval: (dueDiligenceId, data) =>
+    apiClient.post(`/due-diligence/${dueDiligenceId}/approvals`, data),
+  approveOrReject: (dueDiligenceId, approvalId, data) =>
+    apiClient.put(`/due-diligence/${dueDiligenceId}/approvals/${approvalId}`, data),
+};
+

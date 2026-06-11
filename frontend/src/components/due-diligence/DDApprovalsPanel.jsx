@@ -1,0 +1,225 @@
+import { useState } from 'react';
+import { dueDiligenceAPI } from '../../api/endpoints';
+
+const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    reviewerEmail: '',
+    notes: '',
+  });
+
+  const statusColors = {
+    'pending': { bg: '#FEF3C7', text: '#92400E', label: 'Pending' },
+    'approved': { bg: '#DCFCE7', text: '#15803D', label: 'Approved' },
+    'rejected': { bg: '#FEE2E2', text: '#991B1B', label: 'Rejected' },
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await dueDiligenceAPI.createApproval(dueDiligenceId, formData);
+      setFormData({ reviewerEmail: '', notes: '' });
+      setShowForm(false);
+      onRefresh();
+    } catch (error) {
+      console.error('Error creating approval:', error);
+      alert('Failed to create approval request');
+    }
+  };
+
+  const handleApproveOrReject = async (approvalId, decision, notes) => {
+    try {
+      await dueDiligenceAPI.approveOrReject(dueDiligenceId, approvalId, { decision, notes });
+      onRefresh();
+    } catch (error) {
+      console.error('Error updating approval:', error);
+      alert('Failed to update approval');
+    }
+  };
+
+  return (
+    <div>
+      {showForm ? (
+        <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '12px' }}>
+              <input
+                type="email"
+                name="reviewerEmail"
+                value={formData.reviewerEmail}
+                onChange={handleChange}
+                placeholder="Reviewer email"
+                required
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              placeholder="Approval notes"
+              rows="2"
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #E5E7EB',
+                borderRadius: '4px',
+                fontSize: '14px',
+                marginBottom: '12px',
+                boxSizing: 'border-box',
+                fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="submit"
+                style={{
+                  padding: '8px 16px',
+                  background: '#5B21B6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                }}
+              >
+                Request Approval
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#E5E7EB',
+                  color: '#111827',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowForm(true)}
+          style={{
+            marginBottom: '16px',
+            padding: '8px 16px',
+            background: '#5B21B6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 600,
+          }}
+        >
+          + Request Approval
+        </button>
+      )}
+
+      {approvals && approvals.length > 0 ? (
+        <div style={{ display: 'grid', gap: '12px' }}>
+          {approvals.map(approval => {
+            const status = approval.status || 'pending';
+            const colors = statusColors[status];
+            return (
+              <div
+                key={approval.id}
+                style={{
+                  padding: '16px',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '6px',
+                  background: '#F9FAFB',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                  <div>
+                    <h5 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 600 }}>
+                      {approval.reviewer?.email || 'Pending Reviewer'}
+                    </h5>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '4px 12px',
+                        background: colors.bg,
+                        color: colors.text,
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {colors.label}
+                    </span>
+                  </div>
+                </div>
+                {approval.notes && (
+                  <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: '#111827' }}>
+                    {approval.notes}
+                  </p>
+                )}
+                {status === 'pending' && (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      onClick={() => handleApproveOrReject(approval.id, 'approved', '')}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#DCFCE7',
+                        color: '#15803D',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '12px',
+                      }}
+                    >
+                      ✓ Approve
+                    </button>
+                    <button
+                      onClick={() => handleApproveOrReject(approval.id, 'rejected', '')}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#FEE2E2',
+                        color: '#991B1B',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '12px',
+                      }}
+                    >
+                      ✗ Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>
+          ✅ No approval requests yet.
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DDApprovalsPanel;

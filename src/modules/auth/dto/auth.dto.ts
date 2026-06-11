@@ -2,46 +2,71 @@ import { IsEmail, IsString, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @IsString()
-  lastName: string;
+  lastName!: string;
 
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters' })
-  password: string;
+  password!: string;
 }
 
 export class LoginDto {
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
-  password: string;
+  password!: string;
 }
 
 export class GoogleAuthDto {
   @IsString()
-  idToken: string;
+  idToken!: string;
 
   @IsString()
-  accessToken: string;
+  accessToken!: string;
 }
 
 export class RefreshTokenDto {
   @IsString()
-  refreshToken: string;
+  refreshToken!: string;
+}
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  email!: string;
+}
+
+export class VerifyCodeDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  code!: string;
+}
+
+export class ResetPasswordDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  code!: string;
+
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters' })
+  password!: string;
 }
 
 export class TokenResponseDto {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
+  accessToken!: string;
+  refreshToken!: string;
+  expiresIn!: number;
   youtubeToken?: string;
-  user: {
+  user!: {
     id: string;
     email: string;
     firstName: string;

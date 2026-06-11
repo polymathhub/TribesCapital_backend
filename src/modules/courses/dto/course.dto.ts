@@ -2,14 +2,15 @@ import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 export class CreateCourseDto {
   @IsString()
-  title: string;
+  title!: string;
 
   @IsOptional()
   @IsString()
   description?: string;
 
+  @IsOptional()
   @IsString()
-  slug: string;
+  slug?: string;
 
   @IsOptional()
   @IsString()
@@ -55,32 +56,32 @@ export class UpdateCourseDto {
 }
 
 export class CourseResponseDto {
-  id: string;
-  title: string;
+  id!: string;
+  title!: string;
   description?: string;
-  slug: string;
+  slug!: string;
   thumbnail?: string;
-  difficulty: string;
+  difficulty!: string;
   duration?: number;
-  price: number;
-  isPublished: boolean;
-  instructorId: string;
-  lessons: number;
-  enrollments: number;
-  createdAt: Date;
-  updatedAt: Date;
+  price!: number;
+  isPublished!: boolean;
+  instructorId!: string;
+  lessons!: number;
+  enrollments!: number;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export class EnrollmentDto {
-  courseId: string;
+  courseId!: string;
 }
 
 export class EnrollmentResponseDto {
-  id: string;
-  userId: string;
-  courseId: string;
-  status: string;
-  progress: number;
-  startDate: Date;
-  createdAt: Date;
+  id!: string;
+  userId!: string;
+  courseId!: string;
+  status!: string;
+  progress!: number;
+  startDate?: Date;
+  createdAt!: Date;
 }

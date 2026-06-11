@@ -9,8 +9,15 @@ export class CoursesService {
   async create(instructorId: string, createCourseDto: CreateCourseDto): Promise<CourseResponseDto> {
     const course = await this.prisma.course.create({
       data: {
-        ...createCourseDto,
-        instructorId,
+        title: createCourseDto.title,
+        description: createCourseDto.description || '',
+        thumbnail: createCourseDto.thumbnail,
+        category: createCourseDto.categoryId || 'general',
+        level: createCourseDto.difficulty || 'beginner',
+        duration: createCourseDto.duration || 0,
+        isPublished: createCourseDto.isPublished || false,
+        creatorId: instructorId,
+        instructorId: instructorId,
       },
       include: {
         lessons: true,
@@ -88,7 +95,7 @@ export class CoursesService {
       courseId: enrollment.courseId,
       status: enrollment.status,
       progress: 0,
-      startDate: enrollment.startDate,
+      startDate: enrollment.enrolledAt,
       createdAt: enrollment.createdAt,
     };
   }

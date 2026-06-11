@@ -13,15 +13,17 @@ import { RolesModule } from './modules/roles/roles.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
-import { ProgressModule } from './modules/progress/progress.module';
 import { EventsModule } from './modules/events/events.module';
-import { RsvpModule } from './modules/rsvp/rsvp.module';
-import { ProjectsModule } from './modules/projects/projects.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
-import { DocumentsModule } from './modules/documents/documents.module';
 import { CommunityModule } from './modules/community/community.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module';
+// DISABLED MODULES - not yet fully implemented
+// import { ProgressModule } from './modules/progress/progress.module';
+// import { RsvpModule } from './modules/rsvp/rsvp.module';
+// import { ProjectsModule } from './modules/projects/projects.module';
+// import { DocumentsModule } from './modules/documents/documents.module';
 
 @Module({
   imports: [
@@ -36,15 +38,16 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     LearningModule,
     CoursesModule,
     LessonsModule,
-    ProgressModule,
     EventsModule,
-    RsvpModule,
-    ProjectsModule,
     MarketplaceModule,
-    DocumentsModule,
     CommunityModule,
     NotificationsModule,
     AnalyticsModule,
+    DueDiligenceModule,
+    // ProgressModule,
+    // RsvpModule,
+    // ProjectsModule,
+    // DocumentsModule,
   ],
   providers: [
     PrismaService,

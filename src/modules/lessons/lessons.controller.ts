@@ -101,7 +101,7 @@ export class LessonsController {
     @Res() res: Response,
   ): Promise<void> {
     try {
-      // Return alternative YouTube CDN URLs
+      // Return alternative YouTube CDN URLs here for now 
       const response = {
         videoId,
         embedUrls: [
