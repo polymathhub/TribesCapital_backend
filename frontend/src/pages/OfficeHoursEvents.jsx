@@ -1,5 +1,249 @@
 import React, { useState, useEffect, useRef } from "react";
 
+/* ─── NOTIFICATION & CALENDAR UTILITIES ─── */
+const NotificationManager = {
+  // Request notification permissions
+  requestPermission: async () => {
+    if (!('Notification' in window)) {
+      console.log('Browser does not support notifications');
+      return false;
+    }
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    return false;
+  },
+
+  // Send system notification with click handler
+  notify: (title, options = {}) => {
+    if (Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%235B21B6"/><circle cx="35" cy="35" r="8" fill="white"/><path d="M35 50 L50 65 L70 35" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/></svg>',
+        badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%235B21B6"/></svg>',
+        tag: options.tag || 'notification',
+        requireInteraction: true,
+        ...options
+      });
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+      return notification;
+    }
+  },
+
+  // Schedule notification for event (persistent with local storage)
+  scheduleEventNotification: (event, minutesBefore = 15) => {
+    try {
+      const [month, day, year] = [event.calMonth + 1, event.calDay, event.calYear];
+      const [hours, minutes] = event.time.split(':').map(t => {
+        const num = parseInt(t);
+        return t.includes('PM') && num !== 12 ? num + 12 : t.includes('AM') && num === 12 ? 0 : num;
+      });
+      
+      const eventTime = new Date(year, month - 1, day, hours || 0, minutes || 0);
+      const now = new Date();
+      const notificationTime = new Date(eventTime.getTime() - minutesBefore * 60000);
+      const delay = notificationTime.getTime() - now.getTime();
+
+      // Save to local storage for persistence
+      const scheduled = JSON.parse(localStorage.getItem('scheduledNotifications') || '{}');
+      scheduled[`event-${event.id}`] = {
+        title: event.title,
+        eventId: event.id,
+        notificationTime: notificationTime.toISOString(),
+        minutesBefore
+      };
+      localStorage.setItem('scheduledNotifications', JSON.stringify(scheduled));
+
+      if (delay > 0) {
+        const timeoutId = setTimeout(() => {
+          NotificationManager.notify(`Upcoming: ${event.title}`, {
+            body: `Starting in ${minutesBefore} minutes\n${event.time} GMT`,
+            tag: `event-${event.id}`,
+            requireInteraction: true
+          });
+          NotificationManager.playAlertSound();
+          // Store that notification was sent
+          const sent = JSON.parse(localStorage.getItem('sentNotifications') || '{}');
+          sent[`event-${event.id}`] = new Date().toISOString();
+          localStorage.setItem('sentNotifications', JSON.stringify(sent));
+        }, delay);
+        
+        // Store timeout ID for potential clearing
+        const timeouts = JSON.parse(localStorage.getItem('notificationTimeouts') || '{}');
+        timeouts[`event-${event.id}`] = timeoutId;
+        localStorage.setItem('notificationTimeouts', JSON.stringify(timeouts));
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error scheduling notification:', error);
+      return false;
+    }
+  },
+
+  // Play alert sound with multiple tones
+  playAlertSound: () => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Create multiple oscillators for a more noticeable alert
+      const frequencies = [800, 600, 800];
+      const duration = 0.3;
+      
+      frequencies.forEach((freq, idx) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sine';
+        
+        const startTime = audioContext.currentTime + (idx * 0.1);
+        gain.gain.setValueAtTime(0.3, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      });
+    } catch (e) {
+      console.error('Error playing alert sound:', e);
+    }
+  },
+
+  // Generate iCal format for calendar export
+  generateICalEvent: (event) => {
+    const [month, day, year] = [event.calMonth + 1, event.calDay, event.calYear];
+    const [hours, minutes] = event.time.split(':').map(t => {
+      const num = parseInt(t);
+      return t.includes('PM') && num !== 12 ? num + 12 : t.includes('AM') && num === 12 ? 0 : num;
+    });
+
+    const startDate = new Date(year, month - 1, day, hours || 0, minutes || 0);
+    const durationMins = parseInt(event.dur) || 90;
+    const endDate = new Date(startDate.getTime() + durationMins * 60000);
+
+    const formatDateTime = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const mins = String(date.getMinutes()).padStart(2, '0');
+      const secs = String(date.getSeconds()).padStart(2, '0');
+      return `${year}${month}${day}T${hours}${mins}${secs}Z`;
+    };
+
+    const iCal = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//TribesCapital//Events//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:event-${event.id}@tribescapital.com
+DTSTAMP:${formatDateTime(new Date())}
+DTSTART:${formatDateTime(startDate)}
+DTEND:${formatDateTime(endDate)}
+SUMMARY:${event.title}
+DESCRIPTION:${event.desc}\n\nType: ${event.type}\nFormat: ${event.format}\nSpeakers: ${event.speakers.map(s => s.name).join(', ')}
+LOCATION:${event.format.includes('Zoom') ? 'Zoom' : 'TBD'}
+CATEGORIES:${event.type}
+ATTENDEE:mailto:user@tribescapital.com
+BEGIN:VALARM
+TRIGGER:-PT15M
+DESCRIPTION:Reminder: ${event.title}
+ACTION:DISPLAY
+END:VALARM
+END:VEVENT
+END:VCALENDAR`;
+
+    return iCal;
+  },
+
+  // Generate Google Calendar URL
+  generateGoogleCalendarUrl: (event) => {
+    const [month, day, year] = [event.calMonth + 1, event.calDay, event.calYear];
+    const [hours, minutes] = event.time.split(':').map(t => {
+      const num = parseInt(t);
+      return t.includes('PM') && num !== 12 ? num + 12 : t.includes('AM') && num === 12 ? 0 : num;
+    });
+
+    const startDate = new Date(year, month - 1, day, hours || 0, minutes || 0);
+    const durationMins = parseInt(event.dur) || 90;
+    const endDate = new Date(startDate.getTime() + durationMins * 60000);
+
+    const formatGoogleDate = (date) => date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: event.title,
+      details: `${event.desc}\n\nType: ${event.type}\nSpeakers: ${event.speakers.map(s => s.name).join(', ')}`,
+      location: event.format.includes('Zoom') ? 'Zoom' : 'TBD',
+      dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`
+    });
+
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  },
+
+  // Generate Outlook Calendar URL
+  generateOutlookCalendarUrl: (event) => {
+    const [month, day, year] = [event.calMonth + 1, event.calDay, event.calYear];
+    const [hours, minutes] = event.time.split(':').map(t => {
+      const num = parseInt(t);
+      return t.includes('PM') && num !== 12 ? num + 12 : t.includes('AM') && num === 12 ? 0 : num;
+    });
+
+    const startDate = new Date(year, month - 1, day, hours || 0, minutes || 0);
+    const durationMins = parseInt(event.dur) || 90;
+    const endDate = new Date(startDate.getTime() + durationMins * 60000);
+
+    const formatOutlookDate = (date) => date.toISOString();
+    
+    const params = new URLSearchParams({
+      path: '/calendar/action/compose',
+      rru: 'addevent',
+      startdt: formatOutlookDate(startDate),
+      enddt: formatOutlookDate(endDate),
+      subject: event.title,
+      body: `${event.desc}\n\nType: ${event.type}\nSpeakers: ${event.speakers.map(s => s.name).join(', ')}`,
+      location: event.format.includes('Zoom') ? 'Zoom' : 'TBD'
+    });
+
+    return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
+  },
+
+  // Download calendar file
+  downloadCalendarFile: (event) => {
+    const iCal = NotificationManager.generateICalEvent(event);
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/calendar;charset=utf-8,' + encodeURIComponent(iCal));
+    element.setAttribute('download', `${event.id}-event.ics`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  },
+
+  // Open Google Calendar in new tab
+  openGoogleCalendar: (event) => {
+    const url = NotificationManager.generateGoogleCalendarUrl(event);
+    window.open(url, '_blank');
+  },
+
+  // Open Outlook Calendar in new tab
+  openOutlookCalendar: (event) => {
+    const url = NotificationManager.generateOutlookCalendarUrl(event);
+    window.open(url, '_blank');
+  }
+};
+
 /* ─── DESIGN TOKENS (exact from screenshots) ─── */
 const C = {
   pu:'#5B21B6', puf:'#EDE9FE', pul:'#7C3AED', pud:'#4C1D95',
@@ -136,6 +380,39 @@ function CalWidget({ eventDays, onDayClick }) {
 /* ─── EVENT CARD (grid view) ─── */
 function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg,label:ev.type.toUpperCase()};
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [reminderSet, setReminderSet] = useState(false);
+
+  const handleAddToGoogleCalendar = (e) => {
+    e.stopPropagation();
+    NotificationManager.openGoogleCalendar(ev);
+    setCalendarOpen(false);
+  };
+
+  const handleAddToOutlookCalendar = (e) => {
+    e.stopPropagation();
+    NotificationManager.openOutlookCalendar(ev);
+    setCalendarOpen(false);
+  };
+
+  const handleDownloadCalendarFile = (e) => {
+    e.stopPropagation();
+    NotificationManager.downloadCalendarFile(ev);
+    setCalendarOpen(false);
+  };
+
+  const handleSetReminder = async (e) => {
+    e.stopPropagation();
+    const hasPermission = await NotificationManager.requestPermission();
+    if (hasPermission) {
+      const scheduled = NotificationManager.scheduleEventNotification(ev, 15);
+      if (scheduled) {
+        setReminderSet(true);
+        setTimeout(() => setReminderSet(false), 2000);
+      }
+    }
+  };
+
   return (
     <div style={{display:'flex',background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden',marginBottom:12}}>
       {/* Purple date block */}
@@ -177,11 +454,48 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp }) {
         </div>
         {/* Separator line — exact design */}
         <div style={{height:1,background:C.bd,margin:'10px -16px'}}/>
-        {/* Row 5: spots + RSVP */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <span style={{fontSize:12,color:C.pu,fontWeight:500}}>{ev.spotsLeft} spots left</span>
-          <button onClick={()=>onRsvp(ev.id)}
-            style={{display:'flex',alignItems:'center',gap:5,padding:'6px 14px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:ev.rsvped?C.w:C.pu,color:ev.rsvped?C.gr:C.w,border:ev.rsvped?`1px solid ${C.gr}`:'none'}}>
+        {/* Row 5: action buttons + RSVP */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,flex:1,position:'relative'}}>
+            {/* Add to calendar dropdown */}
+            <button onClick={e=>{e.stopPropagation();setCalendarOpen(!calendarOpen);}}
+              style={{display:'flex',alignItems:'center',gap:4,padding:'6px 10px',borderRadius:6,fontSize:11,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.bg,color:C.t1,border:`1px solid ${C.bd}`,transition:'all 0.2s'}}>
+              <I k="calplus" s={12} c={C.t1}/>Calendar
+            </button>
+            {calendarOpen&&(
+              <>
+                <div style={{position:'fixed',inset:0,zIndex:49}} onClick={()=>setCalendarOpen(false)}/>
+                <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,background:C.w,border:`1px solid ${C.bd}`,borderRadius:7,zIndex:50,overflow:'hidden',boxShadow:'0 4px 12px rgba(0,0,0,.08)',minWidth:140}}>
+                  <button onClick={handleAddToGoogleCalendar} style={{width:'100%',padding:'10px 12px',fontSize:11,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:6,transition:'background 0.2s'}}
+                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
+                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                    <I k="globe" s={12} c={C.pu}/>Google
+                  </button>
+                  <div style={{height:1,background:C.bd}}/>
+                  <button onClick={handleAddToOutlookCalendar} style={{width:'100%',padding:'10px 12px',fontSize:11,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:6,transition:'background 0.2s'}}
+                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
+                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                    <I k="monitor" s={12} c={C.am}/>Outlook
+                  </button>
+                  <div style={{height:1,background:C.bd}}/>
+                  <button onClick={handleDownloadCalendarFile} style={{width:'100%',padding:'10px 12px',fontSize:11,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:6,transition:'background 0.2s'}}
+                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
+                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                    <I k="file" s={12} c={C.gr}/>.ics
+                  </button>
+                </div>
+              </>
+            )}
+            {/* Set reminder button */}
+            <button onClick={handleSetReminder}
+              style={{display:'flex',alignItems:'center',gap:4,padding:'6px 10px',borderRadius:6,fontSize:11,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:reminderSet?C.grb:C.bg,color:reminderSet?C.gr:C.t1,border:reminderSet?`1px solid ${C.gr}`:`1px solid ${C.bd}`,transition:'all 0.2s'}}>
+              <I k="bell" s={12} c={reminderSet?C.gr:C.t1}/>
+              {reminderSet?'Set':'Reminder'}
+            </button>
+          </div>
+          {/* RSVP button */}
+          <button onClick={e=>{e.stopPropagation();onRsvp(ev.id);}}
+            style={{display:'flex',alignItems:'center',gap:5,padding:'6px 14px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:ev.rsvped?C.w:C.pu,color:ev.rsvped?C.gr:C.w,border:ev.rsvped?`1px solid ${C.gr}`:'none',flexShrink:0}}>
             {ev.rsvped&&<I k="check" s={11} c={C.gr} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP'}
           </button>
         </div>
@@ -278,8 +592,34 @@ function EventFormModal({ title, initial, onClose, onSave }) {
 }
 
 /* ─── EVENT DETAIL MODAL — exact Design 21 ─── */
-function DetailModal({ ev, onClose, onRsvp }) {
+function DetailModal({ ev, onClose, onRsvp, onNotifyMe }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg};
+  const [reminderSet, setReminderSet] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  
+  const handleAddToGoogleCalendar = () => {
+    NotificationManager.openGoogleCalendar(ev);
+  };
+
+  const handleAddToOutlookCalendar = () => {
+    NotificationManager.openOutlookCalendar(ev);
+  };
+
+  const handleDownloadCalendarFile = () => {
+    NotificationManager.downloadCalendarFile(ev);
+  };
+
+  const handleSetReminder = async () => {
+    const hasPermission = await NotificationManager.requestPermission();
+    if (hasPermission) {
+      const scheduled = NotificationManager.scheduleEventNotification(ev, 15);
+      if (scheduled) {
+        setReminderSet(true);
+        setTimeout(() => setReminderSet(false), 2000);
+      }
+    }
+  };
+
   return (
     <>
       <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.25)',zIndex:100}} onClick={onClose}/>
@@ -322,11 +662,50 @@ function DetailModal({ ev, onClose, onRsvp }) {
             ))}
           </>}
         </div>
-        {/* Footer — Design 21: "14 spots remaining" + full-width RSVPed button */}
+        {/* Footer — Design 21: action buttons (Calendar, Reminder, RSVP) */}
         <div style={{padding:'14px 24px 20px',borderTop:`1px solid ${C.bd}`,flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
             <span style={{fontSize:13,color:C.t2}}>{ev.spotsLeft} spots remaining</span>
           </div>
+          {/* Calendar selector dropdown */}
+          <div style={{position:'relative',marginBottom:12}}>
+            <button onClick={()=>setCalendarOpen(!calendarOpen)}
+              style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'10px 14px',borderRadius:9,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.bg,color:C.t1,border:`1px solid ${C.bd}`,transition:'all 0.2s'}}>
+              <span style={{display:'flex',alignItems:'center',gap:6}}><I k="calplus" s={14} c={C.t1}/>Add to calendar</span>
+              <I k={calendarOpen?'chd':'chr'} s={12} c={C.t3}/>
+            </button>
+            {calendarOpen&&(
+              <>
+                <div style={{position:'fixed',inset:0,zIndex:49}} onClick={()=>setCalendarOpen(false)}/>
+                <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:C.w,border:`1px solid ${C.bd}`,borderRadius:8,zIndex:50,overflow:'hidden',boxShadow:'0 4px 14px rgba(0,0,0,.1)'}}>
+                  <button onClick={()=>{handleAddToGoogleCalendar();setCalendarOpen(false);}} style={{width:'100%',padding:'12px 14px',fontSize:12,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:8,transition:'background 0.2s'}}
+                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
+                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                    <I k="globe" s={14} c={C.pu}/>Google Calendar
+                  </button>
+                  <div style={{height:1,background:C.bd}}/>
+                  <button onClick={()=>{handleAddToOutlookCalendar();setCalendarOpen(false);}} style={{width:'100%',padding:'12px 14px',fontSize:12,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:8,transition:'background 0.2s'}}
+                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
+                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                    <I k="monitor" s={14} c={C.am}/>Outlook Calendar
+                  </button>
+                  <div style={{height:1,background:C.bd}}/>
+                  <button onClick={()=>{handleDownloadCalendarFile();setCalendarOpen(false);}} style={{width:'100%',padding:'12px 14px',fontSize:12,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:8,transition:'background 0.2s'}}
+                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
+                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                    <I k="file" s={14} c={C.gr}/>Download .ics file
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          {/* Set reminder button */}
+          <button onClick={handleSetReminder}
+            style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'10px 14px',borderRadius:9,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:reminderSet?C.grb:C.bg,color:reminderSet?C.gr:C.t1,border:reminderSet?`1px solid ${C.gr}`:`1px solid ${C.bd}`,transition:'all 0.2s',marginBottom:12}}>
+            <I k="bell" s={14} c={reminderSet?C.gr:C.t1}/>
+            {reminderSet?'✓ Reminder set for 15 min before':'Set alarm reminder (15 min before)'}
+          </button>
+          {/* Full-width RSVP button */}
           <button onClick={()=>onRsvp(ev.id)}
             style={{width:'100%',padding:'13px',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:ev.rsvped?C.pu:C.w,color:ev.rsvped?C.w:C.pu,border:ev.rsvped?'none':`1.5px solid ${C.pu}`}}>
             {ev.rsvped&&<I k="check" s={16} c={C.w} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP now'}
@@ -404,8 +783,26 @@ export default function OfficeHoursEvents() {
   const [viewAll, setViewAll]     = useState(false);
   const [toast, setToast]         = useState(null);
   const [calEvDays, setCalEvDays] = useState([{day:8,month:4,year:2026}]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const showToast = msg => setToast(msg);
+
+  // Handle "Notify me" button - request permissions and set up notifications for all events
+  const handleNotifyMe = async () => {
+    const hasPermission = await NotificationManager.requestPermission();
+    if (hasPermission) {
+      let scheduled = 0;
+      events.forEach(event => {
+        if (NotificationManager.scheduleEventNotification(event, 15)) {
+          scheduled++;
+        }
+      });
+      setNotificationsEnabled(true);
+      showToast(`✓ Notifications enabled for ${scheduled} events! You'll get alerts 15 minutes before each event.`);
+    } else {
+      showToast('Please enable notifications to get event reminders');
+    }
+  };
 
   // RSVP toggle
   const handleRsvp = id => {
@@ -474,8 +871,9 @@ export default function OfficeHoursEvents() {
               <p style={{fontSize:13,color:C.t2,margin:0}}>Live sessions, workshops, and replays from the Tribes Capital team and network</p>
             </div>
             <div style={{display:'flex',gap:10,flexShrink:0}}>
-              <button onClick={()=>showToast("You'll be notified about upcoming events!")} style={{display:'flex',alignItems:'center',gap:7,padding:'9px 16px',border:`1px solid ${C.bd}`,borderRadius:9,background:C.w,color:C.t1,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
-                <I k="bell" s={14} c={C.t2}/>Notify me
+              <button onClick={handleNotifyMe} style={{display:'flex',alignItems:'center',gap:7,padding:'9px 16px',border:notificationsEnabled?'none':`1px solid ${C.bd}`,borderRadius:9,background:notificationsEnabled?C.grb:C.w,color:notificationsEnabled?C.gr:C.t1,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s'}}>
+                <I k="bell" s={14} c={notificationsEnabled?C.gr:C.t2}/>
+                {notificationsEnabled?'Notifications on':'Notify me'}
               </button>
               <button onClick={()=>setCreate(true)} style={{display:'flex',alignItems:'center',gap:7,padding:'9px 18px',border:'none',borderRadius:9,background:C.pu,color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
                 <I k="plus" s={14} c={C.w} sw={2}/>Create event

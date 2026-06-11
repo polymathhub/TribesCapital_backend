@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { LogoFull, LogoMark } from "../components/Logo";
 
 /* ── DESIGN TOKENS (from uploaded design) ─────────────────── */
 const C = {
@@ -28,21 +29,7 @@ const baseInput = {
 function Logo() {
   return (
     <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:28}}>
-      {/* Tribes Capital circular logo - purple design */}
-      <svg width={54} height={54} viewBox="0 0 100 100" fill="none">
-        {/* Purple gradient background circle */}
-        <defs>
-          <linearGradient id="purpleGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#7C3AED"/>
-            <stop offset="100%" stopColor="#5B21B6"/>
-          </linearGradient>
-        </defs>
-        <circle cx={50} cy={50} r={48} fill="url(#purpleGrad1)"/>
-        {/* Inner ring */}
-        <circle cx={50} cy={50} r={42} fill="none" stroke="white" strokeWidth="2" opacity={0.7}/>
-        {/* Center letter T */}
-        <text x="50" y="65" fontSize="48" fontWeight="900" fill="white" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">T</text>
-      </svg>
+      <LogoMark size={54} animate={true}/>
       <div style={{display:'flex', flexDirection:'column'}}>
         <span style={{fontSize:16, fontWeight:800, color:C.text, letterSpacing:1.2, textTransform:'uppercase', lineHeight:1.1}}>
           Tribes
@@ -58,17 +45,7 @@ function Logo() {
 function SmallLogo() {
   return (
     <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:24}}>
-      <svg width={42} height={42} viewBox="0 0 100 100" fill="none">
-        <defs>
-          <linearGradient id="purpleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#7C3AED"/>
-            <stop offset="100%" stopColor="#5B21B6"/>
-          </linearGradient>
-        </defs>
-        <circle cx={50} cy={50} r={48} fill="url(#purpleGrad2)"/>
-        <circle cx={50} cy={50} r={42} fill="none" stroke="white" strokeWidth="2" opacity={0.7}/>
-        <text x="50" y="65" fontSize="48" fontWeight="900" fill="white" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">T</text>
-      </svg>
+      <LogoMark size={42} animate={true}/>
       <span style={{fontSize:13, fontWeight:700, color:C.text, letterSpacing:1.2, textTransform:'uppercase'}}>
         Tribes Capital
       </span>

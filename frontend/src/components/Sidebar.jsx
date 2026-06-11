@@ -1,6 +1,7 @@
 import React from 'react';
 import { COLORS } from '../constants/colors';
 import Icon from './Icon';
+import { LogoMark } from './Logo';
 
 const NAV_ITEMS = [
   { label: 'Home', active: true },
@@ -105,17 +106,7 @@ function Sidebar({ sidebarRef }) {
       `}</style>
       
       <div style={{ padding: '12px 12px 12px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        <svg width={36} height={36} viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
-          <defs>
-            <linearGradient id="tribeLogo" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#7C3AED"/>
-              <stop offset="100%" stopColor="#5B21B6"/>
-            </linearGradient>
-          </defs>
-          <circle cx="50" cy="50" r="48" fill="url(#tribeLogo)"/>
-          <circle cx="50" cy="50" r="42" fill="none" stroke="white" strokeWidth="1.5" opacity="0.7"/>
-          <text x="50" y="62" fontSize="24" fontWeight="900" fill="white" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">T</text>
-        </svg>
+        <LogoMark size={36} animate={true}/>
         <span style={{ fontWeight: 700, fontSize: 11, color: COLORS.T1, letterSpacing: .8, textTransform: 'uppercase' }}>Tribes Capital</span>
       </div>
 

@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Body, Param, Delete, Query, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, Query, UseGuards, HttpCode } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto, EventResponseDto, RsvpResponseDto, CreateRsvpDto } from './dto/event.dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
+import { RolesGuard } from '@common/guards/roles.guard';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
 import { Public } from '@common/decorators/public.decorator';
 
 @Controller('events')
@@ -57,5 +59,27 @@ export class EventsController {
   @UseGuards(JwtAuthGuard)
   async getRsvps(@Param('id') eventId: string): Promise<RsvpResponseDto[]> {
     return this.eventsService.getRsvps(eventId);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async update(
+    @Param('id') id: string,
+    @GetCurrentUser('id') userId: string,
+    @Body() updateEventDto: CreateEventDto,
+  ): Promise<EventResponseDto> {
+    return this.eventsService.update(id, userId, updateEventDto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @HttpCode(204)
+  async delete(
+    @Param('id') id: string,
+    @GetCurrentUser('id') userId: string,
+  ): Promise<void> {
+    await this.eventsService.delete(id, userId);
   }
 }

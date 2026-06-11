@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import LearningHub from "./LearningHub";
 import OfficeHoursEvents from "./OfficeHoursEvents";
+import Logo, { LogoMark, LogoFull } from "../components/Logo";
 
 /* ─── DESIGN TOKENS ─────────────────────────────────── */
 const P   = '#5B21B6';
@@ -21,44 +22,6 @@ const T3  = '#9CA3AF';
 const BD  = '#E5E7EB';
 const BG  = '#F9FAFB';
 const W   = '#FFFFFF';
-
-/* ─── LOGO COMPONENTS ────────────────────────────────── */
-function LogoMark({ size = 28, color = PL }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
-      <defs>
-        <linearGradient id={`tribeLogo${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#7C3AED"/>
-          <stop offset="100%" stopColor="#5B21B6"/>
-        </linearGradient>
-      </defs>
-      <circle cx={50} cy={50} r={48} fill={`url(#tribeLogo${size})`}/>
-      <circle cx={50} cy={50} r={42} fill="none" stroke="white" strokeWidth="2" opacity="0.7"/>
-      <text x="50" y="65" fontSize="56" fontWeight="900" fill="white" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">T</text>
-    </svg>
-  );
-}
-
-function LogoFull({ size = 'medium', variant = 'dark' }) {
-  const sizes = {
-    small: { mark: 24, text: 11, gap: 8 },
-    medium: { mark: 28, text: 12, gap: 10 },
-    large: { mark: 36, text: 16, gap: 12 }
-  };
-  const s = sizes[size] || sizes.medium;
-  const textColor = variant === 'dark' ? T1 : W;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: s.gap, flexShrink: 0 }}>
-      <LogoMark size={s.mark} color={PL}/>
-      <span style={{ fontWeight: 700, fontSize: s.text, color: textColor, letterSpacing: '.5px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Tribes Capital</span>
-    </div>
-  );
-}
-
-function Logo({ size = 28 }) {
-  return <LogoMark size={size} color={PL}/>;
-}
-
 /* ─── TUTORIAL STEPS ────────────────────────────────── */
 const STEPS = [
   { id:'welcome',  target:null,       pos:'center', icon:'👋', title:'Welcome to Tribes Capital',
@@ -145,65 +108,191 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
           boxShadow:'0 0 0 9999px rgba(17,24,39,0.68)',
           border:'2px solid rgba(255,255,255,0.55)',
           transition:'all 0.35s cubic-bezier(.4,0,.2,1)',
+          animation: 'pulse 2s ease-in-out infinite'
         }}/>
       ) : (
-        <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.68)', zIndex:999, pointerEvents:'none' }}/>
+        <div style={{ 
+          position:'fixed', 
+          inset:0, 
+          background:'rgba(17,24,39,0.68)', 
+          zIndex:999, 
+          pointerEvents:'none',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)'
+        }}/>
       )}
 
       {/* Tooltip card */}
       <div style={{
         position:'fixed', ...tipPos,
-        width:340, background:W, borderRadius:14,
-        boxShadow:'0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1)',
-        zIndex:1001, overflow:'hidden',
-        animation:'tipIn 0.25s cubic-bezier(.34,1.56,.64,1)',
+        width:340, 
+        background: 'rgba(255, 255, 255, 0.85)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.4)',
+        borderRadius:14,
+        boxShadow:'0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1), 0 0 20px rgba(124, 58, 237, 0.15)',
+        zIndex:1001, 
+        overflow:'hidden',
+        animation:'fadeInUp 0.4s cubic-bezier(.34,1.56,.64,1)',
       }}>
         {/* Purple progress bar */}
         <div style={{ height:4, background:'#EDE9FE' }}>
-          <div style={{ height:4, background:P, width:`${((step+1)/total)*100}%`, transition:'width .35s ease', borderRadius:'0 2px 2px 0' }}/>
+          <div 
+            style={{ 
+              height:4, 
+              background: `linear-gradient(90deg, ${P}, #5B21B6)`, 
+              width:`${((step+1)/total)*100}%`, 
+              transition:'width .35s cubic-bezier(0.34, 1.56, 0.64, 1)', 
+              borderRadius:'0 2px 2px 0',
+              boxShadow: `0 0 10px rgba(124, 58, 237, 0.4)`
+            }}
+          />
         </div>
 
         {/* Header row */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px 8px' }}>
-          <span style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:.8, textTransform:'uppercase' }}>
+        <div style={{ 
+          display:'flex', 
+          alignItems:'center', 
+          justifyContent:'space-between', 
+          padding:'14px 18px 8px',
+          background: 'rgba(236, 233, 254, 0.2)',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <span style={{ 
+            fontSize:10, 
+            fontWeight:700, 
+            color:P, 
+            letterSpacing:.8, 
+            textTransform:'uppercase' 
+          }}>
             Step {step+1} of {total}
           </span>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <button onClick={onSkip} style={btnStyle('none', 'none', T3, 12)}>Skip tour</button>
-            <button onClick={onSkip}
-              style={{ ...circleBtn, background:'#F3F4F6', border:'none', color:T2, fontSize:16, lineHeight:1 }}>×</button>
+            <button 
+              onClick={onSkip} 
+              style={{
+                ...btnStyle('none', 'none', T3, 12),
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.color = T2}
+              onMouseLeave={(e) => e.target.style.color = T3}
+            >
+              Skip tour
+            </button>
+            <button 
+              onClick={onSkip}
+              style={{ 
+                ...circleBtn, 
+                background:'rgba(236, 233, 254, 0.6)', 
+                border:'1px solid rgba(124, 58, 237, 0.2)', 
+                color:T2, 
+                fontSize:16, 
+                lineHeight:1,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(236, 233, 254, 0.9)';
+                e.currentTarget.style.transform = 'scale(1.1) rotate(90deg)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(236, 233, 254, 0.6)';
+                e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+              }}
+            >
+              ×
+            </button>
           </div>
         </div>
 
         {/* Body */}
         <div style={{ padding:'2px 18px 18px' }}>
-          <div style={{ fontSize:30, marginBottom:12, lineHeight:1 }}>{cur.icon}</div>
-          <h3 style={{ fontSize:16, fontWeight:700, color:T1, margin:'0 0 8px', letterSpacing:-.3 }}>{cur.title}</h3>
-          <p style={{ fontSize:13, color:T2, lineHeight:1.65, margin:0 }}>{cur.desc}</p>
+          <div style={{ 
+            fontSize:30, 
+            marginBottom:12, 
+            lineHeight:1,
+            animation: 'bounce 0.6s ease-in-out'
+          }}>
+            {cur.icon}
+          </div>
+          <h3 style={{ fontSize:16, fontWeight:700, color:T1, margin:'0 0 8px', letterSpacing:-.3 }}>
+            {cur.title}
+          </h3>
+          <p style={{ fontSize:13, color:T2, lineHeight:1.65, margin:0 }}>
+            {cur.desc}
+          </p>
         </div>
 
         {/* Footer */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'12px 18px', borderTop:`1px solid ${BD}`, background:BG }}>
+        <div style={{ 
+          display:'flex', 
+          alignItems:'center', 
+          justifyContent:'space-between',
+          padding:'12px 18px', 
+          borderTop:`1px solid rgba(229, 231, 235, 0.4)`, 
+          background: 'rgba(249, 250, 251, 0.5)',
+          backdropFilter: 'blur(4px)'
+        }}>
           {/* Dot indicators */}
           <div style={{ display:'flex', gap:5, alignItems:'center' }}>
             {STEPS.map((_,i) => (
-              <div key={i} style={{
-                height:6, width:i===step?18:6, borderRadius:3,
-                background:i===step?P:BD, transition:'all .2s ease',
-              }}/>
+              <div 
+                key={i} 
+                style={{
+                  height:6, 
+                  width:i===step?18:6, 
+                  borderRadius:3,
+                  background:i===step ? `linear-gradient(90deg, ${P}, #5B21B6)` : '#E5E7EB', 
+                  transition:'all .3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  boxShadow: i===step ? `0 0 8px rgba(124, 58, 237, 0.4)` : 'none'
+                }}
+              />
             ))}
           </div>
           {/* Buttons */}
           <div style={{ display:'flex', gap:8 }}>
             {step > 0 && (
-              <button onClick={onBack}
-                style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 13), padding:'8px 14px', borderRadius:8, fontWeight:500 }}>
+              <button 
+                onClick={onBack}
+                style={{ 
+                  ...btnStyle(`1px solid rgba(124, 58, 237, 0.2)`, 'rgba(255, 255, 255, 0.7)', T2, 13), 
+                  padding:'8px 14px', 
+                  borderRadius:8, 
+                  fontWeight:500,
+                  backdropFilter: 'blur(4px)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(236, 233, 254, 0.6)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
                 ← Back
               </button>
             )}
-            <button onClick={onNext}
-              style={{ ...btnStyle('none', P, W, 13), padding:'8px 20px', borderRadius:8, fontWeight:500 }}>
+            <button 
+              onClick={onNext}
+              style={{ 
+                ...btnStyle('none', `linear-gradient(135deg, ${P}, #5B21B6)`, W, 13), 
+                padding:'8px 20px', 
+                borderRadius:8, 
+                fontWeight:500,
+                boxShadow: `0 4px 12px rgba(124, 58, 237, 0.3)`,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = `0 8px 24px rgba(124, 58, 237, 0.4)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = `0 4px 12px rgba(124, 58, 237, 0.3)`;
+              }}
+            >
               {step === total-1 ? 'Start exploring ✓' : 'Next →'}
             </button>
           </div>
@@ -214,6 +303,18 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
         @keyframes tipIn {
           from { opacity:0; transform: scale(.95) translateY(8px); }
           to   { opacity:1; transform: scale(1) translateY(0); }
+        }
+        @keyframes slideInDown {
+          from { opacity:0; transform: translateY(-12px); }
+          to   { opacity:1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+          from { opacity:0; transform: translateY(12px); }
+          to   { opacity:1; transform: translateY(0); }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
         }
       `}</style>
     </>
@@ -233,32 +334,91 @@ const circleBtn = {
 
 /* ─── COURSE CARD ────────────────────────────────────── */
 function CourseCard({ cat, title, meta, pct, btn, catColor = P, onContinue }) {
+  const [isHovered, setIsHovered] = useState(false);
   return (
-    <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, marginBottom:12, overflow:'hidden' }}>
+    <div 
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ 
+        background: 'rgba(255, 255, 255, 0.7)',
+        backdropFilter: 'blur(10px)',
+        border: `1px solid ${isHovered ? P : 'rgba(255, 255, 255, 0.3)'}`,
+        borderRadius: 12, 
+        marginBottom: 12, 
+        overflow: 'hidden',
+        boxShadow: isHovered ? `0 12px 48px rgba(124, 58, 237, 0.2)` : '0 8px 32px rgba(0, 0, 0, 0.08)',
+        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        cursor: 'pointer'
+      }}>
       {/* Top progress stripe */}
-      <div style={{ height:3, background:'#F3F4F6' }}>
-        <div style={{ height:3, width:`${pct}%`, background:catColor === GR ? GR : P, borderRadius:'0 3px 3px 0' }}/>
+      <div style={{ height: 3, background: '#F3F4F6' }}>
+        <div 
+          style={{ 
+            height: 3, 
+            width: `${pct}%`, 
+            background: catColor === GR ? GR : P, 
+            borderRadius: '0 3px 3px 0',
+            transition: 'width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
+        />
       </div>
-      <div style={{ padding:'14px 18px 16px', display:'flex', gap:14 }}>
-        {/* Doc icon */}
-        <div style={{ width:36, height:44, background:PF, borderRadius:8, display:'flex', alignItems:'center',
-          justifyContent:'center', flexShrink:0, color:P, fontSize:16 }}>
+      <div style={{ padding: '14px 18px 16px', display: 'flex', gap: 14 }}>
+        {/* Doc icon with animation */}
+        <div 
+          style={{ 
+            width: 36, 
+            height: 44, 
+            background: 'rgba(236, 233, 254, 0.6)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: 8, 
+            display: 'flex', 
+            alignItems: 'center',
+            justifyContent: 'center', 
+            flexShrink: 0, 
+            color: P, 
+            fontSize: 16,
+            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transform: isHovered ? 'scale(1.1) rotate(-5deg)' : 'scale(1) rotate(0)'
+          }}>
           <Icon name="doc" size={18} color={P}/>
         </div>
-        <div style={{ flex:1 }}>
-          <p style={{ fontSize:10, fontWeight:700, color:catColor, letterSpacing:.6, textTransform:'uppercase', margin:'0 0 5px' }}>{cat}</p>
-          <p style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 4px', lineHeight:1.35 }}>{title}</p>
-          <p style={{ fontSize:12, color:T2, margin:'0 0 14px' }}>{meta}</p>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:160, height:4, background:'#F3F4F6', borderRadius:4 }}>
-                <div style={{ width:`${pct}%`, height:4, background: catColor === GR ? GR : P, borderRadius:4 }}/>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: catColor, letterSpacing: .6, textTransform: 'uppercase', margin: '0 0 5px' }}>{cat}</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: T1, margin: '0 0 4px', lineHeight: 1.35 }}>{title}</p>
+          <p style={{ fontSize: 12, color: T2, margin: '0 0 14px' }}>{meta}</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 160, height: 4, background: '#F3F4F6', borderRadius: 4 }}>
+                <div 
+                  style={{ 
+                    width: `${pct}%`, 
+                    height: 4, 
+                    background: `linear-gradient(90deg, ${catColor === GR ? GR : P}, ${catColor === GR ? '#047857' : '#5B21B6'})`, 
+                    borderRadius: 4,
+                    transition: 'width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    boxShadow: `0 0 8px ${catColor === GR ? 'rgba(5, 150, 105, 0.4)' : 'rgba(124, 58, 237, 0.4)'}`
+                  }}
+                />
               </div>
-              <span style={{ fontSize:12, color:T2 }}>{pct}% complete</span>
+              <span style={{ fontSize: 12, color: T2 }}>{pct}% complete</span>
             </div>
             <button 
               onClick={onContinue}
-              style={{ ...btnStyle('none', P, W, 13), padding:'8px 16px', borderRadius:8, fontWeight:500 }}>
+              style={{ 
+                background: `linear-gradient(135deg, ${P}, #5B21B6)`,
+                border: 'none',
+                color: W, 
+                fontSize: 13, 
+                padding: '8px 16px', 
+                borderRadius: 8, 
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
+                transform: isHovered ? 'translateY(-2px)' : 'translateY(0)'
+              }}>
               {btn}
             </button>
           </div>
@@ -274,18 +434,63 @@ function NotificationsPanel({ notifications, onClose, isOpen }) {
   
   return (
     <>
-      <div style={{ position:'fixed', inset:0, zIndex:499, background:'rgba(0,0,0,0.3)' }} onClick={onClose}/>
+      <div 
+        style={{ 
+          position:'fixed', 
+          inset:0, 
+          zIndex:499, 
+          background:'rgba(0,0,0,0.3)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)'
+        }} 
+        onClick={onClose}
+      />
       <div style={{
-        position:'absolute', top:54, right:12,
-        width:360, background:W, borderRadius:12, boxShadow:'0 10px 40px rgba(0,0,0,0.15)',
-        zIndex:500, overflow:'hidden', maxHeight:'500px', overflowY:'auto'
+        position:'absolute', 
+        top:54, 
+        right:12,
+        width:360, 
+        background: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        borderRadius:12, 
+        boxShadow:'0 12px 48px rgba(0,0,0,0.12), 0 8px 24px rgba(124, 58, 237, 0.1)',
+        zIndex:500, 
+        overflow:'hidden', 
+        maxHeight:'500px', 
+        overflowY:'auto',
+        animation: 'slideInDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
       }}>
         {/* Header */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 18px', borderBottom:`1px solid ${BD}` }}>
+        <div style={{ 
+          display:'flex', 
+          justifyContent:'space-between', 
+          alignItems:'center', 
+          padding:'16px 18px', 
+          borderBottom:`1px solid rgba(229, 231, 235, 0.5)`,
+          background: 'rgba(236, 233, 254, 0.3)',
+          backdropFilter: 'blur(8px)'
+        }}>
           <h3 style={{ fontSize:15, fontWeight:600, color:T1, margin:0 }}>Notifications</h3>
           <button 
             onClick={onClose}
-            style={{ width:24, height:24, background:'none', border:'none', cursor:'pointer', padding:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            style={{ 
+              width:24, 
+              height:24, 
+              background:'none', 
+              border:'none', 
+              cursor:'pointer', 
+              padding:0, 
+              display:'flex', 
+              alignItems:'center', 
+              justifyContent:'center',
+              transition: 'all 0.2s ease',
+              borderRadius: 6
+            }}
+            onMouseEnter={(e) => e.target.style.background = 'rgba(123, 58, 237, 0.1)'}
+            onMouseLeave={(e) => e.target.style.background = 'none'}
+          >
             <Icon name="close" size={16} color={T2}/>
           </button>
         </div>
@@ -293,15 +498,25 @@ function NotificationsPanel({ notifications, onClose, isOpen }) {
         {/* Notifications list */}
         {notifications.length === 0 ? (
           <div style={{ padding:'32px 16px', textAlign:'center' }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>🔔</div>
+            <div style={{ fontSize:32, marginBottom:8, animation: 'float 3s ease-in-out infinite' }}>🔔</div>
             <p style={{ fontSize:13, color:T2, margin:0 }}>No new notifications</p>
           </div>
         ) : (
           notifications.map((notif, i) => (
-            <div key={notif.id} style={{ padding:'14px 16px', borderBottom:i < notifications.length - 1 ? `1px solid ${BD}` : 'none', cursor:'pointer', transition:'background .2s',
-              ':hover': { background:BG } }}>
+            <div 
+              key={notif.id} 
+              style={{ 
+                padding:'14px 16px', 
+                borderBottom:i < notifications.length - 1 ? `1px solid rgba(229, 231, 235, 0.4)` : 'none', 
+                cursor:'pointer', 
+                transition:'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                background: 'transparent',
+                ':hover': { background: 'rgba(236, 233, 254, 0.3)' }
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(236, 233, 254, 0.3)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
               <div style={{ display:'flex', gap:10 }}>
-                <div style={{ fontSize:20, flexShrink:0 }}>{notif.icon}</div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <p style={{ fontSize:13, fontWeight:500, color:T1, margin:'0 0 2px' }}>{notif.title}</p>
                   <p style={{ fontSize:12, color:T2, margin:'0 0 4px', lineHeight:1.4 }}>{notif.desc}</p>
@@ -318,8 +533,14 @@ function NotificationsPanel({ notifications, onClose, isOpen }) {
 
 /* ─── MAIN APP ───────────────────────────────────────── */
 export default function HomePage({ user, currentPage = 'home', onNavigate = () => {}, onLogout = () => {} }) {
+
+  // Check if user is new — show tour only on first login
   const [tourStep,   setTourStep]   = useState(0);
-  const [tourActive, setTourActive] = useState(true);
+  const [tourActive, setTourActive] = useState(() => {
+    // Only show tour if user hasn't completed it before
+    const hasCompletedTour = localStorage.getItem(`tourCompleted_${user?.email}`);
+    return !hasCompletedTour;
+  });
   const [spotlight,  setSpotlight]  = useState(null);
   const [tipPos,     setTipPos]     = useState({ top:'50%', left:'50%', transform:'translate(-50%,-50%)' });
   const [rsvpStatus, setRsvpStatus] = useState({ 0: false, 1: true, 2: false });
@@ -327,11 +548,37 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New Office Hours', desc: 'Project Finance Deep Dive starts in 2 hours', time: '2 hours ago', icon: '📅' },
-    { id: 2, title: 'Course Milestone', desc: 'You completed Module 4!', time: '1 day ago', icon: '🎉' },
-    { id: 3, title: 'Event Reminder', desc: 'Workshop starts tomorrow at 2:00 PM', time: '1 day ago', icon: '🔔' },
+    { id: 1, title: 'New Office Hours', desc: 'Project Finance Deep Dive starts in 2 hours', time: '2 hours ago', icon: '📅', read: false },
+    { id: 2, title: 'Course Milestone', desc: 'You completed Module 4!', time: '1 day ago', icon: '🎉', read: false },
+    { id: 3, title: 'Event Reminder', desc: 'Workshop starts tomorrow at 2:00 PM', time: '1 day ago', icon: '🔔', read: false },
   ]);
   const [unreadCount, setUnreadCount] = useState(3);
+
+  // Real-time notification polling
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Simulate real-time notifications (30% chance)
+      if (Math.random() > 0.7 && notifications.length < 10) {
+        const sampleNotifs = [
+          { title: 'New deal posted', desc: 'Solar project in Kenya now open for investment', icon: '☀️' },
+          { title: 'Event starting soon', desc: 'Office Hours: Risk Management in 15 minutes', icon: '📢' },
+          { title: 'Portfolio update', desc: 'Your monthly returns summary is ready', icon: '📈' },
+          { title: 'Resource available', desc: 'New toolkit: Due Diligence Checklist', icon: '📋' },
+          { title: 'Message from host', desc: 'New discussion in Member Circles', icon: '💬' },
+        ];
+        const newNotif = sampleNotifs[Math.floor(Math.random() * sampleNotifs.length)];
+        const notif = {
+          id: Math.max(...notifications.map(n=>n.id), 0) + 1,
+          ...newNotif,
+          time: 'just now',
+          read: false
+        };
+        setNotifications(prev => [notif, ...prev]);
+        setUnreadCount(prev => prev + 1);
+      }
+    }, 8000); // Check every 8 seconds
+    return () => clearInterval(interval);
+  }, [notifications]);
 
   /* Section refs */
   const sidebarRef  = useRef(null);
@@ -378,9 +625,21 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     return () => clearTimeout(id);
   }, [tourStep, tourActive, updatePositions]);
 
-  const next  = () => tourStep < STEPS.length-1 ? setTourStep(s=>s+1) : setTourActive(false);
-  const back  = () => tourStep > 0 && setTourStep(s=>s-1);
-  const skip  = () => setTourActive(false);
+  const next  = () => {
+    if (tourStep < STEPS.length - 1) {
+      setTourStep(s => s + 1);
+    } else {
+      // Tour completed - save to localStorage
+      localStorage.setItem(`tourCompleted_${user?.email}`, 'true');
+      setTourActive(false);
+    }
+  };
+  const back  = () => tourStep > 0 && setTourStep(s => s - 1);
+  const skip  = () => {
+    // Tour skipped - save to localStorage
+    localStorage.setItem(`tourCompleted_${user?.email}`, 'true');
+    setTourActive(false);
+  };
   
   /* Event handlers */
   const handleCourseClick = () => {
@@ -543,6 +802,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               >
                 {user?.email?.[0]?.toUpperCase() || 'A'}
               </div>
+
               <button 
                 onClick={onLogout}
                 style={{
@@ -578,30 +838,100 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           }}>
             <div style={{ minWidth:0 }}>
               <p style={{ color:'rgba(255,255,255,.7)', fontSize:10, fontWeight:600, letterSpacing:1.2,
-                textTransform:'uppercase', margin:'0 0 8px' }}>WELCOME BACK</p>
-              <h1 style={{ color:W, fontSize:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5, whiteSpace:'nowrap' }}>
-                  Welcome back,{user.name}👋
+                textTransform:'uppercase', margin:'0 0 8px' }}>WELCOME TO TRIBES CAPITAL</p>
+              <h1 style={{ color:W, fontSize:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5 }}>
+                  Hi {user.name}!👋
               </h1>
-              <p style={{ color:'rgba(255,255,255,.8)', fontSize:13, margin:'0 0 16px', maxWidth:400, lineHeight:1.6 }}>
-                You're part of a community of clean energy investors across Africa.
+              <p style={{ color:'rgba(255,255,255,.8)', fontSize:13, margin:'0 0 16px', maxWidth:400, lineHeight:1.5 }}>
+                Explore deals, events, and resources to grow clean energy investments.
               </p>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                {['Recent deals','Live events','Active courses'].map(chip=>(
-                  <div key={chip} style={{ background:'rgba(255,255,255,.16)', border:'1px solid rgba(255,255,255,.25)',
-                    borderRadius:20, padding:'5px 13px', fontSize:12, fontWeight:500, color:W, whiteSpace:'nowrap' }}>
-                    {chip}
-                  </div>
+                {[
+                  { label: 'Deals', page: 'pipeline' },
+                  { label: 'Events', page: 'events' },
+                  { label: 'Courses', page: 'learning' }
+                ].map(item => (
+                  <button
+                    key={item.label}
+                    onClick={() => onNavigate(item.page)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(10px)',
+                      WebkitBackdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: 8,
+                      padding: '10px 20px',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: W,
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                      e.target.style.boxShadow = '0 12px 48px rgba(0, 0, 0, 0.15)';
+                      e.target.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                      e.target.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    {item.label}
+                  </button>
                 ))}
               </div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, flexShrink:0 }}>
-              {[['Members','Community'],['Projects','Active'],['Docs','Repository'],['Events','Coming']].map(([v,l])=>(
-                <div key={l} style={{ background:'rgba(255,255,255,.12)', border:'1px solid rgba(255,255,255,.18)',
-                  borderRadius:10, padding:'12px 18px', textAlign:'center', minWidth:90 }}>
-                  <div style={{ fontSize:20, fontWeight:700, color:W, letterSpacing:-.5 }}>{v}</div>
-                  <div style={{ fontSize:11, color:'rgba(255,255,255,.7)', marginTop:2 }}>{l}</div>
-                </div>
-              ))}
+            {/* Animated Pie Chart */}
+            <div style={{ position: 'relative', width: 180, height: 180, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <svg
+                width="180"
+                height="180"
+                viewBox="0 0 140 140"
+                style={{
+                  transform: 'rotate(-90deg)',
+                  animation: 'spin 8s linear infinite',
+                }}
+              >
+                {/* Background circle */}
+                <circle cx="70" cy="70" r="65" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" strokeWidth="2"/>
+                
+                {/* Pie segments with animation */}
+                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="12" strokeDasharray="103 344" strokeDashoffset="0" style={{ animation: 'dashSlide 3s ease-in-out infinite' }}/>
+                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="12" strokeDasharray="86 344" strokeDashoffset="-103" style={{ animation: 'dashSlide2 3s ease-in-out infinite' }}/>
+                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="12" strokeDasharray="69 344" strokeDashoffset="-189" style={{ animation: 'dashSlide3 3s ease-in-out infinite' }}/>
+                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="12" strokeDasharray="86 344" strokeDashoffset="-258"/>
+                
+                {/* Center circle */}
+                <circle cx="70" cy="70" r="35" fill="white"/>
+              </svg>
+              
+              {/* Logo at center */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <LogoMark size={76} animate={false} />
+              </div>
+              
+              <style>{`
+                @keyframes spin {
+                  from { transform: rotate(-90deg); }
+                  to { transform: rotate(270deg); }
+                }
+                @keyframes dashSlide {
+                  0%, 100% { stroke-dashoffset: 0; }
+                  50% { stroke-dashoffset: -20; }
+                }
+                @keyframes dashSlide2 {
+                  0%, 100% { stroke-dashoffset: -103; }
+                  50% { stroke-dashoffset: -123; }
+                }
+                @keyframes dashSlide3 {
+                  0%, 100% { stroke-dashoffset: -189; }
+                  50% { stroke-dashoffset: -209; }
+                }
+              `}</style>
             </div>
           </div>
 

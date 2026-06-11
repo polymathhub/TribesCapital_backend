@@ -120,6 +120,66 @@ export class EventsService {
     return rsvps.map(rsvp => this.formatRsvpResponse(rsvp));
   }
 
+  async update(id: string, userId: string, updateEventDto: CreateEventDto): Promise<EventResponseDto> {
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Only allow admin or event creator to update
+    if (event.creatorId !== userId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { roles: true },
+      });
+
+      const isAdmin = user?.roles?.some(r => r.name === 'admin');
+      if (!isAdmin) {
+        throw new BadRequestException('Only admin or event creator can update events');
+      }
+    }
+
+    const updatedEvent = await this.prisma.event.update({
+      where: { id },
+      data: updateEventDto,
+      include: {
+        rsvps: true,
+      },
+    });
+
+    return this.formatEventResponse(updatedEvent);
+  }
+
+  async delete(id: string, userId: string): Promise<void> {
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Only allow admin or event creator to delete
+    if (event.creatorId !== userId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { roles: true },
+      });
+
+      const isAdmin = user?.roles?.some(r => r.name === 'admin');
+      if (!isAdmin) {
+        throw new BadRequestException('Only admin or event creator can delete events');
+      }
+    }
+
+    await this.prisma.event.delete({
+      where: { id },
+    });
+  }
+
   private formatEventResponse(event: any): EventResponseDto {
     return {
       id: event.id,

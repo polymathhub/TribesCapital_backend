@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import apiClient from '../api/client';
+import { coursesAPI } from '../api/endpoints';
 
 export const useCourses = (options = {}) => {
   const [courses, setCourses] = useState([]);
@@ -10,37 +10,23 @@ export const useCourses = (options = {}) => {
     const fetchCourses = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get('/courses', {
-          params: { skip: 0, take: 10, ...options },
+        setError(null);
+        const response = await coursesAPI.list({
+          skip: options.skip || 0,
+          take: options.take || 100,
         });
         setCourses(response.data || []);
       } catch (err) {
-        setError(err.message);
-        setCourses([
-          {
-            id: '1',
-            title: 'Understanding Clean Energy Ownership Structures',
-            category: 'PROJECT FINANCE — MODULE 4',
-            metadata: 'Lesson 6 of 10 · 38 min · Certificate',
-            progress: 62,
-            action: 'Continue lesson',
-          },
-          {
-            id: '2',
-            title: 'Financial Modeling for Solar Projects',
-            category: 'PROJECT FINANCE — MODULE 5',
-            metadata: 'Lesson 2 of 8 · 45 min · Certificate',
-            progress: 3,
-            action: 'Continue lesson',
-          },
-        ]);
+        console.error('Failed to fetch courses:', err);
+        setError(err.response?.data?.message || err.message || 'Failed to load courses');
+        setCourses([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCourses();
-  }, []);
+  }, [options.skip, options.take]);
 
   return { courses, loading, error };
 };
@@ -54,10 +40,12 @@ export const useEnrolledCourses = () => {
     const fetchEnrolled = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get('/courses/enrolled');
+        setError(null);
+        const response = await coursesAPI.getEnrolled();
         setCourses(response.data || []);
       } catch (err) {
-        setError(err.message);
+        console.error('Failed to fetch enrolled courses:', err);
+        setError(err.response?.data?.message || err.message || 'Failed to load enrolled courses');
         setCourses([]);
       } finally {
         setLoading(false);
@@ -76,22 +64,28 @@ export const useCourseProgress = (courseId) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!courseId) {
+      setProgress(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchProgress = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get(`/courses/${courseId}/progress`);
-        setProgress(response.data);
+        setError(null);
+        const response = await coursesAPI.getProgress(courseId);
+        setProgress(response.data || null);
       } catch (err) {
-        setError(err.message);
+        console.error('Failed to fetch course progress:', err);
+        setError(err.response?.data?.message || err.message || 'Failed to load progress');
         setProgress(null);
       } finally {
         setLoading(false);
       }
     };
 
-    if (courseId) {
-      fetchProgress();
-    }
+    fetchProgress();
   }, [courseId]);
 
   return { progress, loading, error };
