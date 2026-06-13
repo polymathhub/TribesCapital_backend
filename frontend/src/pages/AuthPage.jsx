@@ -411,41 +411,52 @@ function LoginPage({ onNavigate, onLogin }) {
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
-    // Initialize Google Sign-In SDK
-    if (typeof window !== 'undefined' && !window.google) {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
+    try {
+      // Load Google Sign-In SDK if not already loaded
+      if (!window.google?.accounts) {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          initializeGoogleSignIn();
+        };
+        document.head.appendChild(script);
+      } else {
+        initializeGoogleSignIn();
+      }
+    } catch (error) {
+      console.error('Error loading Google SDK:', error);
+      setGoogleLoading(false);
+    }
+  };
+
+  const initializeGoogleSignIn = () => {
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+    
+    if (!googleClientId) {
+      console.error('Google Client ID not configured. Set VITE_GOOGLE_CLIENT_ID in .env');
+      setGoogleLoading(false);
+      return;
     }
 
-    // In production, use actual Google Sign-In flow
-    // For now, trigger Google Sign-In programmatically
-    setTimeout(() => {
-      try {
-        if (window.google?.accounts?.id) {
-          window.google.accounts.id.initialize({
-            client_id: '1234567890-xxxxxxxxx.apps.googleusercontent.com', // Replace with actual Google Client ID
-            callback: handleGoogleCallback,
-          });
-          window.google.accounts.id.renderButton(document.getElementById('googleSignInDiv'), {
-            type: 'standard',
-            size: 'large',
-            theme: 'outline',
-            text: 'signin',
-          });
-        } else {
-          // Fallback: Simulate Google Sign-In
-          simulateGoogleSignIn();
-        }
-      } catch (error) {
-        simulateGoogleSignIn();
-      }
-    }, 100);
+    window.google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: handleGoogleCallback,
+      auto_select: false,
+    });
+
+    // Programmatically request login
+    window.google.accounts.id.requestIdToken();
   };
 
   const handleGoogleCallback = async (response) => {
+    if (!response.credential) {
+      setGoogleLoading(false);
+      alert('Google Sign-In failed: No credential received');
+      return;
+    }
+
     try {
       const res = await authAPI.googleAuth({
         idToken: response.credential,
@@ -463,21 +474,10 @@ function LoginPage({ onNavigate, onLogin }) {
       });
     } catch (error) {
       console.error('Google Sign-In error:', error);
-      alert('Google Sign-In failed. Please try again.');
-    } finally {
+      const errorMsg = error.response?.data?.message || 'Google Sign-In failed. Please try again.';
+      alert(errorMsg);
       setGoogleLoading(false);
     }
-  };
-
-  const simulateGoogleSignIn = () => {
-    // Simulate Google Sign-In for demo
-    const mockGoogleEmail = `user${Math.floor(Math.random() * 10000)}@gmail.com`;
-    const mockName = 'Google User';
-    localStorage.setItem('accessToken', 'google-token-' + Date.now());
-    localStorage.setItem('youtubeToken', 'youtube-' + Date.now());
-    localStorage.setItem('userEmail', mockGoogleEmail);
-    onLogin({ email: mockGoogleEmail, name: mockName, googleId: 'google-' + Date.now() });
-    setGoogleLoading(false);
   };
 
   return (
