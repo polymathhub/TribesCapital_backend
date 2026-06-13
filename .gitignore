@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+frontend/node_modules/
 package-lock.json
 yarn.lock
 
@@ -11,6 +12,7 @@ yarn.lock
 # Build output
 dist/
 build/
+frontend/dist/
 
 # IDE
 .vscode/

@@ -6,7 +6,9 @@
   "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "nest build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "nest build",
+    "build:frontend": "cd frontend && npm install && npm run build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -25,6 +27,7 @@
   },
   "dependencies": {
     "@nestjs/bull": "^10.0.1",
+    "@nestjs/serve-static": "^4.0.0",
     "@nestjs/common": "^10.2.8",
     "@nestjs/config": "^3.1.1",
     "@nestjs/core": "^10.2.8",

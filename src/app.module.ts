@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import configurations from './config';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -31,6 +33,13 @@ import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module
       isGlobal: true,
       load: configurations,
       envFilePath: ['.env', '.env.local'],
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'frontend'),
+      exclude: ['/api*'],
+      serveStaticOptions: {
+        index: false,
+      },
     }),
     DatabaseModule,
     AuthModule,
