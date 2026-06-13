@@ -9,6 +9,17 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 
 async function bootstrap() {
+  // Load database config early to ensure DATABASE_URL is set for Prisma
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbPort = process.env.DB_PORT || '5432';
+  const dbUsername = process.env.DB_USERNAME || 'postgres';
+  const dbPassword = process.env.DB_PASSWORD || 'postgres';
+  const dbName = process.env.DB_NAME || 'tribes_capital';
+
+  if (!process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = `postgresql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
