@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import configurations from './config';
-import { PrismaService } from './database/prisma.service';
+import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -32,6 +32,7 @@ import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module
       load: configurations,
       envFilePath: ['.env', '.env.local'],
     }),
+    DatabaseModule,
     AuthModule,
     UsersModule,
     RolesModule,
@@ -44,13 +45,8 @@ import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module
     NotificationsModule,
     AnalyticsModule,
     DueDiligenceModule,
-    // ProgressModule,
-    // RsvpModule,
-    // ProjectsModule,
-    // DocumentsModule,
   ],
   providers: [
-    PrismaService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
