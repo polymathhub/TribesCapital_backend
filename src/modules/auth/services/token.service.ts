@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
+import * as axios from 'axios';
 
 export interface TokenPayload {
   sub: string; // User ID
@@ -129,32 +130,185 @@ export class TokenService {
     );
   }
 
+  private googlePublicKeysCache: Map<string, string> = new Map();
+  private googlePublicKeysCacheExpiry: number = 0;
+  private readonly GOOGLE_CERTS_URL =
+    'https://www.googleapis.com/oauth2/v1/certs';
+
   /**
-   * Verify Google OAuth ID token signature
-   * In production, should call Google's tokeninfo endpoint
+   * Fetch Google's public keys for verifying ID tokens
    */
-  async verifyGoogleToken(idToken: string): Promise<any> {
+  private async fetchGooglePublicKeys(): Promise<Map<string, string>> {
+    const now = Date.now();
+
+    // Use cache if available and not expired (1 hour)
+    if (
+      this.googlePublicKeysCache.size > 0 &&
+      this.googlePublicKeysCacheExpiry > now
+    ) {
+      return this.googlePublicKeysCache;
+    }
+
     try {
-      // In production, verify with Google's API
-      // For now, decode without verification (MUST be fixed in production)
+      const response = await axios.default.get(this.GOOGLE_CERTS_URL, {
+        timeout: 5000,
+      });
+
+      const keysMap = new Map<string, string>();
+      for (const [kid, cert] of Object.entries(response.data)) {
+        keysMap.set(kid, cert as string);
+      }
+
+      this.googlePublicKeysCache = keysMap;
+      this.googlePublicKeysCacheExpiry = now + 60 * 60 * 1000; // 1 hour
+
+      this.logger.debug('Google public keys cached');
+      return keysMap;
+    } catch (error) {
+      this.logger.error('Failed to fetch Google public keys', error);
+      // If cache is empty, throw error
+      if (this.googlePublicKeysCache.size === 0) {
+        throw new Error('Unable to verify Google token - public keys unavailable');
+      }
+      // Otherwise use stale cache
+      return this.googlePublicKeysCache;
+    }
+  }
+
+  /**
+   * Verify Google OAuth ID token with proper signature validation
+   * Validates token format, signature, expiration, and audience
+   */
+  async verifyGoogleToken(
+    idToken: string,
+    expectedAudience?: string,
+  ): Promise<{
+    sub: string;
+    email: string;
+    email_verified: boolean;
+    given_name: string;
+    family_name: string;
+    picture: string;
+    locale: string;
+    aud: string;
+    iss: string;
+    iat: number;
+    exp: number;
+  }> {
+    try {
+      // Validate token format
       const parts = idToken.split('.');
       if (parts.length !== 3) {
-        throw new Error('Invalid token format');
+        throw new BadRequestException('Invalid token format');
       }
 
-      const payload = JSON.parse(
-        Buffer.from(parts[1], 'base64').toString('utf-8'),
-      );
+      // Decode header and payload WITHOUT verification first
+      let header: any;
+      let payload: any;
 
-      // Check expiration
-      if (payload.exp && payload.exp * 1000 < Date.now()) {
-        throw new Error('Token expired');
+      try {
+        header = JSON.parse(
+          Buffer.from(parts[0], 'base64').toString('utf-8'),
+        );
+        payload = JSON.parse(
+          Buffer.from(parts[1], 'base64').toString('utf-8'),
+        );
+      } catch {
+        throw new BadRequestException('Invalid token encoding');
       }
 
-      return payload;
-    } catch (error) {
-      this.logger.error('Failed to verify Google token', error);
-      throw new Error('Invalid Google token');
+      // Validate payload structure
+      if (
+        !payload.sub ||
+        !payload.email ||
+        !payload.iss ||
+        !payload.aud ||
+        !payload.exp
+      ) {
+        throw new BadRequestException('Missing required token claims');
+      }
+
+      // Validate issuer (must be Google)
+      if (
+        payload.iss !== 'https://accounts.google.com' &&
+        payload.iss !== 'accounts.google.com'
+      ) {
+        throw new BadRequestException(
+          'Invalid token issuer - must be from Google',
+        );
+      }
+
+      // Validate expiration
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp < now) {
+        throw new BadRequestException('Token has expired');
+      }
+
+      // Validate audience if provided
+      if (expectedAudience) {
+        const audiences = Array.isArray(payload.aud)
+          ? payload.aud
+          : [payload.aud];
+        if (!audiences.includes(expectedAudience)) {
+          this.logger.warn(
+            `Token audience mismatch. Expected: ${expectedAudience}, Got: ${payload.aud}`,
+          );
+          throw new BadRequestException(
+            'Token audience does not match application',
+          );
+        }
+      }
+
+      // Verify signature with Google's public key
+      const publicKeys = await this.fetchGooglePublicKeys();
+      const kid = header.kid;
+
+      if (!kid || !publicKeys.has(kid)) {
+        throw new BadRequestException('Unable to verify token signature');
+      }
+
+      const publicKey = publicKeys.get(kid);
+
+      // Verify the token signature
+      try {
+        this.jwtService.verify(idToken, {
+          publicKey,
+          algorithms: ['RS256'],
+        });
+      } catch (verifyError: any) {
+        this.logger.warn('Token signature verification failed', verifyError.message);
+        throw new BadRequestException('Invalid token signature');
+      }
+
+      // Validate email is verified by Google
+      if (payload.email_verified !== true) {
+        this.logger.warn(
+          `Email not verified by Google for: ${payload.email}`,
+        );
+        throw new BadRequestException('Email not verified by Google');
+      }
+
+      // Return validated payload
+      return {
+        sub: payload.sub,
+        email: payload.email.toLowerCase(),
+        email_verified: payload.email_verified,
+        given_name: payload.given_name || '',
+        family_name: payload.family_name || '',
+        picture: payload.picture || '',
+        locale: payload.locale || 'en',
+        aud: payload.aud,
+        iss: payload.iss,
+        iat: payload.iat,
+        exp: payload.exp,
+      };
+    } catch (error: any) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error('Failed to verify Google token', error.message);
+      throw new BadRequestException('Failed to verify Google token');
     }
   }
 

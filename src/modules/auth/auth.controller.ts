@@ -9,7 +9,7 @@ import {
   BadRequestException,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
   RegisterDto,
@@ -228,8 +228,26 @@ export class AuthController {
   @Post('google')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Authenticate with Google',
-    description: 'Login or register with Google OAuth',
+    summary: 'Authenticate with Google OAuth',
+    description:
+      'Login or register a user via Google OAuth. ' +
+      'Validates the Google ID token, creates/updates user account, and returns JWT tokens. ' +
+      'The idToken must be obtained from Google Sign-In on the frontend. ' +
+      'Google ID tokens are automatically verified for signature and expiration.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Authentication successful',
+    type: AuthTokenResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Invalid token, token expired, email not verified by Google, or account linking conflict',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'OAuth configuration error or token verification failure',
   })
   async googleAuth(
     @Body() googleAuthDto: GoogleAuthDto,

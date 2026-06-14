@@ -356,18 +356,33 @@ function ImagePanel() {
   );
 }
 
-/* ── TWO-COLUMN WRAPPER ───────────────────────────────────── */
+/* ── TWO-COLUMN WRAPPER - MOBILE RESPONSIVE ───────────────── */
 function TwoCol({ children }) {
   return (
     <div style={{
-      display:'flex', background:C.white, borderRadius:20,
-      overflow:'hidden', width:'100%', maxWidth:1020,
-      boxShadow:'0 24px 80px rgba(0,0,0,0.35)',
+      display:'flex',
+      flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+      background:C.white,
+      borderRadius: window.innerWidth < 768 ? 0 : 20,
+      overflow:'hidden',
+      width:'100%',
+      maxWidth: window.innerWidth < 768 ? '100%' : '1020px',
+      height: window.innerWidth < 768 ? '100vh' : 'auto',
+      boxShadow: window.innerWidth < 768 ? 'none' : '0 24px 80px rgba(0,0,0,0.35)',
     }}>
-      <ImagePanel/>
+      {/* Hide image panel on mobile */}
+      {window.innerWidth >= 768 && <ImagePanel/>}
+      
       <div style={{
-        flex:1, padding:'48px 52px', display:'flex', flexDirection:'column',
-        justifyContent:'center', overflowY:'auto',
+        flex:1,
+        padding: window.innerWidth < 640 ? '24px 16px' : 
+                 window.innerWidth < 768 ? '32px 24px' : 
+                 '48px 52px',
+        display:'flex',
+        flexDirection:'column',
+        justifyContent: window.innerWidth < 768 ? 'flex-start' : 'center',
+        overflowY:'auto',
+        width: window.innerWidth < 768 ? '100%' : 'auto',
       }}>
         {children}
       </div>
@@ -1164,16 +1179,25 @@ function ResetPasswordPage({ email, onNavigate }) {
 export default function AuthPage({ onLogin }) {
   const [page,        setPage]        = useState('login');
   const [forgotEmail, setForgotEmail] = useState('');
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div style={{
       minHeight:'100vh',
       background:'#0D0D0D',
       display:'flex',
-      alignItems:'center',
+      alignItems: isMobile ? 'flex-start' : 'center',
       justifyContent:'center',
-      padding:24,
+      padding: isMobile ? '12px 0' : '24px',
+      paddingTop: isMobile ? '0' : '24px',
       fontFamily:"'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      overflowY: 'auto',
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
@@ -1183,9 +1207,19 @@ export default function AuthPage({ onLogin }) {
         input::placeholder { color: #9CA3AF; }
         select option { color: #111827; }
         button:focus-visible { outline: 2px solid #7C3AED; outline-offset: 2px; }
+
+        /* Mobile responsive styles */
+        @media (max-width: 767px) {
+          input[type="text"],
+          input[type="email"],
+          input[type="password"],
+          select {
+            font-size: 16px !important; /* Prevent iOS zoom on input focus */
+          }
+        }
       `}</style>
 
-      <div key={page} style={{width:'100%',maxWidth:1020,animation:'fadeUp .3s ease',display:'flex',justifyContent:'center'}}>
+      <div key={page} style={{width:'100%', maxWidth: isMobile ? '100%' : '1020px', animation:'fadeUp .3s ease', display:'flex', justifyContent:'center'}}>
         {page === 'login'          && <LoginPage          onNavigate={setPage} onLogin={onLogin}/>}
         {page === 'signup'         && <SignupPage         onNavigate={setPage} onLogin={onLogin}/>}
         {page === 'forgot'         && <ForgotPage         onNavigate={setPage} onSetEmail={setForgotEmail}/>}

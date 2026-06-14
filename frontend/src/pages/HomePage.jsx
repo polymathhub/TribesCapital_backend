@@ -3,6 +3,9 @@ import LearningHub from "./LearningHub";
 import OfficeHoursEvents from "./OfficeHoursEvents";
 import DueDiligencePage from "./DueDiligencePage";
 import Logo, { LogoMark, LogoFull } from "../components/Logo";
+import MobileNav from "../components/MobileNav";
+import "../styles/responsive.css";
+import "../styles/homepage-responsive.css";
 
 /* ─── DESIGN TOKENS ─────────────────────────────────── */
 const P   = '#5B21B6';
@@ -539,14 +542,28 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [tipPos,     setTipPos]     = useState({ top:'50%', left:'50%', transform:'translate(-50%,-50%)' });
   const [rsvpStatus, setRsvpStatus] = useState({ 0: false, 1: true, 2: false });
   const [showNotifications, setShowNotifications] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Default false for mobile responsiveness
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [notifications, setNotifications] = useState([
     { id: 1, title: 'New Office Hours', desc: 'Project Finance Deep Dive starts in 2 hours', time: '2 hours ago', icon: '📅', read: false },
     { id: 2, title: 'Course Milestone', desc: 'You completed Module 4!', time: '1 day ago', icon: '🎉', read: false },
     { id: 3, title: 'Event Reminder', desc: 'Workshop starts tomorrow at 2:00 PM', time: '1 day ago', icon: '🔔', read: false },
   ]);
   const [unreadCount, setUnreadCount] = useState(3);
+
+  // Handle window resize for responsive design
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Close sidebar on mobile
+      if (mobile) setSidebarOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Real-time notification polling
   useEffect(() => {
@@ -671,6 +688,16 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   /* ── RENDER ── */
   return (
     <div style={{ display:'flex', height:'100vh', background:BG, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
+      {/* Mobile Navigation Drawer */}
+      <MobileNav 
+        isOpen={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        currentPage={currentPage}
+        onNavigate={onNavigate}
+        user={user}
+        onLogout={onLogout}
+      />
+
       {/* Global animations */}
       <style>{`
         @keyframes slideInSidebar { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -680,17 +707,37 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         .sidebar-exit { animation: slideOutSidebar 0.35s cubic-bezier(0.77, 0, 0.68, -0.32) forwards; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         .nav-item-hover:hover { animation: pulse 0.3s ease-out; }
+        
+        /* Responsive sidebar - hide on mobile */
+        @media (max-width: 767px) {
+          .sidebar-desktop {
+            display: none !important;
+          }
+          .hamburger-show {
+            display: flex !important;
+          }
+          .search-bar-desktop {
+            display: none !important;
+          }
+        }
+        
+        @media (min-width: 768px) {
+          .hamburger-show {
+            display: none !important;
+          }
+          .sidebar-desktop {
+            display: flex !important;
+          }
+          .search-bar-desktop {
+            display: flex !important;
+          }
+        }
       `}</style>
 
-      {/* ══ SIDEBAR ══ */}
-      <div style={{
+      {/* ══ SIDEBAR (Desktop/Tablet only) ══ */}
+      <div className="sidebar-desktop" style={{
         width:200, minWidth:200, background:W, borderRight:`1px solid ${BD}`,
-        display:'flex', flexDirection:'column', overflowY:'auto', flexShrink:0, zIndex:5,
-        transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-        opacity: sidebarOpen ? 1 : 0,
-        transition: 'transform 0.35s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.35s ease',
-        position: sidebarOpen ? 'relative' : 'absolute',
-        pointerEvents: sidebarOpen ? 'auto' : 'none',
+        display:'none', flexDirection:'column', overflowY:'auto', flexShrink:0, zIndex:5,
       }} ref={sidebarRef}>
         {/* Logo */}
         <div style={{ padding:'16px 16px 14px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', flexShrink:0 }}>
@@ -728,44 +775,47 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         {/* TOPBAR */}
         <div style={{
           height:54, background:W, borderBottom:`1px solid ${BD}`,
-          display:'flex', alignItems:'center', padding:'0 24px', gap:16,
+          display:'flex', alignItems:'center', padding:'0 12px', gap:16,
           flexShrink:0, justifyContent:'space-between', position:'relative',
         }}>
+          {/* Mobile menu button - only show on mobile */}
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="hamburger-show"
+            onClick={() => setMobileNavOpen(true)}
             style={{
-              width:40, height:40, border:'none', borderRadius:10,
-              background: sidebarOpen ? 'rgba(91, 33, 182, 0.08)' : 'transparent',
-              cursor:'pointer', display:'flex', alignItems:'center',
-              justifyContent:'center', color: sidebarOpen ? P : T2, 
+              width:44, height:44, border:'none', borderRadius:10,
+              background: 'transparent',
+              cursor:'pointer', display:'none', alignItems:'center',
+              justifyContent:'center', color: T2, 
               transition:'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              position:'relative',
+              padding: 0,
             }}
-            title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-            onMouseEnter={(e) => e.currentTarget.style.background = sidebarOpen ? 'rgba(91, 33, 182, 0.12)' : 'rgba(111, 114, 131, 0.08)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = sidebarOpen ? 'rgba(91, 33, 182, 0.08)' : 'transparent'}
+            title='Open menu'
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(111, 114, 131, 0.08)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-              <line x1="3" y1="6" x2="21" y2="6" style={{ transformOrigin: '12px 6px', transform: sidebarOpen ? 'rotate(45deg) translateY(12px)' : 'rotate(0deg)', transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}/>
-              <line x1="3" y1="12" x2="21" y2="12" style={{ opacity: sidebarOpen ? 0 : 1, transition: 'opacity 0.3s ease' }}/>
-              <line x1="3" y1="18" x2="21" y2="18" style={{ transformOrigin: '12px 18px', transform: sidebarOpen ? 'rotate(-45deg) translateY(-12px)' : 'rotate(0deg)', transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <div style={{ flex:1, maxWidth:400, background:BG, border:`1px solid ${BD}`, borderRadius:10,
+          <div style={{ flex:1, maxWidth:'400px', background:BG, border:`1px solid ${BD}`, borderRadius:10,
             height:36, display:'flex', alignItems:'center', gap:8, padding:'0 12px',
-            transition:'all 0.25s ease', boxShadow: 'inset 0 0 0 1px transparent'
-          }}>
+            transition:'all 0.25s ease', boxShadow: 'inset 0 0 0 1px transparent',
+            minWidth: 0, // Allow flex to shrink below 400px on mobile
+          }} className="search-bar-desktop">
             <Icon name="search" size={14} color={T3}/>
             <input
               type="text"
-              placeholder="Search topics, documents, people, events…"
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={(e) => { e.currentTarget.parentElement.style.borderColor = P; e.currentTarget.parentElement.style.background = W; e.currentTarget.parentElement.style.boxShadow = `0 0 0 2px ${P}20`; }}
               onBlur={(e) => { e.currentTarget.parentElement.style.borderColor = BD; e.currentTarget.parentElement.style.background = BG; e.currentTarget.parentElement.style.boxShadow = 'inset 0 0 0 1px transparent'; }}
               style={{
                 flex:1, border:'none', background:'transparent', fontSize:13, color:T1,
-                outline:'none', fontFamily:'inherit'
+                outline:'none', fontFamily:'inherit', minWidth: 0,
               }}
             />
           </div>
@@ -786,29 +836,14 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 position:'absolute', top:5, right:5, animation: 'pulse 2s infinite' }}/>
               )}
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:40, height:40, background:P, borderRadius:'50%',
-                display:'flex', alignItems:'center', justifyContent:'center', color:W, fontSize:12, fontWeight:600,
-                transition:'all 0.2s ease', cursor:'pointer'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = PL; e.currentTarget.style.transform = 'scale(1.05)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = P; e.currentTarget.style.transform = 'scale(1)'; }}
-              >
-                {user?.email?.[0]?.toUpperCase() || 'A'}
-              </div>
-
-              <button 
-                onClick={onLogout}
-                style={{
-                  padding:'8px 16px', background:'transparent', border:`1px solid ${BD}`, 
-                  borderRadius:6, cursor:'pointer', fontSize:13, color:T2, fontFamily:'inherit',
-                  fontWeight:500, transition:'all .2s'
-                }}
-                onMouseEnter={(e) => { e.target.style.background = BG; }}
-                onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-              >
-                Log out
-              </button>
+            <div style={{ width:40, height:40, background:P, borderRadius:'50%',
+              display:'flex', alignItems:'center', justifyContent:'center', color:W, fontSize:12, fontWeight:600,
+              transition:'all 0.2s ease', cursor:'pointer', title: user?.email
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = PL; e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = P; e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              {user?.email?.[0]?.toUpperCase() || 'A'}
             </div>
           </div>
           
@@ -827,19 +862,19 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {/* ── WELCOME BANNER ── */}
           <div ref={bannerRef} style={{
             background:`linear-gradient(135deg, ${PD} 0%, ${P} 55%, ${PL} 100%)`,
-            borderRadius:16, padding:'26px 32px', marginBottom:20,
-            display:'flex', justifyContent:'space-between', alignItems:'center', gap:24,
+            borderRadius:14, padding:'14px 12px', marginBottom:12,
+            display:'flex', justifyContent:'space-between', alignItems:'center', gap:12,
           }}>
             <div style={{ minWidth:0 }}>
-              <p style={{ color:'rgba(255,255,255,.7)', fontSize:10, fontWeight:600, letterSpacing:1.2,
-                textTransform:'uppercase', margin:'0 0 8px' }}>WELCOME TO TRIBES CAPITAL</p>
-              <h1 style={{ color:W, fontSize:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5 }}>
+              <p style={{ color:'rgba(255,255,255,.7)', fontSize:9, fontWeight:600, letterSpacing:0.8,
+                textTransform:'uppercase', margin:'0 0 6px' }}>WELCOME TO TRIBES CAPITAL</p>
+              <h1 style={{ color:W, fontSize:18, fontWeight:700, margin:'0 0 6px', letterSpacing:-.5 }}>
                   Hi {user.name}!👋
               </h1>
-              <p style={{ color:'rgba(255,255,255,.8)', fontSize:13, margin:'0 0 16px', maxWidth:400, lineHeight:1.5 }}>
+              <p style={{ color:'rgba(255,255,255,.8)', fontSize:12, margin:'0 0 10px', maxWidth:300, lineHeight:1.4 }}>
                 Explore deals, events, and resources to grow clean energy investments.
               </p>
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                 {[
                   { label: 'Deals', page: 'pipeline' },
                   { label: 'Events', page: 'events' },
@@ -853,15 +888,15 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       backdropFilter: 'blur(10px)',
                       WebkitBackdropFilter: 'blur(10px)',
                       border: '1px solid rgba(255, 255, 255, 0.3)',
-                      borderRadius: 8,
-                      padding: '10px 20px',
-                      fontSize: 13,
+                      borderRadius: 6,
+                      padding: '8px 14px',
+                      fontSize: 11,
                       fontWeight: 600,
                       color: W,
                       whiteSpace: 'nowrap',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.background = 'rgba(255, 255, 255, 0.3)';

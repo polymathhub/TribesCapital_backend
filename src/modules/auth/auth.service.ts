@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma.service';
+import * as crypto from 'crypto';
 import {
   RegisterDto,
   LoginDto,
@@ -705,7 +706,7 @@ export class AuthService {
   }
 
   // ============================================================================
-  // GOOGLE OAUTH (Simplified - needs production verification)
+  // GOOGLE OAUTH - PRODUCTION READY
   // ============================================================================
 
   async authenticateWithGoogle(
@@ -714,18 +715,23 @@ export class AuthService {
     userAgent?: string,
   ): Promise<AuthTokenResponseDto> {
     try {
-      // Verify Google token (in production, call Google's tokeninfo endpoint)
+      // Get Google Client ID from config
+      const googleClientId = this.configService.get('oauth.google.clientId');
+
+      if (!googleClientId) {
+        this.logger.error('Google Client ID not configured');
+        throw new BadRequestException('OAuth configuration error');
+      }
+
+      // Verify Google token with signature validation
       const googleData = await this.tokenService.verifyGoogleToken(
         googleAuthDto.idToken,
+        googleClientId,
       );
-
-      if (!googleData.email) {
-        throw new BadRequestException('Could not extract email from Google token');
-      }
 
       const email = googleData.email.toLowerCase();
 
-      // Find or create user
+      // Check if user exists
       let user = await this.prisma.user.findUnique({
         where: { email },
         include: {
@@ -735,17 +741,18 @@ export class AuthService {
       });
 
       if (!user) {
-        // Create new OAuth user with auto-verified email
+        // Create new OAuth user with pre-verified email
         user = await this.prisma.user.create({
           data: {
             email,
             firstName: googleData.given_name || 'User',
             lastName: googleData.family_name || '',
-            googleId: googleData.sub,
             password: await this.tokenService.hashPassword(
-              Math.random().toString(36),
+              // Generate random password - user cannot login with password
+              crypto.randomBytes(32).toString('hex'),
             ),
-            emailVerified: true, // OAuth emails are pre-verified by Google
+            googleId: googleData.sub,
+            emailVerified: true, // Google has verified the email
             isActive: true,
           },
           include: {
@@ -754,6 +761,9 @@ export class AuthService {
           },
         });
 
+        this.logger.log(`New OAuth user created: ${email}`);
+
+        // Audit new registration via OAuth
         await this.auditService.logAuthEvent({
           userId: user.id,
           action: 'user_registered_oauth',
@@ -762,19 +772,38 @@ export class AuthService {
           ipAddress,
           userAgent,
         });
-      } else if (!user.googleId) {
-        // Link Google account to existing user
-        user = await this.prisma.user.update({
-          where: { id: user.id },
-          data: { googleId: googleData.sub },
-          include: {
-            roles: true,
-            permissions: true,
-          },
-        });
+      } else if (user.googleId !== googleData.sub) {
+        // User exists but Google ID doesn't match
+        if (user.googleId) {
+          // Account already linked to different Google account
+          this.logger.warn(
+            `OAuth account mismatch for user: ${email}`,
+          );
+          throw new BadRequestException(
+            'This email is already linked to a different Google account',
+          );
+        } else {
+          // Link Google account to existing user
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { googleId: googleData.sub },
+            include: {
+              roles: true,
+              permissions: true,
+            },
+          });
+
+          this.logger.log(`Google account linked to existing user: ${email}`);
+        }
       }
 
-      // Update last login
+      // Check if account is active
+      if (!user.isActive) {
+        this.logger.warn(`OAuth login attempted for inactive user: ${email}`);
+        throw new BadRequestException('Account is inactive');
+      }
+
+      // Update last login info
       await this.prisma.user.update({
         where: { id: user.id },
         data: {
@@ -786,7 +815,7 @@ export class AuthService {
         },
       });
 
-      // Log OAuth login
+      // Audit successful OAuth login
       await this.auditService.logAuthEvent({
         userId: user.id,
         action: 'user_login_oauth',
@@ -796,10 +825,20 @@ export class AuthService {
         userAgent,
       });
 
+      this.logger.log(`OAuth login successful: ${email}`);
+
+      // Return authenticated tokens
       return this.generateAuthTokens(user);
     } catch (error) {
-      this.logger.error('Google OAuth failed', error);
-      throw new UnauthorizedException('Google authentication failed');
+      if (
+        error instanceof BadRequestException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+
+      this.logger.error('OAuth authentication failed', error);
+      throw new BadRequestException('OAuth authentication failed');
     }
   }
 
@@ -833,7 +872,7 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       emailVerified: user.emailVerified,
-      roles: user.roles.map((r) => r.name),
+      roles: user.roles.map((r: any) => r.name),
       createdAt: user.createdAt,
     };
   }
