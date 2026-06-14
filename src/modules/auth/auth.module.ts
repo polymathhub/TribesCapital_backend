@@ -6,6 +6,9 @@ import { DatabaseModule } from '@database/database.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { TokenService } from './services/token.service';
+import { EmailService } from './services/email.service';
+import { AuditService } from './services/audit.service';
 
 @Module({
   imports: [
@@ -16,14 +19,15 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: (configService: ConfigService) => {
         const jwtConfig = configService.get('jwt');
         return {
-          secret: jwtConfig.secret,
-          signOptions: { expiresIn: jwtConfig.accessTokenExpiry },
+          secret: jwtConfig.access.secret,
+          signOptions: { expiresIn: jwtConfig.access.expiry },
         };
       },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule, PassportModule],
+  providers: [AuthService, JwtStrategy, TokenService, EmailService, AuditService],
+  exports: [AuthService, JwtModule, PassportModule, TokenService, EmailService, AuditService],
 })
 export class AuthModule {}
+

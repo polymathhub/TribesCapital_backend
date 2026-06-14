@@ -3,9 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AuthService } from '../auth.service';
+import { TokenPayload } from '../services/token.service';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
@@ -14,11 +15,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: jwtConfig.secret,
+      secretOrKey: jwtConfig.access.secret,
+      algorithms: ['HS256'],
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: TokenPayload) {
+    // Load fresh user from database to get current roles/permissions
     return this.authService.validateUser(payload.sub);
   }
 }

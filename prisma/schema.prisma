@@ -17,13 +17,20 @@ model User {
   bio                   String?
   isActive              Boolean     @default(true)
   emailVerified         Boolean     @default(false)
-  emailVerificationToken String?
   googleId              String?     @unique
-  passwordResetToken    String?
-  passwordResetExpires  DateTime?
   lastLogin             DateTime?
+  lastLoginIp           String?
+  lastLoginUserAgent    String?
+  failedLoginAttempts   Int         @default(0)
+  lockoutUntil          DateTime?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
+
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+  refreshTokens           RefreshToken[]
+  loginAttempts           LoginAttempt[]
+  auditLogs               AuditLog[]
 
   roles                 Role[]      @relation("UserRoles")
   permissions           Permission[] @relation("UserPermissions")
@@ -92,6 +99,89 @@ model Permission {
 
   @@unique([resource, action])
   @@index([resource])
+}
+
+// Authentication Models
+model EmailVerificationToken {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String      @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+}
+
+model PasswordResetToken {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String      @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+}
+
+model RefreshToken {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String      @unique
+  deviceInfo  String?
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+model LoginAttempt {
+  id          String      @id @default(cuid())
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email       String
+  success     Boolean
+  ipAddress   String?
+  userAgent   String?
+  failureReason String?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([success])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String
+  resource    String
+  resourceId  String?
+  changes     Json?
+  ipAddress   String?
+  userAgent   String?
+  status      String      @default("success")
+  metadata    Json?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
 }
 
 model Course {

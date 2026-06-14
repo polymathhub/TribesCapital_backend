@@ -1,135 +1,825 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  Logger,
+  ConflictException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma.service';
-import { RegisterDto, LoginDto, TokenResponseDto, RefreshTokenDto, GoogleAuthDto, ForgotPasswordDto, VerifyCodeDto, ResetPasswordDto } from './dto/auth.dto';
-import * as bcrypt from 'bcrypt';
+import {
+  RegisterDto,
+  LoginDto,
+  VerifyEmailDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  RefreshTokenDto,
+  GoogleAuthDto,
+  AuthTokenResponseDto,
+  UserResponseDto,
+  MessageResponseDto,
+} from './dto/auth.dto';
+import { TokenService, TokenPayload } from './services/token.service';
+import { EmailService } from './services/email.service';
+import { AuditService } from './services/audit.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private readonly MAX_LOGIN_ATTEMPTS = 5;
+  private readonly LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+  private readonly EMAIL_VERIFICATION_EXPIRY = 24 * 60 * 60; // 24 hours in seconds
+  private readonly PASSWORD_RESET_EXPIRY = 60 * 60; // 1 hour in seconds
+
   constructor(
     private prisma: PrismaService,
-    private jwtService: JwtService,
+    private tokenService: TokenService,
+    private emailService: EmailService,
+    private auditService: AuditService,
+    private configService: ConfigService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<TokenResponseDto> {
+  // ============================================================================
+  // REGISTRATION
+  // ============================================================================
+
+  async register(
+    registerDto: RegisterDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokenResponseDto> {
+    // Validate password confirmation
+    if (registerDto.password !== registerDto.passwordConfirmation) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    // Check if email already exists
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: registerDto.email },
+      where: { email: registerDto.email.toLowerCase() },
     });
 
     if (existingUser) {
-      throw new BadRequestException('Email already registered');
+      this.logger.warn(`Registration attempted with existing email: ${registerDto.email}`);
+      // Don't reveal that email exists (prevent account enumeration)
+      throw new ConflictException('Email already registered');
     }
 
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-
-    const user = await this.prisma.user.create({
-      data: {
-        email: registerDto.email,
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-        password: hashedPassword,
-      },
-    });
-
-    return this.generateTokens(user.id, user.email);
-  }
-
-  async login(loginDto: LoginDto): Promise<TokenResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: loginDto.email },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const passwordValid = await bcrypt.compare(loginDto.password, user.password);
-
-    if (!passwordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    });
-
-    return this.generateTokens(user.id, user.email);
-  }
-
-  async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<TokenResponseDto> {
-    // Verify Google ID token (in production, verify with Google's API)
-    // For now, we'll extract email from the token payload
-    let googleData: any = {};
     try {
-      // Decode JWT without verification for demo (PRODUCTION: verify properly)
-      const parts = googleAuthDto.idToken.split('.');
-      if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-        googleData = {
-          email: payload.email,
-          firstName: payload.given_name || 'User',
-          lastName: payload.family_name || '',
-          googleId: payload.sub,
-          picture: payload.picture,
-        };
-      }
-    } catch (error) {
-      throw new BadRequestException('Invalid Google token');
-    }
+      // Hash password with strong bcrypt (12 rounds)
+      const passwordHash = await this.tokenService.hashPassword(registerDto.password);
 
-    if (!googleData.email) {
-      throw new BadRequestException('Could not extract email from Google token');
-    }
-
-    // Check if user exists
-    let user = await this.prisma.user.findUnique({
-      where: { email: googleData.email },
-    });
-
-    // If user doesn't exist, create new user with Google data
-    if (!user) {
-      user = await this.prisma.user.create({
+      // Create user
+      const user = await this.prisma.user.create({
         data: {
-          email: googleData.email,
-          firstName: googleData.firstName,
-          lastName: googleData.lastName,
-          googleId: googleData.googleId,
-          password: await bcrypt.hash(Math.random().toString(), 10), // Generate random password for OAuth users
-          isActive: true,
+          email: registerDto.email.toLowerCase(),
+          firstName: registerDto.firstName.trim(),
+          lastName: registerDto.lastName.trim(),
+          password: passwordHash,
+          emailVerified: false,
         },
       });
-    } else {
-      // Update existing user with Google ID if not already set
-      if (!user.googleId) {
-        user = await this.prisma.user.update({
-          where: { id: user.id },
-          data: { googleId: googleData.googleId },
+
+      // Generate email verification token
+      const { token, hash } = this.tokenService.generateSecureToken();
+
+      // Store hashed token in database
+      await this.prisma.emailVerificationToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: hash,
+          expiresAt: new Date(Date.now() + this.EMAIL_VERIFICATION_EXPIRY * 1000),
+        },
+      });
+
+      // Send verification email
+      const frontendUrl = this.configService.get('app.frontendUrl');
+      const verificationLink = `${frontendUrl}/auth/verify-email?token=${token}`;
+
+      try {
+        await this.emailService.sendVerificationEmail({
+          email: user.email,
+          firstName: user.firstName,
+          verificationLink,
+          expiresIn: '24 hours',
         });
+      } catch (emailError) {
+        this.logger.error('Failed to send verification email', emailError);
+        // Don't fail registration if email fails - log and continue
       }
+
+      // Log registration event
+      await this.auditService.logAuthEvent({
+        userId: user.id,
+        action: 'user_registered',
+        resource: 'user',
+        resourceId: user.id,
+        ipAddress,
+        userAgent,
+      });
+
+      this.logger.log(`User registered: ${user.email}`);
+
+      // Generate tokens
+      const tokenPair = this.generateAuthTokens(user);
+
+      return tokenPair;
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      this.logger.error('Registration failed', error);
+      throw new InternalServerErrorException('Registration failed');
     }
-
-    // Update last login
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    });
-
-    const tokens = await this.generateTokens(user.id, user.email);
-    
-    // Include YouTube token if available
-    return {
-      ...tokens,
-      youtubeToken: googleAuthDto.accessToken, // Pass YouTube access token
-    };
   }
 
-  async validateUser(userId: string): Promise<any> {
+  // ============================================================================
+  // EMAIL VERIFICATION
+  // ============================================================================
+
+  async verifyEmail(
+    verifyEmailDto: VerifyEmailDto,
+  ): Promise<MessageResponseDto> {
+    try {
+      // Hash the token to compare with database
+      const tokenHash = this.tokenService.hashToken(verifyEmailDto.token);
+
+      // Find verification token
+      const verificationToken = await this.prisma.emailVerificationToken.findUnique({
+        where: { tokenHash },
+        include: { user: true },
+      });
+
+      if (!verificationToken) {
+        throw new BadRequestException('Invalid or expired verification token');
+      }
+
+      // Check if already used
+      if (verificationToken.usedAt) {
+        throw new BadRequestException('Verification token has already been used');
+      }
+
+      // Check if expired
+      if (verificationToken.expiresAt < new Date()) {
+        throw new BadRequestException('Verification token has expired');
+      }
+
+      // Mark email as verified
+      await this.prisma.user.update({
+        where: { id: verificationToken.userId },
+        data: { emailVerified: true },
+      });
+
+      // Mark token as used
+      await this.prisma.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: { usedAt: new Date() },
+      });
+
+      // Log verification event
+      await this.auditService.logAuthEvent({
+        userId: verificationToken.userId,
+        action: 'email_verified',
+        resource: 'user',
+        resourceId: verificationToken.userId,
+      });
+
+      this.logger.log(`Email verified for user: ${verificationToken.user.email}`);
+
+      return { message: 'Email verified successfully' };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error('Email verification failed', error);
+      throw new InternalServerErrorException('Email verification failed');
+    }
+  }
+
+  // ============================================================================
+  // LOGIN
+  // ============================================================================
+
+  async login(
+    loginDto: LoginDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokenResponseDto> {
+    const email = loginDto.email.toLowerCase();
+
+    try {
+      // Check for brute force attempts
+      const failedAttempts = await this.auditService.getRecentLoginAttempts(
+        email,
+        15,
+      );
+
+      if (failedAttempts >= this.MAX_LOGIN_ATTEMPTS) {
+        this.logger.warn(
+          `Too many failed login attempts for email: ${email}`,
+        );
+
+        await this.auditService.logLoginAttempt({
+          email,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: 'Too many failed attempts',
+        });
+
+        throw new UnauthorizedException(
+          'Account temporarily locked due to too many failed login attempts. Try again later.',
+        );
+      }
+
+      // Find user
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+        include: {
+          roles: true,
+          permissions: true,
+        },
+      });
+
+      if (!user) {
+        this.logger.warn(`Login attempted with non-existent email: ${email}`);
+
+        await this.auditService.logLoginAttempt({
+          email,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: 'User not found',
+        });
+
+        // Generic error to prevent account enumeration
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      // Check if account is active
+      if (!user.isActive) {
+        this.logger.warn(`Login attempted with inactive user: ${email}`);
+
+        await this.auditService.logLoginAttempt({
+          userId: user.id,
+          email,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: 'Account inactive',
+        });
+
+        throw new UnauthorizedException('Account is inactive');
+      }
+
+      // Check if account is locked
+      if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+        this.logger.warn(`Login attempted for locked account: ${email}`);
+
+        await this.auditService.logLoginAttempt({
+          userId: user.id,
+          email,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: 'Account locked',
+        });
+
+        throw new UnauthorizedException(
+          'Account is temporarily locked. Try again later.',
+        );
+      }
+
+      // Verify password
+      const passwordValid = await this.tokenService.verifyPassword(
+        loginDto.password,
+        user.password,
+      );
+
+      if (!passwordValid) {
+        this.logger.warn(`Failed login attempt for user: ${email}`);
+
+        // Increment failed attempts
+        const newFailedAttempts = failedAttempts + 1;
+        let lockoutUntil = null;
+
+        // Lock account after max attempts
+        if (newFailedAttempts >= this.MAX_LOGIN_ATTEMPTS) {
+          lockoutUntil = new Date(Date.now() + this.LOCKOUT_DURATION_MS);
+        }
+
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: newFailedAttempts,
+            lockoutUntil,
+          },
+        });
+
+        await this.auditService.logLoginAttempt({
+          userId: user.id,
+          email,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: 'Invalid password',
+        });
+
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      // Require email verification before login
+      if (!user.emailVerified) {
+        this.logger.warn(`Login attempted with unverified email: ${email}`);
+
+        await this.auditService.logLoginAttempt({
+          userId: user.id,
+          email,
+          success: false,
+          ipAddress,
+          userAgent,
+          failureReason: 'Email not verified',
+        });
+
+        throw new UnauthorizedException(
+          'Please verify your email before logging in',
+        );
+      }
+
+      // Reset failed login attempts and lockout
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: 0,
+          lockoutUntil: null,
+          lastLogin: new Date(),
+          lastLoginIp: ipAddress,
+          lastLoginUserAgent: userAgent,
+        },
+      });
+
+      // Log successful login
+      await this.auditService.logLoginAttempt({
+        userId: user.id,
+        email,
+        success: true,
+        ipAddress,
+        userAgent,
+      });
+
+      await this.auditService.logAuthEvent({
+        userId: user.id,
+        action: 'user_login',
+        resource: 'user',
+        resourceId: user.id,
+        ipAddress,
+        userAgent,
+      });
+
+      this.logger.log(`User logged in: ${email}`);
+
+      // Generate tokens
+      const tokenPair = this.generateAuthTokens(user);
+
+      // Store refresh token hash
+      if (tokenPair.refreshToken) {
+        const { hash } = this.tokenService.generateSecureToken();
+        const tokenConfig = this.configService.get('jwt.refresh');
+
+        await this.prisma.refreshToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: hash,
+            deviceInfo: userAgent,
+            ipAddress,
+            expiresAt: new Date(
+              Date.now() +
+              this.parseExpiryToMs(tokenConfig.expiry),
+            ),
+          },
+        });
+      }
+
+      return tokenPair;
+    } catch (error) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error('Login failed', error);
+      throw new InternalServerErrorException('Login failed');
+    }
+  }
+
+  // ============================================================================
+  // REFRESH TOKEN
+  // ============================================================================
+
+  async refreshTokens(
+    refreshTokenDto: RefreshTokenDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokenResponseDto> {
+    try {
+      // Verify refresh token
+      const decoded = this.tokenService.verifyRefreshToken(
+        refreshTokenDto.refreshToken,
+      );
+
+      // Find user
+      const user = await this.prisma.user.findUnique({
+        where: { id: decoded.sub },
+        include: {
+          roles: true,
+          permissions: true,
+        },
+      });
+
+      if (!user || !user.isActive) {
+        throw new UnauthorizedException('User not found or inactive');
+      }
+
+      // Generate new token pair
+      const newTokenPair = this.generateAuthTokens(user);
+
+      // Log token refresh
+      await this.auditService.logAuthEvent({
+        userId: user.id,
+        action: 'token_refreshed',
+        resource: 'auth',
+        ipAddress,
+        userAgent,
+      });
+
+      return newTokenPair;
+    } catch (error) {
+      this.logger.error('Token refresh failed', error);
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
+
+  // ============================================================================
+  // FORGOT PASSWORD
+  // ============================================================================
+
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<MessageResponseDto> {
+    const email = forgotPasswordDto.email.toLowerCase();
+
+    try {
+      // Find user (silently fail to prevent account enumeration)
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (user && user.isActive) {
+        try {
+          // Generate password reset token
+          const { token, hash } = this.tokenService.generateSecureToken();
+
+          // Store hashed token
+          await this.prisma.passwordResetToken.create({
+            data: {
+              userId: user.id,
+              tokenHash: hash,
+              expiresAt: new Date(
+                Date.now() + this.PASSWORD_RESET_EXPIRY * 1000,
+              ),
+            },
+          });
+
+          // Send reset email
+          const frontendUrl = this.configService.get('app.frontendUrl');
+          const resetLink = `${frontendUrl}/auth/reset-password?token=${token}`;
+
+          await this.emailService.sendPasswordResetEmail({
+            email: user.email,
+            firstName: user.firstName,
+            resetLink,
+            expiresIn: '1 hour',
+          });
+
+          // Log password reset request
+          await this.auditService.logAuthEvent({
+            userId: user.id,
+            action: 'password_reset_requested',
+            resource: 'user',
+            resourceId: user.id,
+            ipAddress,
+            userAgent,
+          });
+
+          this.logger.log(`Password reset requested for: ${email}`);
+        } catch (emailError) {
+          this.logger.error('Failed to send password reset email', emailError);
+          // Continue anyway - user can request again
+        }
+      } else {
+        this.logger.warn(
+          `Password reset requested for non-existent email: ${email}`,
+        );
+      }
+
+      // Always return same response (prevents account enumeration)
+      return {
+        message:
+          'If an account exists with that email, password reset instructions have been sent',
+      };
+    } catch (error) {
+      this.logger.error('Forgot password failed', error);
+      // Don't throw - always return success response
+      return {
+        message:
+          'If an account exists with that email, password reset instructions have been sent',
+      };
+    }
+  }
+
+  // ============================================================================
+  // RESET PASSWORD
+  // ============================================================================
+
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<MessageResponseDto> {
+    // Validate password confirmation
+    if (resetPasswordDto.password !== resetPasswordDto.passwordConfirmation) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    try {
+      // Hash the token to find it
+      const tokenHash = this.tokenService.hashToken(resetPasswordDto.token);
+
+      // Find reset token
+      const resetToken = await this.prisma.passwordResetToken.findUnique({
+        where: { tokenHash },
+        include: { user: true },
+      });
+
+      if (!resetToken) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+
+      // Check if already used
+      if (resetToken.usedAt) {
+        throw new BadRequestException('Reset token has already been used');
+      }
+
+      // Check if expired
+      if (resetToken.expiresAt < new Date()) {
+        throw new BadRequestException('Reset token has expired');
+      }
+
+      // Hash new password
+      const newPasswordHash = await this.tokenService.hashPassword(
+        resetPasswordDto.password,
+      );
+
+      // Update password and mark token as used
+      await this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: {
+          password: newPasswordHash,
+          failedLoginAttempts: 0,
+          lockoutUntil: null,
+        },
+      });
+
+      await this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      });
+
+      // Revoke all refresh tokens (force re-login on all devices)
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: resetToken.userId },
+        data: { revokedAt: new Date() },
+      });
+
+      // Log password reset
+      await this.auditService.logAuthEvent({
+        userId: resetToken.userId,
+        action: 'password_reset',
+        resource: 'user',
+        resourceId: resetToken.userId,
+        ipAddress,
+        userAgent,
+      });
+
+      this.logger.log(
+        `Password reset completed for user: ${resetToken.user.email}`,
+      );
+
+      return { message: 'Password has been reset successfully' };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error('Password reset failed', error);
+      throw new InternalServerErrorException('Password reset failed');
+    }
+  }
+
+  // ============================================================================
+  // LOGOUT
+  // ============================================================================
+
+  async logout(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<MessageResponseDto> {
+    try {
+      // Revoke current refresh token session
+      await this.prisma.refreshToken.updateMany({
+        where: {
+          userId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+
+      // Log logout
+      await this.auditService.logAuthEvent({
+        userId,
+        action: 'user_logout',
+        resource: 'user',
+        resourceId: userId,
+        ipAddress,
+        userAgent,
+      });
+
+      this.logger.log(`User logged out: ${userId}`);
+
+      return { message: 'Logged out successfully' };
+    } catch (error) {
+      this.logger.error('Logout failed', error);
+      throw new InternalServerErrorException('Logout failed');
+    }
+  }
+
+  // ============================================================================
+  // LOGOUT ALL DEVICES
+  // ============================================================================
+
+  async logoutAllDevices(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<MessageResponseDto> {
+    try {
+      // Revoke all refresh tokens
+      await this.prisma.refreshToken.updateMany({
+        where: { userId },
+        data: { revokedAt: new Date() },
+      });
+
+      // Log logout from all devices
+      await this.auditService.logAuthEvent({
+        userId,
+        action: 'user_logout_all_devices',
+        resource: 'user',
+        resourceId: userId,
+        ipAddress,
+        userAgent,
+      });
+
+      this.logger.log(`User logged out from all devices: ${userId}`);
+
+      return { message: 'Logged out from all devices successfully' };
+    } catch (error) {
+      this.logger.error('Logout all devices failed', error);
+      throw new InternalServerErrorException('Logout all devices failed');
+    }
+  }
+
+  // ============================================================================
+  // GOOGLE OAUTH (Simplified - needs production verification)
+  // ============================================================================
+
+  async authenticateWithGoogle(
+    googleAuthDto: GoogleAuthDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokenResponseDto> {
+    try {
+      // Verify Google token (in production, call Google's tokeninfo endpoint)
+      const googleData = await this.tokenService.verifyGoogleToken(
+        googleAuthDto.idToken,
+      );
+
+      if (!googleData.email) {
+        throw new BadRequestException('Could not extract email from Google token');
+      }
+
+      const email = googleData.email.toLowerCase();
+
+      // Find or create user
+      let user = await this.prisma.user.findUnique({
+        where: { email },
+        include: {
+          roles: true,
+          permissions: true,
+        },
+      });
+
+      if (!user) {
+        // Create new OAuth user with auto-verified email
+        user = await this.prisma.user.create({
+          data: {
+            email,
+            firstName: googleData.given_name || 'User',
+            lastName: googleData.family_name || '',
+            googleId: googleData.sub,
+            password: await this.tokenService.hashPassword(
+              Math.random().toString(36),
+            ),
+            emailVerified: true, // OAuth emails are pre-verified by Google
+            isActive: true,
+          },
+          include: {
+            roles: true,
+            permissions: true,
+          },
+        });
+
+        await this.auditService.logAuthEvent({
+          userId: user.id,
+          action: 'user_registered_oauth',
+          resource: 'user',
+          resourceId: user.id,
+          ipAddress,
+          userAgent,
+        });
+      } else if (!user.googleId) {
+        // Link Google account to existing user
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { googleId: googleData.sub },
+          include: {
+            roles: true,
+            permissions: true,
+          },
+        });
+      }
+
+      // Update last login
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          lastLogin: new Date(),
+          lastLoginIp: ipAddress,
+          lastLoginUserAgent: userAgent,
+          failedLoginAttempts: 0,
+          lockoutUntil: null,
+        },
+      });
+
+      // Log OAuth login
+      await this.auditService.logAuthEvent({
+        userId: user.id,
+        action: 'user_login_oauth',
+        resource: 'user',
+        resourceId: user.id,
+        ipAddress,
+        userAgent,
+      });
+
+      return this.generateAuthTokens(user);
+    } catch (error) {
+      this.logger.error('Google OAuth failed', error);
+      throw new UnauthorizedException('Google authentication failed');
+    }
+  }
+
+  // ============================================================================
+  // VALIDATE & HELPER METHODS
+  // ============================================================================
+
+  /**
+   * Validate user for JWT strategy
+   */
+  async validateUser(userId: string): Promise<UserResponseDto | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        roles: true,
-        permissions: true,
+        roles: {
+          select: { name: true },
+        },
+        permissions: {
+          select: { name: true },
+        },
       },
     });
 
@@ -142,139 +832,64 @@ export class AuthService {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      roles: user.roles,
-      permissions: user.permissions,
+      emailVerified: user.emailVerified,
+      roles: user.roles.map((r) => r.name),
+      createdAt: user.createdAt,
     };
   }
 
-  async refreshTokens(refreshTokenDto: RefreshTokenDto): Promise<TokenResponseDto> {
-    try {
-      const decoded = this.jwtService.verify(refreshTokenDto.refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
+  /**
+   * Generate auth token pair with user claims
+   */
+  private generateAuthTokens(user: any): AuthTokenResponseDto {
+    const payload: TokenPayload = {
+      sub: user.id,
+      email: user.email,
+      roles: user.roles?.map((r: any) => r.name) || [],
+      permissions: user.permissions?.map((p: any) => p.name) || [],
+    };
 
-      const user = await this.prisma.user.findUnique({
-        where: { id: decoded.sub },
-      });
-
-      if (!user || !user.isActive) {
-        throw new UnauthorizedException('User not found or inactive');
-      }
-
-      return this.generateTokens(user.id, user.email);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-  }
-
-  private async generateTokens(userId: string, email: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-      },
-    });
-
-    const payload = { sub: userId, email };
-
-    const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_EXPIRATION,
-    });
-
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRATION,
-    });
+    const tokenPair = this.tokenService.generateTokenPair(payload);
 
     return {
-      accessToken,
-      refreshToken,
-      expiresIn: parseInt(process.env.JWT_EXPIRATION || '900', 10),
-      user: (user || { id: userId, email, firstName: '', lastName: '' }) as any,
-    } as TokenResponseDto;
-  }
-
-  async forgotPassword(forgotPasswordDto: any): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: forgotPasswordDto.email },
-    });
-
-    if (!user) {
-      // For security, don't reveal if email exists
-      return { message: 'If email exists, a reset code has been sent' };
-    }
-
-    // Generate 6-digit reset code
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordResetToken: resetCode,
-        passwordResetExpires: resetExpires,
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresIn: tokenPair.expiresIn,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        emailVerified: user.emailVerified,
+        roles: user.roles?.map((r: any) => r.name) || [],
+        createdAt: user.createdAt,
       },
-    });
-
-    // In production, send email with reset code
-    // For now, log it (can be replaced with email service)
-    console.log(`Password reset code for ${user.email}: ${resetCode}`);
-
-    return { message: 'If email exists, a reset code has been sent' };
+    };
   }
 
-  async verifyResetCode(verifyCodeDto: any): Promise<{ valid: boolean }> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: verifyCodeDto.email },
-    });
-
-    if (!user || !user.passwordResetToken) {
-      throw new BadRequestException('Invalid email or code');
+  /**
+   * Convert expiry string to milliseconds
+   */
+  private parseExpiryToMs(expiry: string): number {
+    const match = expiry.match(/^(\d+)([smhd])$/);
+    if (!match) {
+      return 604800000; // Default 7 days
     }
 
-    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
-      throw new BadRequestException('Reset code has expired. Please request a new one.');
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+
+    switch (unit) {
+      case 's':
+        return value * 1000;
+      case 'm':
+        return value * 60 * 1000;
+      case 'h':
+        return value * 3600 * 1000;
+      case 'd':
+        return value * 86400 * 1000;
+      default:
+        return 604800000;
     }
-
-    if (user.passwordResetToken !== verifyCodeDto.code) {
-      throw new BadRequestException('Invalid code');
-    }
-
-    return { valid: true };
-  }
-
-  async resetPassword(resetPasswordDto: any): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: resetPasswordDto.email },
-    });
-
-    if (!user || !user.passwordResetToken) {
-      throw new BadRequestException('Invalid email or code');
-    }
-
-    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
-      throw new BadRequestException('Reset code has expired. Please request a new one.');
-    }
-
-    if (user.passwordResetToken !== resetPasswordDto.code) {
-      throw new BadRequestException('Invalid code');
-    }
-
-    const hashedPassword = await bcrypt.hash(resetPasswordDto.password, 10);
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-      },
-    });
-
-    return { message: 'Password reset successfully' };
   }
 }
