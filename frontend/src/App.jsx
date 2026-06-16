@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AuthPage from './pages/AuthPage';
 import HomePage from './pages/HomePage';
+import Sidebar from './components/Sidebar';
 import LoadingScreen from './components/LoadingScreen';
 import { usersAPI } from './api/endpoints';
 import './App.css';
@@ -11,6 +12,18 @@ function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [winW, setWinW] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1280);
+  const sidebarRef = useRef(null);
+
+  useEffect(() => {
+    const h = () => setWinW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+
+  const isMobile = winW < 640;
+  const isTablet = winW >= 640 && winW < 1024;
 
   // Check if user is authenticated on mount
   useEffect(() => {
@@ -99,12 +112,27 @@ function App() {
   }
 
   return (
-    <div style={{ animation: 'fadeIn 0.6s ease-out' }}>
+    <div style={{ animation: 'fadeIn 0.6s ease-out', display: 'flex', height: '100vh', background: '#F9FAFB' }}>
+      <Sidebar 
+        sidebarRef={sidebarRef}
+        currentPage={currentPage}
+        onNavigate={(page) => {
+          setCurrentPage(page);
+          setSidebarOpen(false);
+        }}
+        onClose={() => setSidebarOpen(false)}
+        isMobile={isMobile}
+        isTablet={isTablet}
+        isOpen={sidebarOpen}
+      />
       <HomePage 
         user={user}
         currentPage={currentPage}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        isMobile={isMobile}
+        isTablet={isTablet}
       />
     </div>
   );

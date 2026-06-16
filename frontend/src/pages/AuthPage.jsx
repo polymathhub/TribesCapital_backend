@@ -1,64 +1,86 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { authAPI } from '../api/endpoints';
 import { LogoFull } from '../components/Logo';
 
-/* ──────── DESIGN TOKENS ──────────── */
-const C = {
-  primary: '#8B21B6',
-  primaryDark: '#5B21B6',
-  primaryMid: '#7C3AED',
+/* ─── DESIGN TOKENS ─────────────────────────────────── */
+const COLORS = {
+  primary: '#5B21B6',
+  primaryLight: '#7C3AED',
   primaryFaint: '#EDE9FE',
   text: '#111827',
-  textGray: '#6B7280',
+  textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
   border: '#E5E7EB',
-  white: '#FFFFFF',
+  background: '#F9FAFB',
+  surface: '#FFFFFF',
   error: '#DC2626',
+  errorLight: '#FEE2E2',
   success: '#059669',
+  successLight: '#DCFCE7',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
 };
 
-const baseInput = {
-  width: '100%',
-  height: 46,
-  border: `1px solid ${C.border}`,
-  borderRadius: 8,
-  fontSize: 14,
-  color: C.text,
-  padding: '0 14px',
-  background: C.white,
-  outline: 'none',
-  boxSizing: 'border-box',
-  fontFamily: 'inherit',
-  transition: 'border-color .15s, box-shadow .15s',
-};
-
-/* ──────── HOOKS ──────────── */
+/* ─── UTILITIES ─────────────────────────────────────── */
 function useBreakpoint() {
-  const [w, setW] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1280));
+  const [width, setWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1280);
   useEffect(() => {
-    const h = () => setW(window.innerWidth);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
   }, []);
-  return { isMobile: w < 640, isTablet: w >= 640 && w < 1024, isDesktop: w >= 1024 };
+  return {
+    isMobile: width < 640,
+    isTablet: width >= 640 && width < 1024,
+    isDesktop: width >= 1024,
+  };
 }
 
-/* ──────── COMPONENTS ──────────── */
-function EyeOpen() {
-  return (
-    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx={12} cy={12} r={3} />
-    </svg>
-  );
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
 }
 
-function EyeOff() {
+function validatePassword(password) {
+  return {
+    minLength: password.length >= 12,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSymbol: /[^A-Za-z0-9]/.test(password),
+  };
+}
+
+function getPasswordStrength(password) {
+  const validation = validatePassword(password);
+  const score = Object.values(validation).filter(Boolean).length;
+  const strengths = [
+    { level: 0, label: 'Very Weak', color: COLORS.error, percentage: 0 },
+    { level: 1, label: 'Weak', color: COLORS.error, percentage: 20 },
+    { level: 2, label: 'Fair', color: COLORS.warning, percentage: 40 },
+    { level: 3, label: 'Good', color: '#3B82F6', percentage: 60 },
+    { level: 4, label: 'Strong', color: COLORS.success, percentage: 80 },
+    { level: 5, label: 'Very Strong', color: COLORS.success, percentage: 100 },
+  ];
+  return strengths[score];
+}
+
+/* ─── ICON COMPONENTS ──────────────────────────────── */
+function EyeIcon({ open = false }) {
   return (
-    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-      <line x1={1} y1={1} x2={23} y2={23} />
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+      {open ? (
+        <>
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx={12} cy={12} r={3} />
+        </>
+      ) : (
+        <>
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+          <line x1={1} y1={1} x2={23} y2={23} />
+        </>
+      )}
     </svg>
   );
 }
@@ -74,53 +96,260 @@ function GoogleIcon() {
   );
 }
 
-function Spinner() {
+function CheckIcon() {
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: 16,
-        height: 16,
-        border: '2px solid rgba(255,255,255,0.3)',
-        borderTopColor: '#fff',
-        borderRadius: '50%',
-        marginRight: 8,
-        verticalAlign: 'middle',
-        animation: 'spin 0.6s linear infinite',
-      }}
-    />
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
   );
 }
 
-function Btn({ onClick, loading, children, disabled, variant = 'primary' }) {
-  const bgColor = variant === 'secondary' ? '#FFFFFF' : disabled || loading ? '#C4B5FD' : C.primary;
-  const textColor = variant === 'secondary' ? C.primary : C.white;
-  const borderColor = variant === 'secondary' ? C.primaryMid : 'transparent';
+function AlertIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx={12} cy={12} r={10} />
+      <line x1={12} y1={8} x2={12} y2={12} />
+      <line x1={12} y1={16} x2={12.01} y2={16} />
+    </svg>
+  );
+}
 
+function Spinner({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx={12} cy={12} r={10} opacity={0.25} />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth={2} strokeDasharray="15.7" strokeLinecap="round" style={{ animation: 'spin 1s linear infinite' }} />
+    </svg>
+  );
+}
+
+/* ─── UI COMPONENTS ────────────────────────────────── */
+function Alert({ type = 'error', message }) {
+  const colors = {
+    error: { bg: COLORS.errorLight, border: '#FCA5A5', text: COLORS.error, icon: <AlertIcon /> },
+    success: { bg: COLORS.successLight, border: '#86EFAC', text: COLORS.success, icon: <CheckIcon /> },
+    warning: { bg: COLORS.warningLight, border: '#FDE68A', text: COLORS.warning, icon: <AlertIcon /> },
+  };
+  const color = colors[type] || colors.error;
+  return (
+    <div
+      style={{
+        background: color.bg,
+        border: `1px solid ${color.border}`,
+        borderRadius: 8,
+        padding: '12px 14px',
+        marginBottom: 16,
+        fontSize: 13,
+        color: color.text,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{color.icon}</div>
+      <div style={{ flex: 1 }}>{message}</div>
+    </div>
+  );
+}
+
+function FormField({ label, required = false, error = null, children }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      {label && (
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: COLORS.text, marginBottom: 8 }}>
+          {label}
+          {required && <span style={{ color: COLORS.error }}> *</span>}
+        </label>
+      )}
+      {children}
+      {error && <p style={{ fontSize: 12, color: COLORS.error, margin: '6px 0 0' }}>{error}</p>}
+    </div>
+  );
+}
+
+function TextInput({ type = 'text', placeholder, value, onChange, disabled = false, icon: IconComponent = null, onIconClick = null }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          width: '100%',
+          height: 46,
+          paddingLeft: 14,
+          paddingRight: IconComponent ? 44 : 14,
+          border: `1px solid ${focused ? COLORS.primaryLight : COLORS.border}`,
+          borderRadius: 8,
+          fontSize: 14,
+          color: COLORS.text,
+          background: disabled ? '#F3F4F6' : COLORS.surface,
+          outline: 'none',
+          boxShadow: focused ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
+          transition: 'all 0.15s ease',
+          fontFamily: 'inherit',
+          opacity: disabled ? 0.6 : 1,
+        }}
+      />
+      {IconComponent && (
+        <button
+          type="button"
+          onClick={onIconClick}
+          disabled={disabled}
+          style={{
+            position: 'absolute',
+            right: 14,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: COLORS.textMuted,
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {IconComponent}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SelectInput({ options, value, onChange, disabled = false, placeholder = 'Select an option' }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <select
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          width: '100%',
+          height: 46,
+          paddingLeft: 14,
+          paddingRight: 36,
+          border: `1px solid ${focused ? COLORS.primaryLight : COLORS.border}`,
+          borderRadius: 8,
+          fontSize: 14,
+          color: value ? COLORS.text : COLORS.textMuted,
+          background: disabled ? '#F3F4F6' : COLORS.surface,
+          outline: 'none',
+          boxShadow: focused ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
+          transition: 'all 0.15s ease',
+          fontFamily: 'inherit',
+          appearance: 'none',
+          cursor: 'pointer',
+          opacity: disabled ? 0.6 : 1,
+        }}
+      >
+        <option value="" disabled>{placeholder}</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+      <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+        <svg width={12} height={8} viewBox="0 0 12 8" fill="none">
+          <path d="M1 1L6 6L11 1" stroke={COLORS.textMuted} strokeWidth={1.5} strokeLinecap="round" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function CheckboxInput({ id, label, checked, onChange, disabled = false }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+        style={{
+          width: 18,
+          height: 18,
+          cursor: 'pointer',
+          marginTop: 2,
+          flexShrink: 0,
+          opacity: disabled ? 0.6 : 1,
+        }}
+      />
+      <label htmlFor={id} style={{ fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.5, cursor: 'pointer' }}>
+        {label}
+      </label>
+    </div>
+  );
+}
+
+function PasswordStrengthBar({ password }) {
+  const strength = getPasswordStrength(password);
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ height: 3, background: COLORS.border, borderRadius: 2, overflow: 'hidden' }}>
+        <div
+          style={{
+            height: '100%',
+            width: `${strength.percentage}%`,
+            background: strength.color,
+            borderRadius: 2,
+            transition: 'all 0.3s ease',
+          }}
+        />
+      </div>
+      <p style={{ fontSize: 12, color: strength.color, margin: '6px 0 0' }}>
+        {strength.label}
+      </p>
+    </div>
+  );
+}
+
+function Button({ onClick, loading = false, disabled = false, variant = 'primary', children, fullWidth = true }) {
+  const isDisabled = disabled || loading;
+  const styles = {
+    primary: {
+      bg: isDisabled ? '#C4B5FD' : COLORS.primary,
+      color: COLORS.surface,
+      border: 'none',
+    },
+    secondary: {
+      bg: COLORS.surface,
+      color: COLORS.primary,
+      border: `1px solid ${COLORS.primaryLight}`,
+    },
+  };
+  const style = styles[variant];
   return (
     <button
       onClick={onClick}
-      disabled={disabled || loading}
+      disabled={isDisabled}
       style={{
-        width: '100%',
-        height: 50,
-        background: bgColor,
-        color: textColor,
-        border: `1px solid ${borderColor}`,
+        width: fullWidth ? '100%' : 'auto',
+        height: 48,
+        background: style.bg,
+        color: style.color,
+        border: style.border,
         borderRadius: 8,
-        fontFamily: 'inherit',
         fontSize: 15,
         fontWeight: 600,
-        cursor: disabled || loading ? 'not-allowed' : 'pointer',
-        transition: 'background .15s, color .15s',
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        transition: 'all 0.15s ease',
+        fontFamily: 'inherit',
         letterSpacing: 0.2,
-        marginTop: 4,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 10,
+        opacity: loading ? 0.8 : 1,
       }}
     >
-      {loading && <Spinner />}
+      {loading && <Spinner size={16} />}
       {children}
     </button>
   );
@@ -128,153 +357,75 @@ function Btn({ onClick, loading, children, disabled, variant = 'primary' }) {
 
 function Divider() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0', color: C.textMuted, fontSize: 13 }}>
-      <div style={{ flex: 1, height: 1, background: C.border }} />
-      Or
-      <div style={{ flex: 1, height: 1, background: C.border }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0', color: COLORS.textMuted, fontSize: 13 }}>
+      <div style={{ flex: 1, height: 1, background: COLORS.border }} />
+      Or continue with
+      <div style={{ flex: 1, height: 1, background: COLORS.border }} />
     </div>
   );
 }
 
-function Field({ label, required, children }) {
+function GoogleButton({ onClick, loading = false, disabled = false }) {
   return (
-    <div style={{ marginBottom: 18 }}>
-      {label && (
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 7 }}>
-          {label}
-          {required && <span style={{ color: C.error }}> *</span>}
-        </label>
-      )}
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      style={{
+        width: '100%',
+        height: 48,
+        background: COLORS.surface,
+        color: COLORS.text,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: 8,
+        fontSize: 15,
+        fontWeight: 600,
+        cursor: disabled || loading ? 'not-allowed' : 'pointer',
+        transition: 'all 0.15s ease',
+        fontFamily: 'inherit',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        opacity: disabled || loading ? 0.6 : 1,
+      }}
+    >
+      <GoogleIcon />
+      {loading ? 'Signing in...' : 'Continue with Google'}
+    </button>
+  );
+}
+
+function FormContainer({ children, isMobile }) {
+  return (
+    <div
+      style={{
+        background: COLORS.surface,
+        borderRadius: isMobile ? 12 : 16,
+        padding: isMobile ? '24px 20px' : '40px 48px',
+        maxWidth: 460,
+        width: '100%',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
+      }}
+    >
       {children}
     </div>
   );
 }
 
-function Input({ type = 'text', placeholder, value, onChange, style = {}, ...props }) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <input
-      type={type}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={{
-        ...baseInput,
-        borderColor: focused ? C.primaryMid : C.border,
-        boxShadow: focused ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
-        ...style,
-      }}
-      {...props}
-    />
-  );
-}
-
-function ImagePanel() {
-  return (
-    <div
-      style={{
-        flex: '0 0 46%',
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: '16px 0 0 16px',
-        minHeight: 560,
-        background: 'linear-gradient(160deg, #0e0120 0%, #1f0546 30%, #3b0f6e 60%, #5B21B6 85%, #7C3AED 100%)',
-      }}
-    >
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(91,33,182,0.18)', borderRadius: '16px 0 0 16px' }} />
-      <div style={{ position: 'absolute', bottom: 28, left: 28, right: 28 }}>
-        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 1.7, fontWeight: 400, letterSpacing: 0.2 }}>
-          Empowering clean energy infrastructure
-          <br />
-          across African emerging markets
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function TwoCol({ children }) {
-  const { isMobile, isTablet, isDesktop } = useBreakpoint();
-  const singleCol = !isDesktop;
-  return (
-    <div
-      style={{
-        display: 'flex',
-        background: C.white,
-        borderRadius: isMobile ? 16 : 20,
-        overflow: 'hidden',
-        width: '100%',
-        maxWidth: singleCol ? 460 : 1020,
-        boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
-      }}
-    >
-      {isDesktop && <ImagePanel />}
-      <div
-        style={{
-          flex: 1,
-          padding: isMobile ? '32px 24px 28px' : isTablet ? '40px 44px' : '48px 52px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          overflowY: 'auto',
-          maxHeight: isMobile ? 'none' : '100vh',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/* ──────── CUSTOM GOOGLE BUTTON ──────────── */
-function CustomGoogleButton({ onClick, loading }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      style={{
-        width: '100%',
-        height: 50,
-        background: C.white,
-        color: C.text,
-        border: `1px solid ${C.border}`,
-        borderRadius: 8,
-        fontFamily: 'inherit',
-        fontSize: 15,
-        fontWeight: 600,
-        cursor: loading ? 'not-allowed' : 'pointer',
-        transition: 'background .15s, border-color .15s',
-        letterSpacing: 0.2,
-        marginTop: 4,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        opacity: loading ? 0.6 : 1,
-      }}
-    >
-      <GoogleIcon />
-      Continue with Google
-    </button>
-  );
-}
-
-/* ──────── LOGIN PAGE ──────────── */
-function LoginPage({ onNavigate, onLoginSuccess }) {
-  const [email, setEmail] = useState(() => localStorage.getItem('rememberEmail') || '');
+/* ─── PAGES ────────────────────────────────────────── */
+function LoginPage({ onNavigate, onSuccess }) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('rememberEmail'));
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [focusPw, setFocusPw] = useState(false);
   const { isMobile } = useBreakpoint();
 
   const handleLogin = async () => {
     setError('');
-    if (!email.includes('@') || !email.includes('.')) {
+    
+    if (!validateEmail(email)) {
       setError('Please enter a valid email address');
       return;
     }
@@ -286,63 +437,47 @@ function LoginPage({ onNavigate, onLoginSuccess }) {
     setLoading(true);
     try {
       const response = await authAPI.login({ email, password });
-      if (response.data && response.data.accessToken) {
+      if (response.data?.accessToken) {
         localStorage.setItem('accessToken', response.data.accessToken);
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
         localStorage.setItem('userEmail', email);
         localStorage.setItem('userName', response.data.user?.firstName || email.split('@')[0]);
-        
-        // Handle remember me
         if (rememberMe) {
           localStorage.setItem('rememberEmail', email);
-        } else {
-          localStorage.removeItem('rememberEmail');
         }
-        
-        onLoginSuccess();
+        onSuccess();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-      console.error('Login error:', err);
+      setError(err.response?.data?.message || 'Failed to sign in. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setError('');
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-      
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       if (!clientId) {
-        setError('Google Client ID not configured. Contact support.');
+        setError('Google sign-in is not configured');
         setLoading(false);
         return;
       }
 
       if (!window.google?.accounts?.id) {
-        setError('Google SDK not loaded. Please refresh the page.');
+        setError('Google SDK not ready. Please refresh.');
         setLoading(false);
         return;
       }
 
-      // Request ID token directly
       window.google.accounts.id.requestIdToken({
         client_id: clientId,
         callback: async (response) => {
           try {
-            if (!response.credential) {
-              setError('Failed to get credential from Google');
-              setLoading(false);
-              return;
-            }
-
-            // Call backend to verify token and create/authenticate user
             const result = await authAPI.googleAuth({ idToken: response.credential });
-            
             if (result?.data?.accessToken) {
               localStorage.setItem('accessToken', result.data.accessToken);
               if (result.data.refreshToken) {
@@ -350,329 +485,196 @@ function LoginPage({ onNavigate, onLoginSuccess }) {
               }
               localStorage.setItem('userEmail', result.data.user?.email || '');
               localStorage.setItem('userName', result.data.user?.firstName || 'User');
-              if (rememberMe) {
-                localStorage.setItem('rememberEmail', result.data.user?.email || '');
-              }
-              onLoginSuccess();
-            } else {
-              setError('Authentication failed. Please try again.');
-              setLoading(false);
+              onSuccess();
             }
           } catch (err) {
-            const errorMsg = err.response?.data?.message || err.message || 'Google sign-in failed';
-            setError(errorMsg);
-            console.error('Google callback error:', err);
+            setError(err.response?.data?.message || 'Google sign-in failed');
+          } finally {
             setLoading(false);
           }
         },
         error_callback: () => {
-          setError('Google sign-in was cancelled or failed');
+          setError('Google sign-in was cancelled');
           setLoading(false);
         },
       });
-
-      // Show the native Google sign-in prompt
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // If One Tap is not shown, user needs to click the button
-          // This is expected behavior - the prompt might not show in certain contexts
-        }
-      });
     } catch (err) {
-      setError('Google sign-in error: ' + (err.message || 'Unknown error'));
-      console.error('Google sign-in error:', err);
+      setError('Google sign-in error');
       setLoading(false);
     }
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !loading) {
+      handleLogin();
+    }
+  };
+
   return (
-    <TwoCol>
+    <FormContainer isMobile={isMobile}>
       <div style={{ marginBottom: 28 }}>
         <LogoFull size="medium" />
       </div>
-      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 6px', letterSpacing: -0.5 }}>
+      <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px', letterSpacing: -0.5 }}>
         Welcome back
       </h1>
-      <p style={{ fontSize: 14, color: C.textGray, marginBottom: isMobile ? 20 : 28, lineHeight: 1.5 }}>
-        Sign in to access your community dashboard
+      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+        Sign in to access your community
       </p>
 
-      {error && (
-        <div style={{ background: '#FEE2E2', border: `1px solid ${C.error}`, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.error }}>
-          {error}
-        </div>
-      )}
+      {error && <Alert type="error" message={error} />}
 
-      <Field label="Email address">
-        <Input
+      <FormField label="Email address" required>
+        <TextInput
           type="email"
-          placeholder="info@tribescapital.com"
+          placeholder="you@example.com"
           value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setError('');
-          }}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+          onKeyPress={handleKeyPress}
+        />
+      </FormField>
+
+      <FormField label="Password" required>
+        <TextInput
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
+          icon={<EyeIcon open={showPassword} />}
+          onIconClick={() => setShowPassword(!showPassword)}
+          onKeyPress={handleKeyPress}
+        />
+      </FormField>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <CheckboxInput
+          id="rememberMe"
+          label="Remember me"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
           disabled={loading}
         />
-      </Field>
-
-      <Field label="Password">
-        <div style={{ position: 'relative' }}>
-          <input
-            type={showPw ? 'text' : 'password'}
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setError('');
-            }}
-            onFocus={() => setFocusPw(true)}
-            onBlur={() => setFocusPw(false)}
-            disabled={loading}
-            style={{
-              ...baseInput,
-              paddingRight: 44,
-              borderColor: focusPw ? C.primaryMid : C.border,
-              boxShadow: focusPw ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
-              opacity: loading ? 0.6 : 1,
-            }}
-          />
-          <button
-            onClick={() => setShowPw((p) => !p)}
-            style={{
-              position: 'absolute',
-              right: 14,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: C.textGray,
-              display: 'flex',
-              alignItems: 'center',
-              padding: 0,
-            }}
-            type="button"
-            disabled={loading}
-          >
-            {showPw ? <EyeOff /> : <EyeOpen />}
-          </button>
-        </div>
-      </Field>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input
-            type="checkbox"
-            id="rememberMe"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-            disabled={loading}
-            style={{ width: 16, height: 16, cursor: 'pointer' }}
-          />
-          <label htmlFor="rememberMe" style={{ fontSize: 13, color: C.textGray, cursor: 'pointer' }}>
-            Remember me
-          </label>
-        </div>
         <button
           onClick={() => onNavigate('forgot')}
+          disabled={loading}
           style={{
             background: 'none',
             border: 'none',
-            cursor: 'pointer',
             fontSize: 13,
-            color: C.primaryMid,
+            color: COLORS.primaryLight,
             fontWeight: 500,
+            cursor: 'pointer',
             fontFamily: 'inherit',
           }}
-          disabled={loading}
         >
-          Forgot Password?
+          Forgot password?
         </button>
       </div>
 
-      <Btn onClick={handleLogin} loading={loading} disabled={loading}>
-        {loading ? 'Signing in…' : 'Sign In'}
-      </Btn>
+      <Button onClick={handleLogin} loading={loading} disabled={loading}>
+        Sign in
+      </Button>
 
       <Divider />
 
-      <CustomGoogleButton onClick={handleGoogleSignIn} loading={loading} />
+      <GoogleButton onClick={handleGoogleSignIn} loading={loading} disabled={loading} />
 
-      <p style={{ textAlign: 'center', fontSize: 14, color: C.textGray, marginTop: 22 }}>
+      <p style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
         Don't have an account?{' '}
         <button
           onClick={() => onNavigate('signup')}
+          disabled={loading}
           style={{
             background: 'none',
             border: 'none',
-            cursor: 'pointer',
             fontSize: 14,
-            color: C.primaryMid,
+            color: COLORS.primaryLight,
             fontWeight: 600,
+            cursor: 'pointer',
             fontFamily: 'inherit',
           }}
-          disabled={loading}
         >
           Create one
         </button>
       </p>
-    </TwoCol>
+    </FormContainer>
   );
 }
 
-/* ──────── SIGNUP PAGE ──────────── */
-function SignupPage({ onNavigate, onLoginSuccess }) {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [agreed, setAgreed] = useState(false);
+function SignupPage({ onNavigate, onSuccess }) {
+  const [formData, setFormData] = useState({ fullName: '', email: '', role: '', password: '', agreedToTerms: false });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [focusPw, setFocusPw] = useState(false);
-  const [strength, setStrength] = useState({
-    pct: 0,
-    color: C.border,
-    hint: 'Use 8+ characters with a mix of letters, numbers & symbols',
-    score: 0,
-  });
+  const [fieldErrors, setFieldErrors] = useState({});
   const { isMobile } = useBreakpoint();
 
-  const checkStrength = (val) => {
-    let score = 0;
-    const hasUppercase = /[A-Z]/.test(val);
-    const hasLowercase = /[a-z]/.test(val);
-    const hasNumber = /[0-9]/.test(val);
-    const hasSymbol = /[^A-Za-z0-9]/.test(val);
-    const isLongEnough = val.length >= 12;
-
-    if (isLongEnough) score++;
-    if (hasUppercase) score++;
-    if (hasLowercase) score++;
-    if (hasNumber) score++;
-    if (hasSymbol) score++;
-
-    const levels = [
-      { pct: 0, color: C.border, hint: 'Use 12+ characters with uppercase, lowercase, numbers & symbols' },
-      { pct: 20, color: C.error, hint: 'Weak — add more character variety' },
-      { pct: 40, color: '#F59E0B', hint: 'Fair — make it stronger' },
-      { pct: 60, color: '#3B82F6', hint: 'Good — almost there' },
-      { pct: 80, color: '#10B981', hint: 'Strong — very good' },
-      { pct: 100, color: C.success, hint: 'Excellent password ✓' },
-    ];
-    setStrength({ ...levels[score], score });
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.fullName.trim()) errors.fullName = 'Full name is required';
+    if (!validateEmail(formData.email)) errors.email = 'Valid email is required';
+    if (!formData.role) errors.role = 'Please select an account type';
+    const pwValidation = validatePassword(formData.password);
+    if (!formData.password || !pwValidation.minLength) errors.password = 'Password must be at least 12 characters';
+    if (formData.password && (!pwValidation.hasUppercase || !pwValidation.hasLowercase || !pwValidation.hasNumber || !pwValidation.hasSymbol)) {
+      errors.password = 'Include uppercase, lowercase, numbers, and symbols';
+    }
+    if (!formData.agreedToTerms) errors.agreedToTerms = 'Please agree to terms';
+    return errors;
   };
 
   const handleSignup = async () => {
     setError('');
-
-    if (!fullName.trim()) {
-      setError('Please enter your full name');
-      return;
-    }
-    if (!email.includes('@') || !email.includes('.')) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    if (!role) {
-      setError('Please select your account type');
-      return;
-    }
-    if (password.length < 12) {
-      setError('Password must be at least 12 characters');
-      return;
-    }
-    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
-      setError('Password must contain uppercase, lowercase, numbers, and symbols');
-      return;
-    }
-    if (!agreed) {
-      setError('Please agree to the Terms of Use to continue');
-      return;
-    }
+    const errors = validateForm();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) return;
 
     setLoading(true);
     try {
+      const [firstName, ...lastNameParts] = formData.fullName.split(' ');
       const response = await authAPI.register({
-        firstName: fullName.split(' ')[0],
-        lastName: fullName.includes(' ') ? fullName.split(' ').slice(1).join(' ') : '',
-        email,
-        password,
-        passwordConfirmation: password,
-        role,
+        firstName,
+        lastName: lastNameParts.join(' '),
+        email: formData.email,
+        password: formData.password,
+        passwordConfirmation: formData.password,
+        role: formData.role,
       });
       if (response.data) {
-        // Store email for verification page
-        localStorage.setItem('verificationEmail', email);
-        localStorage.setItem('signupFullName', fullName.split(' ')[0]);
+        localStorage.setItem('verificationEmail', formData.email);
         onNavigate('verify');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed. Please try again.');
-      console.error('Signup error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignUp = async (event) => {
+  const handleGoogleSignUp = async () => {
+    setError('');
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-      if (event && event.credential) {
-        const response = await authAPI.googleAuth({ idToken: event.credential });
-        if (response.data && response.data.accessToken) {
-          localStorage.setItem('accessToken', response.data.accessToken);
-          if (response.data.refreshToken) {
-            localStorage.setItem('refreshToken', response.data.refreshToken);
-          }
-          localStorage.setItem('userEmail', response.data.user?.email || '');
-          localStorage.setItem('userName', response.data.user?.firstName || 'User');
-          onLoginSuccess();
-        }
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Google sign-up failed. Please try again.');
-      console.error('Google sign-up error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignUpCustom = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       if (!clientId) {
-        setError('Google Client ID not configured. Contact support.');
+        setError('Google sign-up is not configured');
         setLoading(false);
         return;
       }
 
       if (!window.google?.accounts?.id) {
-        setError('Google SDK not loaded. Please refresh the page.');
+        setError('Google SDK not ready. Please refresh.');
         setLoading(false);
         return;
       }
 
-      // Request ID token directly
       window.google.accounts.id.requestIdToken({
         client_id: clientId,
         callback: async (response) => {
           try {
-            if (!response.credential) {
-              setError('Failed to get credential from Google');
-              setLoading(false);
-              return;
-            }
-
-            // Call backend to verify token and create/authenticate user
             const result = await authAPI.googleAuth({ idToken: response.credential });
-            
             if (result?.data?.accessToken) {
               localStorage.setItem('accessToken', result.data.accessToken);
               if (result.data.refreshToken) {
@@ -680,218 +682,152 @@ function SignupPage({ onNavigate, onLoginSuccess }) {
               }
               localStorage.setItem('userEmail', result.data.user?.email || '');
               localStorage.setItem('userName', result.data.user?.firstName || 'User');
-              onLoginSuccess();
-            } else {
-              setError('Authentication failed. Please try again.');
-              setLoading(false);
+              onSuccess();
             }
           } catch (err) {
-            const errorMsg = err.response?.data?.message || err.message || 'Google sign-up failed';
-            setError(errorMsg);
-            console.error('Google callback error:', err);
+            setError(err.response?.data?.message || 'Google sign-up failed');
+          } finally {
             setLoading(false);
           }
         },
         error_callback: () => {
-          setError('Google sign-up was cancelled or failed');
+          setError('Google sign-up was cancelled');
           setLoading(false);
         },
       });
-
-      // Show the native Google sign-in prompt
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // If One Tap is not shown, user needs to click the button
-          // This is expected behavior - the prompt might not show in certain contexts
-        }
-      });
     } catch (err) {
-      setError('Google sign-up error: ' + (err.message || 'Unknown error'));
-      console.error('Google sign-up error:', err);
+      setError('Google sign-up error');
       setLoading(false);
     }
   };
 
   return (
-    <TwoCol>
+    <FormContainer isMobile={isMobile}>
       <div style={{ marginBottom: 28 }}>
         <LogoFull size="medium" />
       </div>
-      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 6px', letterSpacing: -0.5 }}>
-        Create your account
+      <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px', letterSpacing: -0.5 }}>
+        Create account
       </h1>
-      <p style={{ fontSize: 14, color: C.textGray, marginBottom: isMobile ? 20 : 24, lineHeight: 1.5 }}>
-        Join the network of energy infrastructure stakeholders
+      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+        Join the community of clean energy leaders
       </p>
 
-      {error && (
-        <div style={{ background: '#FEE2E2', border: `1px solid ${C.error}`, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.error }}>
-          {error}
-        </div>
-      )}
+      {error && <Alert type="error" message={error} />}
 
-      <Field label="Full name" required>
-        <Input placeholder="Ali Hassan" value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={loading} />
-      </Field>
-
-      <Field label="Email address" required>
-        <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} />
-      </Field>
-
-      <Field label="Account type" required>
-        <div style={{ position: 'relative' }}>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            disabled={loading}
-            style={{
-              ...baseInput,
-              appearance: 'none',
-              cursor: 'pointer',
-              color: role ? C.text : C.textMuted,
-              paddingRight: 36,
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            <option value="" disabled>
-              Select your role
-            </option>
-            <option>Facility Operator</option>
-            <option>Ecosystem Partner</option>
-            <option>Community Member</option>
-          </select>
-          <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-            <svg width={12} height={8} viewBox="0 0 12 8" fill="none">
-              <path d="M1 1L6 6L11 1" stroke={C.textGray} strokeWidth={1.5} strokeLinecap="round" />
-            </svg>
-          </span>
-        </div>
-      </Field>
-
-      <Field label="Password" required>
-        <div style={{ position: 'relative' }}>
-          <input
-            type={showPw ? 'text' : 'password'}
-            placeholder="Create a strong password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              checkStrength(e.target.value);
-            }}
-            onFocus={() => setFocusPw(true)}
-            onBlur={() => setFocusPw(false)}
-            disabled={loading}
-            style={{
-              ...baseInput,
-              paddingRight: 44,
-              borderColor: focusPw ? C.primaryMid : C.border,
-              boxShadow: focusPw ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
-              opacity: loading ? 0.6 : 1,
-            }}
-          />
-          <button
-            onClick={() => setShowPw((p) => !p)}
-            style={{
-              position: 'absolute',
-              right: 14,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: C.textGray,
-              display: 'flex',
-              alignItems: 'center',
-              padding: 0,
-            }}
-            type="button"
-            disabled={loading}
-          >
-            {showPw ? <EyeOff /> : <EyeOpen />}
-          </button>
-        </div>
-        <div style={{ height: 3, background: C.border, borderRadius: 2, marginTop: 8, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${strength.pct}%`, background: strength.color, borderRadius: 2, transition: 'width .3s, background .3s' }} />
-        </div>
-        <p style={{ fontSize: 12, color: strength.score === 0 ? C.textMuted : strength.color, marginTop: 5 }}>
-          {strength.hint}
-        </p>
-      </Field>
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 18 }}>
-        <input
-          type="checkbox"
-          id="terms"
-          checked={agreed}
-          onChange={(e) => setAgreed(e.target.checked)}
+      <FormField label="Full name" required error={fieldErrors.fullName}>
+        <TextInput
+          placeholder="Ali Hassan"
+          value={formData.fullName}
+          onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
           disabled={loading}
-          style={{ width: 18, height: 18, cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
         />
-        <label htmlFor="terms" style={{ fontSize: 13, color: C.textGray, lineHeight: 1.5, cursor: 'pointer' }}>
-          I agree to the <span style={{ fontWeight: 600, color: C.primaryMid }}>Terms of Use</span> and{' '}
-          <span style={{ fontWeight: 600, color: C.primaryMid }}>Privacy Policy</span>
-        </label>
+      </FormField>
+
+      <FormField label="Email address" required error={fieldErrors.email}>
+        <TextInput
+          type="email"
+          placeholder="you@example.com"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          disabled={loading}
+        />
+      </FormField>
+
+      <FormField label="Account type" required error={fieldErrors.role}>
+        <SelectInput
+          options={['Facility Operator', 'Investor', 'Community Member']}
+          value={formData.role}
+          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          disabled={loading}
+          placeholder="Select your role"
+        />
+      </FormField>
+
+      <FormField label="Password" required error={fieldErrors.password}>
+        <TextInput
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Create a strong password"
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          disabled={loading}
+          icon={<EyeIcon open={showPassword} />}
+          onIconClick={() => setShowPassword(!showPassword)}
+        />
+        {formData.password && <PasswordStrengthBar password={formData.password} />}
+      </FormField>
+
+      <div style={{ marginBottom: 24 }}>
+        <CheckboxInput
+          id="terms"
+          label={
+            <>
+              I agree to the <span style={{ fontWeight: 600, color: COLORS.primaryLight }}>Terms of Use</span> and{' '}
+              <span style={{ fontWeight: 600, color: COLORS.primaryLight }}>Privacy Policy</span>
+            </>
+          }
+          checked={formData.agreedToTerms}
+          onChange={(e) => setFormData({ ...formData, agreedToTerms: e.target.checked })}
+          disabled={loading}
+        />
+        {fieldErrors.agreedToTerms && <p style={{ fontSize: 12, color: COLORS.error, margin: '8px 0 0 28px' }}>{fieldErrors.agreedToTerms}</p>}
       </div>
 
-      <Btn onClick={handleSignup} loading={loading} disabled={loading || !agreed}>
-        {loading ? 'Creating account…' : 'Create Account'}
-      </Btn>
+      <Button onClick={handleSignup} loading={loading} disabled={loading}>
+        Create account
+      </Button>
 
       <Divider />
 
-      <CustomGoogleButton onClick={handleGoogleSignUpCustom} loading={loading} />
+      <GoogleButton onClick={handleGoogleSignUp} loading={loading} disabled={loading} />
 
-      <p style={{ textAlign: 'center', fontSize: 14, color: C.textGray, marginTop: 22 }}>
+      <p style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
         Already have an account?{' '}
         <button
           onClick={() => onNavigate('login')}
+          disabled={loading}
           style={{
             background: 'none',
             border: 'none',
-            cursor: 'pointer',
             fontSize: 14,
-            color: C.primaryMid,
+            color: COLORS.primaryLight,
             fontWeight: 600,
+            cursor: 'pointer',
             fontFamily: 'inherit',
           }}
-          disabled={loading}
         >
           Sign in
         </button>
       </p>
-    </TwoCol>
+    </FormContainer>
   );
 }
 
-/* ──────── EMAIL VERIFICATION PAGE ──────────── */
-function VerifyEmailPage({ onNavigate, onLoginSuccess }) {
+function VerifyPage({ onNavigate, onSuccess }) {
+  const email = localStorage.getItem('verificationEmail') || '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [token, setToken] = useState('');
-  const email = localStorage.getItem('verificationEmail') || '';
+  const [message, setMessage] = useState('');
   const { isMobile } = useBreakpoint();
 
   useEffect(() => {
-    // Check if token is in URL
     const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
-    if (urlToken) {
-      setToken(urlToken);
-      verifyToken(urlToken);
+    const token = params.get('token');
+    if (token) {
+      verifyEmail(token);
     }
   }, []);
 
-  const verifyToken = async (emailToken) => {
+  const verifyEmail = async (token) => {
     setLoading(true);
     try {
-      await authAPI.verifyEmail(emailToken);
+      await authAPI.verifyEmail(token);
       setSuccess(true);
-      setTimeout(() => {
-        onNavigate('login');
-      }, 2000);
+      setMessage('Email verified successfully!');
+      setTimeout(() => onNavigate('login'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Verification failed. Please try again.');
+      setError(err.response?.data?.message || 'Verification failed');
     } finally {
       setLoading(false);
     }
@@ -899,12 +835,11 @@ function VerifyEmailPage({ onNavigate, onLoginSuccess }) {
 
   const handleResendEmail = async () => {
     setLoading(true);
-    setError('');
     try {
-      // In production, this would call a resend-verification-email endpoint
-      setError('Please check your email for the verification link');
+      await authAPI.resendVerification(email);
+      setMessage('Verification email sent!');
     } catch (err) {
-      setError('Failed to resend email. Please try again.');
+      setError(err.response?.data?.message || 'Failed to resend');
     } finally {
       setLoading(false);
     }
@@ -912,100 +847,247 @@ function VerifyEmailPage({ onNavigate, onLoginSuccess }) {
 
   if (success) {
     return (
-      <TwoCol>
+      <FormContainer isMobile={isMobile}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ marginBottom: 28 }}>
-            <LogoFull size="medium" />
+          <div style={{ width: 80, height: 80, background: COLORS.successLight, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+            <div style={{ color: COLORS.success, display: 'flex', alignItems: 'center' }}>
+              <CheckIcon />
+            </div>
           </div>
-          <div style={{ width: 80, height: 80, background: '#DCFCE7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
-            <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={C.success} strokeWidth={2}>
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </div>
-          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 12px', letterSpacing: -0.5 }}>
-            Email Verified!
+          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 12px' }}>
+            Email verified!
           </h1>
-          <p style={{ fontSize: 14, color: C.textGray, marginBottom: 28 }}>
-            Your email has been verified. Redirecting to sign in...
+          <p style={{ fontSize: 14, color: COLORS.textSecondary }}>
+            Your account is ready. Redirecting to sign in...
           </p>
         </div>
-      </TwoCol>
+      </FormContainer>
     );
   }
 
   return (
-    <TwoCol>
-      <div style={{ marginBottom: 28 }}>
-        <LogoFull size="medium" />
-      </div>
-      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 6px', letterSpacing: -0.5 }}>
+    <FormContainer isMobile={isMobile}>
+      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
         Verify your email
       </h1>
-      <p style={{ fontSize: 14, color: C.textGray, marginBottom: 28, lineHeight: 1.5 }}>
-        We've sent a verification link to <span style={{ fontWeight: 600 }}>{email}</span>. Click the link in your email to verify your account.
+      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+        We sent a verification link to <span style={{ fontWeight: 600 }}>{email}</span>
       </p>
 
-      {error && (
-        <div style={{ background: '#FEE2E2', border: `1px solid ${C.error}`, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.error }}>
-          {error}
-        </div>
-      )}
+      {error && <Alert type="error" message={error} />}
+      {message && <Alert type="success" message={message} />}
 
-      {success === false && (
-        <div style={{ background: '#FEF3C7', border: `1px solid #FCD34D`, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: '#B45309' }}>
-          If you don't see the email, check your spam folder or click the button below to resend it.
-        </div>
-      )}
+      <Button onClick={handleResendEmail} loading={loading} disabled={loading} style={{ marginBottom: 16 }}>
+        Resend verification email
+      </Button>
 
-      <div style={{ marginBottom: 18 }}>
-        <Btn onClick={handleResendEmail} loading={loading} disabled={loading}>
-          {loading ? 'Resending…' : 'Resend Verification Email'}
-        </Btn>
-      </div>
-
-      <p style={{ textAlign: 'center', fontSize: 13, color: C.textGray }}>
-        Already verified?{' '}
+      <p style={{ textAlign: 'center', fontSize: 13, color: COLORS.textSecondary }}>
         <button
           onClick={() => onNavigate('login')}
           style={{
             background: 'none',
             border: 'none',
-            cursor: 'pointer',
-            color: C.primaryMid,
-            fontWeight: 600,
-            fontFamily: 'inherit',
             fontSize: 13,
+            color: COLORS.primaryLight,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
           }}
         >
-          Sign in here
+          Back to sign in
         </button>
       </p>
-    </TwoCol>
+    </FormContainer>
   );
 }
 
-/* ──────── MAIN AUTH PAGE ──────────── */
+function ForgotPasswordPage({ onNavigate, onSuccess }) {
+  const [step, setStep] = useState('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const { isMobile } = useBreakpoint();
+
+  const handleSendCode = async () => {
+    setError('');
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email');
+      return;
+    }
+    setLoading(true);
+    try {
+      await authAPI.forgotPassword(email);
+      setStep('code');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send reset code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setError('');
+    if (!code) {
+      setError('Please enter the code from your email');
+      return;
+    }
+    if (!validatePassword(password).minLength) {
+      setError('Password must be at least 12 characters with mixed types');
+      return;
+    }
+    setLoading(true);
+    try {
+      await authAPI.resetPassword({ email, code, password, passwordConfirmation: password });
+      setStep('success');
+      setTimeout(() => onNavigate('login'), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (step === 'success') {
+    return (
+      <FormContainer isMobile={isMobile}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 80, height: 80, background: COLORS.successLight, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+            <div style={{ color: COLORS.success }}>✓</div>
+          </div>
+          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 12px' }}>
+            Password reset!
+          </h1>
+          <p style={{ fontSize: 14, color: COLORS.textSecondary }}>
+            Your password has been reset. Redirecting to sign in...
+          </p>
+        </div>
+      </FormContainer>
+    );
+  }
+
+  if (step === 'code') {
+    return (
+      <FormContainer isMobile={isMobile}>
+        <button
+          onClick={() => setStep('email')}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: 13,
+            color: COLORS.primaryLight,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            marginBottom: 20,
+          }}
+        >
+          ← Back
+        </button>
+        <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
+          Reset your password
+        </h1>
+        <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+          Enter the code from your email and create a new password
+        </p>
+
+        {error && <Alert type="error" message={error} />}
+
+        <FormField label="Reset code" required>
+          <TextInput
+            placeholder="Enter 6-digit code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            disabled={loading}
+          />
+        </FormField>
+
+        <FormField label="New password" required>
+          <TextInput
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Create strong password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            icon={<EyeIcon open={showPassword} />}
+            onIconClick={() => setShowPassword(!showPassword)}
+          />
+          {password && <PasswordStrengthBar password={password} />}
+        </FormField>
+
+        <Button onClick={handleResetPassword} loading={loading} disabled={loading}>
+          Reset password
+        </Button>
+      </FormContainer>
+    );
+  }
+
+  return (
+    <FormContainer isMobile={isMobile}>
+      <button
+        onClick={() => onNavigate('login')}
+        style={{
+          background: 'none',
+          border: 'none',
+          fontSize: 13,
+          color: COLORS.primaryLight,
+          fontWeight: 600,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          marginBottom: 20,
+        }}
+      >
+        ← Back to sign in
+      </button>
+      <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
+        Forgot password?
+      </h1>
+      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+        Enter your email and we'll send you a code to reset your password
+      </p>
+
+      {error && <Alert type="error" message={error} />}
+
+      <FormField label="Email address" required>
+        <TextInput
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+        />
+      </FormField>
+
+      <Button onClick={handleSendCode} loading={loading} disabled={loading}>
+        Send reset code
+      </Button>
+    </FormContainer>
+  );
+}
+
+/* ─── MAIN COMPONENT ───────────────────────────────── */
 export default function AuthPage({ onLogin }) {
   const [page, setPage] = useState('login');
+  const { isMobile } = useBreakpoint();
 
-  const handleLoginSuccess = () => {
+  const handleSuccess = () => {
     localStorage.removeItem('verificationEmail');
-    localStorage.removeItem('signupFullName');
-    if (onLogin) {
-      onLogin();
-    }
+    if (onLogin) onLogin();
   };
 
   return (
     <div
       style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: isMobile ? 'flex-start' : 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: '#F9FAFB',
-        padding: '20px',
+        background: COLORS.background,
+        padding: isMobile ? '20px 16px 40px' : '20px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        overflowX: 'hidden',
       }}
     >
       <style>{`
@@ -1016,9 +1098,10 @@ export default function AuthPage({ onLogin }) {
         body { margin: 0; padding: 0; }
       `}</style>
 
-      {page === 'login' && <LoginPage onNavigate={setPage} onLoginSuccess={handleLoginSuccess} />}
-      {page === 'signup' && <SignupPage onNavigate={setPage} onLoginSuccess={handleLoginSuccess} />}
-      {page === 'verify' && <VerifyEmailPage onNavigate={setPage} onLoginSuccess={handleLoginSuccess} />}
+      {page === 'login' && <LoginPage onNavigate={setPage} onSuccess={handleSuccess} />}
+      {page === 'signup' && <SignupPage onNavigate={setPage} onSuccess={handleSuccess} />}
+      {page === 'verify' && <VerifyPage onNavigate={setPage} onSuccess={handleSuccess} />}
+      {page === 'forgot' && <ForgotPasswordPage onNavigate={setPage} onSuccess={handleSuccess} />}
     </div>
   );
 }

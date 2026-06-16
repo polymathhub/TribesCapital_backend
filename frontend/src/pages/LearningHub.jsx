@@ -987,11 +987,9 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
 /* ═══════════════════════════════════════════════════════
    APP ROOT
 ═══════════════════════════════════════════════════════ */
-export default function App() {
-  const { isMobile, isTablet, isDesktop } = useBreakpoint();
+export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
   const [screen,       setScreen]       = useState('hub');
   const [playerCourse, setPlayerCourse] = useState(null);
-  const [sidebarOpen,  setSidebarOpen]  = useState(false);
 
   function handlePlay(course) {
     setPlayerCourse(course);
@@ -999,26 +997,20 @@ export default function App() {
   }
 
   return (
-    <div style={{display:'flex',height:'100vh',background:BG,fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',fontSize:14,overflow:'hidden'}}>
-      <Sidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        isMobile={isMobile}
-        isTablet={isTablet}
-      />
+    <div style={{flex: 1, display:'flex', height:'100%', background:BG, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden', flexDirection:'column'}}>
       {screen === 'hub'
         ? <HubView
             onPlay={handlePlay}
             isMobile={isMobile}
             isTablet={isTablet}
-            onMenuToggle={() => setSidebarOpen(true)}
+            onMenuToggle={onToggleSidebar}
           />
         : <LessonPlayer
             course={playerCourse}
             onBack={() => setScreen('hub')}
             isMobile={isMobile}
             isTablet={isTablet}
-            onMenuToggle={() => setSidebarOpen(true)}
+            onMenuToggle={onToggleSidebar}
           />
       }
       <style>{`

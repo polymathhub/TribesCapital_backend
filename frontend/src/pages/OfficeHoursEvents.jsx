@@ -507,8 +507,11 @@ function Toast({ msg, onDone }) {
 /* ═══════════════════════════════════════════
    MAIN
 ═══════════════════════════════════════════ */
-export default function OfficeHoursEvents() {
-  const { isMobile, isTablet, isDesktop } = useBreakpoint();
+export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobileParam, isTabletParam }) {
+  const bp = useBreakpoint();
+  const isMobile = isMobileParam !== undefined ? isMobileParam : bp.isMobile;
+  const isTablet = isTabletParam !== undefined ? isTabletParam : bp.isTablet;
+  const isDesktop = bp.isDesktop;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [events,      setEvents]      = useState(INIT_EVENTS);
   const [activeTab,   setTab]         = useState('upcoming');

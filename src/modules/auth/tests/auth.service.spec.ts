@@ -484,7 +484,7 @@ describe('AuthService - Security', () => {
         .mockResolvedValueOnce('$2b$12$...');
 
       await authService.resetPassword(dto, '127.0.0.1');
-
+ 
       expect(prismaService.refreshToken.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ revokedAt: expect.any(Date) }),

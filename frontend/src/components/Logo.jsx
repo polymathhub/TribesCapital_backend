@@ -1,23 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import logoPng from '../assets/image.png';
 
-/**
- * Logo component with optional vibration animation on mount
- * @param {number} size - Size in pixels (default: 28)
- * @param {boolean} animate - Whether to trigger vibration on mount (default: true)
- * @param {string} style - Additional CSS classes or inline styles
- */
 function LogoMark({ size = 28, animate = true, style = {} }) {
-  const [isVibrating, setIsVibrating] = useState(animate);
-
-  useEffect(() => {
-    if (animate) {
-      setIsVibrating(true);
-      const timer = setTimeout(() => setIsVibrating(false), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [animate]);
-
   return (
     <img
       src={logoPng}
@@ -26,7 +10,6 @@ function LogoMark({ size = 28, animate = true, style = {} }) {
         width: size,
         height: size,
         flexShrink: 0,
-        animation: isVibrating ? 'vibrate 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)' : 'none',
         ...style
       }}
     />
@@ -41,15 +24,6 @@ function LogoFull({ size = 'medium', variant = 'dark', animate = true }) {
   };
   const s = sizes[size] || sizes.medium;
   const textColor = variant === 'dark' ? '#111827' : '#FFFFFF';
-  const [isVibrating, setIsVibrating] = useState(animate);
-
-  useEffect(() => {
-    if (animate) {
-      setIsVibrating(true);
-      const timer = setTimeout(() => setIsVibrating(false), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [animate]);
 
   return (
     <div
@@ -58,7 +32,6 @@ function LogoFull({ size = 'medium', variant = 'dark', animate = true }) {
         alignItems: 'center',
         gap: s.gap,
         flexShrink: 0,
-        animation: isVibrating ? 'vibrate 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)' : 'none'
       }}
     >
       <img

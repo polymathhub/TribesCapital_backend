@@ -32,10 +32,6 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  // ============================================================================
-  // REGISTRATION
-  // ============================================================================
-
   @Public()
   @Post('register')
   @HttpCode(201)
@@ -53,10 +49,6 @@ export class AuthController {
     return this.authService.register(registerDto, ipAddress, userAgent);
   }
 
-  // ============================================================================
-  // LOGIN
-  // ============================================================================
-
   @Public()
   @Post('login')
   @HttpCode(200)
@@ -73,10 +65,6 @@ export class AuthController {
 
     return this.authService.login(loginDto, ipAddress, userAgent);
   }
-
-  // ============================================================================
-  // EMAIL VERIFICATION
-  // ============================================================================
 
   @Public()
   @Get('verify-email')
@@ -99,17 +87,13 @@ export class AuthController {
     return this.authService.verifyEmail({ token });
   }
 
-  // ============================================================================
-  // FORGOT PASSWORD
-  // ============================================================================
-
   @Public()
   @Post('forgot-password')
   @HttpCode(200)
   @ApiOperation({
     summary: 'Request password reset',
     description:
-      'Send password reset link to email (returns same response regardless of email existence)',
+      'Send password reset link to email',
   })
   async forgotPassword(
     @Body() forgotPasswordDto: ForgotPasswordDto,
@@ -125,17 +109,13 @@ export class AuthController {
     );
   }
 
-  // ============================================================================
-  // RESET PASSWORD
-  // ============================================================================
-
   @Public()
   @Post('reset-password')
   @HttpCode(200)
   @ApiOperation({
     summary: 'Reset password with token',
     description:
-      'Reset password using token from password reset email',
+      'Reset password using token from password reset email sent to you ',
   })
   async resetPassword(
     @Body() resetPasswordDto: ResetPasswordDto,
@@ -150,10 +130,6 @@ export class AuthController {
       userAgent,
     );
   }
-
-  // ============================================================================
-  // REFRESH TOKEN
-  // ============================================================================
 
   @Public()
   @Post('refresh')
@@ -176,10 +152,6 @@ export class AuthController {
     );
   }
 
-  // ============================================================================
-  // LOGOUT
-  // ============================================================================
-
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(200)
@@ -198,10 +170,6 @@ export class AuthController {
     return this.authService.logout(user.id, ipAddress, userAgent);
   }
 
-  // ============================================================================
-  // LOGOUT ALL DEVICES
-  // ============================================================================
-
   @UseGuards(JwtAuthGuard)
   @Post('logout-all')
   @HttpCode(200)
@@ -219,10 +187,6 @@ export class AuthController {
 
     return this.authService.logoutAllDevices(user.id, ipAddress, userAgent);
   }
-
-  // ============================================================================
-  // GOOGLE OAUTH
-  // ============================================================================
 
   @Public()
   @Post('google')
@@ -263,10 +227,6 @@ export class AuthController {
     );
   }
 
-  // ============================================================================
-  // CURRENT USER
-  // ============================================================================
-
   @UseGuards(JwtAuthGuard)
   @Get('me')
   @HttpCode(200)
@@ -280,10 +240,6 @@ export class AuthController {
   ): Promise<UserResponseDto> {
     return user;
   }
-
-  // ============================================================================
-  // HELPERS
-  // ============================================================================
 
   private getClientIp(req: any): string {
     return (
