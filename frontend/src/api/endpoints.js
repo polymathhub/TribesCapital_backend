@@ -4,6 +4,7 @@ export const authAPI = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   register: (data) => apiClient.post('/auth/register', data),
   googleAuth: (googleData) => apiClient.post('/auth/google', googleData),
+  verifyEmail: (token) => apiClient.get('/auth/verify-email', { params: { token } }),
   refreshToken: () => apiClient.post('/auth/refresh', { refreshToken: localStorage.getItem('refreshToken') }),
   forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
   verifyCode: (email, code) => apiClient.post('/auth/verify-code', { email, code }),

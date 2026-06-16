@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { usersAPI, coursesAPI, eventsAPI } from '../api/endpoints';
+import { LogoMark } from '../components/Logo';
 import LearningHub from './LearningHub';
 import DueDiligencePage from './DueDiligencePage';
 import OfficeHoursEvents from './OfficeHoursEvents';
@@ -246,7 +247,7 @@ export default function HomePage({ user, currentPage, onNavigate, onLogout }) {
           {/* Logo */}
           <div style={{ padding: '20px 16px', borderBottom: `1px solid ${BD}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 32, height: 32, background: P, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: W, fontSize: 16, fontWeight: 700 }}>TC</div>
+              <LogoMark size={32} animate={false} />
               <span style={{ fontSize: 13, fontWeight: 700, color: T1, letterSpacing: 0.5 }}>Tribes Capital</span>
             </div>
           </div>
@@ -320,7 +321,7 @@ export default function HomePage({ user, currentPage, onNavigate, onLogout }) {
             {/* Logo */}
             <div style={{ padding: '20px 16px', borderBottom: `1px solid ${BD}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 32, height: 32, background: P, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: W, fontSize: 16, fontWeight: 700 }}>TC</div>
+                <LogoMark size={32} animate={false} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: T1 }}>Tribes</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T2, padding: 0 }}>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { authAPI } from '../api/endpoints';
+import { LogoFull } from '../components/Logo';
 
 /* ──────── DESIGN TOKENS ──────────── */
 const C = {
@@ -43,21 +44,6 @@ function useBreakpoint() {
 }
 
 /* ──────── COMPONENTS ──────────── */
-function Logo() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-      <svg width={36} height={36} viewBox="0 0 36 36" fill="none">
-        <circle cx={18} cy={18} r={16} stroke={C.primaryMid} strokeWidth={2} />
-        <path d="M10 18h16M18 10v16" stroke={C.primaryMid} strokeWidth={2} strokeLinecap="round" />
-        <circle cx={18} cy={18} r={3} fill={C.primaryMid} />
-      </svg>
-      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, letterSpacing: 2.5, textTransform: 'uppercase' }}>
-        Tribes Capital
-      </span>
-    </div>
-  );
-}
-
 function EyeOpen() {
   return (
     <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
@@ -106,7 +92,11 @@ function Spinner() {
   );
 }
 
-function Btn({ onClick, loading, children, disabled }) {
+function Btn({ onClick, loading, children, disabled, variant = 'primary' }) {
+  const bgColor = variant === 'secondary' ? '#FFFFFF' : disabled || loading ? '#C4B5FD' : C.primary;
+  const textColor = variant === 'secondary' ? C.primary : C.white;
+  const borderColor = variant === 'secondary' ? C.primaryMid : 'transparent';
+
   return (
     <button
       onClick={onClick}
@@ -114,15 +104,15 @@ function Btn({ onClick, loading, children, disabled }) {
       style={{
         width: '100%',
         height: 50,
-        background: disabled || loading ? '#C4B5FD' : C.primary,
-        color: C.white,
-        border: 'none',
+        background: bgColor,
+        color: textColor,
+        border: `1px solid ${borderColor}`,
         borderRadius: 8,
         fontFamily: 'inherit',
         fontSize: 15,
         fontWeight: 600,
         cursor: disabled || loading ? 'not-allowed' : 'pointer',
-        transition: 'background .15s',
+        transition: 'background .15s, color .15s',
         letterSpacing: 0.2,
         marginTop: 4,
         display: 'flex',
@@ -229,6 +219,7 @@ function TwoCol({ children }) {
           flexDirection: 'column',
           justifyContent: 'center',
           overflowY: 'auto',
+          maxHeight: isMobile ? 'none' : '100vh',
         }}
       >
         {children}
@@ -237,11 +228,45 @@ function TwoCol({ children }) {
   );
 }
 
+/* ──────── CUSTOM GOOGLE BUTTON ──────────── */
+function CustomGoogleButton({ onClick, loading }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      style={{
+        width: '100%',
+        height: 50,
+        background: C.white,
+        color: C.text,
+        border: `1px solid ${C.border}`,
+        borderRadius: 8,
+        fontFamily: 'inherit',
+        fontSize: 15,
+        fontWeight: 600,
+        cursor: loading ? 'not-allowed' : 'pointer',
+        transition: 'background .15s, border-color .15s',
+        letterSpacing: 0.2,
+        marginTop: 4,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        opacity: loading ? 0.6 : 1,
+      }}
+    >
+      <GoogleIcon />
+      Continue with Google
+    </button>
+  );
+}
+
 /* ──────── LOGIN PAGE ──────────── */
 function LoginPage({ onNavigate, onLoginSuccess }) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('rememberEmail') || '');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('rememberEmail'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusPw, setFocusPw] = useState(false);
@@ -268,6 +293,14 @@ function LoginPage({ onNavigate, onLoginSuccess }) {
         }
         localStorage.setItem('userEmail', email);
         localStorage.setItem('userName', response.data.user?.firstName || email.split('@')[0]);
+        
+        // Handle remember me
+        if (rememberMe) {
+          localStorage.setItem('rememberEmail', email);
+        } else {
+          localStorage.removeItem('rememberEmail');
+        }
+        
         onLoginSuccess();
       }
     } catch (err) {
@@ -278,36 +311,85 @@ function LoginPage({ onNavigate, onLoginSuccess }) {
     }
   };
 
-  const handleGoogleSignIn = async (event) => {
-    // Handle Google OAuth response
+  const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
       setError('');
-      // This will be triggered by the Google Sign-In callback
-      // The credential will be available in event
-      if (event && event.credential) {
-        const response = await authAPI.googleAuth({ idToken: event.credential });
-        if (response.data && response.data.accessToken) {
-          localStorage.setItem('accessToken', response.data.accessToken);
-          if (response.data.refreshToken) {
-            localStorage.setItem('refreshToken', response.data.refreshToken);
-          }
-          localStorage.setItem('userEmail', response.data.user?.email || '');
-          localStorage.setItem('userName', response.data.user?.firstName || 'User');
-          onLoginSuccess();
-        }
+      
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        setError('Google Client ID not configured. Contact support.');
+        setLoading(false);
+        return;
       }
+
+      if (!window.google?.accounts?.id) {
+        setError('Google SDK not loaded. Please refresh the page.');
+        setLoading(false);
+        return;
+      }
+
+      // Request ID token directly
+      window.google.accounts.id.requestIdToken({
+        client_id: clientId,
+        callback: async (response) => {
+          try {
+            if (!response.credential) {
+              setError('Failed to get credential from Google');
+              setLoading(false);
+              return;
+            }
+
+            // Call backend to verify token and create/authenticate user
+            const result = await authAPI.googleAuth({ idToken: response.credential });
+            
+            if (result?.data?.accessToken) {
+              localStorage.setItem('accessToken', result.data.accessToken);
+              if (result.data.refreshToken) {
+                localStorage.setItem('refreshToken', result.data.refreshToken);
+              }
+              localStorage.setItem('userEmail', result.data.user?.email || '');
+              localStorage.setItem('userName', result.data.user?.firstName || 'User');
+              if (rememberMe) {
+                localStorage.setItem('rememberEmail', result.data.user?.email || '');
+              }
+              onLoginSuccess();
+            } else {
+              setError('Authentication failed. Please try again.');
+              setLoading(false);
+            }
+          } catch (err) {
+            const errorMsg = err.response?.data?.message || err.message || 'Google sign-in failed';
+            setError(errorMsg);
+            console.error('Google callback error:', err);
+            setLoading(false);
+          }
+        },
+        error_callback: () => {
+          setError('Google sign-in was cancelled or failed');
+          setLoading(false);
+        },
+      });
+
+      // Show the native Google sign-in prompt
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // If One Tap is not shown, user needs to click the button
+          // This is expected behavior - the prompt might not show in certain contexts
+        }
+      });
     } catch (err) {
-      setError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
+      setError('Google sign-in error: ' + (err.message || 'Unknown error'));
       console.error('Google sign-in error:', err);
-    } finally {
       setLoading(false);
     }
   };
 
   return (
     <TwoCol>
-      <Logo />
+      <div style={{ marginBottom: 28 }}>
+        <LogoFull size="medium" />
+      </div>
       <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 6px', letterSpacing: -0.5 }}>
         Welcome back
       </h1>
@@ -378,7 +460,20 @@ function LoginPage({ onNavigate, onLoginSuccess }) {
         </div>
       </Field>
 
-      <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="checkbox"
+            id="rememberMe"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            disabled={loading}
+            style={{ width: 16, height: 16, cursor: 'pointer' }}
+          />
+          <label htmlFor="rememberMe" style={{ fontSize: 13, color: C.textGray, cursor: 'pointer' }}>
+            Remember me
+          </label>
+        </div>
         <button
           onClick={() => onNavigate('forgot')}
           style={{
@@ -402,7 +497,7 @@ function LoginPage({ onNavigate, onLoginSuccess }) {
 
       <Divider />
 
-      <GoogleSignInButton onSuccess={handleGoogleSignIn} loading={loading} />
+      <CustomGoogleButton onClick={handleGoogleSignIn} loading={loading} />
 
       <p style={{ textAlign: 'center', fontSize: 14, color: C.textGray, marginTop: 22 }}>
         Don't have an account?{' '}
@@ -447,16 +542,25 @@ function SignupPage({ onNavigate, onLoginSuccess }) {
 
   const checkStrength = (val) => {
     let score = 0;
-    if (val.length >= 8) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const hasUppercase = /[A-Z]/.test(val);
+    const hasLowercase = /[a-z]/.test(val);
+    const hasNumber = /[0-9]/.test(val);
+    const hasSymbol = /[^A-Za-z0-9]/.test(val);
+    const isLongEnough = val.length >= 12;
+
+    if (isLongEnough) score++;
+    if (hasUppercase) score++;
+    if (hasLowercase) score++;
+    if (hasNumber) score++;
+    if (hasSymbol) score++;
+
     const levels = [
-      { pct: 0, color: C.border, hint: 'Use 8+ characters with a mix of letters, numbers & symbols' },
-      { pct: 25, color: C.error, hint: 'Weak — add uppercase letters' },
-      { pct: 50, color: '#F59E0B', hint: 'Fair — add numbers for better security' },
-      { pct: 75, color: '#3B82F6', hint: 'Good — add symbols to make it strong' },
-      { pct: 100, color: C.success, hint: 'Strong password ✓' },
+      { pct: 0, color: C.border, hint: 'Use 12+ characters with uppercase, lowercase, numbers & symbols' },
+      { pct: 20, color: C.error, hint: 'Weak — add more character variety' },
+      { pct: 40, color: '#F59E0B', hint: 'Fair — make it stronger' },
+      { pct: 60, color: '#3B82F6', hint: 'Good — almost there' },
+      { pct: 80, color: '#10B981', hint: 'Strong — very good' },
+      { pct: 100, color: C.success, hint: 'Excellent password ✓' },
     ];
     setStrength({ ...levels[score], score });
   };
@@ -476,8 +580,12 @@ function SignupPage({ onNavigate, onLoginSuccess }) {
       setError('Please select your account type');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (password.length < 12) {
+      setError('Password must be at least 12 characters');
+      return;
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      setError('Password must contain uppercase, lowercase, numbers, and symbols');
       return;
     }
     if (!agreed) {
@@ -492,16 +600,14 @@ function SignupPage({ onNavigate, onLoginSuccess }) {
         lastName: fullName.includes(' ') ? fullName.split(' ').slice(1).join(' ') : '',
         email,
         password,
+        passwordConfirmation: password,
         role,
       });
-      if (response.data && response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
-        if (response.data.refreshToken) {
-          localStorage.setItem('refreshToken', response.data.refreshToken);
-        }
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('userName', fullName.split(' ')[0]);
-        onLoginSuccess();
+      if (response.data) {
+        // Store email for verification page
+        localStorage.setItem('verificationEmail', email);
+        localStorage.setItem('signupFullName', fullName.split(' ')[0]);
+        onNavigate('verify');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed. Please try again.');
@@ -535,9 +641,82 @@ function SignupPage({ onNavigate, onLoginSuccess }) {
     }
   };
 
+  const handleGoogleSignUpCustom = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        setError('Google Client ID not configured. Contact support.');
+        setLoading(false);
+        return;
+      }
+
+      if (!window.google?.accounts?.id) {
+        setError('Google SDK not loaded. Please refresh the page.');
+        setLoading(false);
+        return;
+      }
+
+      // Request ID token directly
+      window.google.accounts.id.requestIdToken({
+        client_id: clientId,
+        callback: async (response) => {
+          try {
+            if (!response.credential) {
+              setError('Failed to get credential from Google');
+              setLoading(false);
+              return;
+            }
+
+            // Call backend to verify token and create/authenticate user
+            const result = await authAPI.googleAuth({ idToken: response.credential });
+            
+            if (result?.data?.accessToken) {
+              localStorage.setItem('accessToken', result.data.accessToken);
+              if (result.data.refreshToken) {
+                localStorage.setItem('refreshToken', result.data.refreshToken);
+              }
+              localStorage.setItem('userEmail', result.data.user?.email || '');
+              localStorage.setItem('userName', result.data.user?.firstName || 'User');
+              onLoginSuccess();
+            } else {
+              setError('Authentication failed. Please try again.');
+              setLoading(false);
+            }
+          } catch (err) {
+            const errorMsg = err.response?.data?.message || err.message || 'Google sign-up failed';
+            setError(errorMsg);
+            console.error('Google callback error:', err);
+            setLoading(false);
+          }
+        },
+        error_callback: () => {
+          setError('Google sign-up was cancelled or failed');
+          setLoading(false);
+        },
+      });
+
+      // Show the native Google sign-in prompt
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // If One Tap is not shown, user needs to click the button
+          // This is expected behavior - the prompt might not show in certain contexts
+        }
+      });
+    } catch (err) {
+      setError('Google sign-up error: ' + (err.message || 'Unknown error'));
+      console.error('Google sign-up error:', err);
+      setLoading(false);
+    }
+  };
+
   return (
     <TwoCol>
-      <Logo />
+      <div style={{ marginBottom: 28 }}>
+        <LogoFull size="medium" />
+      </div>
       <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 6px', letterSpacing: -0.5 }}>
         Create your account
       </h1>
@@ -646,7 +825,7 @@ function SignupPage({ onNavigate, onLoginSuccess }) {
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
           disabled={loading}
-          style={{ width: 18, height: 18, cursor: 'pointer', marginTop: 2 }}
+          style={{ width: 18, height: 18, cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
         />
         <label htmlFor="terms" style={{ fontSize: 13, color: C.textGray, lineHeight: 1.5, cursor: 'pointer' }}>
           I agree to the <span style={{ fontWeight: 600, color: C.primaryMid }}>Terms of Use</span> and{' '}
@@ -660,7 +839,7 @@ function SignupPage({ onNavigate, onLoginSuccess }) {
 
       <Divider />
 
-      <GoogleSignInButton onSuccess={handleGoogleSignUp} loading={loading} />
+      <CustomGoogleButton onClick={handleGoogleSignUpCustom} loading={loading} />
 
       <p style={{ textAlign: 'center', fontSize: 14, color: C.textGray, marginTop: 22 }}>
         Already have an account?{' '}
@@ -684,57 +863,125 @@ function SignupPage({ onNavigate, onLoginSuccess }) {
   );
 }
 
-/* ──────── GOOGLE SIGN-IN BUTTON ──────────── */
-function GoogleSignInButton({ onSuccess, loading }) {
-  const buttonRef = useRef(null);
+/* ──────── EMAIL VERIFICATION PAGE ──────────── */
+function VerifyEmailPage({ onNavigate, onLoginSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [token, setToken] = useState('');
+  const email = localStorage.getItem('verificationEmail') || '';
+  const { isMobile } = useBreakpoint();
 
   useEffect(() => {
-    const initializeGoogleButton = () => {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        console.warn('VITE_GOOGLE_CLIENT_ID not set');
-        return;
-      }
-
-      if (window.google && buttonRef.current) {
-        try {
-          // Clear any existing button
-          buttonRef.current.innerHTML = '';
-
-          window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: onSuccess,
-            auto_select: false,
-          });
-
-          window.google.accounts.id.renderButton(buttonRef.current, {
-            theme: 'outline',
-            size: 'large',
-            text: 'signin_with',
-            width: '100%',
-          });
-        } catch (err) {
-          console.error('Failed to render Google button:', err);
-        }
-      }
-    };
-
-    // Wait for Google SDK to load
-    if (window.google) {
-      initializeGoogleButton();
-    } else {
-      const checkGoogle = setInterval(() => {
-        if (window.google) {
-          clearInterval(checkGoogle);
-          initializeGoogleButton();
-        }
-      }, 100);
-
-      return () => clearInterval(checkGoogle);
+    // Check if token is in URL
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    if (urlToken) {
+      setToken(urlToken);
+      verifyToken(urlToken);
     }
-  }, [onSuccess]);
+  }, []);
 
-  return <div ref={buttonRef} style={{ width: '100%' }} />;
+  const verifyToken = async (emailToken) => {
+    setLoading(true);
+    try {
+      await authAPI.verifyEmail(emailToken);
+      setSuccess(true);
+      setTimeout(() => {
+        onNavigate('login');
+      }, 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Verification failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // In production, this would call a resend-verification-email endpoint
+      setError('Please check your email for the verification link');
+    } catch (err) {
+      setError('Failed to resend email. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <TwoCol>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ marginBottom: 28 }}>
+            <LogoFull size="medium" />
+          </div>
+          <div style={{ width: 80, height: 80, background: '#DCFCE7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+            <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={C.success} strokeWidth={2}>
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 12px', letterSpacing: -0.5 }}>
+            Email Verified!
+          </h1>
+          <p style={{ fontSize: 14, color: C.textGray, marginBottom: 28 }}>
+            Your email has been verified. Redirecting to sign in...
+          </p>
+        </div>
+      </TwoCol>
+    );
+  }
+
+  return (
+    <TwoCol>
+      <div style={{ marginBottom: 28 }}>
+        <LogoFull size="medium" />
+      </div>
+      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 6px', letterSpacing: -0.5 }}>
+        Verify your email
+      </h1>
+      <p style={{ fontSize: 14, color: C.textGray, marginBottom: 28, lineHeight: 1.5 }}>
+        We've sent a verification link to <span style={{ fontWeight: 600 }}>{email}</span>. Click the link in your email to verify your account.
+      </p>
+
+      {error && (
+        <div style={{ background: '#FEE2E2', border: `1px solid ${C.error}`, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.error }}>
+          {error}
+        </div>
+      )}
+
+      {success === false && (
+        <div style={{ background: '#FEF3C7', border: `1px solid #FCD34D`, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: '#B45309' }}>
+          If you don't see the email, check your spam folder or click the button below to resend it.
+        </div>
+      )}
+
+      <div style={{ marginBottom: 18 }}>
+        <Btn onClick={handleResendEmail} loading={loading} disabled={loading}>
+          {loading ? 'Resending…' : 'Resend Verification Email'}
+        </Btn>
+      </div>
+
+      <p style={{ textAlign: 'center', fontSize: 13, color: C.textGray }}>
+        Already verified?{' '}
+        <button
+          onClick={() => onNavigate('login')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: C.primaryMid,
+            fontWeight: 600,
+            fontFamily: 'inherit',
+            fontSize: 13,
+          }}
+        >
+          Sign in here
+        </button>
+      </p>
+    </TwoCol>
+  );
 }
 
 /* ──────── MAIN AUTH PAGE ──────────── */
@@ -742,6 +989,8 @@ export default function AuthPage({ onLogin }) {
   const [page, setPage] = useState('login');
 
   const handleLoginSuccess = () => {
+    localStorage.removeItem('verificationEmail');
+    localStorage.removeItem('signupFullName');
     if (onLogin) {
       onLogin();
     }
@@ -769,6 +1018,7 @@ export default function AuthPage({ onLogin }) {
 
       {page === 'login' && <LoginPage onNavigate={setPage} onLoginSuccess={handleLoginSuccess} />}
       {page === 'signup' && <SignupPage onNavigate={setPage} onLoginSuccess={handleLoginSuccess} />}
+      {page === 'verify' && <VerifyEmailPage onNavigate={setPage} onLoginSuccess={handleLoginSuccess} />}
     </div>
   );
 }
