@@ -39,16 +39,15 @@ export class AuditService {
           action: data.action,
           resource: data.resource,
           resourceId: data.resourceId,
-          changes: data.changes || null,
+          changes: data.changes,
           ipAddress: data.ipAddress,
           userAgent: data.userAgent,
           status: data.status || 'success',
-          metadata: data.metadata || null,
+          metadata: data.metadata,
         },
       });
     } catch (error) {
       this.logger.error('Failed to create audit log', error);
-      // Don't throw - audit logging should never break the auth flow
     }
   }
 
