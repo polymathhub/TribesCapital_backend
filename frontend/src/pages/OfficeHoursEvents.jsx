@@ -1,250 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-/* ─── NOTIFICATION & CALENDAR UTILITIES ─── */
-const NotificationManager = {
-  // Request notification permissions
-  requestPermission: async () => {
-    if (!('Notification' in window)) {
-      console.log('Browser does not support notifications');
-      return false;
-    }
-    if (Notification.permission === 'granted') {
-      return true;
-    }
-    if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission();
-      return permission === 'granted';
-    }
-    return false;
-  },
-
-  // Send system notification with click handler
-  notify: (title, options = {}) => {
-    if (Notification.permission === 'granted') {
-      const notification = new Notification(title, {
-        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%235B21B6"/><circle cx="35" cy="35" r="8" fill="white"/><path d="M35 50 L50 65 L70 35" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/></svg>',
-        badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%235B21B6"/></svg>',
-        tag: options.tag || 'notification',
-        requireInteraction: true,
-        ...options
-      });
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-      return notification;
-    }
-  },
-
-  // Schedule notification for event (persistent with local storage)
-  scheduleEventNotification: (event, minutesBefore = 15) => {
-    try {
-      const [month, day, year] = [event.calMonth + 1, event.calDay, event.calYear];
-      const [hours, minutes] = event.time.split(':').map(t => {
-        const num = parseInt(t);
-        return t.includes('PM') && num !== 12 ? num + 12 : t.includes('AM') && num === 12 ? 0 : num;
-      });
-      
-      const eventTime = new Date(year, month - 1, day, hours || 0, minutes || 0);
-      const now = new Date();
-      const notificationTime = new Date(eventTime.getTime() - minutesBefore * 60000);
-      const delay = notificationTime.getTime() - now.getTime();
-
-      // Save to local storage for persistence
-      const scheduled = JSON.parse(localStorage.getItem('scheduledNotifications') || '{}');
-      scheduled[`event-${event.id}`] = {
-        title: event.title,
-        eventId: event.id,
-        notificationTime: notificationTime.toISOString(),
-        minutesBefore
-      };
-      localStorage.setItem('scheduledNotifications', JSON.stringify(scheduled));
-
-      if (delay > 0) {
-        const timeoutId = setTimeout(() => {
-          NotificationManager.notify(`Upcoming: ${event.title}`, {
-            body: `Starting in ${minutesBefore} minutes\n${event.time} GMT`,
-            tag: `event-${event.id}`,
-            requireInteraction: true
-          });
-          NotificationManager.playAlertSound();
-          // Store that notification was sent
-          const sent = JSON.parse(localStorage.getItem('sentNotifications') || '{}');
-          sent[`event-${event.id}`] = new Date().toISOString();
-          localStorage.setItem('sentNotifications', JSON.stringify(sent));
-        }, delay);
-        
-        // Store timeout ID for potential clearing
-        const timeouts = JSON.parse(localStorage.getItem('notificationTimeouts') || '{}');
-        timeouts[`event-${event.id}`] = timeoutId;
-        localStorage.setItem('notificationTimeouts', JSON.stringify(timeouts));
-        
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error scheduling notification:', error);
-      return false;
-    }
-  },
-
-  // Play alert sound with multiple tones
-  playAlertSound: () => {
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      
-      // Create multiple oscillators for a more noticeable alert
-      const frequencies = [800, 600, 800];
-      const duration = 0.3;
-      
-      frequencies.forEach((freq, idx) => {
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-        
-        oscillator.frequency.value = freq;
-        oscillator.type = 'sine';
-        
-        const startTime = audioContext.currentTime + (idx * 0.1);
-        gain.gain.setValueAtTime(0.3, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-        
-        oscillator.start(startTime);
-        oscillator.stop(startTime + duration);
-      });
-    } catch (e) {
-      console.error('Error playing alert sound:', e);
-    }
-  },
-
-  // Generate iCal format for calendar export
-  generateICalEvent: (event) => {
-    const [month, day, year] = [event.calMonth + 1, event.calDay, event.calYear];
-    const [hours, minutes] = event.time.split(':').map(t => {
-      const num = parseInt(t);
-      return t.includes('PM') && num !== 12 ? num + 12 : t.includes('AM') && num === 12 ? 0 : num;
-    });
-
-    const startDate = new Date(year, month - 1, day, hours || 0, minutes || 0);
-    const durationMins = parseInt(event.dur) || 90;
-    const endDate = new Date(startDate.getTime() + durationMins * 60000);
-
-    const formatDateTime = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const mins = String(date.getMinutes()).padStart(2, '0');
-      const secs = String(date.getSeconds()).padStart(2, '0');
-      return `${year}${month}${day}T${hours}${mins}${secs}Z`;
-    };
-
-    const iCal = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//TribesCapital//Events//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-UID:event-${event.id}@tribescapital.com
-DTSTAMP:${formatDateTime(new Date())}
-DTSTART:${formatDateTime(startDate)}
-DTEND:${formatDateTime(endDate)}
-SUMMARY:${event.title}
-DESCRIPTION:${event.desc}\n\nType: ${event.type}\nFormat: ${event.format}\nSpeakers: ${event.speakers.map(s => s.name).join(', ')}
-LOCATION:${event.format.includes('Zoom') ? 'Zoom' : 'TBD'}
-CATEGORIES:${event.type}
-ATTENDEE:mailto:user@tribescapital.com
-BEGIN:VALARM
-TRIGGER:-PT15M
-DESCRIPTION:Reminder: ${event.title}
-ACTION:DISPLAY
-END:VALARM
-END:VEVENT
-END:VCALENDAR`;
-
-    return iCal;
-  },
-
-  // Generate Google Calendar URL
-  generateGoogleCalendarUrl: (event) => {
-    const [month, day, year] = [event.calMonth + 1, event.calDay, event.calYear];
-    const [hours, minutes] = event.time.split(':').map(t => {
-      const num = parseInt(t);
-      return t.includes('PM') && num !== 12 ? num + 12 : t.includes('AM') && num === 12 ? 0 : num;
-    });
-
-    const startDate = new Date(year, month - 1, day, hours || 0, minutes || 0);
-    const durationMins = parseInt(event.dur) || 90;
-    const endDate = new Date(startDate.getTime() + durationMins * 60000);
-
-    const formatGoogleDate = (date) => date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: event.title,
-      details: `${event.desc}\n\nType: ${event.type}\nSpeakers: ${event.speakers.map(s => s.name).join(', ')}`,
-      location: event.format.includes('Zoom') ? 'Zoom' : 'TBD',
-      dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`
-    });
-
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
-  },
-
-  // Generate Outlook Calendar URL
-  generateOutlookCalendarUrl: (event) => {
-    const [month, day, year] = [event.calMonth + 1, event.calDay, event.calYear];
-    const [hours, minutes] = event.time.split(':').map(t => {
-      const num = parseInt(t);
-      return t.includes('PM') && num !== 12 ? num + 12 : t.includes('AM') && num === 12 ? 0 : num;
-    });
-
-    const startDate = new Date(year, month - 1, day, hours || 0, minutes || 0);
-    const durationMins = parseInt(event.dur) || 90;
-    const endDate = new Date(startDate.getTime() + durationMins * 60000);
-
-    const formatOutlookDate = (date) => date.toISOString();
-    
-    const params = new URLSearchParams({
-      path: '/calendar/action/compose',
-      rru: 'addevent',
-      startdt: formatOutlookDate(startDate),
-      enddt: formatOutlookDate(endDate),
-      subject: event.title,
-      body: `${event.desc}\n\nType: ${event.type}\nSpeakers: ${event.speakers.map(s => s.name).join(', ')}`,
-      location: event.format.includes('Zoom') ? 'Zoom' : 'TBD'
-    });
-
-    return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
-  },
-
-  // Download calendar file
-  downloadCalendarFile: (event) => {
-    const iCal = NotificationManager.generateICalEvent(event);
-    const element = document.createElement('a');
-    element.setAttribute('href', 'data:text/calendar;charset=utf-8,' + encodeURIComponent(iCal));
-    element.setAttribute('download', `${event.id}-event.ics`);
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  },
-
-  // Open Google Calendar in new tab
-  openGoogleCalendar: (event) => {
-    const url = NotificationManager.generateGoogleCalendarUrl(event);
-    window.open(url, '_blank');
-  },
-
-  // Open Outlook Calendar in new tab
-  openOutlookCalendar: (event) => {
-    const url = NotificationManager.generateOutlookCalendarUrl(event);
-    window.open(url, '_blank');
-  }
-};
-
-/* ─── DESIGN TOKENS (exact from screenshots) ─── */
+/* ─── DESIGN TOKENS ─── */
 const C = {
   pu:'#5B21B6', puf:'#EDE9FE', pul:'#7C3AED', pud:'#4C1D95',
   gr:'#16A34A', grb:'#DCFCE7', am:'#D97706', amb:'#FEF3C7',
@@ -261,6 +17,18 @@ const EV_TYPES = {
   'Podcast'      : { c:'#DB2777', b:'#FDF2F8', label:'PODCAST'       },
 };
 const EV_OPTS = Object.keys(EV_TYPES);
+
+/* ─── BREAKPOINT HOOK ─── */
+function useBreakpoint() {
+  const getW = () => (typeof window !== 'undefined' ? window.innerWidth : 1280);
+  const [w, setW] = useState(getW);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return { w, isMobile: w < 640, isTablet: w >= 640 && w < 1024, isDesktop: w >= 1024 };
+}
 
 /* ─── SVG ICONS ─── */
 const IK = {
@@ -286,15 +54,18 @@ const IK = {
   edit    :<><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></>,
   trash   :<><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></>,
   arr     :<><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></>,
-  grid    :<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
-  list    :<><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>,
-  calplus :<><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="10" y1="17" x2="14" y2="17"/></>,
+  menu    :<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>,
 };
 function I({ k, s=16, c=C.t2, sw=1.5, fill='none' }) {
-  return <svg width={s} height={s} viewBox="0 0 24 24" fill={fill} stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{IK[k]}</svg>;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill={fill} stroke={c}
+      strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+      {IK[k]}
+    </svg>
+  );
 }
 
-/* ─── INITIAL DATA ─── */
+/* ─── DATA ─── */
 const SPK = {
   KA:{ initials:'KA', name:'Kwame Asante', role:'Lead Investment Analyst', color:C.pu, bg:C.puf },
   RA:{ initials:'RA', name:'Ria Adeyemi',  role:'Legal Counsel',           color:C.am, bg:C.amb },
@@ -302,8 +73,8 @@ const SPK = {
 };
 const BASE_EVENT = {
   title:'Project Financing Deep Dive: Structuring Your First Deal',
-  desc :'Join our lead investment analyst for a live walkthrough of a real $2.4M C&I solar deal — from term sheet to financial close. Bring your questions.',
-  dateLabel:'Thursday, May 8, 2026', dateShort:'Thursday, May 8 · 3:00 PM GMT',
+  desc:'Join our lead investment analyst for a live walkthrough of a real $2.4M C&I solar deal — from term sheet to financial close. Bring your questions.',
+  dateLabel:'Thursday, May 8, 2026', dateShort:'Thu, May 8 · 3:00 PM GMT',
   time:'3:00 PM GMT', dur:'90 min', format:'Live Zoom · Recorded',
   month:'MAY', day:'8', weekday:'THU', calDay:8, calMonth:4, calYear:2026,
   spotsLeft:14, totalSpots:40, rsvped:true, type:'Office hours',
@@ -322,8 +93,6 @@ const INIT_EVENTS = [
   { ...BASE_EVENT, id:3, speakers:[SPK.KA,SPK.NF] },
   { ...BASE_EVENT, id:4, speakers:[SPK.KA,SPK.RA] },
 ];
-
-/* ─── SIDEBAR ─── */
 const NAV = [
   {l:'Home',k:'home'},{l:'Learning Hub',k:'book'},{l:'Due Diligence Vault',k:'folder'},
   {l:'Project Pipeline',k:'activity'},{l:'Reporting Library',k:'file'},
@@ -332,27 +101,115 @@ const NAV = [
   null,{l:'Announcements & Feedback',k:'bell'},{l:'Help',k:'help'},
 ];
 
-/* ─── CALENDAR WIDGET ─── */
+/* ═══════════════════════════════════════════
+   SIDEBAR — collapsible on mobile/tablet
+═══════════════════════════════════════════ */
+function Sidebar({ open, onClose, isMobile, isTablet }) {
+  const isOverlay = isMobile || isTablet;
+  if (isOverlay && !open) return null;
+  return (
+    <>
+      {/* Backdrop for mobile/tablet */}
+      {isOverlay && (
+        <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:200}}/>
+      )}
+      <aside style={{
+        width:195, minWidth:195, background:C.w, borderRight:`1px solid ${C.bd}`,
+        display:'flex', flexDirection:'column', overflowY:'auto', flexShrink:0,
+        ...(isOverlay ? { position:'fixed', top:0, left:0, height:'100%', zIndex:201, boxShadow:'4px 0 24px rgba(0,0,0,.18)' } : {}),
+      }}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'15px 16px',borderBottom:`1px solid ${C.bd}`}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:26,height:26,borderRadius:'50%',background:C.pu,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>
+            </div>
+            <span style={{fontSize:11,fontWeight:700,color:C.t1,letterSpacing:1,textTransform:'uppercase'}}>Tribes Capital</span>
+          </div>
+          {isOverlay && (
+            <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',padding:4,display:'flex',color:C.t2}}><I k="x" s={16} c={C.t2} sw={2}/></button>
+          )}
+        </div>
+        <nav style={{flex:1,padding:'6px 0'}}>
+          {NAV.map((item,i) => {
+            if (!item) return <div key={i} style={{height:1,background:C.bd,margin:'5px 14px'}}/>;
+            return (
+              <div key={i} onClick={isOverlay?onClose:undefined} style={{display:'flex',alignItems:'center',gap:9,padding:'8px 14px',margin:'1px 6px',borderRadius:8,cursor:'pointer',background:item.active?C.puf:'transparent',color:item.active?C.pu:C.t2,fontSize:13,fontWeight:item.active?500:400,borderLeft:item.active?`3px solid ${C.pu}`:'3px solid transparent'}}>
+                <I k={item.k} s={15} c={item.active?C.pu:C.t3} sw={item.active?2:1.5}/>
+                <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.l}</span>
+              </div>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   TOPBAR — hamburger on mobile/tablet
+═══════════════════════════════════════════ */
+function TopBar({ onMenuToggle, isMobile, isTablet }) {
+  const showHamburger = isMobile || isTablet;
+  return (
+    <header style={{height:54,background:C.w,borderBottom:`1px solid ${C.bd}`,display:'flex',alignItems:'center',padding:`0 ${isMobile?14:24}px`,justifyContent:'space-between',flexShrink:0,gap:12}}>
+      {/* Left: hamburger OR search */}
+      <div style={{display:'flex',alignItems:'center',gap:12,flex:1,minWidth:0}}>
+        {showHamburger && (
+          <button onClick={onMenuToggle} style={{background:'none',border:'none',cursor:'pointer',padding:4,display:'flex',flexShrink:0}}>
+            <I k="menu" s={20} c={C.t1}/>
+          </button>
+        )}
+        {/* Search bar — full on desktop, icon-only on mobile */}
+        {!isMobile && (
+          <div style={{flex:1,maxWidth:400,background:C.bg,border:`1px solid ${C.bd}`,borderRadius:8,height:36,display:'flex',alignItems:'center',gap:8,padding:'0 12px'}}>
+            <I k="search" s={14} c={C.t3}/>
+            <span style={{fontSize:13,color:C.t3,whiteSpace:'nowrap',overflow:'hidden'}}>Search topics, documents, people, events…</span>
+          </div>
+        )}
+        {isMobile && (
+          <span style={{fontSize:14,fontWeight:600,color:C.t1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Office Hours & Events</span>
+        )}
+      </div>
+      {/* Right: search icon (mobile) + bell + avatar */}
+      <div style={{display:'flex',alignItems:'center',gap:isMobile?8:12,flexShrink:0}}>
+        {isMobile && (
+          <button style={{background:'none',border:'none',cursor:'pointer',padding:4,display:'flex'}}>
+            <I k="search" s={18} c={C.t2}/>
+          </button>
+        )}
+        <div style={{width:34,height:34,border:`1px solid ${C.bd}`,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:'pointer',flexShrink:0}}>
+          <I k="bell" s={16} c={C.t2}/>
+          <div style={{width:7,height:7,background:'#EF4444',borderRadius:'50%',border:'1.5px solid #fff',position:'absolute',top:6,right:6}}/>
+        </div>
+        <div style={{width:34,height:34,background:C.pu,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:C.w,fontSize:13,fontWeight:600,flexShrink:0}}>A</div>
+      </div>
+    </header>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   CALENDAR WIDGET
+═══════════════════════════════════════════ */
 function CalWidget({ eventDays, onDayClick }) {
   const [yr, setYr] = useState(2026);
   const [mo, setMo] = useState(4);
   const MNAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const fd = new Date(yr, mo, 1).getDay(); const sc = (fd+6)%7;
-  const dim = new Date(yr, mo+1, 0).getDate(); const pd = new Date(yr, mo, 0).getDate();
-  const cells = [];
-  for (let i=0; i<sc; i++) cells.push({d:pd-sc+1+i, ov:true});
-  for (let d=1; d<=dim; d++) cells.push({d, ov:false});
-  const r=(7-cells.length%7)%7; for (let i=1;i<=r;i++) cells.push({d:i,ov:true});
-  const weeks=[]; for (let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
+  const fd = new Date(yr,mo,1).getDay(); const sc=(fd+6)%7;
+  const dim = new Date(yr,mo+1,0).getDate(); const pd=new Date(yr,mo,0).getDate();
+  const cells=[];
+  for(let i=0;i<sc;i++) cells.push({d:pd-sc+1+i,ov:true});
+  for(let d=1;d<=dim;d++) cells.push({d,ov:false});
+  const r=(7-cells.length%7)%7; for(let i=1;i<=r;i++) cells.push({d:i,ov:true});
+  const weeks=[]; for(let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
   const prev=()=>{if(mo===0){setMo(11);setYr(y=>y-1);}else setMo(m=>m-1);};
   const nxt =()=>{if(mo===11){setMo(0);setYr(y=>y+1);}else setMo(m=>m+1);};
-  const hasEv = (d,ov) => !ov && eventDays.some(e=>e.day===d&&e.month===mo&&e.year===yr);
+  const hasEv=(d,ov)=>!ov&&eventDays.some(e=>e.day===d&&e.month===mo&&e.year===yr);
   return (
     <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:'14px',marginBottom:14}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
         <button onClick={prev} style={{background:'none',border:'none',cursor:'pointer',padding:3,display:'flex'}}><I k="chl" s={14} c={C.t3}/></button>
         <span style={{fontSize:13,fontWeight:600,color:C.t1}}>{MNAMES[mo]}-{yr}</span>
-        <button onClick={nxt}  style={{background:'none',border:'none',cursor:'pointer',padding:3,display:'flex'}}><I k="chr" s={14} c={C.t3}/></button>
+        <button onClick={nxt} style={{background:'none',border:'none',cursor:'pointer',padding:3,display:'flex'}}><I k="chr" s={14} c={C.t3}/></button>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',marginBottom:2}}>
         {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=><div key={d} style={{textAlign:'center',fontSize:11,fontWeight:600,color:C.t3,padding:'2px 0'}}>{d}</div>)}
@@ -377,125 +234,58 @@ function CalWidget({ eventDays, onDayClick }) {
   );
 }
 
-/* ─── EVENT CARD (grid view) ─── */
-function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp }) {
+/* ═══════════════════════════════════════════
+   EVENT CARD — responsive
+═══════════════════════════════════════════ */
+function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg,label:ev.type.toUpperCase()};
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [reminderSet, setReminderSet] = useState(false);
-
-  const handleAddToGoogleCalendar = (e) => {
-    e.stopPropagation();
-    NotificationManager.openGoogleCalendar(ev);
-    setCalendarOpen(false);
-  };
-
-  const handleAddToOutlookCalendar = (e) => {
-    e.stopPropagation();
-    NotificationManager.openOutlookCalendar(ev);
-    setCalendarOpen(false);
-  };
-
-  const handleDownloadCalendarFile = (e) => {
-    e.stopPropagation();
-    NotificationManager.downloadCalendarFile(ev);
-    setCalendarOpen(false);
-  };
-
-  const handleSetReminder = async (e) => {
-    e.stopPropagation();
-    const hasPermission = await NotificationManager.requestPermission();
-    if (hasPermission) {
-      const scheduled = NotificationManager.scheduleEventNotification(ev, 15);
-      if (scheduled) {
-        setReminderSet(true);
-        setTimeout(() => setReminderSet(false), 2000);
-      }
-    }
-  };
-
   return (
     <div style={{display:'flex',background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden',marginBottom:12}}>
       {/* Purple date block */}
-      <div style={{width:64,background:C.pu,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 8px',flexShrink:0}}>
+      <div style={{width:isMobile?56:64,background:C.pu,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 6px',flexShrink:0}}>
         <span style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.7)',letterSpacing:1,textTransform:'uppercase',lineHeight:1.6}}>{ev.month}</span>
-        <span style={{fontSize:28,fontWeight:800,color:C.w,lineHeight:1}}>{ev.day}</span>
+        <span style={{fontSize:isMobile?22:28,fontWeight:800,color:C.w,lineHeight:1}}>{ev.day}</span>
         <span style={{fontSize:9,fontWeight:600,color:'rgba(255,255,255,.65)',letterSpacing:.5,lineHeight:1.6}}>{ev.weekday}</span>
       </div>
       {/* Content */}
-      <div style={{flex:1,padding:'13px 16px',minWidth:0}}>
+      <div style={{flex:1,padding:isMobile?'10px 12px':'13px 16px',minWidth:0}}>
         {/* Row 1: badge + edit/delete */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:7}}>
-          <span style={{fontSize:10,fontWeight:600,color:ec.c,padding:'3px 10px',background:ec.b,borderRadius:20,letterSpacing:.3}}>{ec.label}</span>
-          <div style={{display:'flex',gap:6}}>
-            <button onClick={e=>{e.stopPropagation();onEdit(ev);}} style={{display:'flex',alignItems:'center',gap:4,padding:'4px 10px',border:`1px solid ${C.bd}`,borderRadius:7,background:C.w,color:C.t2,fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>
-              <I k="edit" s={12} c={C.t2}/>Edit
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6,flexWrap:'wrap',gap:4}}>
+          <span style={{fontSize:10,fontWeight:600,color:ec.c,padding:'2px 9px',background:ec.b,borderRadius:20,letterSpacing:.3}}>{ec.label}</span>
+          <div style={{display:'flex',gap:5}}>
+            <button onClick={e=>{e.stopPropagation();onEdit(ev);}} style={{display:'flex',alignItems:'center',gap:3,padding:isMobile?'4px 8px':'4px 10px',border:`1px solid ${C.bd}`,borderRadius:7,background:C.w,color:C.t2,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>
+              <I k="edit" s={11} c={C.t2}/>Edit
             </button>
-            <button onClick={e=>{e.stopPropagation();onDelete(ev);}} style={{display:'flex',alignItems:'center',gap:4,padding:'4px 10px',border:`1px solid ${C.bd}`,borderRadius:7,background:C.w,color:C.t2,fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>
-              <I k="trash" s={12} c={C.t2}/>Delete
+            <button onClick={e=>{e.stopPropagation();onDelete(ev);}} style={{display:'flex',alignItems:'center',gap:3,padding:isMobile?'4px 8px':'4px 10px',border:`1px solid ${C.bd}`,borderRadius:7,background:C.w,color:C.t2,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>
+              <I k="trash" s={11} c={C.t2}/>Delete
             </button>
           </div>
         </div>
-        {/* Row 2: title */}
-        <div onClick={()=>onOpen(ev)} style={{fontSize:14,fontWeight:700,color:C.t1,marginBottom:5,lineHeight:1.35,cursor:'pointer'}}>{ev.title}</div>
-        {/* Row 3: desc */}
-        <p style={{fontSize:12,color:C.t2,margin:'0 0 10px',lineHeight:1.65,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{ev.desc}</p>
-        {/* Row 4: meta + avatars (avatars at RIGHT end of meta row) */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:0}}>
-          <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-            <span style={{display:'flex',alignItems:'center',gap:4,fontSize:12,color:C.t2}}><I k="cal" s={12} c={C.t3}/>{ev.dateShort}</span>
-            <span style={{display:'flex',alignItems:'center',gap:4,fontSize:12,color:C.t2}}><I k="users" s={12} c={C.t3}/>{ev.speakers.length} speakers</span>
-            <span style={{display:'flex',alignItems:'center',gap:4,fontSize:12,color:C.t2}}><I k="clock" s={12} c={C.t3}/>{ev.dur}</span>
+        {/* Title */}
+        <div onClick={()=>onOpen(ev)} style={{fontSize:isMobile?13:14,fontWeight:700,color:C.t1,marginBottom:4,lineHeight:1.35,cursor:'pointer'}}>{ev.title}</div>
+        {/* Desc */}
+        <p style={{fontSize:12,color:C.t2,margin:'0 0 8px',lineHeight:1.6,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{ev.desc}</p>
+        {/* Meta + avatars */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:0,flexWrap:'wrap',gap:4}}>
+          <div style={{display:'flex',alignItems:'center',gap:isMobile?8:12,flexWrap:'wrap'}}>
+            {!isMobile && <span style={{display:'flex',alignItems:'center',gap:4,fontSize:12,color:C.t2}}><I k="cal" s={12} c={C.t3}/>{ev.dateShort}</span>}
+            {isMobile  && <span style={{display:'flex',alignItems:'center',gap:4,fontSize:11,color:C.t2}}><I k="cal" s={11} c={C.t3}/>Thu, May 8</span>}
+            <span style={{display:'flex',alignItems:'center',gap:4,fontSize:isMobile?11:12,color:C.t2}}><I k="users" s={11} c={C.t3}/>{ev.speakers.length} speakers</span>
+            <span style={{display:'flex',alignItems:'center',gap:4,fontSize:isMobile?11:12,color:C.t2}}><I k="clock" s={11} c={C.t3}/>{ev.dur}</span>
           </div>
-          <div style={{display:'flex',alignItems:'center',marginLeft:8}}>
+          <div style={{display:'flex',alignItems:'center'}}>
             {ev.speakers.map((s,i)=>(
-              <div key={i} style={{width:24,height:24,borderRadius:'50%',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,fontWeight:700,color:s.color,border:`2px solid ${C.w}`,marginLeft:i>0?-6:0,zIndex:ev.speakers.length-i,flexShrink:0}}>{s.initials}</div>
+              <div key={i} style={{width:22,height:22,borderRadius:'50%',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,fontWeight:700,color:s.color,border:`2px solid ${C.w}`,marginLeft:i>0?-5:0,zIndex:ev.speakers.length-i,flexShrink:0}}>{s.initials}</div>
             ))}
           </div>
         </div>
-        {/* Separator line — exact design */}
-        <div style={{height:1,background:C.bd,margin:'10px -16px'}}/>
-        {/* Row 5: action buttons + RSVP */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
-          <div style={{display:'flex',alignItems:'center',gap:6,flex:1,position:'relative'}}>
-            {/* Add to calendar dropdown */}
-            <button onClick={e=>{e.stopPropagation();setCalendarOpen(!calendarOpen);}}
-              style={{display:'flex',alignItems:'center',gap:4,padding:'6px 10px',borderRadius:6,fontSize:11,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.bg,color:C.t1,border:`1px solid ${C.bd}`,transition:'all 0.2s'}}>
-              <I k="calplus" s={12} c={C.t1}/>Calendar
-            </button>
-            {calendarOpen&&(
-              <>
-                <div style={{position:'fixed',inset:0,zIndex:49}} onClick={()=>setCalendarOpen(false)}/>
-                <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,background:C.w,border:`1px solid ${C.bd}`,borderRadius:7,zIndex:50,overflow:'hidden',boxShadow:'0 4px 12px rgba(0,0,0,.08)',minWidth:140}}>
-                  <button onClick={handleAddToGoogleCalendar} style={{width:'100%',padding:'10px 12px',fontSize:11,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:6,transition:'background 0.2s'}}
-                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
-                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
-                    <I k="globe" s={12} c={C.pu}/>Google
-                  </button>
-                  <div style={{height:1,background:C.bd}}/>
-                  <button onClick={handleAddToOutlookCalendar} style={{width:'100%',padding:'10px 12px',fontSize:11,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:6,transition:'background 0.2s'}}
-                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
-                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
-                    <I k="monitor" s={12} c={C.am}/>Outlook
-                  </button>
-                  <div style={{height:1,background:C.bd}}/>
-                  <button onClick={handleDownloadCalendarFile} style={{width:'100%',padding:'10px 12px',fontSize:11,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:6,transition:'background 0.2s'}}
-                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
-                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
-                    <I k="file" s={12} c={C.gr}/>.ics
-                  </button>
-                </div>
-              </>
-            )}
-            {/* Set reminder button */}
-            <button onClick={handleSetReminder}
-              style={{display:'flex',alignItems:'center',gap:4,padding:'6px 10px',borderRadius:6,fontSize:11,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:reminderSet?C.grb:C.bg,color:reminderSet?C.gr:C.t1,border:reminderSet?`1px solid ${C.gr}`:`1px solid ${C.bd}`,transition:'all 0.2s'}}>
-              <I k="bell" s={12} c={reminderSet?C.gr:C.t1}/>
-              {reminderSet?'Set':'Reminder'}
-            </button>
-          </div>
-          {/* RSVP button */}
-          <button onClick={e=>{e.stopPropagation();onRsvp(ev.id);}}
-            style={{display:'flex',alignItems:'center',gap:5,padding:'6px 14px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:ev.rsvped?C.w:C.pu,color:ev.rsvped?C.gr:C.w,border:ev.rsvped?`1px solid ${C.gr}`:'none',flexShrink:0}}>
+        {/* Separator */}
+        <div style={{height:1,background:C.bd,margin:isMobile?'8px -12px':'10px -16px'}}/>
+        {/* Spots + RSVP */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <span style={{fontSize:12,color:C.pu,fontWeight:500}}>{ev.spotsLeft} spots left</span>
+          <button onClick={()=>onRsvp(ev.id)}
+            style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:ev.rsvped?C.w:C.pu,color:ev.rsvped?C.gr:C.w,border:ev.rsvped?`1px solid ${C.gr}`:'none'}}>
             {ev.rsvped&&<I k="check" s={11} c={C.gr} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP'}
           </button>
         </div>
@@ -504,8 +294,10 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp }) {
   );
 }
 
-/* ─── EVENT FORM MODAL (Create / Edit) — exact Design 22 ─── */
-function EventFormModal({ title, initial, onClose, onSave }) {
+/* ═══════════════════════════════════════════
+   EVENT FORM MODAL — responsive width
+═══════════════════════════════════════════ */
+function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
   const blank = {title:'',speakers:'',type:'',duration:'',date:'',time:'',maxCap:'',avail:'',desc:'',agenda:[]};
   const [f, setF] = useState(initial||blank);
   const [typeOpen, setTypeOpen] = useState(false);
@@ -517,18 +309,20 @@ function EventFormModal({ title, initial, onClose, onSave }) {
   const IN = {width:'100%',padding:'10px 12px',border:`1px solid ${C.bd}`,borderRadius:8,fontSize:13,color:C.t1,outline:'none',fontFamily:'inherit',boxSizing:'border-box',background:C.w};
   const LB = {fontSize:13,fontWeight:500,color:C.t1,display:'block',marginBottom:5};
   const GP = {marginBottom:16};
+  const modalW = isMobile ? '100%' : 380;
   return (
     <>
       <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.25)',zIndex:100}} onClick={onClose}/>
-      <div style={{position:'fixed',top:0,right:0,width:380,height:'100%',background:C.w,zIndex:101,display:'flex',flexDirection:'column',boxShadow:'-4px 0 30px rgba(0,0,0,.12)'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 24px',borderBottom:`1px solid ${C.bd}`,flexShrink:0}}>
-          <h2 style={{fontSize:18,fontWeight:700,color:C.t1,margin:0}}>{title}</h2>
+      <div style={{position:'fixed',top:0,right:0,width:modalW,height:'100%',background:C.w,zIndex:101,display:'flex',flexDirection:'column',boxShadow:'-4px 0 30px rgba(0,0,0,.12)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 20px',borderBottom:`1px solid ${C.bd}`,flexShrink:0}}>
+          <h2 style={{fontSize:17,fontWeight:700,color:C.t1,margin:0}}>{title}</h2>
           <button onClick={onClose} style={{width:28,height:28,borderRadius:'50%',border:`1px solid ${C.bd}`,background:C.w,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><I k="x" s={14} c={C.t2} sw={2}/></button>
         </div>
-        <div style={{flex:1,overflowY:'auto',padding:'20px 24px'}}>
-          <div style={GP}><label style={LB}>Event title <span style={{color:'#EF4444'}}>*</span></label><input value={f.title} onChange={set('title')} placeholder="Enter your full name" style={IN}/></div>
-          <div style={GP}><label style={LB}>Speaker name(s)</label><input value={f.speakers} onChange={set('speakers')} placeholder="Enter your full name" style={IN}/></div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,...GP}}>
+        <div style={{flex:1,overflowY:'auto',padding:'18px 20px'}}>
+          <div style={GP}><label style={LB}>Event title <span style={{color:'#EF4444'}}>*</span></label><input value={f.title} onChange={set('title')} placeholder="Enter event title" style={IN}/></div>
+          <div style={GP}><label style={LB}>Speaker name(s)</label><input value={f.speakers} onChange={set('speakers')} placeholder="Enter speaker names" style={IN}/></div>
+          {/* Type + Duration — stack on mobile */}
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,...GP}}>
             <div>
               <label style={LB}>Event type <span style={{color:'#EF4444'}}>*</span></label>
               <div style={{position:'relative'}}>
@@ -545,9 +339,10 @@ function EventFormModal({ title, initial, onClose, onSave }) {
                 )}
               </div>
             </div>
-            <div><label style={LB}>Duration</label><input value={f.duration} onChange={set('duration')} placeholder="Select your role" style={IN}/></div>
+            <div><label style={LB}>Duration</label><input value={f.duration} onChange={set('duration')} placeholder="e.g. 90 min" style={IN}/></div>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,...GP}}>
+          {/* Date + Time — stack on mobile */}
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,...GP}}>
             <div>
               <label style={LB}>Date <span style={{color:'#EF4444'}}>*</span></label>
               <div style={{position:'relative'}}>
@@ -572,7 +367,7 @@ function EventFormModal({ title, initial, onClose, onSave }) {
             <label style={LB}>Agenda items <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label>
             {f.agenda.map((a,i)=>(
               <div key={i} style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
-                <input value={a.t} onChange={e=>setAg(i,'t',e.target.value)} placeholder="Time" style={{...IN,width:68,flexShrink:0,padding:'9px 10px'}}/>
+                <input value={a.t} onChange={e=>setAg(i,'t',e.target.value)} placeholder="Time" style={{...IN,width:65,flexShrink:0,padding:'9px 8px'}}/>
                 <input value={a.d} onChange={e=>setAg(i,'d',e.target.value)} placeholder="Agenda item description" style={{...IN,flex:1}}/>
                 <button onClick={()=>delAg(i)} style={{background:'none',border:'none',cursor:'pointer',padding:4,flexShrink:0,display:'flex'}}><I k="x" s={16} c={C.t3} sw={2}/></button>
               </div>
@@ -582,132 +377,63 @@ function EventFormModal({ title, initial, onClose, onSave }) {
             </div>
           </div>
         </div>
-        <div style={{padding:'14px 24px',borderTop:`1px solid ${C.bd}`,display:'flex',gap:10,justifyContent:'flex-end',flexShrink:0}}>
-          <button onClick={onClose} style={{padding:'9px 18px',borderRadius:8,border:`1px solid ${C.bd}`,background:C.w,color:C.t2,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
-          <button onClick={()=>onSave(f)} style={{padding:'9px 22px',borderRadius:8,border:'none',background:C.pu,color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>Save changes</button>
+        <div style={{padding:'14px 20px',borderTop:`1px solid ${C.bd}`,display:'flex',gap:10,justifyContent:'flex-end',flexShrink:0}}>
+          <button onClick={onClose} style={{padding:'9px 16px',borderRadius:8,border:`1px solid ${C.bd}`,background:C.w,color:C.t2,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
+          <button onClick={()=>onSave(f)} style={{padding:'9px 20px',borderRadius:8,border:'none',background:C.pu,color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>Save changes</button>
         </div>
       </div>
     </>
   );
 }
 
-/* ─── EVENT DETAIL MODAL — exact Design 21 ─── */
-function DetailModal({ ev, onClose, onRsvp, onNotifyMe }) {
+/* ═══════════════════════════════════════════
+   DETAIL MODAL — responsive width
+═══════════════════════════════════════════ */
+function DetailModal({ ev, onClose, onRsvp, isMobile }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg};
-  const [reminderSet, setReminderSet] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  
-  const handleAddToGoogleCalendar = () => {
-    NotificationManager.openGoogleCalendar(ev);
-  };
-
-  const handleAddToOutlookCalendar = () => {
-    NotificationManager.openOutlookCalendar(ev);
-  };
-
-  const handleDownloadCalendarFile = () => {
-    NotificationManager.downloadCalendarFile(ev);
-  };
-
-  const handleSetReminder = async () => {
-    const hasPermission = await NotificationManager.requestPermission();
-    if (hasPermission) {
-      const scheduled = NotificationManager.scheduleEventNotification(ev, 15);
-      if (scheduled) {
-        setReminderSet(true);
-        setTimeout(() => setReminderSet(false), 2000);
-      }
-    }
-  };
-
+  const modalW = isMobile ? '100%' : 380;
   return (
     <>
       <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.25)',zIndex:100}} onClick={onClose}/>
-      <div style={{position:'fixed',top:0,right:0,width:380,height:'100%',background:C.w,zIndex:101,display:'flex',flexDirection:'column',boxShadow:'-4px 0 30px rgba(0,0,0,.12)'}}>
+      <div style={{position:'fixed',top:0,right:0,width:modalW,height:'100%',background:C.w,zIndex:101,display:'flex',flexDirection:'column',boxShadow:'-4px 0 30px rgba(0,0,0,.12)'}}>
         <div style={{display:'flex',justifyContent:'flex-end',padding:'16px 20px 0',flexShrink:0}}>
           <button onClick={onClose} style={{width:28,height:28,borderRadius:'50%',border:`1px solid ${C.bd}`,background:C.w,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><I k="x" s={14} c={C.t2} sw={2}/></button>
         </div>
-        <div style={{flex:1,overflowY:'auto',padding:'8px 24px 20px'}}>
-          {/* Type pill */}
-          <span style={{display:'inline-block',fontSize:11,fontWeight:700,color:ec.c,padding:'3px 10px',background:ec.b,borderRadius:20,marginBottom:14}}>
+        <div style={{flex:1,overflowY:'auto',padding:'8px 20px 20px'}}>
+          <span style={{display:'inline-block',fontSize:11,fontWeight:700,color:ec.c,padding:'3px 10px',background:ec.b,borderRadius:20,marginBottom:12}}>
             {ev.type.charAt(0).toUpperCase()+ev.type.slice(1)}
           </span>
-          <h2 style={{fontSize:17,fontWeight:700,color:C.t1,margin:'0 0 10px',lineHeight:1.4}}>{ev.title}</h2>
-          <p style={{fontSize:13,color:C.t2,margin:'0 0 20px',lineHeight:1.7}}>{ev.desc}</p>
-          {/* Info grid — light gray bg boxes (Design 21) */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:22}}>
+          <h2 style={{fontSize:16,fontWeight:700,color:C.t1,margin:'0 0 10px',lineHeight:1.4}}>{ev.title}</h2>
+          <p style={{fontSize:13,color:C.t2,margin:'0 0 18px',lineHeight:1.7}}>{ev.desc}</p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
             {[{l:'Date',v:ev.dateLabel},{l:'Time',v:ev.time},{l:'Duration',v:ev.dur},{l:'Format',v:ev.format}].map(it=>(
-              <div key={it.l} style={{padding:'12px 14px',background:C.bg,border:`1px solid ${C.bd}`,borderRadius:10}}>
-                <div style={{fontSize:11,color:C.t3,marginBottom:4,fontWeight:500}}>{it.l}</div>
+              <div key={it.l} style={{padding:'11px 12px',background:C.bg,border:`1px solid ${C.bd}`,borderRadius:10}}>
+                <div style={{fontSize:11,color:C.t3,marginBottom:3,fontWeight:500}}>{it.l}</div>
                 <div style={{fontSize:13,fontWeight:600,color:C.t1}}>{it.v}</div>
               </div>
             ))}
           </div>
-          {/* Speakers */}
-          <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 14px'}}>Speakers</h3>
+          <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 12px'}}>Speakers</h3>
           {ev.speakers.map((s,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
-              <div style={{width:36,height:36,borderRadius:'50%',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:s.color,flexShrink:0}}>{s.initials}</div>
+            <div key={i} style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+              <div style={{width:34,height:34,borderRadius:'50%',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:s.color,flexShrink:0}}>{s.initials}</div>
               <div><div style={{fontSize:13,fontWeight:600,color:C.t1}}>{s.name}</div><div style={{fontSize:12,color:C.t3}}>{s.role}</div></div>
             </div>
           ))}
-          {/* Agenda */}
           {ev.agenda&&ev.agenda.length>0&&<>
-            <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'16px 0 12px'}}>Agenda</h3>
+            <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'14px 0 10px'}}>Agenda</h3>
             {ev.agenda.map((a,i)=>(
-              <div key={i} style={{display:'flex',gap:16,marginBottom:10,alignItems:'baseline'}}>
+              <div key={i} style={{display:'flex',gap:14,marginBottom:9,alignItems:'baseline'}}>
                 <span style={{fontSize:12,fontWeight:600,color:C.t3,flexShrink:0,width:30}}>{a.t}</span>
                 <span style={{fontSize:13,color:C.t1,lineHeight:1.4}}>{a.d}</span>
               </div>
             ))}
           </>}
         </div>
-        {/* Footer — Design 21: action buttons (Calendar, Reminder, RSVP) */}
-        <div style={{padding:'14px 24px 20px',borderTop:`1px solid ${C.bd}`,flexShrink:0}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-            <span style={{fontSize:13,color:C.t2}}>{ev.spotsLeft} spots remaining</span>
-          </div>
-          {/* Calendar selector dropdown */}
-          <div style={{position:'relative',marginBottom:12}}>
-            <button onClick={()=>setCalendarOpen(!calendarOpen)}
-              style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'10px 14px',borderRadius:9,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.bg,color:C.t1,border:`1px solid ${C.bd}`,transition:'all 0.2s'}}>
-              <span style={{display:'flex',alignItems:'center',gap:6}}><I k="calplus" s={14} c={C.t1}/>Add to calendar</span>
-              <I k={calendarOpen?'chd':'chr'} s={12} c={C.t3}/>
-            </button>
-            {calendarOpen&&(
-              <>
-                <div style={{position:'fixed',inset:0,zIndex:49}} onClick={()=>setCalendarOpen(false)}/>
-                <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:C.w,border:`1px solid ${C.bd}`,borderRadius:8,zIndex:50,overflow:'hidden',boxShadow:'0 4px 14px rgba(0,0,0,.1)'}}>
-                  <button onClick={()=>{handleAddToGoogleCalendar();setCalendarOpen(false);}} style={{width:'100%',padding:'12px 14px',fontSize:12,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:8,transition:'background 0.2s'}}
-                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
-                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
-                    <I k="globe" s={14} c={C.pu}/>Google Calendar
-                  </button>
-                  <div style={{height:1,background:C.bd}}/>
-                  <button onClick={()=>{handleAddToOutlookCalendar();setCalendarOpen(false);}} style={{width:'100%',padding:'12px 14px',fontSize:12,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:8,transition:'background 0.2s'}}
-                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
-                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
-                    <I k="monitor" s={14} c={C.am}/>Outlook Calendar
-                  </button>
-                  <div style={{height:1,background:C.bd}}/>
-                  <button onClick={()=>{handleDownloadCalendarFile();setCalendarOpen(false);}} style={{width:'100%',padding:'12px 14px',fontSize:12,color:C.t1,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:8,transition:'background 0.2s'}}
-                    onMouseEnter={(e)=>e.currentTarget.style.background=C.bg}
-                    onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
-                    <I k="file" s={14} c={C.gr}/>Download .ics file
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-          {/* Set reminder button */}
-          <button onClick={handleSetReminder}
-            style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'10px 14px',borderRadius:9,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:reminderSet?C.grb:C.bg,color:reminderSet?C.gr:C.t1,border:reminderSet?`1px solid ${C.gr}`:`1px solid ${C.bd}`,transition:'all 0.2s',marginBottom:12}}>
-            <I k="bell" s={14} c={reminderSet?C.gr:C.t1}/>
-            {reminderSet?'✓ Reminder set for 15 min before':'Set alarm reminder (15 min before)'}
-          </button>
-          {/* Full-width RSVP button */}
+        <div style={{padding:'14px 20px 18px',borderTop:`1px solid ${C.bd}`,flexShrink:0}}>
+          <div style={{fontSize:13,color:C.t2,marginBottom:10}}>{ev.spotsLeft} spots remaining</div>
           <button onClick={()=>onRsvp(ev.id)}
-            style={{width:'100%',padding:'13px',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:ev.rsvped?C.pu:C.w,color:ev.rsvped?C.w:C.pu,border:ev.rsvped?'none':`1.5px solid ${C.pu}`}}>
+            style={{width:'100%',padding:'12px',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:ev.rsvped?C.pu:C.w,color:ev.rsvped?C.w:C.pu,border:ev.rsvped?'none':`1.5px solid ${C.pu}`}}>
             {ev.rsvped&&<I k="check" s={16} c={C.w} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP now'}
           </button>
         </div>
@@ -716,19 +442,21 @@ function DetailModal({ ev, onClose, onRsvp, onNotifyMe }) {
   );
 }
 
-/* ─── DELETE MODAL ─── */
-function DeleteModal({ ev, onClose, onConfirm }) {
+/* ═══════════════════════════════════════════
+   DELETE MODAL — responsive width
+═══════════════════════════════════════════ */
+function DeleteModal({ ev, onClose, onConfirm, isMobile }) {
   return (
     <>
       <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.35)',zIndex:100}} onClick={onClose}/>
-      <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:400,background:C.w,borderRadius:16,zIndex:101,boxShadow:'0 24px 64px rgba(0,0,0,.2)',overflow:'hidden'}}>
+      <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:isMobile?'92vw':400,background:C.w,borderRadius:16,zIndex:101,boxShadow:'0 24px 64px rgba(0,0,0,.2)',overflow:'hidden'}}>
         <div style={{display:'flex',justifyContent:'flex-end',padding:'14px 18px 0'}}>
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',padding:4,display:'flex'}}><I k="x" s={16} c={C.t3} sw={2}/></button>
         </div>
-        <div style={{padding:'8px 32px 28px',textAlign:'center'}}>
-          <div style={{width:52,height:52,borderRadius:'50%',background:C.rdb,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 18px'}}><I k="trash" s={22} c={C.rd} sw={1.5}/></div>
-          <h3 style={{fontSize:17,fontWeight:700,color:C.t1,margin:'0 0 12px'}}>Delete this event?</h3>
-          <p style={{fontSize:13,color:C.t2,lineHeight:1.7,margin:'0 0 24px'}}>You're about to delete <strong>"{ev.title}"</strong>. This action cannot be undone and attendees will not be notified automatically.</p>
+        <div style={{padding:'8px 28px 28px',textAlign:'center'}}>
+          <div style={{width:52,height:52,borderRadius:'50%',background:C.rdb,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}><I k="trash" s={22} c={C.rd} sw={1.5}/></div>
+          <h3 style={{fontSize:17,fontWeight:700,color:C.t1,margin:'0 0 10px'}}>Delete this event?</h3>
+          <p style={{fontSize:13,color:C.t2,lineHeight:1.7,margin:'0 0 22px'}}>You're about to delete <strong>"{ev.title}"</strong>. This action cannot be undone.</p>
           <div style={{display:'flex',gap:12}}>
             <button onClick={onClose} style={{flex:1,padding:'11px',borderRadius:9,border:`1px solid ${C.bd}`,background:C.w,color:C.t1,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>Keep it</button>
             <button onClick={onConfirm} style={{flex:1,padding:'11px',borderRadius:9,border:'none',background:C.rd,color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>Yes, delete</button>
@@ -739,19 +467,24 @@ function DeleteModal({ ev, onClose, onConfirm }) {
   );
 }
 
-/* ─── VIEW ALL MODAL — right-side drawer (consistent with all other modals) ─── */
-function ViewAllModal({ events, onClose, onOpen, onEdit, onDelete, onRsvp }) {
+/* ═══════════════════════════════════════════
+   VIEW ALL MODAL — responsive width
+═══════════════════════════════════════════ */
+function ViewAllModal({ events, onClose, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
+  const modalW = isMobile ? '100%' : 480;
   return (
     <>
       <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.25)',zIndex:100}} onClick={onClose}/>
-      <div style={{position:'fixed',top:0,right:0,width:480,height:'100%',background:C.w,zIndex:101,display:'flex',flexDirection:'column',boxShadow:'-4px 0 30px rgba(0,0,0,.12)'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 24px',borderBottom:`1px solid ${C.bd}`,flexShrink:0}}>
-          <h2 style={{fontSize:18,fontWeight:700,color:C.t1,margin:0}}>Upcoming Events <span style={{color:C.t3,fontWeight:400,fontSize:14}}>({events.length})</span></h2>
+      <div style={{position:'fixed',top:0,right:0,width:modalW,height:'100%',background:C.w,zIndex:101,display:'flex',flexDirection:'column',boxShadow:'-4px 0 30px rgba(0,0,0,.12)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 20px',borderBottom:`1px solid ${C.bd}`,flexShrink:0}}>
+          <h2 style={{fontSize:17,fontWeight:700,color:C.t1,margin:0}}>Upcoming Events <span style={{color:C.t3,fontWeight:400,fontSize:14}}>({events.length})</span></h2>
           <button onClick={onClose} style={{width:28,height:28,borderRadius:'50%',border:`1px solid ${C.bd}`,background:C.w,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><I k="x" s={14} c={C.t2} sw={2}/></button>
         </div>
-        <div style={{flex:1,overflowY:'auto',padding:'20px 24px'}}>
+        <div style={{flex:1,overflowY:'auto',padding:'16px 16px'}}>
           {events.map(ev=>(
-            <EventCard key={ev.id} ev={ev} onOpen={e=>{onClose();onOpen(e);}} onEdit={e=>{onClose();onEdit(e);}} onDelete={e=>{onClose();onDelete(e);}} onRsvp={onRsvp}/>
+            <EventCard key={ev.id} ev={ev} isMobile={isMobile}
+              onOpen={e=>{onClose();onOpen(e);}} onEdit={e=>{onClose();onEdit(e);}}
+              onDelete={e=>{onClose();onDelete(e);}} onRsvp={onRsvp}/>
           ))}
         </div>
       </div>
@@ -759,90 +492,63 @@ function ViewAllModal({ events, onClose, onOpen, onEdit, onDelete, onRsvp }) {
   );
 }
 
-/* ─── TOAST ─── */
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
 function Toast({ msg, onDone }) {
   useEffect(()=>{const t=setTimeout(onDone,2800);return()=>clearTimeout(t);},[]);
   return (
-    <div style={{position:'fixed',top:16,right:16,background:'#1F2937',color:C.w,fontSize:13,fontWeight:500,padding:'10px 18px',borderRadius:10,display:'flex',alignItems:'center',gap:8,zIndex:200,boxShadow:'0 8px 24px rgba(0,0,0,.2)'}}>
+    <div style={{position:'fixed',top:16,right:16,background:'#1F2937',color:C.w,fontSize:13,fontWeight:500,padding:'10px 18px',borderRadius:10,display:'flex',alignItems:'center',gap:8,zIndex:200,boxShadow:'0 8px 24px rgba(0,0,0,.2)',maxWidth:'90vw'}}>
       <I k="check" s={14} c='#34D399' sw={2.5}/>{msg}
     </div>
   );
 }
 
-/* ─── MAIN COMPONENT ─── */
+/* ═══════════════════════════════════════════
+   MAIN
+═══════════════════════════════════════════ */
 export default function OfficeHoursEvents() {
-  const [events, setEvents]       = useState(INIT_EVENTS);
-  const [activeTab, setTab]       = useState('upcoming');
-  const [activeFilter, setFilter] = useState('all');
-  const [sortBy, setSort]         = useState('soonest');
-  const [sortOpen, setSortOpen]   = useState(false);
-  const [showCreate, setCreate]   = useState(false);
-  const [editEv, setEdit]         = useState(null);
-  const [deleteEv, setDel]        = useState(null);
-  const [detailEv, setDetail]     = useState(null);
-  const [viewAll, setViewAll]     = useState(false);
-  const [toast, setToast]         = useState(null);
-  const [calEvDays, setCalEvDays] = useState([{day:8,month:4,year:2026}]);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const { isMobile, isTablet, isDesktop } = useBreakpoint();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [events,      setEvents]      = useState(INIT_EVENTS);
+  const [activeTab,   setTab]         = useState('upcoming');
+  const [activeFilter,setFilter]      = useState('all');
+  const [sortBy,      setSort]        = useState('soonest');
+  const [sortOpen,    setSortOpen]    = useState(false);
+  const [showCreate,  setCreate]      = useState(false);
+  const [editEv,      setEdit]        = useState(null);
+  const [deleteEv,    setDel]         = useState(null);
+  const [detailEv,    setDetail]      = useState(null);
+  const [viewAll,     setViewAll]     = useState(false);
+  const [toast,       setToast]       = useState(null);
+  const [calEvDays,   setCalEvDays]   = useState([{day:8,month:4,year:2026}]);
 
   const showToast = msg => setToast(msg);
 
-  // Handle "Notify me" button - request permissions and set up notifications for all events
-  const handleNotifyMe = async () => {
-    const hasPermission = await NotificationManager.requestPermission();
-    if (hasPermission) {
-      let scheduled = 0;
-      events.forEach(event => {
-        if (NotificationManager.scheduleEventNotification(event, 15)) {
-          scheduled++;
-        }
-      });
-      setNotificationsEnabled(true);
-      showToast(`✓ Notifications enabled for ${scheduled} events! You'll get alerts 15 minutes before each event.`);
-    } else {
-      showToast('Please enable notifications to get event reminders');
-    }
-  };
-
-  // RSVP toggle
   const handleRsvp = id => {
     setEvents(p=>p.map(e=>e.id===id?{...e,rsvped:!e.rsvped}:e));
-    // Also update detail if open
     if (detailEv?.id===id) setDetail(p=>({...p,rsvped:!p.rsvped}));
   };
 
-  // Save (create or edit)
   const handleSave = form => {
-    const parsedDate = form.date ? form.date.split('/') : [];
-    const calDay   = parsedDate[1] ? parseInt(parsedDate[1]) : 8;
-    const calMonth = parsedDate[0] ? parseInt(parsedDate[0])-1 : 4;
-    const calYear  = parsedDate[2] ? parseInt(parsedDate[2]) : 2026;
+    const parts = form.date ? form.date.split('/') : [];
+    const calDay=parts[1]?parseInt(parts[1]):8, calMonth=parts[0]?parseInt(parts[0])-1:4, calYear=parts[2]?parseInt(parts[2]):2026;
     if (editEv) {
       setEvents(p=>p.map(e=>e.id===editEv.id?{...e,...form,dur:form.duration||e.dur,dateLabel:form.date||e.dateLabel,calDay,calMonth,calYear}:e));
       setEdit(null); showToast('Event updated successfully');
     } else {
-      const ne = {
-        ...form, id:Date.now(), month:parsedDate[0]||'MAY', day:String(calDay), weekday:'THU',
-        dateLabel:form.date||'TBD', dateShort:`${form.date||'TBD'} · ${form.time||'TBD'}`,
-        time:form.time||'TBD', dur:form.duration||'TBD', format:'Live Zoom · Recorded',
-        calDay, calMonth, calYear,
-        spotsLeft:parseInt(form.avail)||0, totalSpots:parseInt(form.maxCap)||0,
-        rsvped:false, speakers:[SPK.KA], agenda:form.agenda||[],
-      };
+      const ne={...form,id:Date.now(),month:parts[0]||'MAY',day:String(calDay),weekday:'THU',dateLabel:form.date||'TBD',dateShort:`${form.date||'TBD'} · ${form.time||'TBD'}`,time:form.time||'TBD',dur:form.duration||'TBD',format:'Live Zoom · Recorded',calDay,calMonth,calYear,spotsLeft:parseInt(form.avail)||0,totalSpots:parseInt(form.maxCap)||0,rsvped:false,speakers:[SPK.KA],agenda:form.agenda||[]};
       setEvents(p=>[...p,ne]);
       setCalEvDays(p=>[...p,{day:calDay,month:calMonth,year:calYear}]);
       setCreate(false); showToast('Event created successfully');
     }
   };
 
-  // Add to calendar (live banner button)
   const addLiveToCalendar = () => {
-    const already = calEvDays.some(e=>e.day===8&&e.month===4&&e.year===2026);
-    if (!already) setCalEvDays(p=>[...p,{day:8,month:4,year:2026}]);
+    if (!calEvDays.some(e=>e.day===8&&e.month===4&&e.year===2026)) setCalEvDays(p=>[...p,{day:8,month:4,year:2026}]);
     showToast('Added to your calendar!');
   };
 
-  // Calendar day click → find event for that day
   const handleCalDayClick = (day,month,year) => {
     const found = events.find(e=>e.calDay===day&&e.calMonth===month&&e.calYear===year);
     if (found) setDetail(found);
@@ -853,126 +559,134 @@ export default function OfficeHoursEvents() {
   const SORTS   = [{id:'soonest',l:'Soonest first'},{id:'latest',l:'Latest first'},{id:'popular',l:'Most popular'}];
   const RSVPS   = [{dot:C.pu,title:'Project Financing Deep Dive',dt:'Thu, May 8 · 3:00 PM GMT'},{dot:C.gr,title:'Project Financing Deep Dive',dt:'Thu, May 8 · 3:00 PM GMT'},{dot:C.pu,title:'Project Financing Deep Dive',dt:'Thu, May 8 · 3:00 PM GMT'}];
   const HOSTS   = [{dot:C.pu,n:'Kwame Asante',r:'Lead Investment Analyst',s:'8 sessions'},{dot:C.gr,n:'Ngozi Fakoya',r:'ESG & Policy Lead',s:'8 sessions'},{dot:C.am,n:'Bola Oladele',r:'Risk & FX Specialist',s:'8 sessions'}];
+  const displayEvents = activeTab==='rsvps' ? events.filter(e=>e.rsvped) : events;
 
-  const displayEvents = events.filter(e => {
-    if (activeTab==='rsvps') return e.rsvped;
-    return true;
-  });
+  /* Right-column width responsive */
+  const rightColW = isDesktop ? 285 : isTablet ? 240 : '100%';
+  const twoColGrid = (isMobile) ? '1fr' : isTablet ? `1fr ${rightColW}px` : `1fr ${rightColW}px`;
+  const mainPad = isMobile ? '16px 14px 60px' : '24px 28px 60px';
 
   return (
     <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',fontSize:14,overflow:'hidden'}}>
-      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
-        <main style={{flex:1,overflowY:'auto',padding:'24px 28px 60px'}}>
 
-          {/* Page header */}
-          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:22,gap:16}}>
+      {/* Sidebar */}
+      <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} isMobile={isMobile} isTablet={isTablet}/>
+
+      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
+        <TopBar onMenuToggle={()=>setSidebarOpen(true)} isMobile={isMobile} isTablet={isTablet}/>
+
+        <main style={{flex:1,overflowY:'auto',padding:mainPad}}>
+
+          {/* ── Page header ── */}
+          <div style={{display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',marginBottom:20,gap:12,flexDirection:isMobile?'column':'row'}}>
             <div>
-              <h1 style={{fontSize:24,fontWeight:700,color:C.t1,margin:'0 0 5px',letterSpacing:-.4}}>Office Hours &amp; Events</h1>
-              <p style={{fontSize:13,color:C.t2,margin:0}}>Live sessions, workshops, and replays from the Tribes Capital team and network</p>
+              {!isMobile && <h1 style={{fontSize:22,fontWeight:700,color:C.t1,margin:'0 0 4px',letterSpacing:-.4}}>Office Hours &amp; Events</h1>}
+              <p style={{fontSize:13,color:C.t2,margin:0,lineHeight:1.5}}>Live sessions, workshops, and replays from the Tribes Capital team and network</p>
             </div>
-            <div style={{display:'flex',gap:10,flexShrink:0}}>
-              <button onClick={handleNotifyMe} style={{display:'flex',alignItems:'center',gap:7,padding:'9px 16px',border:notificationsEnabled?'none':`1px solid ${C.bd}`,borderRadius:9,background:notificationsEnabled?C.grb:C.w,color:notificationsEnabled?C.gr:C.t1,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s'}}>
-                <I k="bell" s={14} c={notificationsEnabled?C.gr:C.t2}/>
-                {notificationsEnabled?'Notifications on':'Notify me'}
+            <div style={{display:'flex',gap:8,flexShrink:0,width:isMobile?'100%':'auto'}}>
+              <button onClick={()=>showToast("You'll be notified about upcoming events!")}
+                style={{flex:isMobile?1:0,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:`1px solid ${C.bd}`,borderRadius:9,background:C.w,color:C.t1,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+                <I k="bell" s={14} c={C.t2}/>Notify me
               </button>
-              <button onClick={()=>setCreate(true)} style={{display:'flex',alignItems:'center',gap:7,padding:'9px 18px',border:'none',borderRadius:9,background:C.pu,color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
+              <button onClick={()=>setCreate(true)}
+                style={{flex:isMobile?1:0,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:'none',borderRadius:9,background:C.pu,color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
                 <I k="plus" s={14} c={C.w} sw={2}/>Create event
               </button>
             </div>
           </div>
 
-          {/* Stats row */}
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:22}}>
+          {/* ── Stats row — 2-col on mobile, 4-col on tablet/desktop ── */}
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?10:16,marginBottom:20}}>
             {[{l:'Upcoming events',v:String(events.length),badge:'This month',bc:C.pu,bb:C.puf},{l:"You're RSVPed to",v:String(events.filter(e=>e.rsvped).length),badge:'Confirmed',bc:C.gr,bb:C.grb},{l:'Replays available',v:'00.0',badge:'All time',bc:C.tl,bb:C.tlb},{l:'Sessions attended',v:'0',badge:'Your record',bc:C.am,bb:C.amb}].map(s=>(
-              <div key={s.l} style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:10,padding:'14px 18px'}}>
-                <div style={{fontSize:12,color:C.t2,marginBottom:6}}>{s.l}</div>
-                <div style={{fontSize:26,fontWeight:700,color:C.t1,marginBottom:8,letterSpacing:-.8}}>{s.v}</div>
+              <div key={s.l} style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:10,padding:isMobile?'12px 14px':'14px 18px'}}>
+                <div style={{fontSize:11,color:C.t2,marginBottom:4}}>{s.l}</div>
+                <div style={{fontSize:isMobile?22:26,fontWeight:700,color:C.t1,marginBottom:6,letterSpacing:-.8}}>{s.v}</div>
                 <span style={{background:s.bb,color:s.bc,fontSize:11,fontWeight:500,padding:'2px 10px',borderRadius:20}}>{s.badge}</span>
               </div>
             ))}
           </div>
 
-          {/* Live banner */}
-          <div style={{background:`linear-gradient(135deg,${C.pud},${C.pu} 55%,${C.pul})`,borderRadius:14,padding:'22px 28px',marginBottom:24}}>
-            <div style={{display:'inline-flex',alignItems:'center',gap:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.3)',borderRadius:20,padding:'4px 12px',marginBottom:14}}>
+          {/* ── Live banner ── */}
+          <div style={{background:`linear-gradient(135deg,${C.pud},${C.pu} 55%,${C.pul})`,borderRadius:14,padding:isMobile?'18px 16px':'22px 28px',marginBottom:22}}>
+            <div style={{display:'inline-flex',alignItems:'center',gap:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.3)',borderRadius:20,padding:'4px 12px',marginBottom:12}}>
               <div style={{width:8,height:8,borderRadius:'50%',background:'#FCD34D'}}/>
               <span style={{fontSize:11,fontWeight:700,color:C.w,letterSpacing:.7}}>LIVE THIS THURSDAY</span>
             </div>
-            <h2 style={{fontSize:20,fontWeight:700,color:C.w,margin:'0 0 8px',lineHeight:1.3}}>Project Financing Deep Dive: Structuring Your First Deal</h2>
-            <p style={{fontSize:13,color:'rgba(255,255,255,.8)',margin:'0 0 16px',lineHeight:1.6,maxWidth:580}}>Join our lead investment analyst as he walks through a real $2.4M C&I solar deal step-by-step — from term sheet to financial close.</p>
-            <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:18,flexWrap:'wrap'}}>
-              {[{k:'cal',t:'Thursday, May 8 · 3:00 PM GMT'},{k:'users',t:'Office Hours'},{k:'clock',t:'90 min'}].map(m=>(
-                <span key={m.t} style={{display:'flex',alignItems:'center',gap:5,fontSize:13,color:'rgba(255,255,255,.85)'}}><I k={m.k} s={13} c='rgba(255,255,255,.65)'/>{m.t}</span>
+            <h2 style={{fontSize:isMobile?16:20,fontWeight:700,color:C.w,margin:'0 0 8px',lineHeight:1.3}}>Project Financing Deep Dive: Structuring Your First Deal</h2>
+            <p style={{fontSize:13,color:'rgba(255,255,255,.8)',margin:'0 0 14px',lineHeight:1.6,maxWidth:580}}>Join our lead investment analyst as he walks through a real $2.4M C&I solar deal — from term sheet to financial close.</p>
+            <div style={{display:'flex',alignItems:'center',gap:isMobile?10:16,marginBottom:14,flexWrap:'wrap'}}>
+              {[{k:'cal',t:isMobile?'May 8 · 3:00 PM GMT':'Thursday, May 8 · 3:00 PM GMT'},{k:'users',t:'Office Hours'},{k:'clock',t:'90 min'}].map(m=>(
+                <span key={m.t} style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k={m.k} s={13} c='rgba(255,255,255,.65)'/>{m.t}</span>
               ))}
             </div>
-            <div style={{display:'flex',gap:10,marginBottom:12}}>
-              <button onClick={()=>showToast('RSVP confirmed! See you Thursday.')} style={{padding:'8px 18px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.5)',background:'rgba(255,255,255,.15)',color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>RSVP now</button>
-              <button onClick={addLiveToCalendar} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.35)',background:'rgba(255,255,255,.08)',color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <button onClick={()=>showToast('RSVP confirmed! See you Thursday.')} style={{padding:isMobile?'8px 14px':'8px 18px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.5)',background:'rgba(255,255,255,.15)',color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>RSVP now</button>
+              <button onClick={addLiveToCalendar} style={{display:'flex',alignItems:'center',gap:6,padding:isMobile?'8px 12px':'8px 16px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.35)',background:'rgba(255,255,255,.08)',color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
                 <I k="plus" s={13} c={C.w} sw={2}/>Add to calendar
               </button>
             </div>
-            <p style={{fontSize:12,color:'rgba(255,255,255,.6)',margin:0}}>14 spots remaining out of 40</p>
+            <p style={{fontSize:12,color:'rgba(255,255,255,.6)',margin:'10px 0 0'}}>14 spots remaining out of 40</p>
           </div>
 
-          {/* Tabs */}
-          <div style={{borderBottom:`1px solid ${C.bd}`,marginBottom:16,display:'flex'}}>
+          {/* ── Tabs — horizontally scrollable on mobile ── */}
+          <div style={{borderBottom:`1px solid ${C.bd}`,marginBottom:14,display:'flex',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
             {TABS.map(tab=>(
               <button key={tab.id} onClick={()=>setTab(tab.id)}
-                style={{background:'none',border:'none',padding:'10px 22px',cursor:'pointer',fontSize:14,fontWeight:activeTab===tab.id?500:400,color:activeTab===tab.id?C.pu:C.t2,borderBottom:activeTab===tab.id?`2px solid ${C.pu}`:'2px solid transparent',marginBottom:-1,fontFamily:'inherit'}}>
+                style={{background:'none',border:'none',padding:isMobile?'10px 16px':'10px 22px',cursor:'pointer',fontSize:14,fontWeight:activeTab===tab.id?500:400,color:activeTab===tab.id?C.pu:C.t2,borderBottom:activeTab===tab.id?`2px solid ${C.pu}`:'2px solid transparent',marginBottom:-1,fontFamily:'inherit',whiteSpace:'nowrap',flexShrink:0}}>
                 {tab.l} ({tab.n})
               </button>
             ))}
           </div>
 
-          {/* Filters + Sort */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:10}}>
-            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          {/* ── Filters + Sort ── */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:10}}>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap',overflowX:isMobile?'auto':'visible',WebkitOverflowScrolling:'touch'}}>
               {FILTERS.map(f=>(
                 <button key={f.id} onClick={()=>setFilter(f.id)}
-                  style={{padding:'6px 14px',borderRadius:20,fontSize:13,cursor:'pointer',fontWeight:activeFilter===f.id?500:400,background:activeFilter===f.id?C.puf:C.w,color:activeFilter===f.id?C.pu:C.t2,border:activeFilter===f.id?`1.5px solid ${C.pu}`:`1px solid ${C.bd}`,fontFamily:'inherit'}}>
+                  style={{padding:'5px 12px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:activeFilter===f.id?500:400,background:activeFilter===f.id?C.puf:C.w,color:activeFilter===f.id?C.pu:C.t2,border:activeFilter===f.id?`1.5px solid ${C.pu}`:`1px solid ${C.bd}`,fontFamily:'inherit',whiteSpace:'nowrap',flexShrink:0}}>
                   {f.l}
                 </button>
               ))}
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:8}}>
-              {/* Sort dropdown */}
-              <div style={{position:'relative'}}>
-                <button onClick={()=>setSortOpen(o=>!o)} style={{display:'flex',alignItems:'center',gap:7,padding:'7px 14px',borderRadius:8,border:`1px solid ${C.bd}`,background:C.w,color:C.t2,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>
-                  {SORTS.find(s=>s.id===sortBy)?.l}<I k="chd" s={13} c={C.t3}/>
-                </button>
-                {sortOpen&&(
-                  <><div style={{position:'fixed',inset:0,zIndex:9}} onClick={()=>setSortOpen(false)}/>
-                  <div style={{position:'absolute',top:'calc(100% + 4px)',right:0,background:C.w,border:`1px solid ${C.bd}`,borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,.1)',minWidth:150,overflow:'hidden',zIndex:10}}>
-                    {SORTS.map(s=>(
-                      <div key={s.id} onClick={()=>{setSort(s.id);setSortOpen(false);}}
-                        style={{padding:'10px 16px',cursor:'pointer',fontSize:13,color:sortBy===s.id?C.pu:C.t1,background:sortBy===s.id?C.puf:'transparent',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                        {s.l}{sortBy===s.id&&<I k="check" s={13} c={C.pu} sw={2.5}/>}
-                      </div>
-                    ))}
-                  </div></>
-                )}
-              </div>
+            <div style={{position:'relative',flexShrink:0}}>
+              <button onClick={()=>setSortOpen(o=>!o)} style={{display:'flex',alignItems:'center',gap:7,padding:'6px 12px',borderRadius:8,border:`1px solid ${C.bd}`,background:C.w,color:C.t2,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>
+                {SORTS.find(s=>s.id===sortBy)?.l}<I k="chd" s={13} c={C.t3}/>
+              </button>
+              {sortOpen&&(
+                <><div style={{position:'fixed',inset:0,zIndex:9}} onClick={()=>setSortOpen(false)}/>
+                <div style={{position:'absolute',top:'calc(100% + 4px)',right:0,background:C.w,border:`1px solid ${C.bd}`,borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,.1)',minWidth:150,overflow:'hidden',zIndex:10}}>
+                  {SORTS.map(s=>(
+                    <div key={s.id} onClick={()=>{setSort(s.id);setSortOpen(false);}}
+                      style={{padding:'10px 16px',cursor:'pointer',fontSize:13,color:sortBy===s.id?C.pu:C.t1,background:sortBy===s.id?C.puf:'transparent',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      {s.l}{sortBy===s.id&&<I k="check" s={13} c={C.pu} sw={2.5}/>}
+                    </div>
+                  ))}
+                </div></>
+              )}
             </div>
           </div>
 
-          {/* Two-column layout */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 285px',gap:24,alignItems:'start'}}>
+          {/* ── Two-column layout — stacks to single column on mobile ── */}
+          <div style={{display:'grid',gridTemplateColumns:twoColGrid,gap:20,alignItems:'start'}}>
 
             {/* LEFT — event list */}
             <div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-                <span style={{fontSize:15,fontWeight:600,color:C.t1}}>Upcoming events <span style={{color:C.t3,fontWeight:400,fontSize:14}}>({displayEvents.length})</span></span>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                <span style={{fontSize:14,fontWeight:600,color:C.t1}}>Upcoming events <span style={{color:C.t3,fontWeight:400,fontSize:13}}>({displayEvents.length})</span></span>
                 <button onClick={()=>setViewAll(true)} style={{fontSize:13,color:C.pu,background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontFamily:'inherit',fontWeight:500}}>
                   View all <I k="arr" s={13} c={C.pu}/>
                 </button>
               </div>
-              {displayEvents.map(ev=><EventCard key={ev.id} ev={ev} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>)}
+              {displayEvents.map(ev=>(
+                <EventCard key={ev.id} ev={ev} isMobile={isMobile}
+                  onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>
+              ))}
             </div>
 
             {/* RIGHT — calendar + widgets */}
             <div>
               <CalWidget eventDays={calEvDays} onDayClick={handleCalDayClick}/>
-              {/* Upcoming RSVPs */}
+              {/* RSVPs */}
               <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden',marginBottom:14}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:`1px solid ${C.bd}`}}>
                   <span style={{fontSize:13,fontWeight:600,color:C.t1}}>Your upcoming RSVPs</span>
@@ -989,7 +703,7 @@ export default function OfficeHoursEvents() {
                   </div>
                 ))}
               </div>
-              {/* Regular hosts */}
+              {/* Hosts */}
               <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden'}}>
                 <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:13,fontWeight:600,color:C.t1}}>Regular hosts</span></div>
                 {HOSTS.map((h,i)=>(
@@ -1010,15 +724,23 @@ export default function OfficeHoursEvents() {
         </main>
       </div>
 
-      {/* Modals */}
-      {showCreate && <EventFormModal title="Create event" onClose={()=>setCreate(false)} onSave={handleSave}/>}
-      {editEv     && <EventFormModal title="Edit event" initial={editEv} onClose={()=>setEdit(null)} onSave={handleSave}/>}
-      {deleteEv   && <DeleteModal ev={deleteEv} onClose={()=>setDel(null)} onConfirm={()=>{setEvents(p=>p.filter(e=>e.id!==deleteEv.id));setDel(null);showToast('Event deleted successfully');}}/>}
-      {detailEv   && <DetailModal ev={detailEv} onClose={()=>setDetail(null)} onRsvp={handleRsvp}/>}
-      {viewAll    && <ViewAllModal events={displayEvents} onClose={()=>setViewAll(false)} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>}
+      {/* ── MODALS ── */}
+      {showCreate && <EventFormModal title="Create event" onClose={()=>setCreate(false)} onSave={handleSave} isMobile={isMobile}/>}
+      {editEv     && <EventFormModal title="Edit event" initial={editEv} onClose={()=>setEdit(null)} onSave={handleSave} isMobile={isMobile}/>}
+      {deleteEv   && <DeleteModal ev={deleteEv} isMobile={isMobile} onClose={()=>setDel(null)} onConfirm={()=>{setEvents(p=>p.filter(e=>e.id!==deleteEv.id));setDel(null);showToast('Event deleted successfully');}}/>}
+      {detailEv   && <DetailModal ev={detailEv} isMobile={isMobile} onClose={()=>setDetail(null)} onRsvp={handleRsvp}/>}
+      {viewAll    && <ViewAllModal events={displayEvents} isMobile={isMobile} onClose={()=>setViewAll(false)} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>}
       {toast      && <Toast msg={toast} onDone={()=>setToast(null)}/>}
 
-      <style>{`*{box-sizing:border-box;}button,input,select,textarea{font-family:inherit;}::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:10px;}`}</style>
+      <style>{`
+        *{box-sizing:border-box;}
+        button,input,select,textarea{font-family:inherit;}
+        ::-webkit-scrollbar{width:4px;height:4px;}
+        ::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:10px;}
+        @media(max-width:639px){
+          .hide-mobile{display:none!important;}
+        }
+      `}</style>
     </div>
   );
 }

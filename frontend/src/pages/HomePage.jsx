@@ -1,11 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import LearningHub from "./LearningHub";
-import OfficeHoursEvents from "./OfficeHoursEvents";
-import DueDiligencePage from "./DueDiligencePage";
-import Logo, { LogoMark, LogoFull } from "../components/Logo";
-import MobileNav from "../components/MobileNav";
-import "../styles/responsive.css";
-import "../styles/homepage-responsive.css";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 /* ─── DESIGN TOKENS ─────────────────────────────────── */
 const P   = '#5B21B6';
@@ -26,10 +19,11 @@ const T3  = '#9CA3AF';
 const BD  = '#E5E7EB';
 const BG  = '#F9FAFB';
 const W   = '#FFFFFF';
+
 /* ─── TUTORIAL STEPS ────────────────────────────────── */
 const STEPS = [
   { id:'welcome',  target:null,       pos:'center', icon:'👋', title:'Welcome to Tribes Capital',
-    desc:"You're now part of a community of clean energy investors and professionals across Africa. Let us show you around in 8 quick steps." },
+    desc:"You're now part of a community of 240+ clean energy investors and professionals across Africa. Let us show you around in 8 quick steps." },
   { id:'sidebar',  target:'sidebar',  pos:'right',  icon:'🧭', title:'Your main navigation',
     desc:'Use this sidebar to jump between Learning Hub, Due Diligence Vault, Project Pipeline, Office Hours & Events, and every other community section.' },
   { id:'banner',   target:'banner',   pos:'bottom', icon:'🏠', title:'Your personal home base',
@@ -48,13 +42,19 @@ const STEPS = [
 
 /* ─── SIDEBAR NAV ────────────────────────────────────── */
 const NAV = [
-  { label:'Home',                    key:'home' },
-  { label:'Learning Hub',            key:'learning' },
-  { label:'Due Diligence Vault',     key:'vault' },
-  { label:'Office Hours & Events',   key:'events' },
+  { label:'Home',                    active:true },
+  { label:'Learning Hub' },
+  { label:'Due Diligence Vault' },
+  { label:'Project Pipeline' },
+  { label:'Reporting Library' },
+  { label:'Office Hours & Events' },
   null, // divider
-  { label:'Announcements & Feedback',key:'announcements' },
-  { label:'Help',                    key:'help' },
+  { label:'Member Circles' },
+  { label:'Toolkits & Templates' },
+  { label:'Partner Marketplace' },
+  null,
+  { label:'Announcements & Feedback' },
+  { label:'Help' },
 ];
 
 /* ─── SMALL ICON SVGs ────────────────────────────────── */
@@ -79,11 +79,11 @@ function Icon({ name, size=15, color=T3 }) {
     time:    <><circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.5" fill="none"/><polyline points="12,6 12,12 16,14" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round"/></>,
     grid:    <><rect x="3" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" fill="none"/><rect x="14" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" fill="none"/><rect x="3" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" fill="none"/><rect x="14" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" fill="none"/></>,
     list:    <><line x1="3" y1="6" x2="21" y2="6" stroke={color} strokeWidth="1.5" strokeLinecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke={color} strokeWidth="1.5" strokeLinecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke={color} strokeWidth="1.5" strokeLinecap="round"/></>,
-    close:   <><line x1="18" y1="6" x2="6" y2="18" stroke={color} strokeWidth="1.5" strokeLinecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke={color} strokeWidth="1.5" strokeLinecap="round"/></>,
   };
   const NAV_ICONS = {
     'Home':'home','Learning Hub':'book','Due Diligence Vault':'folder',
-    'Office Hours & Events':'calendar',
+    'Project Pipeline':'chart','Reporting Library':'file','Office Hours & Events':'calendar',
+    'Member Circles':'users','Toolkits & Templates':'monitor','Partner Marketplace':'globe',
     'Announcements & Feedback':'bell','Help':'help',
   };
   const iconName = NAV_ICONS[name] || name;
@@ -91,8 +91,9 @@ function Icon({ name, size=15, color=T3 }) {
 }
 
 /* ─── TUTORIAL OVERLAY ───────────────────────────────── */
-function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSkip }) {
+function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSkip, isMobile }) {
   const cur = STEPS[step];
+  const tipW = isMobile ? Math.min(320, (typeof window !== 'undefined' ? window.innerWidth : 340) - 24) : 340;
 
   return (
     <>
@@ -105,191 +106,65 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
           boxShadow:'0 0 0 9999px rgba(17,24,39,0.68)',
           border:'2px solid rgba(255,255,255,0.55)',
           transition:'all 0.35s cubic-bezier(.4,0,.2,1)',
-          animation: 'pulse 2s ease-in-out infinite'
         }}/>
       ) : (
-        <div style={{ 
-          position:'fixed', 
-          inset:0, 
-          background:'rgba(17,24,39,0.68)', 
-          zIndex:999, 
-          pointerEvents:'none',
-          backdropFilter: 'blur(2px)',
-          WebkitBackdropFilter: 'blur(2px)'
-        }}/>
+        <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.68)', zIndex:999, pointerEvents:'none' }}/>
       )}
 
       {/* Tooltip card */}
       <div style={{
         position:'fixed', ...tipPos,
-        width:340, 
-        background: 'rgba(255, 255, 255, 0.85)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
-        borderRadius:14,
-        boxShadow:'0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1), 0 0 20px rgba(124, 58, 237, 0.15)',
-        zIndex:1001, 
-        overflow:'hidden',
-        animation:'fadeInUp 0.4s cubic-bezier(.34,1.56,.64,1)',
+        width:tipW, background:W, borderRadius:14,
+        boxShadow:'0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1)',
+        zIndex:1001, overflow:'hidden',
+        animation:'tipIn 0.25s cubic-bezier(.34,1.56,.64,1)',
       }}>
         {/* Purple progress bar */}
         <div style={{ height:4, background:'#EDE9FE' }}>
-          <div 
-            style={{ 
-              height:4, 
-              background: `linear-gradient(90deg, ${P}, #5B21B6)`, 
-              width:`${((step+1)/total)*100}%`, 
-              transition:'width .35s cubic-bezier(0.34, 1.56, 0.64, 1)', 
-              borderRadius:'0 2px 2px 0',
-              boxShadow: `0 0 10px rgba(124, 58, 237, 0.4)`
-            }}
-          />
+          <div style={{ height:4, background:P, width:`${((step+1)/total)*100}%`, transition:'width .35s ease', borderRadius:'0 2px 2px 0' }}/>
         </div>
 
         {/* Header row */}
-        <div style={{ 
-          display:'flex', 
-          alignItems:'center', 
-          justifyContent:'space-between', 
-          padding:'14px 18px 8px',
-          background: 'rgba(236, 233, 254, 0.2)',
-          backdropFilter: 'blur(4px)'
-        }}>
-          <span style={{ 
-            fontSize:10, 
-            fontWeight:700, 
-            color:P, 
-            letterSpacing:.8, 
-            textTransform:'uppercase' 
-          }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px 8px' }}>
+          <span style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:.8, textTransform:'uppercase' }}>
             Step {step+1} of {total}
           </span>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <button 
-              onClick={onSkip} 
-              style={{
-                ...btnStyle('none', 'none', T3, 12),
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.color = T2}
-              onMouseLeave={(e) => e.target.style.color = T3}
-            >
-              Skip tour
-            </button>
-            <button 
-              onClick={onSkip}
-              style={{ 
-                ...circleBtn, 
-                background:'rgba(236, 233, 254, 0.6)', 
-                border:'1px solid rgba(124, 58, 237, 0.2)', 
-                color:T2, 
-                fontSize:16, 
-                lineHeight:1,
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(236, 233, 254, 0.9)';
-                e.currentTarget.style.transform = 'scale(1.1) rotate(90deg)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(236, 233, 254, 0.6)';
-                e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-              }}
-            >
-              ×
-            </button>
+            <button onClick={onSkip} style={btnStyle('none', 'none', T3, 12)}>Skip tour</button>
+            <button onClick={onSkip}
+              style={{ ...circleBtn, background:'#F3F4F6', border:'none', color:T2, fontSize:16, lineHeight:1 }}>×</button>
           </div>
         </div>
 
         {/* Body */}
         <div style={{ padding:'2px 18px 18px' }}>
-          <div style={{ 
-            fontSize:30, 
-            marginBottom:12, 
-            lineHeight:1,
-            animation: 'bounce 0.6s ease-in-out'
-          }}>
-            {cur.icon}
-          </div>
-          <h3 style={{ fontSize:16, fontWeight:700, color:T1, margin:'0 0 8px', letterSpacing:-.3 }}>
-            {cur.title}
-          </h3>
-          <p style={{ fontSize:13, color:T2, lineHeight:1.65, margin:0 }}>
-            {cur.desc}
-          </p>
+          <div style={{ fontSize:30, marginBottom:12, lineHeight:1 }}>{cur.icon}</div>
+          <h3 style={{ fontSize:16, fontWeight:700, color:T1, margin:'0 0 8px', letterSpacing:-.3 }}>{cur.title}</h3>
+          <p style={{ fontSize:13, color:T2, lineHeight:1.65, margin:0 }}>{cur.desc}</p>
         </div>
 
         {/* Footer */}
-        <div style={{ 
-          display:'flex', 
-          alignItems:'center', 
-          justifyContent:'space-between',
-          padding:'12px 18px', 
-          borderTop:`1px solid rgba(229, 231, 235, 0.4)`, 
-          background: 'rgba(249, 250, 251, 0.5)',
-          backdropFilter: 'blur(4px)'
-        }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'12px 18px', borderTop:`1px solid ${BD}`, background:BG }}>
           {/* Dot indicators */}
           <div style={{ display:'flex', gap:5, alignItems:'center' }}>
             {STEPS.map((_,i) => (
-              <div 
-                key={i} 
-                style={{
-                  height:6, 
-                  width:i===step?18:6, 
-                  borderRadius:3,
-                  background:i===step ? `linear-gradient(90deg, ${P}, #5B21B6)` : '#E5E7EB', 
-                  transition:'all .3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  boxShadow: i===step ? `0 0 8px rgba(124, 58, 237, 0.4)` : 'none'
-                }}
-              />
+              <div key={i} style={{
+                height:6, width:i===step?18:6, borderRadius:3,
+                background:i===step?P:BD, transition:'all .2s ease',
+              }}/>
             ))}
           </div>
           {/* Buttons */}
-          <div style={{ display:'flex', gap:8 }}>
+          <div style={{ display:'flex', gap:8, flexShrink:0 }}>
             {step > 0 && (
-              <button 
-                onClick={onBack}
-                style={{ 
-                  ...btnStyle(`1px solid rgba(124, 58, 237, 0.2)`, 'rgba(255, 255, 255, 0.7)', T2, 13), 
-                  padding:'8px 14px', 
-                  borderRadius:8, 
-                  fontWeight:500,
-                  backdropFilter: 'blur(4px)',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(236, 233, 254, 0.6)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
+              <button onClick={onBack}
+                style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 13), padding:'8px 14px', borderRadius:8, fontWeight:500, whiteSpace:'nowrap' }}>
                 ← Back
               </button>
             )}
-            <button 
-              onClick={onNext}
-              style={{ 
-                ...btnStyle('none', `linear-gradient(135deg, ${P}, #5B21B6)`, W, 13), 
-                padding:'8px 20px', 
-                borderRadius:8, 
-                fontWeight:500,
-                boxShadow: `0 4px 12px rgba(124, 58, 237, 0.3)`,
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = `0 8px 24px rgba(124, 58, 237, 0.4)`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = `0 4px 12px rgba(124, 58, 237, 0.3)`;
-              }}
-            >
+            <button onClick={onNext}
+              style={{ ...btnStyle('none', P, W, 13), padding:'8px 20px', borderRadius:8, fontWeight:500, whiteSpace:'nowrap' }}>
               {step === total-1 ? 'Start exploring ✓' : 'Next →'}
             </button>
           </div>
@@ -300,18 +175,6 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
         @keyframes tipIn {
           from { opacity:0; transform: scale(.95) translateY(8px); }
           to   { opacity:1; transform: scale(1) translateY(0); }
-        }
-        @keyframes slideInDown {
-          from { opacity:0; transform: translateY(-12px); }
-          to   { opacity:1; transform: translateY(0); }
-        }
-        @keyframes fadeInUp {
-          from { opacity:0; transform: translateY(12px); }
-          to   { opacity:1; transform: translateY(0); }
-        }
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
         }
       `}</style>
     </>
@@ -330,92 +193,31 @@ const circleBtn = {
 };
 
 /* ─── COURSE CARD ────────────────────────────────────── */
-function CourseCard({ cat, title, meta, pct, btn, catColor = P, onContinue }) {
-  const [isHovered, setIsHovered] = useState(false);
+function CourseCard({ cat, title, meta, pct, btn, catColor = P }) {
   return (
-    <div 
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{ 
-        background: 'rgba(255, 255, 255, 0.7)',
-        backdropFilter: 'blur(10px)',
-        border: `1px solid ${isHovered ? P : 'rgba(255, 255, 255, 0.3)'}`,
-        borderRadius: 12, 
-        marginBottom: 12, 
-        overflow: 'hidden',
-        boxShadow: isHovered ? `0 12px 48px rgba(124, 58, 237, 0.2)` : '0 8px 32px rgba(0, 0, 0, 0.08)',
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        cursor: 'pointer'
-      }}>
+    <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, marginBottom:12, overflow:'hidden' }}>
       {/* Top progress stripe */}
-      <div style={{ height: 3, background: '#F3F4F6' }}>
-        <div 
-          style={{ 
-            height: 3, 
-            width: `${pct}%`, 
-            background: catColor === GR ? GR : P, 
-            borderRadius: '0 3px 3px 0',
-            transition: 'width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-          }}
-        />
+      <div style={{ height:3, background:'#F3F4F6' }}>
+        <div style={{ height:3, width:`${pct}%`, background:catColor === GR ? GR : P, borderRadius:'0 3px 3px 0' }}/>
       </div>
-      <div style={{ padding: '14px 18px 16px', display: 'flex', gap: 14 }}>
-        {/* Doc icon with animation */}
-        <div 
-          style={{ 
-            width: 36, 
-            height: 44, 
-            background: 'rgba(236, 233, 254, 0.6)',
-            backdropFilter: 'blur(8px)',
-            borderRadius: 8, 
-            display: 'flex', 
-            alignItems: 'center',
-            justifyContent: 'center', 
-            flexShrink: 0, 
-            color: P, 
-            fontSize: 16,
-            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            transform: isHovered ? 'scale(1.1) rotate(-5deg)' : 'scale(1) rotate(0)'
-          }}>
+      <div style={{ padding:'14px 18px 16px', display:'flex', gap:14 }}>
+        {/* Doc icon */}
+        <div style={{ width:36, height:44, background:PF, borderRadius:8, display:'flex', alignItems:'center',
+          justifyContent:'center', flexShrink:0, color:P, fontSize:16 }}>
           <Icon name="doc" size={18} color={P}/>
         </div>
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: catColor, letterSpacing: .6, textTransform: 'uppercase', margin: '0 0 5px' }}>{cat}</p>
-          <p style={{ fontSize: 14, fontWeight: 600, color: T1, margin: '0 0 4px', lineHeight: 1.35 }}>{title}</p>
-          <p style={{ fontSize: 12, color: T2, margin: '0 0 14px' }}>{meta}</p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 160, height: 4, background: '#F3F4F6', borderRadius: 4 }}>
-                <div 
-                  style={{ 
-                    width: `${pct}%`, 
-                    height: 4, 
-                    background: `linear-gradient(90deg, ${catColor === GR ? GR : P}, ${catColor === GR ? '#047857' : '#5B21B6'})`, 
-                    borderRadius: 4,
-                    transition: 'width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    boxShadow: `0 0 8px ${catColor === GR ? 'rgba(5, 150, 105, 0.4)' : 'rgba(124, 58, 237, 0.4)'}`
-                  }}
-                />
+        <div style={{ flex:1 }}>
+          <p style={{ fontSize:10, fontWeight:700, color:catColor, letterSpacing:.6, textTransform:'uppercase', margin:'0 0 5px' }}>{cat}</p>
+          <p style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 4px', lineHeight:1.35 }}>{title}</p>
+          <p style={{ fontSize:12, color:T2, margin:'0 0 14px' }}>{meta}</p>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ width:160, height:4, background:'#F3F4F6', borderRadius:4 }}>
+                <div style={{ width:`${pct}%`, height:4, background: catColor === GR ? GR : P, borderRadius:4 }}/>
               </div>
-              <span style={{ fontSize: 12, color: T2 }}>{pct}% complete</span>
+              <span style={{ fontSize:12, color:T2 }}>{pct}% complete</span>
             </div>
-            <button 
-              onClick={onContinue}
-              style={{ 
-                background: `linear-gradient(135deg, ${P}, #5B21B6)`,
-                border: 'none',
-                color: W, 
-                fontSize: 13, 
-                padding: '8px 16px', 
-                borderRadius: 8, 
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
-                transform: isHovered ? 'translateY(-2px)' : 'translateY(0)'
-              }}>
+            <button style={{ ...btnStyle('none', P, W, 13), padding:'8px 16px', borderRadius:8, fontWeight:500 }}>
               {btn}
             </button>
           </div>
@@ -425,171 +227,24 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = P, onContinue }) {
   );
 }
 
-/* ─── NOTIFICATIONS PANEL ────────────────────────────── */
-function NotificationsPanel({ notifications, onClose, isOpen }) {
-  if (!isOpen) return null;
-  
-  return (
-    <>
-      <div 
-        style={{ 
-          position:'fixed', 
-          inset:0, 
-          zIndex:499, 
-          background:'rgba(0,0,0,0.3)',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)'
-        }} 
-        onClick={onClose}
-      />
-      <div style={{
-        position:'absolute', 
-        top:54, 
-        right:12,
-        width:360, 
-        background: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.3)',
-        borderRadius:12, 
-        boxShadow:'0 12px 48px rgba(0,0,0,0.12), 0 8px 24px rgba(124, 58, 237, 0.1)',
-        zIndex:500, 
-        overflow:'hidden', 
-        maxHeight:'500px', 
-        overflowY:'auto',
-        animation: 'slideInDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-      }}>
-        {/* Header */}
-        <div style={{ 
-          display:'flex', 
-          justifyContent:'space-between', 
-          alignItems:'center', 
-          padding:'16px 18px', 
-          borderBottom:`1px solid rgba(229, 231, 235, 0.5)`,
-          background: 'rgba(236, 233, 254, 0.3)',
-          backdropFilter: 'blur(8px)'
-        }}>
-          <h3 style={{ fontSize:15, fontWeight:600, color:T1, margin:0 }}>Notifications</h3>
-          <button 
-            onClick={onClose}
-            style={{ 
-              width:24, 
-              height:24, 
-              background:'none', 
-              border:'none', 
-              cursor:'pointer', 
-              padding:0, 
-              display:'flex', 
-              alignItems:'center', 
-              justifyContent:'center',
-              transition: 'all 0.2s ease',
-              borderRadius: 6
-            }}
-            onMouseEnter={(e) => e.target.style.background = 'rgba(123, 58, 237, 0.1)'}
-            onMouseLeave={(e) => e.target.style.background = 'none'}
-          >
-            <Icon name="close" size={16} color={T2}/>
-          </button>
-        </div>
-        
-        {/* Notifications list */}
-        {notifications.length === 0 ? (
-          <div style={{ padding:'32px 16px', textAlign:'center' }}>
-            <div style={{ fontSize:32, marginBottom:8, animation: 'float 3s ease-in-out infinite' }}>🔔</div>
-            <p style={{ fontSize:13, color:T2, margin:0 }}>No new notifications</p>
-          </div>
-        ) : (
-          notifications.map((notif, i) => (
-            <div 
-              key={notif.id} 
-              style={{ 
-                padding:'14px 16px', 
-                borderBottom:i < notifications.length - 1 ? `1px solid rgba(229, 231, 235, 0.4)` : 'none', 
-                cursor:'pointer', 
-                transition:'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                background: 'transparent',
-                ':hover': { background: 'rgba(236, 233, 254, 0.3)' }
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(236, 233, 254, 0.3)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              <div style={{ display:'flex', gap:10 }}>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ fontSize:13, fontWeight:500, color:T1, margin:'0 0 2px' }}>{notif.title}</p>
-                  <p style={{ fontSize:12, color:T2, margin:'0 0 4px', lineHeight:1.4 }}>{notif.desc}</p>
-                  <p style={{ fontSize:11, color:T3, margin:0 }}>{notif.time}</p>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </>
-  );
-}
-
 /* ─── MAIN APP ───────────────────────────────────────── */
-export default function HomePage({ user, currentPage = 'home', onNavigate = () => {}, onLogout = () => {} }) {
-
-  // Check if user is new — show tour only on first login
+export default function App() {
   const [tourStep,   setTourStep]   = useState(0);
-  const [tourActive, setTourActive] = useState(() => {
-    // Only show tour if user hasn't completed it before
-    const hasCompletedTour = localStorage.getItem(`tourCompleted_${user?.email}`);
-    return !hasCompletedTour;
-  });
+  const [tourActive, setTourActive] = useState(true);
   const [spotlight,  setSpotlight]  = useState(null);
   const [tipPos,     setTipPos]     = useState({ top:'50%', left:'50%', transform:'translate(-50%,-50%)' });
-  const [rsvpStatus, setRsvpStatus] = useState({ 0: false, 1: true, 2: false });
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Default false for mobile responsiveness
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New Office Hours', desc: 'Project Finance Deep Dive starts in 2 hours', time: '2 hours ago', icon: '📅', read: false },
-    { id: 2, title: 'Course Milestone', desc: 'You completed Module 4!', time: '1 day ago', icon: '🎉', read: false },
-    { id: 3, title: 'Event Reminder', desc: 'Workshop starts tomorrow at 2:00 PM', time: '1 day ago', icon: '🔔', read: false },
-  ]);
-  const [unreadCount, setUnreadCount] = useState(3);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Handle window resize for responsive design
+  /* ── Breakpoint ── */
+  const [winW, setWinW] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1280);
   useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      // Close sidebar on mobile
-      if (mobile) setSidebarOpen(false);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const h = () => setWinW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
   }, []);
-
-  // Real-time notification polling
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Simulate real-time notifications (30% chance)
-      if (Math.random() > 0.7 && notifications.length < 10) {
-        const sampleNotifs = [
-          { title: 'New deal posted', desc: 'Solar project in Kenya now open for investment', icon: '☀️' },
-          { title: 'Event starting soon', desc: 'Office Hours: Risk Management in 15 minutes', icon: '📢' },
-          { title: 'Portfolio update', desc: 'Your monthly returns summary is ready', icon: '📈' },
-          { title: 'Resource available', desc: 'New toolkit: Due Diligence Checklist', icon: '📋' },
-          { title: 'Message from host', desc: 'New discussion in Member Circles', icon: '💬' },
-        ];
-        const newNotif = sampleNotifs[Math.floor(Math.random() * sampleNotifs.length)];
-        const notif = {
-          id: Math.max(...notifications.map(n=>n.id), 0) + 1,
-          ...newNotif,
-          time: 'just now',
-          read: false
-        };
-        setNotifications(prev => [notif, ...prev]);
-        setUnreadCount(prev => prev + 1);
-      }
-    }, 8000); // Check every 8 seconds
-    return () => clearInterval(interval);
-  }, [notifications]);
+  const isMobile  = winW < 640;
+  const isTablet  = winW >= 640 && winW < 1024;
+  const isOverlay = isMobile || isTablet;
 
   /* Section refs */
   const sidebarRef  = useRef(null);
@@ -598,7 +253,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const resumeRef   = useRef(null);
   const learningRef = useRef(null);
   const eventsRef   = useRef(null);
-  const notifRef    = useRef(null);
   const REFS = { sidebar:sidebarRef, banner:bannerRef, stats:statsRef, resume:resumeRef, learning:learningRef, events:eventsRef };
 
   const updatePositions = useCallback(() => {
@@ -614,7 +268,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     const pad = 10;
     setSpotlight({ top:r.top-pad, left:r.left-pad, width:r.width+pad*2, height:r.height+pad*2 });
 
-    const TW=340, TH=280, M=18, VP=14;
+    const TW = isMobile ? Math.min(320, winW - 24) : 340;
+    const TH=280, M=18, VP=14;
     let top, left, transform='';
     switch(step.pos) {
       case 'right':  left=r.right+M;   top=Math.max(VP,r.top);  break;
@@ -636,132 +291,65 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     return () => clearTimeout(id);
   }, [tourStep, tourActive, updatePositions]);
 
-  const next  = () => {
-    if (tourStep < STEPS.length - 1) {
-      setTourStep(s => s + 1);
-    } else {
-      // Tour completed - save to localStorage
-      localStorage.setItem(`tourCompleted_${user?.email}`, 'true');
-      setTourActive(false);
-    }
-  };
-  const back  = () => tourStep > 0 && setTourStep(s => s - 1);
-  const skip  = () => {
-    // Tour skipped - save to localStorage
-    localStorage.setItem(`tourCompleted_${user?.email}`, 'true');
-    setTourActive(false);
-  };
-  
-  /* Event handlers */
-  const handleCourseClick = () => {
-    onNavigate('learning');
-  };
-  
-  const handleRSVP = (eventIndex) => {
-    setRsvpStatus(prev => ({ ...prev, [eventIndex]: !prev[eventIndex] }));
-  };
-  
-  const handleNotificationClick = () => {
-    setShowNotifications(!showNotifications);
-    if (!showNotifications) setUnreadCount(0);
-  };
-  
-  const closeNotifications = () => {
-    setShowNotifications(false);
-  };
-  
-  const handleNavigateToLearning = (e) => {
-    e.preventDefault();
-    onNavigate('learning');
-  };
-  
-  const handleNavigateToVault = (e) => {
-    e.preventDefault();
-    onNavigate('vault');
-  };
-  
-  const handleNavigateToEvents = (e) => {
-    e.preventDefault();
-    onNavigate('events');
-  };
+  const next  = () => tourStep < STEPS.length-1 ? setTourStep(s=>s+1) : setTourActive(false);
+  const back  = () => tourStep > 0 && setTourStep(s=>s-1);
+  const skip  = () => setTourActive(false);
 
   /* ── RENDER ── */
   return (
     <div style={{ display:'flex', height:'100vh', background:BG, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
-      {/* Mobile Navigation Drawer */}
-      <MobileNav 
-        isOpen={mobileNavOpen}
-        onClose={() => setMobileNavOpen(false)}
-        currentPage={currentPage}
-        onNavigate={onNavigate}
-        user={user}
-        onLogout={onLogout}
-      />
 
-      {/* Global animations */}
-      <style>{`
-        @keyframes slideInSidebar { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideOutSidebar { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .sidebar-enter { animation: slideInSidebar 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
-        .sidebar-exit { animation: slideOutSidebar 0.35s cubic-bezier(0.77, 0, 0.68, -0.32) forwards; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .nav-item-hover:hover { animation: pulse 0.3s ease-out; }
-        
-        /* Responsive sidebar - hide on mobile */
-        @media (max-width: 767px) {
-          .sidebar-desktop {
-            display: none !important;
-          }
-          .hamburger-show {
-            display: flex !important;
-          }
-          .search-bar-desktop {
-            display: none !important;
-          }
-        }
-        
-        @media (min-width: 768px) {
-          .hamburger-show {
-            display: none !important;
-          }
-          .sidebar-desktop {
-            display: flex !important;
-          }
-          .search-bar-desktop {
-            display: flex !important;
-          }
-        }
-      `}</style>
+      {/* ══ SIDEBAR BACKDROP (mobile/tablet) ══ */}
+      {isOverlay && sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{
+          position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:200,
+        }}/>
+      )}
 
-      {/* ══ SIDEBAR (Desktop/Tablet only) ══ */}
-      <div className="sidebar-desktop" style={{
+      {/* ══ SIDEBAR ══ */}
+      <div ref={sidebarRef} style={{
         width:200, minWidth:200, background:W, borderRight:`1px solid ${BD}`,
-        display:'none', flexDirection:'column', overflowY:'auto', flexShrink:0, zIndex:5,
-      }} ref={sidebarRef}>
+        display:'flex', flexDirection:'column', overflowY:'auto', flexShrink:0,
+        ...(isOverlay ? {
+          position:'fixed', top:0, left:0, height:'100%', zIndex:201,
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-200px)',
+          transition:'transform .25s ease',
+          boxShadow: sidebarOpen ? '4px 0 24px rgba(0,0,0,.2)' : 'none',
+        } : { height:'100%', zIndex:5 }),
+      }}>
         {/* Logo */}
-        <div style={{ padding:'16px 16px 14px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', flexShrink:0 }}>
-          <LogoFull size="small" variant="dark"/>
+        <div style={{ padding:'16px 16px 14px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:26, height:26, background:P, borderRadius:'50%', flexShrink:0,
+              display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg viewBox="0 0 14 14" width={13} height={13}><circle cx="7" cy="7" r="5" stroke="white" strokeWidth="1.2" fill="none"/><path d="M4.5 7h5M7 4.5v5" stroke="white" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            </div>
+            <span style={{ fontWeight:700, fontSize:11, color:T1, letterSpacing:.8, textTransform:'uppercase' }}>Tribes Capital</span>
+          </div>
+          {isOverlay && (
+            <button onClick={() => setSidebarOpen(false)} style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:T2, display:'flex', alignItems:'center' }}>
+              <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke={T2} strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
         </div>
         {/* Nav items */}
         <div style={{ flex:1, padding:'8px 0' }}>
           {NAV.map((item, i) => {
             if (!item) return <div key={i} style={{ height:1, background:BD, margin:'6px 14px' }}/>;
-            const isActive = currentPage === item.key;
             return (
-              <div key={i} 
-                onClick={() => onNavigate(item.key)}
-                style={{
+              <div key={i} style={{
                 display:'flex', alignItems:'center', gap:9,
                 padding:'8px 14px', margin:'1px 6px', borderRadius:8, cursor:'pointer',
-                background: isActive ? PF : 'transparent',
-                color:      isActive ? P  : T2,
-                fontWeight: isActive ? 500 : 400,
+                background: item.active ? PF : 'transparent',
+                color:      item.active ? P  : T2,
+                fontWeight: item.active ? 500 : 400,
                 fontSize:   13,
-                borderLeft: isActive ? `3px solid ${P}` : '3px solid transparent',
-                transition:'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                borderLeft: item.active ? `3px solid ${P}` : '3px solid transparent',
+                transition:'all .15s',
               }}>
-                <Icon name={item.label} size={15} color={isActive ? P : T3}/>
+                <Icon name={item.label} size={15} color={item.active ? P : T3}/>
                 <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.label}</span>
               </div>
             );
@@ -775,206 +363,98 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         {/* TOPBAR */}
         <div style={{
           height:54, background:W, borderBottom:`1px solid ${BD}`,
-          display:'flex', alignItems:'center', padding:'0 12px', gap:16,
-          flexShrink:0, justifyContent:'space-between', position:'relative',
+          display:'flex', alignItems:'center', padding:`0 ${isMobile?14:24}px`, gap:12,
+          flexShrink:0, justifyContent:'space-between',
         }}>
-          {/* Mobile menu button - only show on mobile */}
-          <button
-            className="hamburger-show"
-            onClick={() => setMobileNavOpen(true)}
-            style={{
-              width:44, height:44, border:'none', borderRadius:10,
-              background: 'transparent',
-              cursor:'pointer', display:'none', alignItems:'center',
-              justifyContent:'center', color: T2, 
-              transition:'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              padding: 0,
-            }}
-            title='Open menu'
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(111, 114, 131, 0.08)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6"/>
-              <line x1="3" y1="12" x2="21" y2="12"/>
-              <line x1="3" y1="18" x2="21" y2="18"/>
-            </svg>
-          </button>
-          <div style={{ flex:1, maxWidth:'400px', background:BG, border:`1px solid ${BD}`, borderRadius:10,
-            height:36, display:'flex', alignItems:'center', gap:8, padding:'0 12px',
-            transition:'all 0.25s ease', boxShadow: 'inset 0 0 0 1px transparent',
-            minWidth: 0, // Allow flex to shrink below 400px on mobile
-          }} className="search-bar-desktop">
-            <Icon name="search" size={14} color={T3}/>
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={(e) => { e.currentTarget.parentElement.style.borderColor = P; e.currentTarget.parentElement.style.background = W; e.currentTarget.parentElement.style.boxShadow = `0 0 0 2px ${P}20`; }}
-              onBlur={(e) => { e.currentTarget.parentElement.style.borderColor = BD; e.currentTarget.parentElement.style.background = BG; e.currentTarget.parentElement.style.boxShadow = 'inset 0 0 0 1px transparent'; }}
-              style={{
-                flex:1, border:'none', background:'transparent', fontSize:13, color:T1,
-                outline:'none', fontFamily:'inherit', minWidth: 0,
-              }}
-            />
+          <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 }}>
+            {/* Hamburger — mobile/tablet */}
+            {isOverlay && (
+              <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex', alignItems:'center', flexShrink:0 }}>
+                <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={T1} strokeWidth="2" strokeLinecap="round">
+                  <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+              </button>
+            )}
+            {/* Search — full on desktop, icon-only on mobile */}
+            {!isMobile ? (
+              <div style={{ flex:1, maxWidth:400, background:BG, border:`1px solid ${BD}`, borderRadius:8,
+                height:36, display:'flex', alignItems:'center', gap:8, padding:'0 12px' }}>
+                <Icon name="search" size={14} color={T3}/>
+                <span style={{ fontSize:13, color:T3, whiteSpace:'nowrap', overflow:'hidden' }}>Search topics, documents, people, events…</span>
+              </div>
+            ) : (
+              <span style={{ fontSize:14, fontWeight:600, color:T1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Home</span>
+            )}
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <div 
-              ref={notifRef}
-              onClick={handleNotificationClick}
-              style={{ width:40, height:40, border:`1px solid ${BD}`, borderRadius:'50%',
-              display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative',
-              background:'transparent', transition:'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(91, 33, 182, 0.08)'; e.currentTarget.style.borderColor = P; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = BD; }}
-            >
-              <Icon name="bell2" size={16} color={T2} style={{ transition: 'transform 0.2s ease' }}/>
-              {unreadCount > 0 && (
-                <div style={{ width:8, height:8, background:'#EF4444', borderRadius:'50%', border:'2px solid #fff',
-                position:'absolute', top:5, right:5, animation: 'pulse 2s infinite' }}/>
-              )}
+          <div style={{ display:'flex', alignItems:'center', gap:isMobile?8:12, flexShrink:0 }}>
+            {isMobile && (
+              <button style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex' }}>
+                <Icon name="search" size={18} color={T2}/>
+              </button>
+            )}
+            <div style={{ width:34, height:34, border:`1px solid ${BD}`, borderRadius:'50%',
+              display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', flexShrink:0 }}>
+              <Icon name="bell2" size={16} color={T2}/>
+              <div style={{ width:7, height:7, background:'#EF4444', borderRadius:'50%', border:'1.5px solid #fff',
+                position:'absolute', top:6, right:6 }}/>
             </div>
-            <div style={{ width:40, height:40, background:P, borderRadius:'50%',
-              display:'flex', alignItems:'center', justifyContent:'center', color:W, fontSize:12, fontWeight:600,
-              transition:'all 0.2s ease', cursor:'pointer', title: user?.email
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = PL; e.currentTarget.style.transform = 'scale(1.05)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = P; e.currentTarget.style.transform = 'scale(1)'; }}
-            >
-              {user?.email?.[0]?.toUpperCase() || 'A'}
+            <div style={{ width:34, height:34, background:P, borderRadius:'50%',
+              display:'flex', alignItems:'center', justifyContent:'center', color:W, fontSize:12, fontWeight:600, flexShrink:0 }}>
+              A
             </div>
           </div>
-          
-          {/* Notifications panel */}
-          <NotificationsPanel 
-            notifications={notifications} 
-            onClose={closeNotifications} 
-            isOpen={showNotifications}
-          />
         </div>
 
         {/* SCROLLABLE CONTENT */}
-        <div style={{ flex:1, overflowY:'auto', padding:'24px 28px 60px' }}>
-          {currentPage === 'home' && (
-            <>
+        <div style={{ flex:1, overflowY:'auto', padding:isMobile?'16px 14px 60px':'24px 28px 60px' }}>
+
           {/* ── WELCOME BANNER ── */}
           <div ref={bannerRef} style={{
             background:`linear-gradient(135deg, ${PD} 0%, ${P} 55%, ${PL} 100%)`,
-            borderRadius:14, padding:'14px 12px', marginBottom:12,
-            display:'flex', justifyContent:'space-between', alignItems:'center', gap:12,
+            borderRadius:16, padding:isMobile?'20px 18px':'26px 32px', marginBottom:20,
+            display:'flex', flexDirection:isMobile?'column':'row',
+            justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?16:24,
           }}>
             <div style={{ minWidth:0 }}>
-              <p style={{ color:'rgba(255,255,255,.7)', fontSize:9, fontWeight:600, letterSpacing:0.8,
-                textTransform:'uppercase', margin:'0 0 6px' }}>WELCOME TO TRIBES CAPITAL</p>
-              <h1 style={{ color:W, fontSize:18, fontWeight:700, margin:'0 0 6px', letterSpacing:-.5 }}>
-                  Hi {user.name}!👋
+              <p style={{ color:'rgba(255,255,255,.7)', fontSize:10, fontWeight:600, letterSpacing:1.2,
+                textTransform:'uppercase', margin:'0 0 8px' }}>WELCOME BACK</p>
+              <h1 style={{ color:W, fontSize:isMobile?20:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5 }}>
+                Good morning, Ali 👋
               </h1>
-              <p style={{ color:'rgba(255,255,255,.8)', fontSize:12, margin:'0 0 10px', maxWidth:300, lineHeight:1.4 }}>
-                Explore deals, events, and resources to grow clean energy investments.
+              <p style={{ color:'rgba(255,255,255,.8)', fontSize:13, margin:'0 0 16px', maxWidth:400, lineHeight:1.6 }}>
+                You're part of a community of 240+ clean energy investors across Africa.
               </p>
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                {[
-                  { label: 'Deals', page: 'pipeline' },
-                  { label: 'Events', page: 'events' },
-                  { label: 'Courses', page: 'learning' }
-                ].map(item => (
-                  <button
-                    key={item.label}
-                    onClick={() => onNavigate(item.page)}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.2)',
-                      backdropFilter: 'blur(10px)',
-                      WebkitBackdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
-                      borderRadius: 6,
-                      padding: '8px 14px',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: W,
-                      whiteSpace: 'nowrap',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                      e.target.style.boxShadow = '0 12px 48px rgba(0, 0, 0, 0.15)';
-                      e.target.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                      e.target.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
-                      e.target.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    {item.label}
-                  </button>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                {['3 deals in due diligence','2 events this week','62% course complete'].map(chip=>(
+                  <div key={chip} style={{ background:'rgba(255,255,255,.16)', border:'1px solid rgba(255,255,255,.25)',
+                    borderRadius:20, padding:'5px 13px', fontSize:12, fontWeight:500, color:W, whiteSpace:'nowrap' }}>
+                    {chip}
+                  </div>
                 ))}
               </div>
             </div>
-            {/* animated design on the frontend */}
-            <div style={{ position: 'relative', width: 180, height: 180, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <svg
-                width="180"
-                height="180"
-                viewBox="0 0 140 140"
-                style={{
-                  transform: 'rotate(-90deg)',
-                  animation: 'spin 8s linear infinite',
-                }}
-              >
-                {/* Background circle */}
-                <circle cx="70" cy="70" r="65" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" strokeWidth="2"/>
-                
-                {/* Pie segments with animation */}
-                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="12" strokeDasharray="103 344" strokeDashoffset="0" style={{ animation: 'dashSlide 3s ease-in-out infinite' }}/>
-                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="12" strokeDasharray="86 344" strokeDashoffset="-103" style={{ animation: 'dashSlide2 3s ease-in-out infinite' }}/>
-                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="12" strokeDasharray="69 344" strokeDashoffset="-189" style={{ animation: 'dashSlide3 3s ease-in-out infinite' }}/>
-                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="12" strokeDasharray="86 344" strokeDashoffset="-258"/>
-                
-                {/* Center circle */}
-                <circle cx="70" cy="70" r="35" fill="white"/>
-              </svg>
-              
-              {/* Logo at center */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <LogoMark size={76} animate={false} />
-              </div>
-              
-              <style>{`
-                @keyframes spin {
-                  from { transform: rotate(-90deg); }
-                  to { transform: rotate(270deg); }
-                }
-                @keyframes dashSlide {
-                  0%, 100% { stroke-dashoffset: 0; }
-                  50% { stroke-dashoffset: -20; }
-                }
-                @keyframes dashSlide2 {
-                  0%, 100% { stroke-dashoffset: -103; }
-                  50% { stroke-dashoffset: -123; }
-                }
-                @keyframes dashSlide3 {
-                  0%, 100% { stroke-dashoffset: -189; }
-                  50% { stroke-dashoffset: -209; }
-                }
-              `}</style>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, flexShrink:0, width:isMobile?'100%':'auto' }}>
+              {[['240','Members'],['12','Live Projects'],['48','Docs'],['$124M','Pipeline']].map(([v,l])=>(
+                <div key={l} style={{ background:'rgba(255,255,255,.12)', border:'1px solid rgba(255,255,255,.18)',
+                  borderRadius:10, padding:isMobile?'10px 14px':'12px 18px', textAlign:'center', minWidth:isMobile?0:90 }}>
+                  <div style={{ fontSize:isMobile?17:20, fontWeight:700, color:W, letterSpacing:-.5 }}>{v}</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,.7)', marginTop:2 }}>{l}</div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* ── STATS ROW ── */}
-          <div ref={statsRef} style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:20 }}>
+          <div ref={statsRef} style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)', gap:isMobile?10:16, marginBottom:20 }}>
             {[
-              { l:'Community members', v:'Active', badge:'Join us', bc:P,   bb:PF  },
-              { l:'Active projects',   v:'Growing',  badge:'In progress',      bc:GR,  bb:GRB },
-              { l:'Vault docs',        v:'Archive',  badge:'Available',     bc:TL,  bb:TLB },
-              { l:'Events',            v:'Upcoming',   badge:'Weekly',      bc:AM,  bb:AMB },
+              { l:'Community members', v:'240', badge:'3 in progress', bc:P,   bb:PF  },
+              { l:'Active projects',   v:'12',  badge:'Well done',      bc:GR,  bb:GRB },
+              { l:'Vault docs',        v:'48',  badge:'This month',     bc:TL,  bb:TLB },
+              { l:'Events',            v:'8',   badge:'This week',      bc:AM,  bb:AMB },
             ].map(s=>(
               <div key={s.l} style={{ background:W, border:`1px solid ${BD}`, borderRadius:10, padding:'16px 20px' }}>
                 <p style={{ fontSize:12, color:T2, margin:'0 0 6px' }}>{s.l}</p>
-                <p style={{ fontSize:20, fontWeight:700, color:T1, margin:'0 0 8px', letterSpacing:-.8 }}>{s.v}</p>
+                <p style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 8px', letterSpacing:-.8 }}>{s.v}</p>
                 <span style={{ background:s.bb, color:s.bc, fontSize:11, fontWeight:500, padding:'2px 10px', borderRadius:20 }}>
                   {s.badge}
                 </span>
@@ -985,7 +465,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {/* ── RESUME CARD ── */}
           <div ref={resumeRef} style={{
             background:W, border:`1px solid ${BD}`, borderRadius:12, padding:'16px 20px',
-            marginBottom:24, display:'flex', alignItems:'center', gap:16,
+            marginBottom:24, display:'flex', flexDirection:isMobile?'column':'row',
+            alignItems:isMobile?'flex-start':'center', gap:isMobile?10:16,
           }}>
             <div style={{ width:44, minWidth:44, height:52, background:PF, borderRadius:8,
               display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -999,15 +480,14 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 Last viewed 2 days ago · Module 4 of 7: Legal Frameworks
               </p>
             </div>
-            <button 
-              onClick={handleCourseClick}
-              style={{ ...btnStyle('none', P, W, 13), padding:'10px 20px', borderRadius:8, fontWeight:500, flexShrink:0 }}>
+            <button style={{ ...btnStyle('none', P, W, 13), padding:'10px 20px', borderRadius:8, fontWeight:500,
+              flexShrink:0, whiteSpace:'nowrap', width:isMobile?'100%':'auto' }}>
               Continue
             </button>
           </div>
 
           {/* ── TWO-COLUMN GRID ── */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 290px', gap:24 }}>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 240px':'1fr 290px', gap:24 }}>
 
             {/* LEFT COLUMN */}
             <div>
@@ -1015,29 +495,12 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <div ref={learningRef}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
                   <h2 style={{ fontSize:16, fontWeight:600, color:T1, margin:0 }}>Learning</h2>
-                  <a 
-                    href="#" 
-                    onClick={handleNavigateToLearning}
-                    style={{ fontSize:13, color:P, textDecoration:'none', display:'flex', alignItems:'center', gap:4, cursor:'pointer' }}>
+                  <a href="#" style={{ fontSize:13, color:P, textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>
                     Go to Learning Hub <Icon name="arrow" size={13} color={P}/>
                   </a>
                 </div>
-                <CourseCard 
-                  cat="PROJECT FINANCE — MODULE 4" 
-                  title="Understanding Clean Energy Ownership Structures" 
-                  meta="Lesson 6 of 10 · 38 min · Certificate" 
-                  pct={65} 
-                  btn="Continue lesson"
-                  onContinue={handleCourseClick}
-                />
-                <CourseCard 
-                  cat="PROJECT FINANCE — MODULE 4" 
-                  title="Understanding Clean Energy Ownership Structures" 
-                  meta="Lesson 6 of 10 · 38 min · Certificate" 
-                  pct={20}  
-                  btn="Continue lesson"
-                  onContinue={handleCourseClick}
-                />
+                <CourseCard cat="PROJECT FINANCE — MODULE 4" title="Understanding Clean Energy Ownership Structures" meta="Lesson 6 of 10 · 38 min · Certificate" pct={62} btn="Continue lesson"/>
+                <CourseCard cat="PROJECT FINANCE — MODULE 4" title="Understanding Clean Energy Ownership Structures" meta="Lesson 6 of 10 · 38 min · Certificate" pct={3}  btn="Continue lesson"/>
               </div>
 
               {/* Events section */}
@@ -1046,21 +509,18 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <h2 style={{ fontSize:16, fontWeight:600, color:T1, margin:0 }}>
                     Upcoming events <span style={{ fontSize:13, color:T3, fontWeight:400 }}>(8)</span>
                   </h2>
-                  <a 
-                    href="#" 
-                    onClick={handleNavigateToEvents}
-                    style={{ fontSize:13, color:P, textDecoration:'none', display:'flex', alignItems:'center', gap:4, cursor:'pointer' }}>
+                  <a href="#" style={{ fontSize:13, color:P, textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>
                     View all <Icon name="arrow" size={13} color={P}/>
                   </a>
                 </div>
                 <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, overflow:'hidden' }}>
                   {[
-                    { mo:'JUN',dy:'5', dw:'THU',type:'OFFICE HOURS',title:'Project Finance Deep Dive: Structuring Your First Deal',    meta:'3:00 PM GMT · Kwame Asante · 14 spots left', tc:BLU,tb:BLB },
-                    { mo:'JUN',dy:'10',dw:'TUE',type:'WORKSHOP',    title:'Building a 1MW Financial Model from Scratch',               meta:'2:00 PM GMT · Ngozi Fakoya · 2h session',      tc:GR, tb:GRB },
-                    { mo:'JUN',dy:'17',dw:'TUE',type:'MEMBER CIRCLE',title:'West Africa Energy Deal Flow — June Roundtable',          meta:'4:00 PM GMT · Members only · 30 spots',        tc:P,  tb:PF  },
+                    { mo:'JUN',dy:'5', dw:'THU',type:'OFFICE HOURS',title:'Project Finance Deep Dive: Structuring Your First Deal',    meta:'3:00 PM GMT · Kwame Asante · 14 spots left', rv:false,tc:BLU,tb:BLB },
+                    { mo:'JUN',dy:'10',dw:'TUE',type:'WORKSHOP',    title:'Building a 1MW Financial Model from Scratch',               meta:'2:00 PM GMT · Ngozi Fakoya · 2h session',      rv:true, tc:GR, tb:GRB },
+                    { mo:'JUN',dy:'17',dw:'TUE',type:'MEMBER CIRCLE',title:'West Africa Energy Deal Flow — June Roundtable',          meta:'4:00 PM GMT · Members only · 30 spots',        rv:false,tc:P,  tb:PF  },
                   ].map((ev,i,arr)=>(
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 18px',
-                      borderBottom:i<arr.length-1?`1px solid ${BD}`:'none' }}>
+                    <div key={i} style={{ display:'flex', alignItems:isMobile?'flex-start':'center', gap:14, padding:'14px 18px',
+                      borderBottom:i<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
                       {/* Date box */}
                       <div style={{ width:46, minWidth:46, background:ev.tb, borderRadius:8,
                         textAlign:'center', padding:'7px 4px' }}>
@@ -1076,12 +536,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                         <p style={{ fontSize:13, fontWeight:600, color:T1, margin:'4px 0 3px', lineHeight:1.3 }}>{ev.title}</p>
                         <p style={{ fontSize:11, color:T2, margin:0 }}>{ev.meta}</p>
                       </div>
-                      <button 
-                        onClick={() => handleRSVP(i)}
-                        style={{
-                        ...btnStyle(rsvpStatus[i]?`1px solid ${GR}`:'none', rsvpStatus[i]?GRB:P, rsvpStatus[i]?GR:W, 12),
+                      <button style={{
+                        ...btnStyle(ev.rv?`1px solid ${GR}`:'none', ev.rv?GRB:P, ev.rv?GR:W, 12),
                         padding:'7px 14px', borderRadius:7, fontWeight:500, flexShrink:0,
-                      }}>{rsvpStatus[i]?'✓ RSVPed':'RSVP'}</button>
+                        marginTop:isMobile?4:0,
+                      }}>{ev.rv?'✓ RSVPed':'RSVP'}</button>
                     </div>
                   ))}
                 </div>
@@ -1095,10 +554,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <div>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Recently added</h3>
-                  <a 
-                    href="#" 
-                    onClick={handleNavigateToVault}
-                    style={{ fontSize:12, color:P, textDecoration:'none', cursor:'pointer' }}>Open vault</a>
+                  <a href="#" style={{ fontSize:12, color:P, textDecoration:'none' }}>Open vault</a>
                 </div>
                 <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, overflow:'hidden' }}>
                   {[
@@ -1107,7 +563,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     { bg:'#DBEAFE',em:'📝',nm:'Investment Framework Template Q1 2026',mt:'PDF · v2.1 · 2 days ago' },
                   ].map((d,i,arr)=>(
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
-                      borderBottom:i<arr.length-1?`1px solid ${BD}`:'none', cursor:'pointer', transition:'background .2s' }}>
+                      borderBottom:i<arr.length-1?`1px solid ${BD}`:'none' }}>
                       <div style={{ width:32, height:32, background:d.bg, borderRadius:7, flexShrink:0,
                         display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>{d.em}</div>
                       <div style={{ flex:1, minWidth:0 }}>
@@ -1124,10 +580,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <div>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Announcements</h3>
-                  <a 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); onNavigate('announcements'); }}
-                    style={{ fontSize:12, color:P, textDecoration:'none', cursor:'pointer' }}>View all</a>
+                  <a href="#" style={{ fontSize:12, color:P, textDecoration:'none' }}>View all</a>
                 </div>
                 <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, overflow:'hidden' }}>
                   {[
@@ -1136,7 +589,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     { dot:AM, nm:'Project Financing Deep Dive', dt:'Thu, May 8 · 3:00 PM GMT' },
                   ].map((a,i,arr)=>(
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
-                      borderBottom:i<arr.length-1?`1px solid ${BD}`:'none', cursor:'pointer', transition:'background .2s' }}>
+                      borderBottom:i<arr.length-1?`1px solid ${BD}`:'none' }}>
                       <div style={{ width:8, height:8, borderRadius:'50%', background:a.dot, flexShrink:0 }}/>
                       <div style={{ flex:1, minWidth:0 }}>
                         <p style={{ fontSize:12, fontWeight:500, color:T1, margin:'0 0 2px' }}>{a.nm}</p>
@@ -1159,7 +612,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     { bg:AMB,col:AM, nm:'Bola Oladele',  role:'Risk & FX Specialist',     stat:'8 sessions' },
                   ].map((p,i,arr)=>(
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
-                      borderBottom:i<arr.length-1?`1px solid ${BD}`:'none', cursor:'pointer', transition:'background .2s' }}>
+                      borderBottom:i<arr.length-1?`1px solid ${BD}`:'none' }}>
                       <div style={{ width:30, height:30, borderRadius:'50%', background:p.bg, flexShrink:0,
                         display:'flex', alignItems:'center', justifyContent:'center' }}>
                         <div style={{ width:9, height:9, borderRadius:'50%', background:p.col }}/>
@@ -1176,121 +629,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
             </div>
           </div>
-            </>
-          )}
-          
-          {currentPage === 'reporting' && (
-            <div style={{ padding:'24px 0' }}>
-              <h1 style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 24px' }}>Reporting Library</h1>
-              <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:40, textAlign:'center' }}>
-                <div style={{ fontSize:48, marginBottom:16 }}>📈</div>
-                <h2 style={{ fontSize:20, fontWeight:600, color:T1, margin:'0 0 8px' }}>Reporting Library</h2>
-                <p style={{ fontSize:14, color:T2, margin:0 }}>Access performance reports and analytics here.</p>
-              </div>
-            </div>
-          )}
-          
-          {currentPage === 'vault' && (
-            <div style={{ padding:'0' }}>
-              <DueDiligencePage />
-            </div>
-          )}
-          
-          {currentPage === 'pipeline' && (
-            <div style={{ padding:'24px 0' }}>
-              <h1 style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 24px' }}>Project Pipeline</h1>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:24, maxWidth:800 }}>
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:48, textAlign:'center', position:'relative', overflow:'hidden' }}>
-                  <div style={{ position:'relative', zIndex:1 }}>
-                    <div style={{ fontSize:64, marginBottom:20 }}>📊</div>
-                    <h2 style={{ fontSize:24, fontWeight:700, color:BLU, margin:'0 0 12px' }}>Coming Soon</h2>
-                    <p style={{ fontSize:14, color:T2, margin:'0 0 24px', lineHeight:1.6 }}>
-                      Browse and invest in our curated pipeline of clean energy projects across Africa. Real-time deal flow, project metrics, and investment opportunities.
-                    </p>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12 }}>
-                      <div style={{ width:8, height:8, background:BLU, borderRadius:'50%', animation:'pulse 2s infinite' }}/>
-                      <span style={{ fontSize:13, color:BLU, fontWeight:500 }}>Launching Q3 2024</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:24 }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 12px' }}>Pipeline Features:</h3>
-                  <ul style={{ margin:0, paddingLeft:20, fontSize:13, color:T2, lineHeight:1.8 }}>
-                    <li>Active project listings & opportunities</li>
-                    <li>Project financials & metrics</li>
-                    <li>Investment amount & terms</li>
-                    <li>Risk & return analysis</li>
-                    <li>Due diligence resources</li>
-                    <li>Direct communication with project teams</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {currentPage === 'events' && (
-            <OfficeHoursEvents />
-          )}
-          
-          {currentPage === 'circles' && (
-            <div style={{ padding:'24px 0' }}>
-              <h1 style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 24px' }}>Member Circles</h1>
-              <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:40, textAlign:'center' }}>
-                <div style={{ fontSize:48, marginBottom:16 }}>👥</div>
-                <h2 style={{ fontSize:20, fontWeight:600, color:T1, margin:'0 0 8px' }}>Member Circles</h2>
-                <p style={{ fontSize:14, color:T2, margin:0 }}>Connect with community circles and groups here.</p>
-              </div>
-            </div>
-          )}
-          
-          {currentPage === 'toolkits' && (
-            <div style={{ padding:'24px 0' }}>
-              <h1 style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 24px' }}>Toolkits & Templates</h1>
-              <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:40, textAlign:'center' }}>
-                <div style={{ fontSize:48, marginBottom:16 }}>🛠️</div>
-                <h2 style={{ fontSize:20, fontWeight:600, color:T1, margin:'0 0 8px' }}>Toolkits & Templates</h2>
-                <p style={{ fontSize:14, color:T2, margin:0 }}>Access useful resources and templates here.</p>
-              </div>
-            </div>
-          )}
-          
-          {currentPage === 'marketplace' && (
-            <div style={{ padding:'24px 0' }}>
-              <h1 style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 24px' }}>Partner Marketplace</h1>
-              <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:40, textAlign:'center' }}>
-                <div style={{ fontSize:48, marginBottom:16 }}>🏪</div>
-                <h2 style={{ fontSize:20, fontWeight:600, color:T1, margin:'0 0 8px' }}>Partner Marketplace</h2>
-                <p style={{ fontSize:14, color:T2, margin:0 }}>Discover partner services and opportunities here.</p>
-              </div>
-            </div>
-          )}
-          
-          {currentPage === 'announcements' && (
-            <div style={{ padding:'24px 0' }}>
-              <h1 style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 24px' }}>Announcements & Feedback</h1>
-              <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:40, textAlign:'center' }}>
-                <div style={{ fontSize:48, marginBottom:16 }}>📢</div>
-                <h2 style={{ fontSize:20, fontWeight:600, color:T1, margin:'0 0 8px' }}>Announcements & Feedback</h2>
-                <p style={{ fontSize:14, color:T2, margin:0 }}>Stay updated and share feedback here.</p>wha
-              </div>
-            </div>
-          )}
-          
-          {currentPage === 'help' && (
-            <div style={{ padding:'24px 0' }}>
-              <h1 style={{ fontSize:28, fontWeight:700, color:T1, margin:'0 0 24px' }}>Help & Support</h1>
-              <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:40, textAlign:'center' }}>
-                <div style={{ fontSize:48, marginBottom:16 }}>❓</div>
-                <h2 style={{ fontSize:20, fontWeight:600, color:T1, margin:'0 0 8px' }}>Help & Support</h2>
-                <p style={{ fontSize:14, color:T2, margin:0 }}>Get help and support here.</p>
-              </div>
-            </div>
-          )}
-
-          {currentPage === 'learning' && (
-            <LearningHub />
-          )}
         </div>
       </div>
 
@@ -1304,8 +642,16 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           onNext={next}
           onBack={back}
           onSkip={skip}
+          isMobile={isMobile}
         />
       )}
+      <style>{`
+        *{box-sizing:border-box;}
+        button,input,select,textarea{font-family:inherit;}
+        ::-webkit-scrollbar{width:5px;height:4px;}
+        ::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:10px;}
+        ::-webkit-scrollbar-track{background:transparent;}
+      `}</style>
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { authAPI } from "../api/endpoints";
 
 /* ── DESIGN TOKENS (from uploaded design) ─────────────────── */
 const C = {
@@ -25,52 +24,43 @@ const baseInput = {
   transition:'border-color .15s, box-shadow .15s',
 };
 
+/* ── BREAKPOINT HOOK ──────────────────────────────────────── */
+function useBreakpoint() {
+  const [w, setW] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1280);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return { isMobile: w < 640, isTablet: w >= 640 && w < 1024, isDesktop: w >= 1024 };
+}
+
 /* ── SHARED SMALL COMPONENTS ──────────────────────────────── */
 function Logo() {
   return (
-    <div style={{display:'flex', alignItems:'center', gap:16, marginBottom:28}}>
-      {/* Tribes Capital circular logo - purple design */}
-      <svg width={54} height={54} viewBox="0 0 100 100" fill="none">
-        {/* Purple gradient background circle */}
-        <defs>
-          <linearGradient id="purpleGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#7C3AED"/>
-            <stop offset="100%" stopColor="#5B21B6"/>
-          </linearGradient>
-        </defs>
-        <circle cx={50} cy={50} r={48} fill="url(#purpleGrad1)"/>
-        {/* Inner ring */}
-        <circle cx={50} cy={50} r={42} fill="none" stroke="white" strokeWidth="2" opacity={0.7}/>
-        {/* Center letter T */}
-        <text x="50" y="65" fontSize="48" fontWeight="900" fill="white" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">T</text>
+    <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:28}}>
+      {/* Tribes Capital circular logo mark */}
+      <svg width={36} height={36} viewBox="0 0 36 36" fill="none">
+        <circle cx={18} cy={18} r={16} stroke={C.primaryMid} strokeWidth={2}/>
+        <path d="M10 18h16M18 10v16" stroke={C.primaryMid} strokeWidth={2} strokeLinecap="round"/>
+        <circle cx={18} cy={18} r={3} fill={C.primaryMid}/>
       </svg>
-      <div style={{display:'flex', flexDirection:'column'}}>
-        <span style={{fontSize:16, fontWeight:800, color:C.text, letterSpacing:1.2, textTransform:'uppercase', lineHeight:1.1}}>
-          Tribes
-        </span>
-        <span style={{fontSize:16, fontWeight:800, color:C.text, letterSpacing:1.2, textTransform:'uppercase', lineHeight:1.1}}>
-          Capital
-        </span>
-      </div>
+      <span style={{fontSize:13, fontWeight:700, color:C.text, letterSpacing:2.5, textTransform:'uppercase'}}>
+        Tribes Capital
+      </span>
     </div>
   );
 }
 
 function SmallLogo() {
   return (
-    <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:24}}>
-      <svg width={42} height={42} viewBox="0 0 100 100" fill="none">
-        <defs>
-          <linearGradient id="purpleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#7C3AED"/>
-            <stop offset="100%" stopColor="#5B21B6"/>
-          </linearGradient>
-        </defs>
-        <circle cx={50} cy={50} r={48} fill="url(#purpleGrad2)"/>
-        <circle cx={50} cy={50} r={42} fill="none" stroke="white" strokeWidth="2" opacity={0.7}/>
-        <text x="50" y="65" fontSize="48" fontWeight="900" fill="white" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">T</text>
+    <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:24}}>
+      <svg width={30} height={30} viewBox="0 0 36 36" fill="none">
+        <circle cx={18} cy={18} r={16} stroke={C.primaryMid} strokeWidth={2}/>
+        <path d="M10 18h16M18 10v16" stroke={C.primaryMid} strokeWidth={2} strokeLinecap="round"/>
+        <circle cx={18} cy={18} r={3} fill={C.primaryMid}/>
       </svg>
-      <span style={{fontSize:13, fontWeight:700, color:C.text, letterSpacing:1.2, textTransform:'uppercase'}}>
+      <span style={{fontSize:13, fontWeight:700, color:C.text, letterSpacing:2.5, textTransform:'uppercase'}}>
         Tribes Capital
       </span>
     </div>
@@ -196,25 +186,15 @@ function Divider() {
 }
 
 /* Google button */
-function GoogleBtn({ onClick, loading }) {
+function GoogleBtn() {
   return (
-    <button onClick={onClick} disabled={loading} style={{
-      width:'100%', height:46, background:loading ? '#F3F4F6' : C.white, border:`1px solid ${C.border}`,
+    <button style={{
+      width:'100%', height:46, background:C.white, border:`1px solid ${C.border}`,
       borderRadius:8, fontFamily:'inherit', fontSize:14, fontWeight:500,
-      color:C.text, cursor:loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center',
-      justifyContent:'center', gap:10, transition:'all .2s',
-      opacity: loading ? 0.6 : 1,
+      color:C.text, cursor:'pointer', display:'flex', alignItems:'center',
+      justifyContent:'center', gap:10, transition:'background .15s',
     }}>
-      {loading ? (
-        <>
-          <div style={{width:14, height:14, border:'2px solid #E5E7EB', borderTop:'2px solid #7C3AED', borderRadius:'50%', animation:'spin .6s linear infinite'}}/>
-          Signing in with Google…
-        </>
-      ) : (
-        <>
-          <GoogleIcon/>Continue with Google
-        </>
-      )}
+      <GoogleIcon/>Continue with Google
     </button>
   );
 }
@@ -356,33 +336,26 @@ function ImagePanel() {
   );
 }
 
-/* ── TWO-COLUMN WRAPPER - MOBILE RESPONSIVE ───────────────── */
+/* ── TWO-COLUMN WRAPPER ───────────────────────────────────── */
 function TwoCol({ children }) {
+  const { isMobile, isTablet, isDesktop } = useBreakpoint();
+  const singleCol = !isDesktop;          // tablet + mobile → no image panel
   return (
     <div style={{
-      display:'flex',
-      flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-      background:C.white,
-      borderRadius: window.innerWidth < 768 ? 0 : 20,
-      overflow:'hidden',
-      width:'100%',
-      maxWidth: window.innerWidth < 768 ? '100%' : '1020px',
-      height: window.innerWidth < 768 ? '100vh' : 'auto',
-      boxShadow: window.innerWidth < 768 ? 'none' : '0 24px 80px rgba(0,0,0,0.35)',
+      display:'flex', background:C.white,
+      borderRadius: isMobile ? 16 : 20,
+      overflow:'hidden', width:'100%',
+      maxWidth: singleCol ? 460 : 1020,
+      boxShadow:'0 24px 80px rgba(0,0,0,0.35)',
     }}>
-      {/* Hide image panel on mobile */}
-      {window.innerWidth >= 768 && <ImagePanel/>}
-      
+      {/* Image panel — desktop only */}
+      {isDesktop && <ImagePanel/>}
+      {/* Form panel */}
       <div style={{
         flex:1,
-        padding: window.innerWidth < 640 ? '24px 16px' : 
-                 window.innerWidth < 768 ? '32px 24px' : 
-                 '48px 52px',
-        display:'flex',
-        flexDirection:'column',
-        justifyContent: window.innerWidth < 768 ? 'flex-start' : 'center',
-        overflowY:'auto',
-        width: window.innerWidth < 768 ? '100%' : 'auto',
+        padding: isMobile ? '32px 24px 28px' : isTablet ? '40px 44px' : '48px 52px',
+        display:'flex', flexDirection:'column',
+        justifyContent:'center', overflowY:'auto',
       }}>
         {children}
       </div>
@@ -391,117 +364,30 @@ function TwoCol({ children }) {
 }
 
 /* ══ LOGIN PAGE ══════════════════════════════════════════════ */
-function LoginPage({ onNavigate, onLogin }) {
+function LoginPage({ onNavigate }) {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [showPw,   setShowPw]   = useState(false);
   const [loading,  setLoading]  = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [emailErr, setEmailErr] = useState('');
   const [focusPw,  setFocusPw]  = useState(false);
+  const { isMobile } = useBreakpoint();
 
-  const handleLogin = async () => {
+  const handleLogin = () => {
     const valid = email.includes('@') && email.includes('.');
     if (!valid) { setEmailErr('Please enter a valid email'); return; }
-    if (!password) { setEmailErr('Password is required'); return; }
     setEmailErr('');
     setLoading(true);
-    try {
-      const response = await authAPI.login({ email, password });
-      const data = response.data;
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      if (data.youtubeToken) localStorage.setItem('youtubeToken', data.youtubeToken);
-      localStorage.setItem('userEmail', data.user.email);
-      onLogin({ 
-        email: data.user.email, 
-        name: `${data.user.firstName} ${data.user.lastName}`.trim() 
-      });
-    } catch (error) {
-      setEmailErr(error.response?.data?.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    try {
-      // Load Google Sign-In SDK if not already loaded
-      if (!window.google?.accounts) {
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          initializeGoogleSignIn();
-        };
-        document.head.appendChild(script);
-      } else {
-        initializeGoogleSignIn();
-      }
-    } catch (error) {
-      console.error('Error loading Google SDK:', error);
-      setGoogleLoading(false);
-    }
-  };
-
-  const initializeGoogleSignIn = () => {
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-    
-    if (!googleClientId) {
-      console.error('Google Client ID not configured. Set VITE_GOOGLE_CLIENT_ID in .env');
-      setGoogleLoading(false);
-      return;
-    }
-
-    window.google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleCallback,
-      auto_select: false,
-    });
-
-    // Programmatically request login
-    window.google.accounts.id.requestIdToken();
-  };
-
-  const handleGoogleCallback = async (response) => {
-    if (!response.credential) {
-      setGoogleLoading(false);
-      alert('Google Sign-In failed: No credential received');
-      return;
-    }
-
-    try {
-      const res = await authAPI.googleAuth({
-        idToken: response.credential,
-        accessToken: response.access_token || '',
-      });
-      const data = res.data;
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      if (data.youtubeToken) localStorage.setItem('youtubeToken', data.youtubeToken);
-      localStorage.setItem('userEmail', data.user.email);
-      onLogin({ 
-        email: data.user.email, 
-        name: `${data.user.firstName} ${data.user.lastName}`.trim(),
-        googleId: data.user.googleId,
-      });
-    } catch (error) {
-      console.error('Google Sign-In error:', error);
-      const errorMsg = error.response?.data?.message || 'Google Sign-In failed. Please try again.';
-      alert(errorMsg);
-      setGoogleLoading(false);
-    }
+    setTimeout(() => setLoading(false), 2200);
   };
 
   return (
     <TwoCol>
       <Logo/>
-      <h1 style={{fontSize:28, fontWeight:700, color:C.text, margin:'0 0 6px', letterSpacing:-.5}}>
+      <h1 style={{fontSize: isMobile?22:28, fontWeight:700, color:C.text, margin:'0 0 6px', letterSpacing:-.5}}>
         Welcome back
       </h1>
-      <p style={{fontSize:14, color:C.textGray, marginBottom:28, lineHeight:1.5}}>
+      <p style={{fontSize:14, color:C.textGray, marginBottom: isMobile?20:28, lineHeight:1.5}}>
         Sign in to access your community dashboard
       </p>
 
@@ -561,7 +447,7 @@ function LoginPage({ onNavigate, onLogin }) {
 
       <Divider/>
 
-      <GoogleBtn onClick={handleGoogleSignIn} loading={googleLoading}/>
+      <GoogleBtn/>
 
       <p style={{textAlign:'center', fontSize:14, color:C.textGray, marginTop:22}}>
         Don't have an account?{' '}
@@ -579,7 +465,7 @@ function LoginPage({ onNavigate, onLogin }) {
 
 /* ══ SIGN UP PAGE ════════════════════════════════════════════ */
 /* Full name (not first+last), email, account type, password+strength, terms */
-function SignupPage({ onNavigate, onLogin }) {
+function SignupPage({ onNavigate }) {
   const [fullName,  setFullName]  = useState('');
   const [email,     setEmail]     = useState('');
   const [role,      setRole]      = useState('');
@@ -587,9 +473,9 @@ function SignupPage({ onNavigate, onLogin }) {
   const [showPw,    setShowPw]    = useState(false);
   const [agreed,    setAgreed]    = useState(false);
   const [loading,   setLoading]   = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [focusPw,   setFocusPw]   = useState(false);
   const [strength,  setStrength]  = useState({ pct:0, color:C.border, hint:'Use 8+ characters with a mix of letters, numbers & symbols', score:0 });
+  const { isMobile } = useBreakpoint();
 
   const checkStrength = val => {
     let score = 0;
@@ -607,56 +493,19 @@ function SignupPage({ onNavigate, onLogin }) {
     setStrength({ ...levels[score], score });
   };
 
-  const handleSignup = async () => {
-    if (!fullName.trim()) { alert('Full name is required'); return; }
-    if (!email.includes('@') || !email.includes('.')) { alert('Valid email is required'); return; }
-    if (password.length < 8) { alert('Password must be at least 8 characters'); return; }
+  const handleSignup = () => {
     if (!agreed) { alert('Please agree to the Terms of Use to continue.'); return; }
     setLoading(true);
-    try {
-      const [firstName, ...lastNameParts] = fullName.trim().split(' ');
-      const lastName = lastNameParts.join(' ') || 'User';
-      const response = await authAPI.register({ 
-        email, 
-        firstName: firstName || 'User',
-        lastName,
-        password 
-      });
-      const data = response.data;
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      if (data.youtubeToken) localStorage.setItem('youtubeToken', data.youtubeToken);
-      localStorage.setItem('userEmail', data.user.email);
-      onLogin({ 
-        email: data.user.email, 
-        name: fullName 
-      });
-    } catch (error) {
-      alert(error.response?.data?.message || 'Sign up failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignUp = async () => {
-    setGoogleLoading(true);
-    // Simulate Google Sign-In for signup
-    const mockGoogleEmail = `user${Math.floor(Math.random() * 10000)}@gmail.com`;
-    const mockName = 'Google User';
-    localStorage.setItem('accessToken', 'google-token-' + Date.now());
-    localStorage.setItem('youtubeToken', 'youtube-' + Date.now());
-    localStorage.setItem('userEmail', mockGoogleEmail);
-    onLogin({ email: mockGoogleEmail, name: mockName, googleId: 'google-' + Date.now() });
-    setGoogleLoading(false);
+    setTimeout(() => setLoading(false), 2200);
   };
 
   return (
     <TwoCol>
       <Logo/>
-      <h1 style={{fontSize:28, fontWeight:700, color:C.text, margin:'0 0 6px', letterSpacing:-.5}}>
+      <h1 style={{fontSize: isMobile?22:28, fontWeight:700, color:C.text, margin:'0 0 6px', letterSpacing:-.5}}>
         Create your account
       </h1>
-      <p style={{fontSize:14, color:C.textGray, marginBottom:24, lineHeight:1.5}}>
+      <p style={{fontSize:14, color:C.textGray, marginBottom: isMobile?20:24, lineHeight:1.5}}>
         Join the network of energy infrastructure stakeholders
       </p>
 
@@ -766,7 +615,7 @@ function SignupPage({ onNavigate, onLogin }) {
 
       <Divider/>
 
-      <GoogleBtn onClick={handleGoogleSignUp} loading={googleLoading}/>
+      <GoogleBtn/>
 
       <p style={{textAlign:'center', fontSize:14, color:C.textGray, marginTop:22}}>
         Already have an account?{' '}
@@ -788,30 +637,27 @@ function ForgotPage({ onNavigate, onSetEmail }) {
   const [email,    setEmail]    = useState('');
   const [loading,  setLoading]  = useState(false);
   const [emailErr, setEmailErr] = useState('');
+  const { isMobile } = useBreakpoint();
 
-  const handleReset = async () => {
+  const handleReset = () => {
     if (!email.includes('@') || !email.includes('.')) {
       setEmailErr('Please enter a valid email');
       return;
     }
     setEmailErr('');
     setLoading(true);
-    try {
-      await authAPI.forgotPassword(email);
+    setTimeout(() => {
       setLoading(false);
-      onSetEmail(email);
-      onNavigate('verify');
-    } catch (error) {
-      setEmailErr(error.response?.data?.message || 'Error sending reset code');
-      setLoading(false);
-    }
+      onSetEmail(email);       // lift email to root
+      onNavigate('verify');    // go to OTP verification
+    }, 1800);
   };
 
   return (
     <div style={{
       width:'100%', maxWidth:460,
       background:C.white, borderRadius:16, border:`1px solid ${C.border}`,
-      padding:'40px 40px 36px',
+      padding: isMobile ? '28px 20px 24px' : '40px 40px 36px',
       boxShadow:'0 20px 60px rgba(0,0,0,0.25)',
     }}>
       <button
@@ -867,6 +713,7 @@ function VerifyPage({ email, onNavigate }) {
   const [timer,   setTimer]   = useState(60);
   const [resent,  setResent]  = useState(false);
   const refs = React.useRef([]);
+  const { isMobile } = useBreakpoint();
 
   /* Countdown */
   useEffect(() => {
@@ -892,19 +739,10 @@ function VerifyPage({ email, onNavigate }) {
     e.preventDefault();
   };
 
-  const handleVerify = async () => {
+  const handleVerify = () => {
     if (code.join('').length < 6) { setError('Please enter all 6 digits'); return; }
-    setError(''); 
-    setLoading(true);
-    try {
-      await authAPI.verifyCode(email, code.join(''));
-      localStorage.setItem('resetCode', code.join(''));
-      setLoading(false);
-      onNavigate('reset-password');
-    } catch (error) {
-      setError(error.response?.data?.message || 'Invalid code');
-      setLoading(false);
-    }
+    setError(''); setLoading(true);
+    setTimeout(() => { setLoading(false); onNavigate('reset-password'); }, 1500);
   };
 
   const handleResend = () => {
@@ -914,10 +752,15 @@ function VerifyPage({ email, onNavigate }) {
   };
 
   const filled = code.join('').length === 6;
+  /* OTP box size — smaller on mobile to fit all 6 boxes */
+  const boxW = isMobile ? 42 : 54;
+  const boxH = isMobile ? 50 : 60;
+  const boxFs = isMobile ? 20 : 24;
+  const boxGap = isMobile ? 7 : 10;
 
   return (
     <div style={{width:'100%',maxWidth:460,background:C.white,borderRadius:16,
-      border:`1px solid ${C.border}`,padding:'40px 40px 36px',
+      border:`1px solid ${C.border}`,padding: isMobile ? '28px 20px 24px' : '40px 40px 36px',
       boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
 
       {/* Back */}
@@ -949,7 +792,7 @@ function VerifyPage({ email, onNavigate }) {
       </p>
 
       {/* 6-box OTP */}
-      <div style={{display:'flex',gap:10,justifyContent:'center',marginBottom:8}}>
+      <div style={{display:'flex',gap:boxGap,justifyContent:'center',marginBottom:8}}>
         {code.map((d,i) => (
           <input key={i}
             ref={el => refs.current[i] = el}
@@ -960,7 +803,7 @@ function VerifyPage({ email, onNavigate }) {
             onPaste={handlePaste}
             onFocus={e => e.target.select()}
             style={{
-              width:54, height:60, textAlign:'center', fontSize:24, fontWeight:700,
+              width:boxW, height:boxH, textAlign:'center', fontSize:boxFs, fontWeight:700,
               border:`2px solid ${d ? C.primaryMid : C.border}`,
               borderRadius:10, fontFamily:'inherit', outline:'none',
               background: d ? C.primaryFaint : C.white,
@@ -1006,7 +849,7 @@ function VerifyPage({ email, onNavigate }) {
 
 /* ══ RESET PASSWORD PAGE ═════════════════════════════════════ */
 /* Set new password with strength bar + confirm field */
-function ResetPasswordPage({ email, onNavigate }) {
+function ResetPasswordPage({ onNavigate }) {
   const [newPw,    setNewPw]    = useState('');
   const [confPw,   setConfPw]   = useState('');
   const [showNew,  setShowNew]  = useState(false);
@@ -1017,7 +860,7 @@ function ResetPasswordPage({ email, onNavigate }) {
   const [focusNew, setFocusNew] = useState(false);
   const [focusConf,setFocusConf]= useState(false);
   const [strength, setStrength] = useState({pct:0,color:C.border,hint:'Use 8+ characters with a mix of letters, numbers & symbols',score:0});
-  const resetCode = localStorage.getItem('resetCode') || '';
+  const { isMobile } = useBreakpoint();
 
   const checkStrength = val => {
     let s = 0;
@@ -1035,26 +878,19 @@ function ResetPasswordPage({ email, onNavigate }) {
     setStrength({...lvl[s], score:s});
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (newPw.length < 8)    { setError('Password must be at least 8 characters'); return; }
     if (newPw !== confPw)    { setError("Passwords don't match"); return; }
-    setError(''); 
-    setLoading(true);
-    try {
-      await authAPI.resetPassword(email, resetCode, newPw);
-      localStorage.removeItem('resetCode');
-      setLoading(false);
-      setDone(true);
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to reset password');
-      setLoading(false);
-    }
+    setError(''); setLoading(true);
+    setTimeout(() => { setLoading(false); setDone(true); }, 1800);
   };
 
   /* ── Success state ── */
   if (done) return (
     <div style={{width:'100%',maxWidth:460,background:C.white,borderRadius:16,
-      border:`1px solid ${C.border}`,padding:'48px 40px',textAlign:'center',
+      border:`1px solid ${C.border}`,
+      padding: isMobile ? '36px 20px' : '48px 40px',
+      textAlign:'center',
       boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
       <div style={{width:72,height:72,borderRadius:'50%',background:C.successBg,
         border:`2px solid ${C.successBdr}`,display:'flex',alignItems:'center',
@@ -1065,7 +901,7 @@ function ResetPasswordPage({ email, onNavigate }) {
           <polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
       </div>
-      <h1 style={{fontSize:22,fontWeight:700,color:C.text,margin:'0 0 8px'}}>Password updated!</h1>
+      <h1 style={{fontSize:isMobile?20:22,fontWeight:700,color:C.text,margin:'0 0 8px'}}>Password updated!</h1>
       <p style={{fontSize:14,color:C.textGray,marginBottom:32,lineHeight:1.6}}>
         Your password has been successfully reset.<br/>You can now sign in with your new password.
       </p>
@@ -1075,7 +911,8 @@ function ResetPasswordPage({ email, onNavigate }) {
 
   return (
     <div style={{width:'100%',maxWidth:460,background:C.white,borderRadius:16,
-      border:`1px solid ${C.border}`,padding:'40px 40px 36px',
+      border:`1px solid ${C.border}`,
+      padding: isMobile ? '28px 20px 24px' : '40px 40px 36px',
       boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
 
       {/* Back */}
@@ -1176,28 +1013,20 @@ function ResetPasswordPage({ email, onNavigate }) {
 }
 
 /* ══ ROOT ════════════════════════════════════════════════════ */
-export default function AuthPage({ onLogin }) {
+export default function AuthPage() {
   const [page,        setPage]        = useState('login');
   const [forgotEmail, setForgotEmail] = useState('');
-  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
-
-  React.useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const { isMobile, isTablet } = useBreakpoint();
 
   return (
     <div style={{
       minHeight:'100vh',
       background:'#0D0D0D',
       display:'flex',
-      alignItems: isMobile ? 'flex-start' : 'center',
+      alignItems:'center',
       justifyContent:'center',
-      padding: isMobile ? '12px 0' : '24px',
-      paddingTop: isMobile ? '0' : '24px',
+      padding: isMobile ? '16px 12px' : isTablet ? '20px 16px' : 24,
       fontFamily:"'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      overflowY: 'auto',
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
@@ -1207,24 +1036,14 @@ export default function AuthPage({ onLogin }) {
         input::placeholder { color: #9CA3AF; }
         select option { color: #111827; }
         button:focus-visible { outline: 2px solid #7C3AED; outline-offset: 2px; }
-
-        /* Mobile responsive styles */
-        @media (max-width: 767px) {
-          input[type="text"],
-          input[type="email"],
-          input[type="password"],
-          select {
-            font-size: 16px !important; /* Prevent iOS zoom on input focus */
-          }
-        }
       `}</style>
 
-      <div key={page} style={{width:'100%', maxWidth: isMobile ? '100%' : '1020px', animation:'fadeUp .3s ease', display:'flex', justifyContent:'center'}}>
-        {page === 'login'          && <LoginPage          onNavigate={setPage} onLogin={onLogin}/>}
-        {page === 'signup'         && <SignupPage         onNavigate={setPage} onLogin={onLogin}/>}
+      <div key={page} style={{width:'100%',maxWidth:1020,animation:'fadeUp .3s ease',display:'flex',justifyContent:'center'}}>
+        {page === 'login'          && <LoginPage          onNavigate={setPage}/>}
+        {page === 'signup'         && <SignupPage         onNavigate={setPage}/>}
         {page === 'forgot'         && <ForgotPage         onNavigate={setPage} onSetEmail={setForgotEmail}/>}
         {page === 'verify'         && <VerifyPage         onNavigate={setPage} email={forgotEmail}/>}
-        {page === 'reset-password' && <ResetPasswordPage  onNavigate={setPage} email={forgotEmail}/>}
+        {page === 'reset-password' && <ResetPasswordPage  onNavigate={setPage}/>}
       </div>
     </div>
   );
