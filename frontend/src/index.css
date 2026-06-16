@@ -1,3 +1,6 @@
+/* Import responsive design system */
+@import './styles/responsive.css';
+
 :root {
   --primary: #5B21B6;
   --primary-light: #7C3AED;
@@ -31,9 +34,6 @@
   --font-2xl: 24px;
   --font-3xl: 30px;
 }
-
-/* Import responsive design system */
-@import './styles/responsive.css';
 
 * {
   margin: 0;

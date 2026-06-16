@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AuthPage from './pages/AuthPage';
 import HomePage from './pages/HomePage';
 import LoadingScreen from './components/LoadingScreen';
+import { usersAPI } from './api/endpoints';
 import './App.css';
 
 function App() {
@@ -9,21 +10,49 @@ function App() {
   const [user, setUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
+  // Check if user is authenticated on mount
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const userEmail = localStorage.getItem('userEmail');
-    
-    // Simulate loading time (2.5 seconds total)
-    const timer = setTimeout(() => {
-      if (token && userEmail) {
-        setIsAuthenticated(true);
-        setUser({ email: userEmail, name: userEmail.split('@')[0] });
+    const checkAuthentication = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const userEmail = localStorage.getItem('userEmail');
+        const userName = localStorage.getItem('userName');
+
+        if (token && userEmail) {
+          // Try to fetch user profile to verify token is still valid
+          try {
+            const profileRes = await usersAPI.getProfile();
+            if (profileRes.data) {
+              setUser({ 
+                email: profileRes.data.email || userEmail, 
+                name: profileRes.data.firstName || userName || userEmail.split('@')[0],
+                ...profileRes.data
+              });
+              setIsAuthenticated(true);
+            }
+          } catch (err) {
+            // Token might be expired or user profile endpoint not available
+            // Still allow access if we have a token (backend will validate)
+            setUser({ email: userEmail, name: userName || userEmail.split('@')[0] });
+            setIsAuthenticated(true);
+          }
+        }
+      } catch (err) {
+        console.error('Auth check error:', err);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+      } finally {
+        setIsCheckingAuth(false);
+        // Simulate brief loading screen
+        setTimeout(() => setIsLoading(false), 1200);
       }
-      setIsLoading(false);
-    }, 2500);
-    
-    return () => clearTimeout(timer);
+    };
+
+    checkAuthentication();
   }, []);
 
   const handleLogin = (userData) => {
@@ -34,7 +63,9 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
     setIsAuthenticated(false);
     setUser(null);
     setCurrentPage('login');
@@ -44,30 +75,28 @@ function App() {
     setCurrentPage(page);
   };
 
+  // Show loading screen while checking authentication
+  if (isCheckingAuth || isLoading) {
+    return <LoadingScreen isVisible={true} />;
+  }
 
   if (!isAuthenticated) {
     return (
-      <>
-        <LoadingScreen isVisible={isLoading} />
-        <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out' }}>
-          <AuthPage onLogin={handleLogin} />
-        </div>
-      </>
+      <div style={{ animation: 'fadeIn 0.6s ease-out' }}>
+        <AuthPage onLogin={handleLogin} />
+      </div>
     );
   }
 
   return (
-    <>
-      <LoadingScreen isVisible={isLoading} />
-      <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out' }}>
-        <HomePage 
-          user={user}
-          currentPage={currentPage}
-          onNavigate={handleNavigate}
-          onLogout={handleLogout}
-        />
-      </div>
-    </>
+    <div style={{ animation: 'fadeIn 0.6s ease-out' }}>
+      <HomePage 
+        user={user}
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+      />
+    </div>
   );
 }
 
