@@ -55,10 +55,20 @@ function App() {
     checkAuthentication();
   }, []);
 
-  const handleLogin = (userData) => {
-    setUser(userData);
-    setIsAuthenticated(true);
-    setCurrentPage('home');
+  const handleLogin = () => {
+    // Re-check authentication after login
+    const token = localStorage.getItem('accessToken');
+    const userEmail = localStorage.getItem('userEmail');
+    const userName = localStorage.getItem('userName');
+    
+    if (token && userEmail) {
+      setUser({ 
+        email: userEmail, 
+        name: userName || userEmail.split('@')[0],
+      });
+      setIsAuthenticated(true);
+      setCurrentPage('home');
+    }
   };
 
   const handleLogout = () => {

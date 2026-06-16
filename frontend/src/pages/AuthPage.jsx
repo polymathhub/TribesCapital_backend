@@ -1,32 +1,39 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from 'react';
+import { authAPI } from '../api/endpoints';
 
-/* ── DESIGN TOKENS (from uploaded design) ─────────────────── */
+/* ──────── DESIGN TOKENS ──────────── */
 const C = {
-  primary:     '#8B21B6',   // vivid purple from "Sign In" button
-  primaryDark: '#5B21B6',   // deeper purple
-  primaryMid:  '#7C3AED',   // mid purple (links)
-  primaryFaint:'#EDE9FE',   // faint purple bg
-  text:        '#111827',
-  textGray:    '#6B7280',
-  textMuted:   '#9CA3AF',
-  border:      '#E5E7EB',
-  white:       '#FFFFFF',
-  error:       '#DC2626',
-  success:     '#059669',
-  successBg:   '#F0FDF4',
-  successBdr:  '#A7F3D0',
+  primary: '#8B21B6',
+  primaryDark: '#5B21B6',
+  primaryMid: '#7C3AED',
+  primaryFaint: '#EDE9FE',
+  text: '#111827',
+  textGray: '#6B7280',
+  textMuted: '#9CA3AF',
+  border: '#E5E7EB',
+  white: '#FFFFFF',
+  error: '#DC2626',
+  success: '#059669',
 };
 
 const baseInput = {
-  width:'100%', height:46, border:`1px solid ${C.border}`, borderRadius:8,
-  fontSize:14, color:C.text, padding:'0 14px', background:C.white,
-  outline:'none', boxSizing:'border-box', fontFamily:'inherit',
-  transition:'border-color .15s, box-shadow .15s',
+  width: '100%',
+  height: 46,
+  border: `1px solid ${C.border}`,
+  borderRadius: 8,
+  fontSize: 14,
+  color: C.text,
+  padding: '0 14px',
+  background: C.white,
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+  transition: 'border-color .15s, box-shadow .15s',
 };
 
-/* ── BREAKPOINT HOOK ──────────────────────────────────────── */
+/* ──────── HOOKS ──────────── */
 function useBreakpoint() {
-  const [w, setW] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1280);
+  const [w, setW] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1280));
   useEffect(() => {
     const h = () => setW(window.innerWidth);
     window.addEventListener('resize', h);
@@ -35,97 +42,117 @@ function useBreakpoint() {
   return { isMobile: w < 640, isTablet: w >= 640 && w < 1024, isDesktop: w >= 1024 };
 }
 
-/* ── SHARED SMALL COMPONENTS ──────────────────────────────── */
+/* ──────── COMPONENTS ──────────── */
 function Logo() {
   return (
-    <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:28}}>
-      {/* Tribes Capital circular logo mark */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
       <svg width={36} height={36} viewBox="0 0 36 36" fill="none">
-        <circle cx={18} cy={18} r={16} stroke={C.primaryMid} strokeWidth={2}/>
-        <path d="M10 18h16M18 10v16" stroke={C.primaryMid} strokeWidth={2} strokeLinecap="round"/>
-        <circle cx={18} cy={18} r={3} fill={C.primaryMid}/>
+        <circle cx={18} cy={18} r={16} stroke={C.primaryMid} strokeWidth={2} />
+        <path d="M10 18h16M18 10v16" stroke={C.primaryMid} strokeWidth={2} strokeLinecap="round" />
+        <circle cx={18} cy={18} r={3} fill={C.primaryMid} />
       </svg>
-      <span style={{fontSize:13, fontWeight:700, color:C.text, letterSpacing:2.5, textTransform:'uppercase'}}>
+      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, letterSpacing: 2.5, textTransform: 'uppercase' }}>
         Tribes Capital
       </span>
     </div>
   );
 }
 
-function SmallLogo() {
-  return (
-    <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:24}}>
-      <svg width={30} height={30} viewBox="0 0 36 36" fill="none">
-        <circle cx={18} cy={18} r={16} stroke={C.primaryMid} strokeWidth={2}/>
-        <path d="M10 18h16M18 10v16" stroke={C.primaryMid} strokeWidth={2} strokeLinecap="round"/>
-        <circle cx={18} cy={18} r={3} fill={C.primaryMid}/>
-      </svg>
-      <span style={{fontSize:13, fontWeight:700, color:C.text, letterSpacing:2.5, textTransform:'uppercase'}}>
-        Tribes Capital
-      </span>
-    </div>
-  );
-}
-
-/* Eye toggle icons */
 function EyeOpen() {
   return (
     <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-      <circle cx={12} cy={12} r={3}/>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx={12} cy={12} r={3} />
     </svg>
   );
 }
+
 function EyeOff() {
   return (
     <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-      <line x1={1} y1={1} x2={23} y2={23}/>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+      <line x1={1} y1={1} x2={23} y2={23} />
     </svg>
   );
 }
 
-/* Google logo */
 function GoogleIcon() {
   return (
     <svg width={18} height={18} viewBox="0 0 18 18">
-      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-      <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/>
+      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
+      <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" />
+      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" />
     </svg>
   );
 }
 
-/* Spinner */
 function Spinner() {
   return (
-    <span style={{
-      display:'inline-block', width:16, height:16,
-      border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'#fff',
-      borderRadius:'50%', marginRight:8, verticalAlign:'middle',
-      animation:'spin .6s linear infinite',
-    }}/>
+    <span
+      style={{
+        display: 'inline-block',
+        width: 16,
+        height: 16,
+        border: '2px solid rgba(255,255,255,0.3)',
+        borderTopColor: '#fff',
+        borderRadius: '50%',
+        marginRight: 8,
+        verticalAlign: 'middle',
+        animation: 'spin 0.6s linear infinite',
+      }}
+    />
   );
 }
 
-/* Back arrow */
-function BackArrow() {
+function Btn({ onClick, loading, children, disabled }) {
   return (
-    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-      <path d="M19 12H5M12 19l-7-7 7-7"/>
-    </svg>
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      style={{
+        width: '100%',
+        height: 50,
+        background: disabled || loading ? '#C4B5FD' : C.primary,
+        color: C.white,
+        border: 'none',
+        borderRadius: 8,
+        fontFamily: 'inherit',
+        fontSize: 15,
+        fontWeight: 600,
+        cursor: disabled || loading ? 'not-allowed' : 'pointer',
+        transition: 'background .15s',
+        letterSpacing: 0.2,
+        marginTop: 4,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {loading && <Spinner />}
+      {children}
+    </button>
   );
 }
 
-/* Shared field focus style via data-attribute trick */
+function Divider() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0', color: C.textMuted, fontSize: 13 }}>
+      <div style={{ flex: 1, height: 1, background: C.border }} />
+      Or
+      <div style={{ flex: 1, height: 1, background: C.border }} />
+    </div>
+  );
+}
+
 function Field({ label, required, children }) {
   return (
-    <div style={{marginBottom:18}}>
+    <div style={{ marginBottom: 18 }}>
       {label && (
-        <label style={{display:'block', fontSize:13, fontWeight:500, color:C.text, marginBottom:7}}>
-          {label}{required && <span style={{color:C.error}}> *</span>}
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 7 }}>
+          {label}
+          {required && <span style={{ color: C.error }}> *</span>}
         </label>
       )}
       {children}
@@ -133,8 +160,7 @@ function Field({ label, required, children }) {
   );
 }
 
-/* Input component with focus ring */
-function Input({ type='text', placeholder, value, onChange, style={}, ...props }) {
+function Input({ type = 'text', placeholder, value, onChange, style = {}, ...props }) {
   const [focused, setFocused] = useState(false);
   return (
     <input
@@ -142,8 +168,8 @@ function Input({ type='text', placeholder, value, onChange, style={}, ...props }
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      onFocus={()=>setFocused(true)}
-      onBlur={()=>setFocused(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       style={{
         ...baseInput,
         borderColor: focused ? C.primaryMid : C.border,
@@ -155,306 +181,243 @@ function Input({ type='text', placeholder, value, onChange, style={}, ...props }
   );
 }
 
-/* Primary button */
-function Btn({ onClick, loading, children, disabled }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled || loading}
-      style={{
-        width:'100%', height:50, background: disabled||loading ? '#C4B5FD' : C.primary,
-        color:C.white, border:'none', borderRadius:8, fontFamily:'inherit',
-        fontSize:15, fontWeight:600, cursor: disabled||loading ? 'not-allowed' : 'pointer',
-        transition:'background .15s', letterSpacing:0.2, marginTop:4,
-        display:'flex', alignItems:'center', justifyContent:'center',
-      }}
-    >
-      {loading && <Spinner/>}{children}
-    </button>
-  );
-}
-
-/* "Or" divider */
-function Divider() {
-  return (
-    <div style={{display:'flex', alignItems:'center', gap:12, margin:'22px 0', color:C.textMuted, fontSize:13}}>
-      <div style={{flex:1, height:1, background:C.border}}/>
-      Or
-      <div style={{flex:1, height:1, background:C.border}}/>
-    </div>
-  );
-}
-
-/* Google button */
-function GoogleBtn() {
-  return (
-    <button style={{
-      width:'100%', height:46, background:C.white, border:`1px solid ${C.border}`,
-      borderRadius:8, fontFamily:'inherit', fontSize:14, fontWeight:500,
-      color:C.text, cursor:'pointer', display:'flex', alignItems:'center',
-      justifyContent:'center', gap:10, transition:'background .15s',
-    }}>
-      <GoogleIcon/>Continue with Google
-    </button>
-  );
-}
-
-/* ── LEFT IMAGE PANEL ─────────────────────────────────────── */
-/* Simulates the wind turbine + solar panel image with purple overlay */
 function ImagePanel() {
   return (
-    <div style={{
-      flex:'0 0 46%', position:'relative', overflow:'hidden',
-      borderRadius:'16px 0 0 16px', minHeight:560,
-      background:'linear-gradient(160deg, #0e0120 0%, #1f0546 30%, #3b0f6e 60%, #5B21B6 85%, #7C3AED 100%)',
-    }}>
-      {/* SVG scene: wind turbines + solar panels + purple tint */}
-      <svg
-        width="100%" height="100%"
-        viewBox="0 0 420 580"
-        preserveAspectRatio="xMidYMid slice"
-        style={{position:'absolute', inset:0}}
-      >
-        <defs>
-          <radialGradient id="glow1" cx="75%" cy="35%" r="50%">
-            <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.35}/>
-            <stop offset="100%" stopColor="#0e0120" stopOpacity={0}/>
-          </radialGradient>
-          <radialGradient id="glow2" cx="30%" cy="75%" r="60%">
-            <stop offset="0%" stopColor="#5B21B6" stopOpacity={0.3}/>
-            <stop offset="100%" stopColor="#0e0120" stopOpacity={0}/>
-          </radialGradient>
-          <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#180340" stopOpacity={0.6}/>
-            <stop offset="100%" stopColor="#0a0118" stopOpacity={0.95}/>
-          </linearGradient>
-          <linearGradient id="panelSheen" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#6D28D9" stopOpacity={0.5}/>
-            <stop offset="100%" stopColor="#2e0a5c" stopOpacity={0.8}/>
-          </linearGradient>
-        </defs>
-
-        {/* Atmospheric glows */}
-        <rect width={420} height={580} fill="url(#glow1)"/>
-        <rect width={420} height={580} fill="url(#glow2)"/>
-
-        {/* Distant mountains / silhouette */}
-        <path d="M0 340 Q60 300 120 320 Q180 290 230 310 Q280 270 340 295 Q380 275 420 300 L420 580 L0 580 Z"
-          fill="rgba(20,4,48,0.7)"/>
-
-        {/* ─── Wind turbine 1 (main, right) ─── */}
-        {/* Mast */}
-        <line x1={320} y1={110} x2={320} y2={375} stroke="rgba(255,255,255,0.22)" strokeWidth={3.5} strokeLinecap="round"/>
-        {/* Hub */}
-        <circle cx={320} cy={145} r={5} fill="rgba(255,255,255,0.3)"/>
-        {/* Blades — angled like real turbine */}
-        <line x1={320} y1={145} x2={262} y2={88}  stroke="rgba(255,255,255,0.2)" strokeWidth={5} strokeLinecap="round"/>
-        <line x1={320} y1={145} x2={375} y2={83}  stroke="rgba(255,255,255,0.2)" strokeWidth={5} strokeLinecap="round"/>
-        <line x1={320} y1={145} x2={322} y2={212} stroke="rgba(255,255,255,0.2)" strokeWidth={5} strokeLinecap="round"/>
-
-        {/* ─── Wind turbine 2 (mid-left) ─── */}
-        <line x1={175} y1={185} x2={175} y2={375} stroke="rgba(255,255,255,0.15)" strokeWidth={2.5} strokeLinecap="round"/>
-        <circle cx={175} cy={220} r={3.5} fill="rgba(255,255,255,0.22)"/>
-        <line x1={175} y1={220} x2={140} y2={183} stroke="rgba(255,255,255,0.14)" strokeWidth={3.5} strokeLinecap="round"/>
-        <line x1={175} y1={220} x2={212} y2={180} stroke="rgba(255,255,255,0.14)" strokeWidth={3.5} strokeLinecap="round"/>
-        <line x1={175} y1={220} x2={177} y2={260} stroke="rgba(255,255,255,0.14)" strokeWidth={3.5} strokeLinecap="round"/>
-
-        {/* ─── Wind turbine 3 (distant left) ─── */}
-        <line x1={68} y1={240} x2={68} y2={375} stroke="rgba(255,255,255,0.1)" strokeWidth={1.5} strokeLinecap="round"/>
-        <circle cx={68} cy={264} r={2.5} fill="rgba(255,255,255,0.18)"/>
-        <line x1={68} y1={264} x2={48} y2={244} stroke="rgba(255,255,255,0.1)" strokeWidth={2.5} strokeLinecap="round"/>
-        <line x1={68} y1={264} x2={90} y2={242} stroke="rgba(255,255,255,0.1)" strokeWidth={2.5} strokeLinecap="round"/>
-        <line x1={68} y1={264} x2={70} y2={286} stroke="rgba(255,255,255,0.1)" strokeWidth={2.5} strokeLinecap="round"/>
-
-        {/* Ground platform */}
-        <rect x={0} y={375} width={420} height={205} fill="url(#ground)"/>
-
-        {/* ─── Solar panels ─── */}
-        {/* Row 1 */}
-        {[0,1,2,3,4,5,6].map(i=>(
-          <g key={`r1-${i}`} transform={`translate(${-5 + i*62}, 388)`}>
-            <rect width={56} height={35} rx={2}
-              fill="url(#panelSheen)" stroke="rgba(255,255,255,0.12)" strokeWidth={0.6}/>
-            <line x1={28} y1={0} x2={28} y2={35} stroke="rgba(255,255,255,0.08)" strokeWidth={0.5}/>
-            <line x1={0} y1={11} x2={56} y2={11} stroke="rgba(255,255,255,0.08)" strokeWidth={0.5}/>
-            <line x1={0} y1={23} x2={56} y2={23} stroke="rgba(255,255,255,0.08)" strokeWidth={0.5}/>
-          </g>
-        ))}
-        {/* Row 2 */}
-        {[0,1,2,3,4,5,6].map(i=>(
-          <g key={`r2-${i}`} transform={`translate(${-5 + i*62}, 430)`}>
-            <rect width={56} height={35} rx={2}
-              fill="url(#panelSheen)" stroke="rgba(255,255,255,0.09)" strokeWidth={0.5}
-              style={{opacity:0.8}}/>
-            <line x1={28} y1={0} x2={28} y2={35} stroke="rgba(255,255,255,0.06)" strokeWidth={0.5}/>
-            <line x1={0} y1={11} x2={56} y2={11} stroke="rgba(255,255,255,0.06)" strokeWidth={0.5}/>
-            <line x1={0} y1={23} x2={56} y2={23} stroke="rgba(255,255,255,0.06)" strokeWidth={0.5}/>
-          </g>
-        ))}
-        {/* Row 3 */}
-        {[0,1,2,3,4,5,6].map(i=>(
-          <g key={`r3-${i}`} transform={`translate(${-5 + i*62}, 472)`}>
-            <rect width={56} height={35} rx={2}
-              fill="url(#panelSheen)" stroke="rgba(255,255,255,0.06)" strokeWidth={0.4}
-              style={{opacity:0.6}}/>
-            <line x1={28} y1={0} x2={28} y2={35} stroke="rgba(255,255,255,0.04)" strokeWidth={0.5}/>
-            <line x1={0} y1={11} x2={56} y2={11} stroke="rgba(255,255,255,0.04)" strokeWidth={0.5}/>
-          </g>
-        ))}
-        {/* Row 4 - partial, fading */}
-        {[0,1,2,3,4,5,6].map(i=>(
-          <g key={`r4-${i}`} transform={`translate(${-5 + i*62}, 513)`} style={{opacity:0.35}}>
-            <rect width={56} height={35} rx={2}
-              fill="url(#panelSheen)" stroke="rgba(255,255,255,0.04)" strokeWidth={0.3}/>
-          </g>
-        ))}
-
-        {/* Water / dam suggestion */}
-        <path d="M30 360 Q105 345 180 355 Q255 343 320 355 Q370 348 420 358 L420 380 L0 380 Z"
-          fill="rgba(91,33,182,0.18)"/>
-        {/* Water ripple lines */}
-        <path d="M40 367 Q120 360 200 365 Q280 358 380 366"
-          stroke="rgba(255,255,255,0.07)" strokeWidth={1} fill="none"/>
-        <path d="M20 373 Q100 367 180 371 Q260 365 400 372"
-          stroke="rgba(255,255,255,0.05)" strokeWidth={1} fill="none"/>
-
-        {/* Purple atmospheric glow near turbines */}
-        <ellipse cx={320} cy={380} rx={100} ry={40} fill="rgba(124,58,237,0.12)"/>
-        <ellipse cx={175} cy={380} rx={70} ry={30} fill="rgba(91,33,182,0.1)"/>
-      </svg>
-
-      {/* Subtle purple overlay for tint effect matching design */}
-      <div style={{position:'absolute', inset:0, background:'rgba(91,33,182,0.18)', borderRadius:'16px 0 0 16px'}}/>
-
-      {/* Bottom tagline */}
-      <div style={{position:'absolute', bottom:28, left:28, right:28}}>
-        <p style={{color:'rgba(255,255,255,0.55)', fontSize:12, lineHeight:1.7, fontWeight:400, letterSpacing:0.2}}>
-          Empowering clean energy infrastructure<br/>across African emerging markets
+    <div
+      style={{
+        flex: '0 0 46%',
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: '16px 0 0 16px',
+        minHeight: 560,
+        background: 'linear-gradient(160deg, #0e0120 0%, #1f0546 30%, #3b0f6e 60%, #5B21B6 85%, #7C3AED 100%)',
+      }}
+    >
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(91,33,182,0.18)', borderRadius: '16px 0 0 16px' }} />
+      <div style={{ position: 'absolute', bottom: 28, left: 28, right: 28 }}>
+        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 1.7, fontWeight: 400, letterSpacing: 0.2 }}>
+          Empowering clean energy infrastructure
+          <br />
+          across African emerging markets
         </p>
       </div>
     </div>
   );
 }
 
-/* ── TWO-COLUMN WRAPPER ───────────────────────────────────── */
 function TwoCol({ children }) {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
-  const singleCol = !isDesktop;          // tablet + mobile → no image panel
+  const singleCol = !isDesktop;
   return (
-    <div style={{
-      display:'flex', background:C.white,
-      borderRadius: isMobile ? 16 : 20,
-      overflow:'hidden', width:'100%',
-      maxWidth: singleCol ? 460 : 1020,
-      boxShadow:'0 24px 80px rgba(0,0,0,0.35)',
-    }}>
-      {/* Image panel — desktop only */}
-      {isDesktop && <ImagePanel/>}
-      {/* Form panel */}
-      <div style={{
-        flex:1,
-        padding: isMobile ? '32px 24px 28px' : isTablet ? '40px 44px' : '48px 52px',
-        display:'flex', flexDirection:'column',
-        justifyContent:'center', overflowY:'auto',
-      }}>
+    <div
+      style={{
+        display: 'flex',
+        background: C.white,
+        borderRadius: isMobile ? 16 : 20,
+        overflow: 'hidden',
+        width: '100%',
+        maxWidth: singleCol ? 460 : 1020,
+        boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
+      }}
+    >
+      {isDesktop && <ImagePanel />}
+      <div
+        style={{
+          flex: 1,
+          padding: isMobile ? '32px 24px 28px' : isTablet ? '40px 44px' : '48px 52px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          overflowY: 'auto',
+        }}
+      >
         {children}
       </div>
     </div>
   );
 }
 
-/* ══ LOGIN PAGE ══════════════════════════════════════════════ */
-function LoginPage({ onNavigate }) {
-  const [email,    setEmail]    = useState('');
+/* ──────── LOGIN PAGE ──────────── */
+function LoginPage({ onNavigate, onLoginSuccess }) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPw,   setShowPw]   = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [emailErr, setEmailErr] = useState('');
-  const [focusPw,  setFocusPw]  = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [focusPw, setFocusPw] = useState(false);
   const { isMobile } = useBreakpoint();
 
-  const handleLogin = () => {
-    const valid = email.includes('@') && email.includes('.');
-    if (!valid) { setEmailErr('Please enter a valid email'); return; }
-    setEmailErr('');
+  const handleLogin = async () => {
+    setError('');
+    if (!email.includes('@') || !email.includes('.')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => setLoading(false), 2200);
+    try {
+      const response = await authAPI.login({ email, password });
+      if (response.data && response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('userName', response.data.user?.firstName || email.split('@')[0]);
+        onLoginSuccess();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async (event) => {
+    // Handle Google OAuth response
+    try {
+      setLoading(true);
+      setError('');
+      // This will be triggered by the Google Sign-In callback
+      // The credential will be available in event
+      if (event && event.credential) {
+        const response = await authAPI.googleAuth({ idToken: event.credential });
+        if (response.data && response.data.accessToken) {
+          localStorage.setItem('accessToken', response.data.accessToken);
+          if (response.data.refreshToken) {
+            localStorage.setItem('refreshToken', response.data.refreshToken);
+          }
+          localStorage.setItem('userEmail', response.data.user?.email || '');
+          localStorage.setItem('userName', response.data.user?.firstName || 'User');
+          onLoginSuccess();
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
+      console.error('Google sign-in error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <TwoCol>
-      <Logo/>
-      <h1 style={{fontSize: isMobile?22:28, fontWeight:700, color:C.text, margin:'0 0 6px', letterSpacing:-.5}}>
+      <Logo />
+      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 6px', letterSpacing: -0.5 }}>
         Welcome back
       </h1>
-      <p style={{fontSize:14, color:C.textGray, marginBottom: isMobile?20:28, lineHeight:1.5}}>
+      <p style={{ fontSize: 14, color: C.textGray, marginBottom: isMobile ? 20 : 28, lineHeight: 1.5 }}>
         Sign in to access your community dashboard
       </p>
 
-      {/* Email */}
+      {error && (
+        <div style={{ background: '#FEE2E2', border: `1px solid ${C.error}`, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.error }}>
+          {error}
+        </div>
+      )}
+
       <Field label="Email address">
         <Input
           type="email"
           placeholder="info@tribescapital.com"
           value={email}
-          onChange={e=>{setEmail(e.target.value);setEmailErr('');}}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError('');
+          }}
+          disabled={loading}
         />
-        {emailErr && <p style={{fontSize:12, color:C.error, marginTop:5}}>{emailErr}</p>}
       </Field>
 
-      {/* Password */}
       <Field label="Password">
-        <div style={{position:'relative'}}>
+        <div style={{ position: 'relative' }}>
           <input
-            type={showPw?'text':'password'}
+            type={showPw ? 'text' : 'password'}
             placeholder="Enter your password"
             value={password}
-            onChange={e=>setPassword(e.target.value)}
-            onFocus={()=>setFocusPw(true)}
-            onBlur={()=>setFocusPw(false)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError('');
+            }}
+            onFocus={() => setFocusPw(true)}
+            onBlur={() => setFocusPw(false)}
+            disabled={loading}
             style={{
-              ...baseInput, paddingRight:44,
+              ...baseInput,
+              paddingRight: 44,
               borderColor: focusPw ? C.primaryMid : C.border,
               boxShadow: focusPw ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
+              opacity: loading ? 0.6 : 1,
             }}
           />
           <button
-            onClick={()=>setShowPw(p=>!p)}
-            style={{position:'absolute', right:14, top:'50%', transform:'translateY(-50%)',
-              background:'none', border:'none', cursor:'pointer', color:C.textGray, display:'flex',
-              alignItems:'center', padding:0}}
+            onClick={() => setShowPw((p) => !p)}
+            style={{
+              position: 'absolute',
+              right: 14,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: C.textGray,
+              display: 'flex',
+              alignItems: 'center',
+              padding: 0,
+            }}
             type="button"
+            disabled={loading}
           >
-            {showPw ? <EyeOff/> : <EyeOpen/>}
+            {showPw ? <EyeOff /> : <EyeOpen />}
           </button>
         </div>
       </Field>
 
-      {/* Forgot password link */}
-      <div style={{textAlign:'right', marginTop:-8, marginBottom:22}}>
+      <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 22 }}>
         <button
-          onClick={()=>onNavigate('forgot')}
-          style={{background:'none', border:'none', cursor:'pointer', fontSize:13,
-            color:C.primaryMid, fontWeight:500, fontFamily:'inherit'}}
+          onClick={() => onNavigate('forgot')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 13,
+            color: C.primaryMid,
+            fontWeight: 500,
+            fontFamily: 'inherit',
+          }}
+          disabled={loading}
         >
           Forgot Password?
         </button>
       </div>
 
-      <Btn onClick={handleLogin} loading={loading}>
+      <Btn onClick={handleLogin} loading={loading} disabled={loading}>
         {loading ? 'Signing in…' : 'Sign In'}
       </Btn>
 
-      <Divider/>
+      <Divider />
 
-      <GoogleBtn/>
+      <GoogleSignInButton onSuccess={handleGoogleSignIn} loading={loading} />
 
-      <p style={{textAlign:'center', fontSize:14, color:C.textGray, marginTop:22}}>
+      <p style={{ textAlign: 'center', fontSize: 14, color: C.textGray, marginTop: 22 }}>
         Don't have an account?{' '}
         <button
-          onClick={()=>onNavigate('signup')}
-          style={{background:'none', border:'none', cursor:'pointer', fontSize:14,
-            color:C.primaryMid, fontWeight:600, fontFamily:'inherit'}}
+          onClick={() => onNavigate('signup')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 14,
+            color: C.primaryMid,
+            fontWeight: 600,
+            fontFamily: 'inherit',
+          }}
+          disabled={loading}
         >
           Create one
         </button>
@@ -463,588 +426,349 @@ function LoginPage({ onNavigate }) {
   );
 }
 
-/* ══ SIGN UP PAGE ════════════════════════════════════════════ */
-/* Full name (not first+last), email, account type, password+strength, terms */
-function SignupPage({ onNavigate }) {
-  const [fullName,  setFullName]  = useState('');
-  const [email,     setEmail]     = useState('');
-  const [role,      setRole]      = useState('');
-  const [password,  setPassword]  = useState('');
-  const [showPw,    setShowPw]    = useState(false);
-  const [agreed,    setAgreed]    = useState(false);
-  const [loading,   setLoading]   = useState(false);
-  const [focusPw,   setFocusPw]   = useState(false);
-  const [strength,  setStrength]  = useState({ pct:0, color:C.border, hint:'Use 8+ characters with a mix of letters, numbers & symbols', score:0 });
+/* ──────── SIGNUP PAGE ──────────── */
+function SignupPage({ onNavigate, onLoginSuccess }) {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [focusPw, setFocusPw] = useState(false);
+  const [strength, setStrength] = useState({
+    pct: 0,
+    color: C.border,
+    hint: 'Use 8+ characters with a mix of letters, numbers & symbols',
+    score: 0,
+  });
   const { isMobile } = useBreakpoint();
 
-  const checkStrength = val => {
+  const checkStrength = (val) => {
     let score = 0;
     if (val.length >= 8) score++;
     if (/[A-Z]/.test(val)) score++;
     if (/[0-9]/.test(val)) score++;
     if (/[^A-Za-z0-9]/.test(val)) score++;
     const levels = [
-      { pct:0,   color:C.border,    hint:'Use 8+ characters with a mix of letters, numbers & symbols' },
-      { pct:25,  color:C.error,     hint:'Weak — add uppercase letters' },
-      { pct:50,  color:'#F59E0B',   hint:'Fair — add numbers for better security' },
-      { pct:75,  color:'#3B82F6',   hint:'Good — add symbols to make it strong' },
-      { pct:100, color:C.success,   hint:'Strong password ✓' },
+      { pct: 0, color: C.border, hint: 'Use 8+ characters with a mix of letters, numbers & symbols' },
+      { pct: 25, color: C.error, hint: 'Weak — add uppercase letters' },
+      { pct: 50, color: '#F59E0B', hint: 'Fair — add numbers for better security' },
+      { pct: 75, color: '#3B82F6', hint: 'Good — add symbols to make it strong' },
+      { pct: 100, color: C.success, hint: 'Strong password ✓' },
     ];
     setStrength({ ...levels[score], score });
   };
 
-  const handleSignup = () => {
-    if (!agreed) { alert('Please agree to the Terms of Use to continue.'); return; }
+  const handleSignup = async () => {
+    setError('');
+
+    if (!fullName.trim()) {
+      setError('Please enter your full name');
+      return;
+    }
+    if (!email.includes('@') || !email.includes('.')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    if (!role) {
+      setError('Please select your account type');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    if (!agreed) {
+      setError('Please agree to the Terms of Use to continue');
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => setLoading(false), 2200);
+    try {
+      const response = await authAPI.register({
+        firstName: fullName.split(' ')[0],
+        lastName: fullName.includes(' ') ? fullName.split(' ').slice(1).join(' ') : '',
+        email,
+        password,
+        role,
+      });
+      if (response.data && response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('userName', fullName.split(' ')[0]);
+        onLoginSuccess();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Signup failed. Please try again.');
+      console.error('Signup error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async (event) => {
+    try {
+      setLoading(true);
+      setError('');
+      if (event && event.credential) {
+        const response = await authAPI.googleAuth({ idToken: event.credential });
+        if (response.data && response.data.accessToken) {
+          localStorage.setItem('accessToken', response.data.accessToken);
+          if (response.data.refreshToken) {
+            localStorage.setItem('refreshToken', response.data.refreshToken);
+          }
+          localStorage.setItem('userEmail', response.data.user?.email || '');
+          localStorage.setItem('userName', response.data.user?.firstName || 'User');
+          onLoginSuccess();
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Google sign-up failed. Please try again.');
+      console.error('Google sign-up error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <TwoCol>
-      <Logo/>
-      <h1 style={{fontSize: isMobile?22:28, fontWeight:700, color:C.text, margin:'0 0 6px', letterSpacing:-.5}}>
+      <Logo />
+      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: C.text, margin: '0 0 6px', letterSpacing: -0.5 }}>
         Create your account
       </h1>
-      <p style={{fontSize:14, color:C.textGray, marginBottom: isMobile?20:24, lineHeight:1.5}}>
+      <p style={{ fontSize: 14, color: C.textGray, marginBottom: isMobile ? 20 : 24, lineHeight: 1.5 }}>
         Join the network of energy infrastructure stakeholders
       </p>
 
-      {/* Full name (replaces first+last name from original code) */}
+      {error && (
+        <div style={{ background: '#FEE2E2', border: `1px solid ${C.error}`, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.error }}>
+          {error}
+        </div>
+      )}
+
       <Field label="Full name" required>
-        <Input
-          placeholder="Ali Hassan"
-          value={fullName}
-          onChange={e=>setFullName(e.target.value)}
-        />
+        <Input placeholder="Ali Hassan" value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={loading} />
       </Field>
 
-      {/* Email */}
       <Field label="Email address" required>
-        <Input
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={e=>setEmail(e.target.value)}
-        />
+        <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} />
       </Field>
 
-      {/* Account type */}
-      <Field label="Account type">
-        <div style={{position:'relative'}}>
+      <Field label="Account type" required>
+        <div style={{ position: 'relative' }}>
           <select
             value={role}
-            onChange={e=>setRole(e.target.value)}
+            onChange={(e) => setRole(e.target.value)}
+            disabled={loading}
             style={{
-              ...baseInput, appearance:'none', cursor:'pointer',
+              ...baseInput,
+              appearance: 'none',
+              cursor: 'pointer',
               color: role ? C.text : C.textMuted,
-              paddingRight:36,
+              paddingRight: 36,
+              opacity: loading ? 0.6 : 1,
             }}
           >
-            <option value="" disabled>Select your role</option>
+            <option value="" disabled>
+              Select your role
+            </option>
             <option>Facility Operator</option>
             <option>Ecosystem Partner</option>
             <option>Community Member</option>
           </select>
-          <span style={{position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none'}}>
+          <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
             <svg width={12} height={8} viewBox="0 0 12 8" fill="none">
-              <path d="M1 1L6 6L11 1" stroke={C.textGray} strokeWidth={1.5} strokeLinecap="round"/>
+              <path d="M1 1L6 6L11 1" stroke={C.textGray} strokeWidth={1.5} strokeLinecap="round" />
             </svg>
           </span>
         </div>
       </Field>
 
-      {/* Password + strength */}
       <Field label="Password" required>
-        <div style={{position:'relative'}}>
+        <div style={{ position: 'relative' }}>
           <input
-            type={showPw?'text':'password'}
+            type={showPw ? 'text' : 'password'}
             placeholder="Create a strong password"
             value={password}
-            onChange={e=>{ setPassword(e.target.value); checkStrength(e.target.value); }}
-            onFocus={()=>setFocusPw(true)}
-            onBlur={()=>setFocusPw(false)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              checkStrength(e.target.value);
+            }}
+            onFocus={() => setFocusPw(true)}
+            onBlur={() => setFocusPw(false)}
+            disabled={loading}
             style={{
-              ...baseInput, paddingRight:44,
+              ...baseInput,
+              paddingRight: 44,
               borderColor: focusPw ? C.primaryMid : C.border,
               boxShadow: focusPw ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
+              opacity: loading ? 0.6 : 1,
             }}
           />
           <button
-            onClick={()=>setShowPw(p=>!p)}
-            style={{position:'absolute', right:14, top:'50%', transform:'translateY(-50%)',
-              background:'none', border:'none', cursor:'pointer', color:C.textGray, display:'flex',
-              alignItems:'center', padding:0}}
+            onClick={() => setShowPw((p) => !p)}
+            style={{
+              position: 'absolute',
+              right: 14,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: C.textGray,
+              display: 'flex',
+              alignItems: 'center',
+              padding: 0,
+            }}
             type="button"
+            disabled={loading}
           >
-            {showPw ? <EyeOff/> : <EyeOpen/>}
+            {showPw ? <EyeOff /> : <EyeOpen />}
           </button>
         </div>
-        {/* Strength bar */}
-        <div style={{height:3, background:C.border, borderRadius:2, marginTop:8, overflow:'hidden'}}>
-          <div style={{
-            height:'100%', width:`${strength.pct}%`,
-            background:strength.color, borderRadius:2,
-            transition:'width .3s, background .3s',
-          }}/>
+        <div style={{ height: 3, background: C.border, borderRadius: 2, marginTop: 8, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${strength.pct}%`, background: strength.color, borderRadius: 2, transition: 'width .3s, background .3s' }} />
         </div>
-        <p style={{fontSize:12, color:strength.score===0?C.textMuted:strength.color, marginTop:5}}>
+        <p style={{ fontSize: 12, color: strength.score === 0 ? C.textMuted : strength.color, marginTop: 5 }}>
           {strength.hint}
         </p>
       </Field>
 
-      {/* Terms checkbox */}
-      <div style={{display:'flex', alignItems:'flex-start', gap:10, marginBottom:18}}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 18 }}>
         <input
           type="checkbox"
           id="terms"
           checked={agreed}
-          onChange={e=>setAgreed(e.target.checked)}
-          style={{width:16, height:16, minWidth:16, marginTop:2, accentColor:C.primary, cursor:'pointer'}}
+          onChange={(e) => setAgreed(e.target.checked)}
+          disabled={loading}
+          style={{ width: 18, height: 18, cursor: 'pointer', marginTop: 2 }}
         />
-        <label htmlFor="terms" style={{fontSize:13, color:C.textGray, lineHeight:1.5, cursor:'pointer'}}>
-          I agree to the{' '}
-          <a href="#" style={{color:C.primaryMid, textDecoration:'none'}} onClick={e=>e.preventDefault()}>Terms of Use</a>,{' '}
-          <a href="#" style={{color:C.primaryMid, textDecoration:'none'}} onClick={e=>e.preventDefault()}>Privacy Policy</a>, and{' '}
-          <a href="#" style={{color:C.primaryMid, textDecoration:'none'}} onClick={e=>e.preventDefault()}>Risk Warning</a>
+        <label htmlFor="terms" style={{ fontSize: 13, color: C.textGray, lineHeight: 1.5, cursor: 'pointer' }}>
+          I agree to the <span style={{ fontWeight: 600, color: C.primaryMid }}>Terms of Use</span> and{' '}
+          <span style={{ fontWeight: 600, color: C.primaryMid }}>Privacy Policy</span>
         </label>
       </div>
 
-      <Btn onClick={handleSignup} loading={loading}>
-        {loading ? 'Creating account…' : 'Create account'}
+      <Btn onClick={handleSignup} loading={loading} disabled={loading || !agreed}>
+        {loading ? 'Creating account…' : 'Create Account'}
       </Btn>
 
-      <Divider/>
+      <Divider />
 
-      <GoogleBtn/>
+      <GoogleSignInButton onSuccess={handleGoogleSignUp} loading={loading} />
 
-      <p style={{textAlign:'center', fontSize:14, color:C.textGray, marginTop:22}}>
+      <p style={{ textAlign: 'center', fontSize: 14, color: C.textGray, marginTop: 22 }}>
         Already have an account?{' '}
         <button
-          onClick={()=>onNavigate('login')}
-          style={{background:'none', border:'none', cursor:'pointer', fontSize:14,
-            color:C.primaryMid, fontWeight:600, fontFamily:'inherit'}}
+          onClick={() => onNavigate('login')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 14,
+            color: C.primaryMid,
+            fontWeight: 600,
+            fontFamily: 'inherit',
+          }}
+          disabled={loading}
         >
-          Sign In
+          Sign in
         </button>
       </p>
     </TwoCol>
   );
 }
 
-/* ══ FORGOT PASSWORD PAGE ════════════════════════════════════ */
-/* Single centered card — normal design from HTML, updated colors */
-function ForgotPage({ onNavigate, onSetEmail }) {
-  const [email,    setEmail]    = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [emailErr, setEmailErr] = useState('');
-  const { isMobile } = useBreakpoint();
+/* ──────── GOOGLE SIGN-IN BUTTON ──────────── */
+function GoogleSignInButton({ onSuccess, loading }) {
+  const buttonRef = useRef(null);
 
-  const handleReset = () => {
-    if (!email.includes('@') || !email.includes('.')) {
-      setEmailErr('Please enter a valid email');
-      return;
-    }
-    setEmailErr('');
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onSetEmail(email);       // lift email to root
-      onNavigate('verify');    // go to OTP verification
-    }, 1800);
-  };
-
-  return (
-    <div style={{
-      width:'100%', maxWidth:460,
-      background:C.white, borderRadius:16, border:`1px solid ${C.border}`,
-      padding: isMobile ? '28px 20px 24px' : '40px 40px 36px',
-      boxShadow:'0 20px 60px rgba(0,0,0,0.25)',
-    }}>
-      <button
-        onClick={()=>onNavigate('login')}
-        style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:13,color:C.textGray,
-          background:'none',border:'none',cursor:'pointer',fontWeight:500,fontFamily:'inherit',
-          marginBottom:24,padding:0}}
-      >
-        <BackArrow/>Back to sign in
-      </button>
-
-      <SmallLogo/>
-
-      <h1 style={{fontSize:22,fontWeight:700,color:C.text,letterSpacing:-.4,margin:'0 0 6px'}}>
-        Reset your password
-      </h1>
-      <p style={{fontSize:14,color:C.textGray,marginBottom:28,lineHeight:1.5}}>
-        Enter your email and we'll send you a 6-digit verification code
-      </p>
-
-      <Field label="Email address">
-        <Input
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={e=>{setEmail(e.target.value);setEmailErr('');}}
-        />
-        {emailErr && <p style={{fontSize:12,color:C.error,marginTop:5}}>{emailErr}</p>}
-      </Field>
-
-      <Btn onClick={handleReset} loading={loading}>
-        {loading ? 'Sending code…' : 'Send verification code'}
-      </Btn>
-
-      <p style={{textAlign:'center',fontSize:14,color:C.textGray,marginTop:22}}>
-        Remember your password?{' '}
-        <button onClick={()=>onNavigate('login')}
-          style={{background:'none',border:'none',cursor:'pointer',fontSize:14,
-            color:C.primaryMid,fontWeight:500,fontFamily:'inherit'}}>
-          Sign in
-        </button>
-      </p>
-    </div>
-  );
-}
-
-/* ══ VERIFY CODE PAGE ════════════════════════════════════════ */
-/* 6-box OTP input — auto-advance, paste, backspace, countdown resend */
-function VerifyPage({ email, onNavigate }) {
-  const [code,    setCode]    = useState(['','','','','','']);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
-  const [timer,   setTimer]   = useState(60);
-  const [resent,  setResent]  = useState(false);
-  const refs = React.useRef([]);
-  const { isMobile } = useBreakpoint();
-
-  /* Countdown */
   useEffect(() => {
-    if (timer <= 0) return;
-    const t = setInterval(() => setTimer(p => p - 1), 1000);
-    return () => clearInterval(t);
-  }, [timer]);
+    const initializeGoogleButton = () => {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        console.warn('VITE_GOOGLE_CLIENT_ID not set');
+        return;
+      }
 
-  const handleChange = (i, val) => {
-    if (!/^\d?$/.test(val)) return;
-    const next = [...code]; next[i] = val; setCode(next); setError('');
-    if (val && i < 5) refs.current[i + 1]?.focus();
-  };
-  const handleKeyDown = (i, e) => {
-    if (e.key === 'Backspace' && !code[i] && i > 0) {
-      const next = [...code]; next[i - 1] = ''; setCode(next);
-      refs.current[i - 1]?.focus();
+      if (window.google && buttonRef.current) {
+        try {
+          // Clear any existing button
+          buttonRef.current.innerHTML = '';
+
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: onSuccess,
+            auto_select: false,
+          });
+
+          window.google.accounts.id.renderButton(buttonRef.current, {
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            width: '100%',
+          });
+        } catch (err) {
+          console.error('Failed to render Google button:', err);
+        }
+      }
+    };
+
+    // Wait for Google SDK to load
+    if (window.google) {
+      initializeGoogleButton();
+    } else {
+      const checkGoogle = setInterval(() => {
+        if (window.google) {
+          clearInterval(checkGoogle);
+          initializeGoogleButton();
+        }
+      }, 100);
+
+      return () => clearInterval(checkGoogle);
+    }
+  }, [onSuccess]);
+
+  return <div ref={buttonRef} style={{ width: '100%' }} />;
+}
+
+/* ──────── MAIN AUTH PAGE ──────────── */
+export default function AuthPage({ onLogin }) {
+  const [page, setPage] = useState('login');
+
+  const handleLoginSuccess = () => {
+    if (onLogin) {
+      onLogin();
     }
   };
-  const handlePaste = e => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);
-    if (pasted.length === 6) { setCode(pasted.split('')); refs.current[5]?.focus(); }
-    e.preventDefault();
-  };
-
-  const handleVerify = () => {
-    if (code.join('').length < 6) { setError('Please enter all 6 digits'); return; }
-    setError(''); setLoading(true);
-    setTimeout(() => { setLoading(false); onNavigate('reset-password'); }, 1500);
-  };
-
-  const handleResend = () => {
-    setCode(['','','','','','']); setTimer(60); setResent(true);
-    refs.current[0]?.focus();
-    setTimeout(() => setResent(false), 3000);
-  };
-
-  const filled = code.join('').length === 6;
-  /* OTP box size — smaller on mobile to fit all 6 boxes */
-  const boxW = isMobile ? 42 : 54;
-  const boxH = isMobile ? 50 : 60;
-  const boxFs = isMobile ? 20 : 24;
-  const boxGap = isMobile ? 7 : 10;
 
   return (
-    <div style={{width:'100%',maxWidth:460,background:C.white,borderRadius:16,
-      border:`1px solid ${C.border}`,padding: isMobile ? '28px 20px 24px' : '40px 40px 36px',
-      boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
-
-      {/* Back */}
-      <button onClick={()=>onNavigate('forgot')}
-        style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:13,color:C.textGray,
-          background:'none',border:'none',cursor:'pointer',fontWeight:500,fontFamily:'inherit',
-          marginBottom:24,padding:0}}>
-        <BackArrow/>Back
-      </button>
-
-      <SmallLogo/>
-
-      {/* Email icon badge */}
-      <div style={{width:60,height:60,borderRadius:'50%',background:C.primaryFaint,
-        display:'flex',alignItems:'center',justifyContent:'center',margin:'0 0 20px'}}>
-        <svg width={26} height={26} viewBox="0 0 24 24" fill="none"
-          stroke={C.primaryMid} strokeWidth={1.8} strokeLinecap="round">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-          <polyline points="22,6 12,13 2,6"/>
-        </svg>
-      </div>
-
-      <h1 style={{fontSize:22,fontWeight:700,color:C.text,letterSpacing:-.4,margin:'0 0 8px'}}>
-        Check your email
-      </h1>
-      <p style={{fontSize:14,color:C.textGray,marginBottom:28,lineHeight:1.6}}>
-        We sent a 6-digit verification code to<br/>
-        <strong style={{color:C.text}}>{email||'your email address'}</strong>
-      </p>
-
-      {/* 6-box OTP */}
-      <div style={{display:'flex',gap:boxGap,justifyContent:'center',marginBottom:8}}>
-        {code.map((d,i) => (
-          <input key={i}
-            ref={el => refs.current[i] = el}
-            type="text" inputMode="numeric" maxLength={1}
-            value={d}
-            onChange={e => handleChange(i, e.target.value)}
-            onKeyDown={e => handleKeyDown(i, e)}
-            onPaste={handlePaste}
-            onFocus={e => e.target.select()}
-            style={{
-              width:boxW, height:boxH, textAlign:'center', fontSize:boxFs, fontWeight:700,
-              border:`2px solid ${d ? C.primaryMid : C.border}`,
-              borderRadius:10, fontFamily:'inherit', outline:'none',
-              background: d ? C.primaryFaint : C.white,
-              color: C.primaryDark,
-              transition:'border-color .15s, background .15s',
-              cursor:'text',
-            }}
-          />
-        ))}
-      </div>
-
-      {error && <p style={{fontSize:12,color:C.error,textAlign:'center',marginBottom:8}}>{error}</p>}
-
-      {resent && (
-        <div style={{background:C.successBg,border:`1px solid ${C.successBdr}`,
-          borderRadius:8,padding:'10px 14px',fontSize:13,color:'#065F46',
-          textAlign:'center',marginBottom:12}}>
-          ✓ A new code has been sent to your email
-        </div>
-      )}
-
-      <div style={{marginTop:16}}>
-        <Btn onClick={handleVerify} loading={loading} disabled={!filled}>
-          {loading ? 'Verifying…' : 'Verify code'}
-        </Btn>
-      </div>
-
-      {/* Resend */}
-      <p style={{textAlign:'center',fontSize:14,color:C.textGray,marginTop:20}}>
-        Didn't receive it?{' '}
-        {timer > 0
-          ? <span style={{color:C.textMuted}}>Resend in <strong style={{color:C.text}}>{timer}s</strong></span>
-          : <button onClick={handleResend}
-              style={{background:'none',border:'none',cursor:'pointer',fontSize:14,
-                color:C.primaryMid,fontWeight:500,fontFamily:'inherit'}}>
-              Resend code
-            </button>
-        }
-      </p>
-    </div>
-  );
-}
-
-/* ══ RESET PASSWORD PAGE ═════════════════════════════════════ */
-/* Set new password with strength bar + confirm field */
-function ResetPasswordPage({ onNavigate }) {
-  const [newPw,    setNewPw]    = useState('');
-  const [confPw,   setConfPw]   = useState('');
-  const [showNew,  setShowNew]  = useState(false);
-  const [showConf, setShowConf] = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
-  const [done,     setDone]     = useState(false);
-  const [focusNew, setFocusNew] = useState(false);
-  const [focusConf,setFocusConf]= useState(false);
-  const [strength, setStrength] = useState({pct:0,color:C.border,hint:'Use 8+ characters with a mix of letters, numbers & symbols',score:0});
-  const { isMobile } = useBreakpoint();
-
-  const checkStrength = val => {
-    let s = 0;
-    if (val.length >= 8) s++;
-    if (/[A-Z]/.test(val)) s++;
-    if (/[0-9]/.test(val)) s++;
-    if (/[^A-Za-z0-9]/.test(val)) s++;
-    const lvl = [
-      {pct:0,  color:C.border,  hint:'Use 8+ characters with a mix of letters, numbers & symbols'},
-      {pct:25, color:C.error,   hint:'Weak — add uppercase letters'},
-      {pct:50, color:'#F59E0B', hint:'Fair — add numbers for better security'},
-      {pct:75, color:'#3B82F6', hint:'Good — add symbols to make it strong'},
-      {pct:100,color:C.success, hint:'Strong password ✓'},
-    ];
-    setStrength({...lvl[s], score:s});
-  };
-
-  const handleSubmit = () => {
-    if (newPw.length < 8)    { setError('Password must be at least 8 characters'); return; }
-    if (newPw !== confPw)    { setError("Passwords don't match"); return; }
-    setError(''); setLoading(true);
-    setTimeout(() => { setLoading(false); setDone(true); }, 1800);
-  };
-
-  /* ── Success state ── */
-  if (done) return (
-    <div style={{width:'100%',maxWidth:460,background:C.white,borderRadius:16,
-      border:`1px solid ${C.border}`,
-      padding: isMobile ? '36px 20px' : '48px 40px',
-      textAlign:'center',
-      boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
-      <div style={{width:72,height:72,borderRadius:'50%',background:C.successBg,
-        border:`2px solid ${C.successBdr}`,display:'flex',alignItems:'center',
-        justifyContent:'center',margin:'0 auto 20px'}}>
-        <svg width={32} height={32} viewBox="0 0 24 24" fill="none"
-          stroke={C.success} strokeWidth={2.2} strokeLinecap="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-      </div>
-      <h1 style={{fontSize:isMobile?20:22,fontWeight:700,color:C.text,margin:'0 0 8px'}}>Password updated!</h1>
-      <p style={{fontSize:14,color:C.textGray,marginBottom:32,lineHeight:1.6}}>
-        Your password has been successfully reset.<br/>You can now sign in with your new password.
-      </p>
-      <Btn onClick={()=>onNavigate('login')}>Back to Sign In</Btn>
-    </div>
-  );
-
-  return (
-    <div style={{width:'100%',maxWidth:460,background:C.white,borderRadius:16,
-      border:`1px solid ${C.border}`,
-      padding: isMobile ? '28px 20px 24px' : '40px 40px 36px',
-      boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
-
-      {/* Back */}
-      <button onClick={()=>onNavigate('verify')}
-        style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:13,color:C.textGray,
-          background:'none',border:'none',cursor:'pointer',fontWeight:500,fontFamily:'inherit',
-          marginBottom:24,padding:0}}>
-        <BackArrow/>Back
-      </button>
-
-      <SmallLogo/>
-
-      {/* Lock icon */}
-      <div style={{width:60,height:60,borderRadius:'50%',background:C.primaryFaint,
-        display:'flex',alignItems:'center',justifyContent:'center',margin:'0 0 20px'}}>
-        <svg width={26} height={26} viewBox="0 0 24 24" fill="none"
-          stroke={C.primaryMid} strokeWidth={1.8} strokeLinecap="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-      </div>
-
-      <h1 style={{fontSize:22,fontWeight:700,color:C.text,letterSpacing:-.4,margin:'0 0 8px'}}>
-        Set new password
-      </h1>
-      <p style={{fontSize:14,color:C.textGray,marginBottom:28,lineHeight:1.6}}>
-        Your new password must be different from previously used passwords
-      </p>
-
-      {/* New password */}
-      <Field label="New password" required>
-        <div style={{position:'relative'}}>
-          <input
-            type={showNew?'text':'password'}
-            placeholder="Create a strong password"
-            value={newPw}
-            onChange={e=>{ setNewPw(e.target.value); checkStrength(e.target.value); setError(''); }}
-            onFocus={()=>setFocusNew(true)}
-            onBlur={()=>setFocusNew(false)}
-            style={{...baseInput,paddingRight:44,
-              borderColor:focusNew?C.primaryMid:C.border,
-              boxShadow:focusNew?`0 0 0 3px rgba(124,58,237,0.12)`:'none'}}
-          />
-          <button onClick={()=>setShowNew(p=>!p)} type="button"
-            style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',
-              background:'none',border:'none',cursor:'pointer',color:C.textGray,
-              display:'flex',alignItems:'center',padding:0}}>
-            {showNew ? <EyeOff/> : <EyeOpen/>}
-          </button>
-        </div>
-        {/* Strength bar */}
-        <div style={{height:3,background:C.border,borderRadius:2,marginTop:8,overflow:'hidden'}}>
-          <div style={{height:'100%',width:`${strength.pct}%`,background:strength.color,
-            borderRadius:2,transition:'width .3s, background .3s'}}/>
-        </div>
-        <p style={{fontSize:12,color:strength.score===0?C.textMuted:strength.color,marginTop:5}}>
-          {strength.hint}
-        </p>
-      </Field>
-
-      {/* Confirm password */}
-      <Field label="Confirm new password" required>
-        <div style={{position:'relative'}}>
-          <input
-            type={showConf?'text':'password'}
-            placeholder="Re-enter your new password"
-            value={confPw}
-            onChange={e=>{ setConfPw(e.target.value); setError(''); }}
-            onFocus={()=>setFocusConf(true)}
-            onBlur={()=>setFocusConf(false)}
-            style={{...baseInput,paddingRight:44,
-              borderColor: error&&confPw ? C.error : focusConf ? C.primaryMid : C.border,
-              boxShadow:focusConf?`0 0 0 3px rgba(124,58,237,0.12)`:'none'}}
-          />
-          <button onClick={()=>setShowConf(p=>!p)} type="button"
-            style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',
-              background:'none',border:'none',cursor:'pointer',color:C.textGray,
-              display:'flex',alignItems:'center',padding:0}}>
-            {showConf ? <EyeOff/> : <EyeOpen/>}
-          </button>
-        </div>
-        {/* Match indicator */}
-        {confPw && newPw && (
-          <p style={{fontSize:12,marginTop:5,
-            color: newPw===confPw ? C.success : C.error}}>
-            {newPw===confPw ? '✓ Passwords match' : '✗ Passwords do not match'}
-          </p>
-        )}
-      </Field>
-
-      {error && <p style={{fontSize:12,color:C.error,marginBottom:12}}>{error}</p>}
-
-      <Btn onClick={handleSubmit} loading={loading}>
-        {loading ? 'Updating password…' : 'Update password'}
-      </Btn>
-    </div>
-  );
-}
-
-/* ══ ROOT ════════════════════════════════════════════════════ */
-export default function AuthPage() {
-  const [page,        setPage]        = useState('login');
-  const [forgotEmail, setForgotEmail] = useState('');
-  const { isMobile, isTablet } = useBreakpoint();
-
-  return (
-    <div style={{
-      minHeight:'100vh',
-      background:'#0D0D0D',
-      display:'flex',
-      alignItems:'center',
-      justifyContent:'center',
-      padding: isMobile ? '16px 12px' : isTablet ? '20px 16px' : 24,
-      fontFamily:"'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: '#F9FAFB',
+        padding: '20px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+    >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-        * { box-sizing: border-box; }
-        input::placeholder { color: #9CA3AF; }
-        select option { color: #111827; }
-        button:focus-visible { outline: 2px solid #7C3AED; outline-offset: 2px; }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        body { margin: 0; padding: 0; }
       `}</style>
 
-      <div key={page} style={{width:'100%',maxWidth:1020,animation:'fadeUp .3s ease',display:'flex',justifyContent:'center'}}>
-        {page === 'login'          && <LoginPage          onNavigate={setPage}/>}
-        {page === 'signup'         && <SignupPage         onNavigate={setPage}/>}
-        {page === 'forgot'         && <ForgotPage         onNavigate={setPage} onSetEmail={setForgotEmail}/>}
-        {page === 'verify'         && <VerifyPage         onNavigate={setPage} email={forgotEmail}/>}
-        {page === 'reset-password' && <ResetPasswordPage  onNavigate={setPage}/>}
-      </div>
+      {page === 'login' && <LoginPage onNavigate={setPage} onLoginSuccess={handleLoginSuccess} />}
+      {page === 'signup' && <SignupPage onNavigate={setPage} onLoginSuccess={handleLoginSuccess} />}
     </div>
   );
 }
