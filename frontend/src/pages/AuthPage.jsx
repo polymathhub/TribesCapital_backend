@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/endpoints';
 import { LogoFull } from '../components/Logo';
 
@@ -34,6 +34,160 @@ function useBreakpoint() {
     isTablet: width >= 640 && width < 1024,
     isDesktop: width >= 1024,
   };
+}
+
+/* ─── PROFESSIONAL GOOGLE OAUTH SERVICE ─────────────────── */
+class GoogleOAuthService {
+  constructor() {
+    this.isInitialized = false;
+    this.isReady = false;
+    this.initPromise = null;
+  }
+
+  async waitForSDK(maxAttempts = 50) {
+    let attempts = 0;
+    while (!window.google?.accounts?.id && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    return !!window.google?.accounts?.id;
+  }
+
+  async initialize() {
+    if (this.isInitialized) return this.initPromise;
+
+    this.initPromise = (async () => {
+      try {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+          throw new Error('Google Client ID not configured');
+        }
+
+        const isReady = await this.waitForSDK();
+        if (!isReady) {
+          throw new Error('Google SDK failed to load');
+        }
+
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        this.isInitialized = true;
+        this.isReady = true;
+      } catch (error) {
+        this.isInitialized = false;
+        this.isReady = false;
+        throw error;
+      }
+    })();
+
+    return this.initPromise;
+  }
+
+  async authenticate() {
+    if (!this.isReady) {
+      await this.initialize();
+    }
+
+    return new Promise((resolve, reject) => {
+      const handleCredentialResponse = async (response) => {
+        try {
+          if (!response?.credential) {
+            reject(new Error('No credential received from Google'));
+            return;
+          }
+
+          const authResult = await authAPI.googleAuth({ idToken: response.credential });
+          
+          if (!authResult?.data?.accessToken) {
+            reject(new Error('No authentication token in response'));
+            return;
+          }
+
+          // Store auth data
+          localStorage.setItem('accessToken', authResult.data.accessToken);
+          if (authResult.data.refreshToken) {
+            localStorage.setItem('refreshToken', authResult.data.refreshToken);
+          }
+          if (authResult.data.user?.email) {
+            localStorage.setItem('userEmail', authResult.data.user.email);
+          }
+          if (authResult.data.user?.firstName) {
+            localStorage.setItem('userName', authResult.data.user.firstName);
+          }
+
+          resolve({
+            success: true,
+            user: authResult.data.user,
+            accessToken: authResult.data.accessToken,
+          });
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+      });
+
+      // Trigger the One Tap UI
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // One Tap not displayed, user can still click button
+        }
+        if (notification.isSkippedMoment()) {
+          // User dismissed the One Tap UI
+        }
+      });
+    });
+  }
+
+  renderButton(element, customOptions = {}) {
+    if (!this.isReady) return;
+
+    const defaultOptions = {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      width: '100%',
+    };
+
+    window.google.accounts.id.renderButton(element, { ...defaultOptions, ...customOptions });
+  }
+}
+
+// Single instance
+const googleOAuthService = new GoogleOAuthService();
+
+// Hook for using Google OAuth
+function useGoogleAuth(onSuccess, onError) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGoogleAuth = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await googleOAuthService.authenticate();
+      onSuccess(result);
+    } catch (error) {
+      console.error('Google authentication error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Google authentication failed';
+      onError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onSuccess, onError]);
+
+  // Initialize on mount
+  useEffect(() => {
+    googleOAuthService.initialize().catch((error) => {
+      console.error('Failed to initialize Google OAuth:', error);
+    });
+  }, []);
+
+  return { handleGoogleAuth, isLoading };
 }
 
 function validateEmail(email) {
@@ -273,8 +427,8 @@ function CheckboxInput({ id, label, checked, onChange, disabled = false }) {
         onChange={onChange}
         disabled={disabled}
         style={{
-          width: 18,
-          height: 18,
+          width: 10,
+          height: 10,
           cursor: 'pointer',
           marginTop: 2,
           flexShrink: 0,
@@ -412,7 +566,7 @@ function FormContainer({ children, isMobile }) {
   );
 }
 
-/* ─── PAGES ────────────────────────────────────────── */
+/*PAGES */
 function LoginPage({ onNavigate, onSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -421,6 +575,14 @@ function LoginPage({ onNavigate, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { isMobile } = useBreakpoint();
+  
+  const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
+    (result) => {
+      console.log('Google auth successful:', result.user);
+      onSuccess();
+    },
+    setError
+  );
 
   const handleLogin = async () => {
     setError('');
@@ -456,56 +618,8 @@ function LoginPage({ onNavigate, onSuccess }) {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        setError('Google sign-in is not configured');
-        setLoading(false);
-        return;
-      }
-
-      if (!window.google?.accounts?.id) {
-        setError('Google SDK not ready. Please refresh.');
-        setLoading(false);
-        return;
-      }
-
-      window.google.accounts.id.requestIdToken({
-        client_id: clientId,
-        callback: async (response) => {
-          try {
-            const result = await authAPI.googleAuth({ idToken: response.credential });
-            if (result?.data?.accessToken) {
-              localStorage.setItem('accessToken', result.data.accessToken);
-              if (result.data.refreshToken) {
-                localStorage.setItem('refreshToken', result.data.refreshToken);
-              }
-              localStorage.setItem('userEmail', result.data.user?.email || '');
-              localStorage.setItem('userName', result.data.user?.firstName || 'User');
-              onSuccess();
-            }
-          } catch (err) {
-            setError(err.response?.data?.message || 'Google sign-in failed');
-          } finally {
-            setLoading(false);
-          }
-        },
-        error_callback: () => {
-          setError('Google sign-in was cancelled');
-          setLoading(false);
-        },
-      });
-    } catch (err) {
-      setError('Google sign-in error');
-      setLoading(false);
-    }
-  };
-
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !loading) {
+    if (e.key === 'Enter' && !loading && !googleLoading) {
       handleLogin();
     }
   };
@@ -579,7 +693,7 @@ function LoginPage({ onNavigate, onSuccess }) {
 
       <Divider />
 
-      <GoogleButton onClick={handleGoogleSignIn} loading={loading} disabled={loading} />
+      <GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading} />
 
       <p style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
         Don't have an account?{' '}
@@ -609,95 +723,186 @@ function SignupPage({ onNavigate, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const [attempt, setAttempt] = useState(0);
   const { isMobile } = useBreakpoint();
+  
+  const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
+    (result) => {
+      console.log('Google auth successful for signup:', result.user);
+      onSuccess();
+    },
+    setError
+  );
 
+  // Validation with better messaging
   const validateForm = () => {
     const errors = {};
-    if (!formData.fullName.trim()) errors.fullName = 'Full name is required';
-    if (!validateEmail(formData.email)) errors.email = 'Valid email is required';
-    if (!formData.role) errors.role = 'Please select an account type';
-    const pwValidation = validatePassword(formData.password);
-    if (!formData.password || !pwValidation.minLength) errors.password = 'Password must be at least 12 characters';
-    if (formData.password && (!pwValidation.hasUppercase || !pwValidation.hasLowercase || !pwValidation.hasNumber || !pwValidation.hasSymbol)) {
-      errors.password = 'Include uppercase, lowercase, numbers, and symbols';
+    
+    if (!formData.fullName?.trim()) {
+      errors.fullName = 'Full name is required';
+    } else if (formData.fullName.trim().split(' ').length < 2) {
+      errors.fullName = 'Please enter your first and last name';
     }
-    if (!formData.agreedToTerms) errors.agreedToTerms = 'Please agree to terms';
+    
+    if (!validateEmail(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.role) {
+      errors.role = 'Please select an account type';
+    }
+    
+    const pwValidation = validatePassword(formData.password);
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (!pwValidation.minLength) {
+      errors.password = 'Password must be at least 12 characters';
+    } else if (!pwValidation.hasUppercase) {
+      errors.password = 'Password must contain at least one uppercase letter';
+    } else if (!pwValidation.hasLowercase) {
+      errors.password = 'Password must contain at least one lowercase letter';
+    } else if (!pwValidation.hasNumber) {
+      errors.password = 'Password must contain at least one number';
+    } else if (!pwValidation.hasSymbol) {
+      errors.password = 'Password must contain at least one symbol (!@#$%^&*)';
+    }
+    
+    if (!formData.agreedToTerms) {
+      errors.agreedToTerms = 'You must agree to the terms and conditions';
+    }
+    
     return errors;
   };
 
+  // Enterprise-grade signup handler
   const handleSignup = async () => {
+    // Reset error state
     setError('');
+    setFieldErrors({});
+    
+    // Validate form
     const errors = validateForm();
-    setFieldErrors(errors);
-    if (Object.keys(errors).length) return;
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      // Set the first error to display
+      const firstError = Object.values(errors)[0];
+      setError(firstError);
+      console.warn('Validation failed:', errors);
+      return;
+    }
+
+    // Prevent duplicate submissions
+    if (loading) {
+      console.warn('Signup already in progress');
+      return;
+    }
 
     setLoading(true);
+    setAttempt(prev => prev + 1);
+
     try {
-      const [firstName, ...lastNameParts] = formData.fullName.split(' ');
-      const response = await authAPI.register({
-        firstName,
-        lastName: lastNameParts.join(' '),
-        email: formData.email,
+      // Parse name
+      const nameParts = formData.fullName.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || 'User';
+
+      // Prepare payload
+      const payload = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
         passwordConfirmation: formData.password,
         role: formData.role,
+      };
+
+      console.log('📝 Signup attempt #' + attempt, { 
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        email: payload.email,
+        role: payload.role,
       });
-      if (response.data) {
-        localStorage.setItem('verificationEmail', formData.email);
-        onNavigate('verify');
+
+      // Send request with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+      let response;
+      try {
+        response = await authAPI.register(payload);
+      } finally {
+        clearTimeout(timeoutId);
       }
+
+      console.log('✅ Signup response received:', {
+        status: response.status,
+        hasData: !!response.data,
+        hasAccessToken: !!response.data?.accessToken,
+      });
+
+      // Validate response
+      if (!response.data) {
+        throw new Error('No data in response from server');
+      }
+
+      // Success - store and navigate
+      localStorage.setItem('verificationEmail', formData.email.trim().toLowerCase());
+      
+      // Store user data if provided
+      if (response.data.user?.email) {
+        localStorage.setItem('userEmail', response.data.user.email);
+      }
+      if (response.data.user?.firstName) {
+        localStorage.setItem('userName', response.data.user.firstName);
+      }
+
+      console.log('🎉 Signup successful, navigating to verification page');
+      
+      // Small delay to ensure state is consistent
+      setTimeout(() => {
+        onNavigate('verify');
+      }, 300);
+
     } catch (err) {
-      setError(err.response?.data?.message || 'Signup failed. Please try again.');
+      console.error('❌ Signup error:', {
+        name: err.name,
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+        isAbortError: err.name === 'AbortError',
+      });
+
+      // Determine user-friendly error message
+      let userMessage = 'Signup failed. Please try again.';
+
+      if (err.name === 'AbortError') {
+        userMessage = 'Request timed out. Please check your connection and try again.';
+      } else if (err.response?.status === 409) {
+        userMessage = 'This email is already registered. Please sign in or use a different email.';
+      } else if (err.response?.status === 400) {
+        userMessage = err.response.data?.message || 'Invalid signup data. Please check your information.';
+      } else if (err.response?.status === 500) {
+        userMessage = 'Server error. Our team has been notified. Please try again in a moment.';
+      } else if (err.message?.includes('Network')) {
+        userMessage = 'Network error. Please check your connection and try again.';
+      } else if (err.response?.data?.message) {
+        userMessage = err.response.data.message;
+      } else if (err.message) {
+        userMessage = err.message;
+      }
+
+      setError(userMessage);
+      console.warn('User message set:', userMessage);
+      
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignUp = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        setError('Google sign-up is not configured');
-        setLoading(false);
-        return;
-      }
-
-      if (!window.google?.accounts?.id) {
-        setError('Google SDK not ready. Please refresh.');
-        setLoading(false);
-        return;
-      }
-
-      window.google.accounts.id.requestIdToken({
-        client_id: clientId,
-        callback: async (response) => {
-          try {
-            const result = await authAPI.googleAuth({ idToken: response.credential });
-            if (result?.data?.accessToken) {
-              localStorage.setItem('accessToken', result.data.accessToken);
-              if (result.data.refreshToken) {
-                localStorage.setItem('refreshToken', result.data.refreshToken);
-              }
-              localStorage.setItem('userEmail', result.data.user?.email || '');
-              localStorage.setItem('userName', result.data.user?.firstName || 'User');
-              onSuccess();
-            }
-          } catch (err) {
-            setError(err.response?.data?.message || 'Google sign-up failed');
-          } finally {
-            setLoading(false);
-          }
-        },
-        error_callback: () => {
-          setError('Google sign-up was cancelled');
-          setLoading(false);
-        },
-      });
-    } catch (err) {
-      setError('Google sign-up error');
-      setLoading(false);
+  // Handle Enter key
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !loading && !googleLoading) {
+      handleSignup();
     }
   };
 
@@ -720,7 +925,8 @@ function SignupPage({ onNavigate, onSuccess }) {
           placeholder="Ali Hassan"
           value={formData.fullName}
           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-          disabled={loading}
+          disabled={loading || googleLoading}
+          onKeyPress={handleKeyPress}
         />
       </FormField>
 
@@ -730,7 +936,8 @@ function SignupPage({ onNavigate, onSuccess }) {
           placeholder="you@example.com"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          disabled={loading}
+          disabled={loading || googleLoading}
+          onKeyPress={handleKeyPress}
         />
       </FormField>
 
@@ -739,7 +946,7 @@ function SignupPage({ onNavigate, onSuccess }) {
           options={['Facility Operator', 'Investor', 'Community Member']}
           value={formData.role}
           onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-          disabled={loading}
+          disabled={loading || googleLoading}
           placeholder="Select your role"
         />
       </FormField>
@@ -750,9 +957,10 @@ function SignupPage({ onNavigate, onSuccess }) {
           placeholder="Create a strong password"
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          disabled={loading}
+          disabled={loading || googleLoading}
           icon={<EyeIcon open={showPassword} />}
           onIconClick={() => setShowPassword(!showPassword)}
+          onKeyPress={handleKeyPress}
         />
         {formData.password && <PasswordStrengthBar password={formData.password} />}
       </FormField>
@@ -768,32 +976,33 @@ function SignupPage({ onNavigate, onSuccess }) {
           }
           checked={formData.agreedToTerms}
           onChange={(e) => setFormData({ ...formData, agreedToTerms: e.target.checked })}
-          disabled={loading}
+          disabled={loading || googleLoading}
         />
         {fieldErrors.agreedToTerms && <p style={{ fontSize: 12, color: COLORS.error, margin: '8px 0 0 28px' }}>{fieldErrors.agreedToTerms}</p>}
       </div>
 
-      <Button onClick={handleSignup} loading={loading} disabled={loading}>
+      <Button onClick={handleSignup} loading={loading} disabled={loading || googleLoading}>
         Create account
       </Button>
 
       <Divider />
 
-      <GoogleButton onClick={handleGoogleSignUp} loading={loading} disabled={loading} />
+      <GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading} />
 
       <p style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
         Already have an account?{' '}
         <button
           onClick={() => onNavigate('login')}
-          disabled={loading}
+          disabled={loading || googleLoading}
           style={{
             background: 'none',
             border: 'none',
             fontSize: 14,
             color: COLORS.primaryLight,
             fontWeight: 600,
-            cursor: 'pointer',
+            cursor: loading || googleLoading ? 'not-allowed' : 'pointer',
             fontFamily: 'inherit',
+            opacity: loading || googleLoading ? 0.6 : 1,
           }}
         >
           Sign in

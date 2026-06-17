@@ -4,7 +4,6 @@ import DueDiligencePage from './DueDiligencePage';
 import OfficeHoursEvents from './OfficeHoursEvents';
 import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
-import { NAV_ITEMS } from '../constants/navigation';
 
 /* ─── DESIGN TOKENS ─────────────────────────────────── */
 const P   = '#5B21B6';
@@ -222,18 +221,16 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [tourActive, setTourActive] = useState(true);
   const [spotlight,  setSpotlight]  = useState(null);
   const [tipPos,     setTipPos]     = useState({ top:'50%', left:'50%', transform:'translate(-50%,-50%)' });
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isOverlay = isMobile || isTablet;
 
   /* Section refs */
-  const sidebarRef  = useRef(null);
   const bannerRef   = useRef(null);
   const statsRef    = useRef(null);
   const resumeRef   = useRef(null);
   const learningRef = useRef(null);
   const eventsRef   = useRef(null);
-  const REFS = { sidebar:sidebarRef, banner:bannerRef, stats:statsRef, resume:resumeRef, learning:learningRef, events:eventsRef };
+  const REFS = { banner:bannerRef, stats:statsRef, resume:resumeRef, learning:learningRef, events:eventsRef };
 
   const updatePositions = useCallback(() => {
     const step = STEPS[tourStep];
@@ -277,119 +274,55 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   /* ── RENDER ── */
   return (
-    <div style={{ display:'flex', height:'100vh', background:BG, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:BG, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
 
-      {/* ══ SIDEBAR BACKDROP (mobile/tablet) ══ */}
-      {isOverlay && sidebarOpen && (
-        <div onClick={() => setSidebarOpen(false)} style={{
-          position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:200,
-        }}/>
-      )}
-
-      {/* ══ SIDEBAR ══ */}
-      <div ref={sidebarRef} style={{
-        width:200, minWidth:200, background:W, borderRight:`1px solid ${BD}`,
-        display:'flex', flexDirection:'column', overflowY:'auto', flexShrink:0,
-        ...(isOverlay ? {
-          position:'fixed', top:0, left:0, height:'100%', zIndex:201,
-          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-200px)',
-          transition:'transform .25s ease',
-          boxShadow: sidebarOpen ? '4px 0 24px rgba(0,0,0,.2)' : 'none',
-        } : { height:'100%', zIndex:5 }),
+      {/* ══ TOPBAR ══ */}
+      <div style={{
+        height:54, background:W, borderBottom:`1px solid ${BD}`,
+        display:'flex', alignItems:'center', padding:`0 ${isMobile?14:24}px`, gap:12,
+        flexShrink:0, justifyContent:'space-between',
       }}>
-        {/* Logo */}
-        <div style={{ padding:'16px 16px 14px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, flexShrink:0 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:26, height:26, background:P, borderRadius:'50%', flexShrink:0,
-              display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <svg viewBox="0 0 14 14" width={13} height={13}><circle cx="7" cy="7" r="5" stroke="white" strokeWidth="1.2" fill="none"/><path d="M4.5 7h5M7 4.5v5" stroke="white" strokeWidth="1.2" strokeLinecap="round"/></svg>
-            </div>
-            <span style={{ fontWeight:700, fontSize:11, color:T1, letterSpacing:.8, textTransform:'uppercase' }}>Tribes Capital</span>
-          </div>
+        <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 }}>
+          {/* Hamburger — mobile/tablet */}
           {isOverlay && (
-            <button onClick={() => setSidebarOpen(false)} style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:T2, display:'flex', alignItems:'center' }}>
-              <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke={T2} strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            <button onClick={onToggleSidebar} style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex', alignItems:'center', flexShrink:0 }}>
+              <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={T1} strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
             </button>
           )}
+          {/* Search — full on desktop, icon-only on mobile */}
+          {!isMobile ? (
+            <div style={{ flex:1, maxWidth:400, background:BG, border:`1px solid ${BD}`, borderRadius:8,
+              height:36, display:'flex', alignItems:'center', gap:8, padding:'0 12px' }}>
+              <Icon name="search" size={14} color={T3}/>
+              <span style={{ fontSize:13, color:T3, whiteSpace:'nowrap', overflow:'hidden' }}>Search topics, documents, people, events…</span>
+            </div>
+          ) : (
+            <span style={{ fontSize:14, fontWeight:600, color:T1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Home</span>
+          )}
         </div>
-        {/* Nav items */}
-        <div style={{ flex:1, padding:'8px 0' }}>
-          {NAV_ITEMS.map((item, i) => {
-            if (!item) return <div key={`divider-${i}`} style={{ height:1, background:BD, margin:'6px 14px' }}/>;
-            const isActive = currentPage === item.key;
-            return (
-              <div key={item.id} 
-                onClick={() => onNavigate(item.key)}
-                style={{
-                  display:'flex', alignItems:'center', gap:9,
-                  padding:'8px 14px', margin:'1px 6px', borderRadius:8, cursor:'pointer',
-                  background: isActive ? PF : 'transparent',
-                  color:      isActive ? P  : T2,
-                  fontWeight: isActive ? 500 : 400,
-                  fontSize:   13,
-                  borderLeft: isActive ? `3px solid ${P}` : '3px solid transparent',
-                  transition:'all .15s',
-                }}>
-                <Icon name={item.icon} size={15} color={isActive ? P : T3}/>
-                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.label}</span>
-              </div>
-            );
-          })}
+        <div style={{ display:'flex', alignItems:'center', gap:isMobile?8:12, flexShrink:0 }}>
+          {isMobile && (
+            <button style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex' }}>
+              <Icon name="search" size={18} color={T2}/>
+            </button>
+          )}
+          <div style={{ width:34, height:34, border:`1px solid ${BD}`, borderRadius:'50%',
+            display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', flexShrink:0 }}>
+            <Icon name="bell2" size={16} color={T2}/>
+            <div style={{ width:7, height:7, background:'#EF4444', borderRadius:'50%', border:'1.5px solid #fff',
+              position:'absolute', top:6, right:6 }}/>
+          </div>
+          <div style={{ width:34, height:34, background:P, borderRadius:'50%',
+            display:'flex', alignItems:'center', justifyContent:'center', color:W, fontSize:12, fontWeight:600, flexShrink:0 }}>
+            A
+          </div>
         </div>
       </div>
 
-      {/* ══ MAIN AREA ══ */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
-
-        {/* TOPBAR */}
-        <div style={{
-          height:54, background:W, borderBottom:`1px solid ${BD}`,
-          display:'flex', alignItems:'center', padding:`0 ${isMobile?14:24}px`, gap:12,
-          flexShrink:0, justifyContent:'space-between',
-        }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 }}>
-            {/* Hamburger — mobile/tablet */}
-            {isOverlay && (
-              <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex', alignItems:'center', flexShrink:0 }}>
-                <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={T1} strokeWidth="2" strokeLinecap="round">
-                  <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-                </svg>
-              </button>
-            )}
-            {/* Search — full on desktop, icon-only on mobile */}
-            {!isMobile ? (
-              <div style={{ flex:1, maxWidth:400, background:BG, border:`1px solid ${BD}`, borderRadius:8,
-                height:36, display:'flex', alignItems:'center', gap:8, padding:'0 12px' }}>
-                <Icon name="search" size={14} color={T3}/>
-                <span style={{ fontSize:13, color:T3, whiteSpace:'nowrap', overflow:'hidden' }}>Search topics, documents, people, events…</span>
-              </div>
-            ) : (
-              <span style={{ fontSize:14, fontWeight:600, color:T1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Home</span>
-            )}
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:isMobile?8:12, flexShrink:0 }}>
-            {isMobile && (
-              <button style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex' }}>
-                <Icon name="search" size={18} color={T2}/>
-              </button>
-            )}
-            <div style={{ width:34, height:34, border:`1px solid ${BD}`, borderRadius:'50%',
-              display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', flexShrink:0 }}>
-              <Icon name="bell2" size={16} color={T2}/>
-              <div style={{ width:7, height:7, background:'#EF4444', borderRadius:'50%', border:'1.5px solid #fff',
-                position:'absolute', top:6, right:6 }}/>
-            </div>
-            <div style={{ width:34, height:34, background:P, borderRadius:'50%',
-              display:'flex', alignItems:'center', justifyContent:'center', color:W, fontSize:12, fontWeight:600, flexShrink:0 }}>
-              A
-            </div>
-          </div>
-        </div>
-
-        {/* SCROLLABLE CONTENT */}
-        <div style={{ flex:1, overflowY:'auto', padding:isMobile?'16px 14px 60px':'24px 28px 60px' }}>
+      {/* SCROLLABLE CONTENT */}
+      <div style={{ flex:1, overflowY:'auto', padding:isMobile?'16px 14px 60px':'24px 28px 60px' }}>
 
           {/* ── HOME PAGE ── */}
           {currentPage === 'home' && (
@@ -404,7 +337,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <p style={{ color:'rgba(255,255,255,.7)', fontSize:10, fontWeight:600, letterSpacing:1.2,
                 textTransform:'uppercase', margin:'0 0 8px' }}>WELCOME BACK</p>
               <h1 style={{ color:W, fontSize:isMobile?20:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5 }}>
-                Good morning, Ali 👋
+                Welcome , {username}👋
               </h1>
               <p style={{ color:'rgba(255,255,255,.8)', fontSize:13, margin:'0 0 16px', maxWidth:400, lineHeight:1.6 }}>
                 You're part of a community of 240+ clean energy investors across Africa.
@@ -642,7 +575,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             <HelpPage user={user} onToggleSidebar={onToggleSidebar} isMobile={isMobile} isTablet={isTablet}/>
           )}
         </div>
-      </div>
 
       {/* ══ TUTORIAL OVERLAY ══ */}
       {tourActive && (
