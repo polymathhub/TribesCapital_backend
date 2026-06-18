@@ -609,7 +609,9 @@ function LoginPage({ onNavigate, onSuccess }) {
         if (rememberMe) {
           localStorage.setItem('rememberEmail', email);
         }
-        onSuccess();
+          onSuccess();
+          // Ensure navigation to homepage after successful login
+          try { window.location.href = '/'; } catch (e) { /* noop */ }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to sign in. Please try again.');
@@ -729,7 +731,9 @@ function SignupPage({ onNavigate, onSuccess }) {
   const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
     (result) => {
       console.log('Google auth successful for signup:', result.user);
-      onSuccess();
+        onSuccess();
+        // Ensure navigation to homepage after successful signup
+        try { window.location.href = '/'; } catch (e) { /* noop */ }
     },
     setError
   );
