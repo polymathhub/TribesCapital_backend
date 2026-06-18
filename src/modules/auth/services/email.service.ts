@@ -16,6 +16,16 @@ export interface PasswordResetEmailData {
   expiresIn: string;
 }
 
+export interface WelcomeEmailData {
+  email: string;
+  firstName: string;
+}
+
+export interface PasswordChangedEmailData {
+  email: string;
+  firstName: string;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -92,6 +102,54 @@ export class EmailService {
       return true;
     } catch (error) {
       this.logger.error('Failed to send password reset email', error);
+      throw error;
+    }
+  }
+
+  async sendWelcomeEmail(data: WelcomeEmailData): Promise<boolean> {
+    try {
+      if (!this.transporter) {
+        this.logger.warn('Email service not initialized, skipping welcome email');
+        return true;
+      }
+
+      const html = this.getWelcomeEmailTemplate(data);
+
+      await this.transporter.sendMail({
+        from: this.configService.get('email.from'),
+        to: data.email,
+        subject: 'Welcome to Tribes Capital',
+        html,
+      });
+
+      this.logger.debug(`Welcome email sent to ${data.email}`);
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to send welcome email', error);
+      throw error;
+    }
+  }
+
+  async sendPasswordChangedEmail(data: PasswordChangedEmailData): Promise<boolean> {
+    try {
+      if (!this.transporter) {
+        this.logger.warn('Email service not initialized, skipping password changed email');
+        return true;
+      }
+
+      const html = this.getPasswordChangedEmailTemplate(data);
+
+      await this.transporter.sendMail({
+        from: this.configService.get('email.from'),
+        to: data.email,
+        subject: 'Your password has been changed',
+        html,
+      });
+
+      this.logger.debug(`Password changed email sent to ${data.email}`);
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to send password changed email', error);
       throw error;
     }
   }
@@ -596,3 +654,29 @@ export class EmailService {
     `;
   }
 }
+
+  private getWelcomeEmailTemplate(data: WelcomeEmailData): string {
+    return `
+<html><body style="font-family: sans-serif;">
+  <h2>Welcome, ${data.firstName}!</h2>
+  <p>Thanks for joining Tribes Capital. We're excited to have you.</p>
+  <p>Get started by exploring your dashboard and completing your profile.</p>
+  <p>If you need help, reply to this email or visit our Help Center.</p>
+  <hr />
+  <p style="font-size:12px;color:#666;">© Tribes Capital</p>
+</body></html>
+    `;
+  }
+
+  private getPasswordChangedEmailTemplate(data: PasswordChangedEmailData): string {
+    return `
+<html><body style="font-family: sans-serif;">
+  <h2>Password changed</h2>
+  <p>Hi ${data.firstName},</p>
+  <p>This is a confirmation that your account password was successfully changed.</p>
+  <p>If you didn't make this change, please contact support immediately.</p>
+  <hr />
+  <p style="font-size:12px;color:#666;">© Tribes Capital</p>
+</body></html>
+    `;
+  }

@@ -76,6 +76,16 @@ export class RegisterDto {
   @IsNotEmpty({ message: 'Password confirmation is required' })
   @IsString({ message: 'Password confirmation must be a string' })
   passwordConfirmation!: string;
+
+  @ApiProperty({
+    example: 'Investor',
+    description: 'Optional role to assign to the user on registration',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'Role must be a string' })
+  @MaxLength(100, { message: 'Role must not exceed 100 characters' })
+  role?: string;
 }
 
 // ============================================================================
@@ -207,9 +217,9 @@ export class GoogleAuthDto {
     example: 'ya29.a0AfH6SMB...',
     description: 'Google access token',
   })
-  @IsNotEmpty({ message: 'Access token is required' })
+  @IsOptional()
   @IsString({ message: 'Access token must be a string' })
-  accessToken!: string;
+  accessToken?: string;
 }
 
 // ============================================================================

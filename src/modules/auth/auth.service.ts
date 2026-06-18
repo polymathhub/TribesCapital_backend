@@ -71,14 +71,24 @@ export class AuthService {
       // Hash password with strong bcrypt (12 rounds)
       const passwordHash = await this.tokenService.hashPassword(registerDto.password);
 
-      // Create user
+      // Create user (attach role if provided)
+      const createData: any = {
+        email: registerDto.email.toLowerCase(),
+        firstName: registerDto.firstName.trim(),
+        lastName: registerDto.lastName.trim(),
+        password: passwordHash,
+        emailVerified: false,
+      };
+
+      if (registerDto.role) {
+        createData.roles = { connect: [{ name: registerDto.role }] };
+      }
+
       const user = await this.prisma.user.create({
-        data: {
-          email: registerDto.email.toLowerCase(),
-          firstName: registerDto.firstName.trim(),
-          lastName: registerDto.lastName.trim(),
-          password: passwordHash,
-          emailVerified: false,
+        data: createData,
+        include: {
+          roles: true,
+          permissions: true,
         },
       });
 
@@ -188,6 +198,15 @@ export class AuthService {
 
       this.logger.log(`Email verified for user: ${verificationToken.user.email}`);
 
+      // Send welcome email (best-effort)
+      try {
+        await this.emailService.sendWelcomeEmail({
+          email: verificationToken.user.email,
+          firstName: verificationToken.user.firstName || 'User',
+        });
+      } catch (err) {
+        this.logger.warn('Failed to send welcome email', err);
+      }
       return { message: 'Email verified successfully' };
     } catch (error) {
       if (error instanceof BadRequestException) {
@@ -620,6 +639,15 @@ export class AuthService {
         `Password reset completed for user: ${resetToken.user.email}`,
       );
 
+      // Send password changed confirmation email (best-effort)
+      try {
+        await this.emailService.sendPasswordChangedEmail({
+          email: resetToken.user.email,
+          firstName: resetToken.user.firstName || 'User',
+        });
+      } catch (err) {
+        this.logger.warn('Failed to send password changed email', err);
+      }
       return { message: 'Password has been reset successfully' };
     } catch (error) {
       if (error instanceof BadRequestException) {

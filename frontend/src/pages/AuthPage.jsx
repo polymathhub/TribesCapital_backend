@@ -933,7 +933,7 @@ function SignupPage({ onNavigate, onSuccess }) {
       <FormField label="Email address" required error={fieldErrors.email}>
         <TextInput
           type="email"
-          placeholder="you@example.com"
+          placeholder="letsgo@example.com"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           disabled={loading || googleLoading}
@@ -1284,6 +1284,12 @@ export default function AuthPage({ onLogin }) {
   const handleSuccess = () => {
     localStorage.removeItem('verificationEmail');
     if (onLogin) onLogin();
+    // Ensure SPA navigates to home after successful auth
+    try {
+      window.location.href = '/';
+    } catch (e) {
+      // fallback: do nothing
+    }
   };
 
   return (

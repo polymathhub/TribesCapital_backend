@@ -47,7 +47,7 @@ export class AuditService {
         },
       });
     } catch (error) {
-      this.logger.error('Failed to create audit log', error);
+      this.logger.error('Failed to create audit log currently', error);
     }
   }
 
