@@ -653,8 +653,7 @@ export class EmailService {
 </html>
     `;
   }
-}
-
+  
   private getWelcomeEmailTemplate(data: WelcomeEmailData): string {
     return `
 <html><body style="font-family: sans-serif;">
@@ -680,3 +679,5 @@ export class EmailService {
 </body></html>
     `;
   }
+
+}
