@@ -69,22 +69,28 @@ function App() {
   }, []);
 
   const handleLogin = (userData) => {
-    // Immediately update authentication state with fresh data from localStorage
+    // Get auth data from localStorage (just set by login/signup)
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
     const userName = localStorage.getItem('userName');
     
-    if (token && userEmail) {
-      // Set user immediately without waiting for API call
-      setUser({ 
-        email: userEmail, 
-        name: userName || userEmail.split('@')[0],
-        ...userData
-      });
+    // Build user info from passed data or localStorage
+    const userInfo = userData ? {
+      email: userData.email || userEmail,
+      name: userData.firstName || userName || userEmail?.split('@')[0],
+      ...userData
+    } : {
+      email: userEmail,
+      name: userName || userEmail?.split('@')[0]
+    };
+
+    if (token && userInfo.email) {
+      setUser(userInfo);
       setIsAuthenticated(true);
       setIsCheckingAuth(false);
       setIsLoading(false);
       setCurrentPage('home');
+      console.log('✅ User logged in:', userInfo.email);
     }
   };
 

@@ -606,7 +606,7 @@ function LoginPage({ onNavigate, onSuccess }) {
   const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
     (result) => {
       console.log('Google auth successful:', result.user);
-      onSuccess();
+      onSuccess(result.user);
     },
     setError
   );
@@ -627,17 +627,27 @@ function LoginPage({ onNavigate, onSuccess }) {
     try {
       const response = await authAPI.login({ email, password });
       if (response.data?.accessToken) {
+        // Store auth data
+        const userData = {
+          email: email,
+          firstName: response.data.user?.firstName || email.split('@')[0],
+          lastName: response.data.user?.lastName || '',
+          ...response.data.user
+        };
+        
         localStorage.setItem('accessToken', response.data.accessToken);
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('userName', response.data.user?.firstName || email.split('@')[0]);
+        localStorage.setItem('userEmail', userData.email);
+        localStorage.setItem('userName', userData.firstName);
+        
         if (rememberMe) {
           localStorage.setItem('rememberEmail', email);
         }
-        // Call success handler to update app state and navigate to homepage
-        onSuccess();
+        
+        // Call success handler with user data to update app state immediately
+        onSuccess(userData);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to sign in. Please try again.');
@@ -757,7 +767,7 @@ function SignupPage({ onNavigate, onSuccess }) {
   const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
     (result) => {
       console.log('Google auth successful for signup:', result.user);
-      onSuccess();
+      onSuccess(result.user);
     },
     setError
   );
@@ -893,8 +903,8 @@ function SignupPage({ onNavigate, onSuccess }) {
           console.warn('Failed to persist session to localStorage', storageErr);
         }
 
-        // Trigger success flow (which redirects to the app/home)
-        onSuccess();
+        // Trigger success flow with user data
+        onSuccess(response.data.user);
         return;
       }
 
@@ -1342,10 +1352,10 @@ export default function AuthPage({ onLogin }) {
     }
   }, []);
 
-  const handleSuccess = () => {
+  const handleSuccess = (userData) => {
     localStorage.removeItem('verificationEmail');
     if (onLogin) {
-      onLogin();
+      onLogin(userData);
     }
   };
 
