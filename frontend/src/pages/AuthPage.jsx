@@ -636,9 +636,8 @@ function LoginPage({ onNavigate, onSuccess }) {
         if (rememberMe) {
           localStorage.setItem('rememberEmail', email);
         }
-          onSuccess();
-          // Ensure navigation to homepage after successful login
-          try { window.location.href = '/'; } catch (e) { /* noop */ }
+        // Call success handler to update app state and navigate to homepage
+        onSuccess();
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to sign in. Please try again.');
@@ -758,9 +757,7 @@ function SignupPage({ onNavigate, onSuccess }) {
   const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
     (result) => {
       console.log('Google auth successful for signup:', result.user);
-        onSuccess();
-        // Ensure navigation to homepage after successful signup
-        try { window.location.href = '/'; } catch (e) { /* noop */ }
+      onSuccess();
     },
     setError
   );
@@ -898,7 +895,6 @@ function SignupPage({ onNavigate, onSuccess }) {
 
         // Trigger success flow (which redirects to the app/home)
         onSuccess();
-        try { window.location.href = '/'; } catch (e) { /* noop */ }
         return;
       }
 
@@ -1079,7 +1075,8 @@ function VerifyPage({ onNavigate, onSuccess }) {
       await authAPI.verifyEmail(token);
       setSuccess(true);
       setMessage('Email verified successfully!');
-      setTimeout(() => onNavigate('login'), 2000);
+      // Auto-redirect after 3 seconds
+      setTimeout(() => onNavigate('login'), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Verification failed');
     } finally {
@@ -1111,9 +1108,12 @@ function VerifyPage({ onNavigate, onSuccess }) {
           <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 12px' }}>
             Email verified!
           </h1>
-          <p style={{ fontSize: 14, color: COLORS.textSecondary }}>
+          <p style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 }}>
             Your account is ready. Redirecting to sign in...
           </p>
+          <Button onClick={() => onNavigate('login')} fullWidth>
+            Go to Sign In
+          </Button>
         </div>
       </FormContainer>
     );
@@ -1326,14 +1326,26 @@ export default function AuthPage({ onLogin }) {
   const [page, setPage] = useState('login');
   const { isMobile } = useBreakpoint();
 
+  // Detect if we're on verify or forgot-password page based on URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verifyToken = params.get('token');
+    const code = params.get('code');
+    const resetEmail = params.get('email');
+
+    if (verifyToken) {
+      // Email verification link
+      setPage('verify');
+    } else if (code && resetEmail) {
+      // Password reset link
+      setPage('forgot');
+    }
+  }, []);
+
   const handleSuccess = () => {
     localStorage.removeItem('verificationEmail');
-    if (onLogin) onLogin();
-    // Ensure SPA navigates to home after successful auth
-    try {
-      window.location.href = '/';
-    } catch (e) {
-      // fallback: do nothing
+    if (onLogin) {
+      onLogin();
     }
   };
 

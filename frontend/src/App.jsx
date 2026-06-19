@@ -68,18 +68,22 @@ function App() {
     checkAuthentication();
   }, []);
 
-  const handleLogin = () => {
-    // Re-check authentication after login
+  const handleLogin = (userData) => {
+    // Immediately update authentication state with fresh data from localStorage
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
     const userName = localStorage.getItem('userName');
     
     if (token && userEmail) {
+      // Set user immediately without waiting for API call
       setUser({ 
         email: userEmail, 
         name: userName || userEmail.split('@')[0],
+        ...userData
       });
       setIsAuthenticated(true);
+      setIsCheckingAuth(false);
+      setIsLoading(false);
       setCurrentPage('home');
     }
   };
