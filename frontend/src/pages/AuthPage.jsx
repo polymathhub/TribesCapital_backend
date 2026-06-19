@@ -876,20 +876,34 @@ function SignupPage({ onNavigate, onSuccess }) {
         throw new Error('No data in response from server');
       }
 
-      // Success - store and navigate
+      // Success - if server returned tokens, sign the user in immediately
       localStorage.setItem('verificationEmail', formData.email.trim().toLowerCase());
-      
-      // Store user data if provided
-      if (response.data.user?.email) {
-        localStorage.setItem('userEmail', response.data.user.email);
-      }
-      if (response.data.user?.firstName) {
-        localStorage.setItem('userName', response.data.user.firstName);
+
+      // If backend returned an access token, persist session and navigate to app
+      if (response.data?.accessToken) {
+        try {
+          localStorage.setItem('accessToken', response.data.accessToken);
+          if (response.data.refreshToken) {
+            localStorage.setItem('refreshToken', response.data.refreshToken);
+          }
+          if (response.data.user?.email) {
+            localStorage.setItem('userEmail', response.data.user.email);
+          }
+          if (response.data.user?.firstName) {
+            localStorage.setItem('userName', response.data.user.firstName);
+          }
+        } catch (storageErr) {
+          console.warn('Failed to persist session to localStorage', storageErr);
+        }
+
+        // Trigger success flow (which redirects to the app/home)
+        onSuccess();
+        try { window.location.href = '/'; } catch (e) { /* noop */ }
+        return;
       }
 
+      // Otherwise, navigate to verification step (production flow)
       console.log('🎉 Signup successful, navigating to verification page');
-      
-      // Small delay to ensure state is consistent
       setTimeout(() => {
         onNavigate('verify');
       }, 300);
