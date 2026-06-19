@@ -72,16 +72,48 @@ export class AuthService {
       const passwordHash = await this.tokenService.hashPassword(registerDto.password);
 
       // Create user (attach role if provided)
+      // Determine whether to require email verification
+      const appEnv = this.configService.get('app.environment');
+      const emailEnabled = this.configService.get('email.enabled');
+      const skipVerification = appEnv !== 'production' || !emailEnabled;
+
       const createData: any = {
         email: registerDto.email.toLowerCase(),
         firstName: registerDto.firstName.trim(),
         lastName: registerDto.lastName.trim(),
         password: passwordHash,
-        emailVerified: false,
+        // In dev or when email is disabled, mark email as verified to allow immediate login
+        emailVerified: skipVerification ? true : false,
       };
 
+      // Normalize and map incoming role to known role names; default to 'user'
       if (registerDto.role) {
-        createData.roles = { connect: [{ name: registerDto.role }] };
+        const requested = registerDto.role.trim().toLowerCase();
+        // simple slugify
+        const slug = requested.replace(/[^a-z0-9]+/g, '_');
+        // map unknown roles to 'user' to ensure consistent permissions
+        const allowed = new Set(['admin', 'moderator', 'user']);
+        const roleName = allowed.has(slug) ? slug : 'user';
+
+        // Connect to existing role (or create if missing) using canonical roleName
+        createData.roles = {
+          connectOrCreate: [
+            {
+              where: { name: roleName },
+              create: { name: roleName, description: `${roleName} role` },
+            },
+          ],
+        };
+      } else {
+        // Ensure default 'user' role is attached if none provided
+        createData.roles = {
+          connectOrCreate: [
+            {
+              where: { name: 'user' },
+              create: { name: 'user', description: 'Regular user role' },
+            },
+          ],
+        };
       }
 
       const user = await this.prisma.user.create({
@@ -92,32 +124,37 @@ export class AuthService {
         },
       });
 
-      // Generate email verification token
-      const { token, hash } = this.tokenService.generateSecureToken();
+      // If verification is required in production, create token and send email.
+      if (!skipVerification) {
+        // Generate email verification token
+        const { token, hash } = this.tokenService.generateSecureToken();
 
-      // Store hashed token in database
-      await this.prisma.emailVerificationToken.create({
-        data: {
-          userId: user.id,
-          tokenHash: hash,
-          expiresAt: new Date(Date.now() + this.EMAIL_VERIFICATION_EXPIRY * 1000),
-        },
-      });
-
-      // Send verification email
-      const frontendUrl = this.configService.get('app.frontendUrl');
-      const verificationLink = `${frontendUrl}/auth/verify-email?token=${token}`;
-
-      try {
-        await this.emailService.sendVerificationEmail({
-          email: user.email,
-          firstName: user.firstName,
-          verificationLink,
-          expiresIn: '24 hours',
+        // Store hashed token in database
+        await this.prisma.emailVerificationToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: hash,
+            expiresAt: new Date(Date.now() + this.EMAIL_VERIFICATION_EXPIRY * 1000),
+          },
         });
-      } catch (emailError) {
-        this.logger.error('Failed to send verification email', emailError);
-        // Don't fail registration if email fails - log and continue
+
+        // Send verification email
+        const frontendUrl = this.configService.get('app.frontendUrl');
+        const verificationLink = `${frontendUrl}/auth/verify-email?token=${token}`;
+
+        try {
+          await this.emailService.sendVerificationEmail({
+            email: user.email,
+            firstName: user.firstName,
+            verificationLink,
+            expiresIn: '24 hours',
+          });
+        } catch (emailError) {
+          this.logger.error('Failed to send verification email', emailError);
+          // Don't fail registration if email fails - log and continue
+        }
+      } else {
+        this.logger.log(`Skipping email verification for user ${user.email} (env=${appEnv}, emailEnabled=${emailEnabled})`);
       }
 
       // Log registration event

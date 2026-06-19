@@ -418,27 +418,48 @@ function SelectInput({ options, value, onChange, disabled = false, placeholder =
 }
 
 function CheckboxInput({ id, label, checked, onChange, disabled = false }) {
+  // Accessible custom checkbox with larger hit target and modern style
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+    <label htmlFor={id} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: disabled ? 'not-allowed' : 'pointer' }}>
       <input
-        type="checkbox"
         id={id}
+        type="checkbox"
         checked={checked}
         onChange={onChange}
         disabled={disabled}
+        aria-checked={checked}
         style={{
-          width: 10,
-          height: 10,
-          cursor: 'pointer',
-          marginTop: 2,
-          flexShrink: 0,
-          opacity: disabled ? 0.6 : 1,
+          position: 'absolute',
+          opacity: 0,
+          pointerEvents: 'none',
         }}
       />
-      <label htmlFor={id} style={{ fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.5, cursor: 'pointer' }}>
+      <span
+        aria-hidden
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: 6,
+          border: `1.5px solid ${checked ? COLORS.primary : COLORS.border}`,
+          background: checked ? COLORS.primary : 'transparent',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: checked ? '0 4px 10px rgba(91,33,182,0.14)' : 'none',
+          transition: 'all 150ms ease',
+          flexShrink: 0,
+        }}
+      >
+        {checked && (
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ color: '#fff' }}>
+            <polyline points="20 6 9 17 4 12" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+      <span style={{ fontSize: 14, color: disabled ? '#9CA3AF' : COLORS.textSecondary, lineHeight: 1.4 }}>
         {label}
-      </label>
-    </div>
+      </span>
+    </label>
   );
 }
 
@@ -555,10 +576,16 @@ function FormContainer({ children, isMobile }) {
       style={{
         background: COLORS.surface,
         borderRadius: isMobile ? 12 : 16,
-        padding: isMobile ? '24px 20px' : '40px 48px',
+        padding: isMobile ? '20px 16px 28px' : '40px 48px',
         maxWidth: 460,
         width: '100%',
         boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
+        display: 'flex',
+        flexDirection: 'column',
+        // On small screens, allow the form to scroll while keeping CTAs reachable
+        maxHeight: isMobile ? 'calc(100vh - 64px)' : 'none',
+        overflowY: isMobile ? 'auto' : 'visible',
+        WebkitOverflowScrolling: isMobile ? 'touch' : 'auto',
       }}
     >
       {children}
