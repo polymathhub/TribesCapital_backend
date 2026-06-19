@@ -305,3 +305,17 @@ export class MessageResponseDto {
   message!: string;
 }
 
+// ============================================================================
+// RESEND VERIFICATION DTO
+// ============================================================================
+
+export class ResendVerificationDto {
+  @ApiProperty({
+    example: 'user@example.com',
+    description: 'Email address to resend verification to',
+  })
+  @IsNotEmpty({ message: 'Email is required' })
+  @IsEmail({}, { message: 'Email must be valid' })
+  email!: string;
+}
+

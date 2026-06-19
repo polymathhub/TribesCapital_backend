@@ -22,6 +22,7 @@ import {
   AuthTokenResponseDto,
   UserResponseDto,
   MessageResponseDto,
+  ResendVerificationDto,
 } from './dto/auth.dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { Public } from '@common/decorators/public.decorator';
@@ -85,6 +86,19 @@ export class AuthController {
     }
 
     return this.authService.verifyEmail({ token });
+  }
+
+  @Public()
+  @Post('resend-verification')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Resend email verification',
+    description: 'Send verification email again to the provided address',
+  })
+  async resendVerification(
+    @Body() resendVerificationDto: ResendVerificationDto,
+  ): Promise<MessageResponseDto> {
+    return this.authService.resendVerificationEmail(resendVerificationDto.email);
   }
 
   @Public()

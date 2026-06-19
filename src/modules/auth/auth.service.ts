@@ -386,8 +386,12 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      // Require email verification before login
-      if (!user.emailVerified) {
+      // Require email verification before login (optional in dev/test)
+      const appEnv = this.configService.get('app.environment');
+      const emailEnabled = this.configService.get('email.enabled');
+      const requireEmailVerification = appEnv === 'production' && emailEnabled;
+
+      if (requireEmailVerification && !user.emailVerified) {
         this.logger.warn(`Login attempted with unverified email: ${email}`);
 
         await this.auditService.logLoginAttempt({
@@ -904,6 +908,85 @@ export class AuthService {
 
       this.logger.error('OAuth authentication failed', error);
       throw new BadRequestException('OAuth authentication failed');
+    }
+  }
+
+  // ============================================================================
+  // RESEND VERIFICATION EMAIL
+  // ============================================================================
+
+  async resendVerificationEmail(email: string): Promise<MessageResponseDto> {
+    const normalizedEmail = email.toLowerCase();
+
+    try {
+      // Find user
+      const user = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (!user) {
+        // Don't reveal that user doesn't exist (prevent enumeration)
+        return {
+          message: 'If an account exists with that email, verification email has been sent',
+        };
+      }
+
+      // Check if already verified
+      if (user.emailVerified) {
+        return {
+          message: 'Email is already verified',
+        };
+      }
+
+      try {
+        // Generate new email verification token
+        const { token, hash } = this.tokenService.generateSecureToken();
+
+        // Delete any existing verification tokens for this user
+        await this.prisma.emailVerificationToken.deleteMany({
+          where: { userId: user.id },
+        });
+
+        // Create new verification token
+        await this.prisma.emailVerificationToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: hash,
+            expiresAt: new Date(
+              Date.now() + this.EMAIL_VERIFICATION_EXPIRY * 1000,
+            ),
+          },
+        });
+
+        // Send verification email
+        const frontendUrl = this.configService.get('app.frontendUrl');
+        const verificationLink = `${frontendUrl}/auth/verify-email?token=${token}`;
+
+        await this.emailService.sendVerificationEmail({
+          email: user.email,
+          firstName: user.firstName,
+          verificationLink,
+          expiresIn: '24 hours',
+        });
+
+        this.logger.log(
+          `Verification email resent to: ${normalizedEmail}`,
+        );
+      } catch (emailError) {
+        this.logger.error('Failed to send verification email', emailError);
+        throw new InternalServerErrorException('Failed to send verification email');
+      }
+
+      return {
+        message: 'Verification email has been sent',
+      };
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+
+      this.logger.error('Resend verification failed', error);
+      throw new InternalServerErrorException('Resend verification failed');
     }
   }
 
