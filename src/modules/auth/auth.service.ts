@@ -59,66 +59,53 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
-    try {
-      const passwordHash = await this.tokenService.hashPassword(registerDto.password);
+    const passwordHash = await this.tokenService.hashPassword(registerDto.password);
 
-      const createData: any = {
-        email: registerDto.email.toLowerCase(),
-        firstName: registerDto.firstName.trim(),
-        lastName: registerDto.lastName.trim(),
-        password: passwordHash,
-        emailVerified: true,
+    const createData: any = {
+      email: registerDto.email.toLowerCase(),
+      firstName: registerDto.firstName.trim(),
+      lastName: registerDto.lastName.trim(),
+      password: passwordHash,
+      emailVerified: true,
+    };
+
+    if (registerDto.role) {
+      const requested = registerDto.role.trim().toLowerCase();
+      const slug = requested.replace(/[^a-z0-9]+/g, '_');
+      const allowed = new Set(['admin', 'moderator', 'user']);
+      const roleName = allowed.has(slug) ? slug : 'user';
+
+      createData.roles = {
+        connectOrCreate: [
+          {
+            where: { name: roleName },
+            create: { name: roleName, description: `${roleName} role` },
+          },
+        ],
       };
-
-      if (registerDto.role) {
-        const requested = registerDto.role.trim().toLowerCase();
-        const slug = requested.replace(/[^a-z0-9]+/g, '_');
-        const allowed = new Set(['admin', 'moderator', 'user']);
-        const roleName = allowed.has(slug) ? slug : 'user';
-
-        createData.roles = {
-          connectOrCreate: [
-            {
-              where: { name: roleName },
-              create: { name: roleName, description: `${roleName} role` },
-            },
-          ],
-        };
-      } else {
-        createData.roles = {
-          connectOrCreate: [
-            {
-              where: { name: 'user' },
-              create: { name: 'user', description: 'Regular user role' },
-            },
-          ],
-        };
-      }
-
-      const user = await this.prisma.user.create({
-        data: createData,
-        include: {
-          roles: true,
-          permissions: true,
-        },
-      });
-
-      this.logger.log(`User registered: ${user.email}`);
-      const tokenPair = this.generateAuthTokens(user);
-
-      return tokenPair;
-    } catch (error: any) {
-      if (error?.code === 'P2002' && error?.meta?.target?.includes('email')) {
-        throw new ConflictException('Email already registered');
-      }
-
-      if (error instanceof ConflictException) {
-        throw error;
-      }
-      
-      this.logger.error('Registration error', error);
-      throw new BadRequestException('Signup failed. Please check your information.');
+    } else {
+      createData.roles = {
+        connectOrCreate: [
+          {
+            where: { name: 'user' },
+            create: { name: 'user', description: 'Regular user role' },
+          },
+        ],
+      };
     }
+
+    const user = await this.prisma.user.create({
+      data: createData,
+      include: {
+        roles: true,
+        permissions: true,
+      },
+    });
+
+    this.logger.log(`User registered: ${user.email}`);
+    const tokenPair = this.generateAuthTokens(user);
+
+    return tokenPair;
   }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDto): Promise<MessageResponseDto> {
