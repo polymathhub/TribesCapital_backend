@@ -64,6 +64,28 @@ async function main() {
 
   console.log('✅ Admin user created/updated:', adminUser);
 
+  // Create demo user for testing
+  const demoUserPassword = await bcrypt.hash('Demo@123456', 10);
+  
+  const demoUser = await prisma.user.upsert({
+    where: { email: 'demo@tribescapital.com' },
+    update: {},
+    create: {
+      email: 'demo@tribescapital.com',
+      firstName: 'Demo',
+      lastName: 'User',
+      password: demoUserPassword,
+      isActive: true,
+      emailVerified: true,
+      roles: {
+        connect: [{ id: userRole.id }],
+      },
+    },
+    include: { roles: true },
+  });
+
+  console.log('✅ Demo user created/updated:', demoUser);
+
   // Create event management permissions
   const permissions = [
     {
