@@ -8,7 +8,7 @@
     "prebuild": "rimraf dist",
     "build": "npm run build:backend && npm run build:frontend",
     "build:backend": "npx nest build",
-    "build:frontend": "cd frontend && npm ci --omit=dev && npm run build",
+    "build:frontend": "cd frontend && npm install --omit=dev && npm run build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node dist/main",
     "start:dev": "nest start --watch",

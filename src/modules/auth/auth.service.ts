@@ -465,9 +465,6 @@ export class AuthService {
     }
   }
 
-  // ============================================================================
-  // LOGOUT
-  // ============================================================================
 
   async logout(
     userId: string,
@@ -505,9 +502,8 @@ export class AuthService {
     }
   }
 
-  // ============================================================================
+
   // LOGOUT ALL DEVICES
-  // ============================================================================
 
   async logoutAllDevices(
     userId: string,
@@ -540,9 +536,6 @@ export class AuthService {
     }
   }
 
-  // ============================================================================
-  // GOOGLE OAUTH - PRODUCTION READY
-  // ============================================================================
 
   async authenticateWithGoogle(
     googleAuthDto: GoogleAuthDto,
@@ -756,13 +749,6 @@ export class AuthService {
     }
   }
 
-  // ============================================================================
-  // VALIDATE & HELPER METHODS
-  // ============================================================================
-
-  /**
-   * Validate user for JWT strategy
-   */
   /**
    * Check if an email is already registered
    */
@@ -792,9 +778,6 @@ export class AuthService {
     }
   }
 
-  // ============================================================================
-  // HELPER METHODS
-  // ============================================================================
 
   async validateUser(userId: string): Promise<UserResponseDto | null> {
     const user = await this.prisma.user.findUnique({

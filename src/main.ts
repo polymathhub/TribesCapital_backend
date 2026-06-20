@@ -6,6 +6,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ValidationPipe } from './common/pipes/validation.pipe';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { PrismaService } from './database/prisma.service';
 import helmet from 'helmet';
 
 async function bootstrap() {
