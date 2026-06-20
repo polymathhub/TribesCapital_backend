@@ -53,6 +53,14 @@ export function GoogleSignIn({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   // Initialize Google Sign-In on mount
   useEffect(() => {
     const script = document.querySelector(
@@ -196,10 +204,29 @@ export function GoogleSignIn({
             color: '#991B1B',
             fontSize: '14px',
             lineHeight: '1.5',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
           }}
           role="alert"
         >
-          {error}
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#991B1B',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '0',
+              flexShrink: 0,
+            }}
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
         </div>
       )}
 
