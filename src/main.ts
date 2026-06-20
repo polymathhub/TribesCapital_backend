@@ -9,6 +9,27 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 
 async function bootstrap() {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // SECURITY: Validate critical environment variables in production
+  if (isProduction) {
+    const requiredSecrets = [
+      'JWT_ACCESS_SECRET',
+      'JWT_REFRESH_SECRET',
+      'DATABASE_URL',
+    ];
+    const missingSecrets = requiredSecrets.filter(secret => !process.env[secret]);
+    
+    if (missingSecrets.length > 0) {
+      console.error(
+        `❌ SECURITY ERROR: Missing required environment variables in production:\n` +
+        missingSecrets.map(s => `   - ${s}`).join('\n') +
+        `\n\nApplication will not start without these secrets.`
+      );
+      process.exit(1);
+    }
+  }
+
   // Load database config early to ensure DATABASE_URL is set for Prisma
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = process.env.DB_PORT || '5432';
