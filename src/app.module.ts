@@ -8,6 +8,7 @@ import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { SpaFallbackController } from './spa-fallback.controller';
+import { HealthController } from './health.controller';
 // Module imports
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -58,7 +59,7 @@ import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module
     AnalyticsModule,
     DueDiligenceModule,
   ],
-  controllers: [SpaFallbackController],
+  controllers: [HealthController, SpaFallbackController],
   providers: [
     {
       provide: APP_GUARD,
