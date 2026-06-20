@@ -9,15 +9,12 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 
 async function bootstrap() {
-  // Load database config early to ensure DATABASE_URL is set for Prisma
-  const dbHost = process.env.DB_HOST || 'localhost';
-  const dbPort = process.env.DB_PORT || '5432';
-  const dbUsername = process.env.DB_USERNAME || 'postgres';
-  const dbPassword = process.env.DB_PASSWORD || 'postgres';
-  const dbName = process.env.DB_NAME || 'tribes_capital';
-
+  // DATABASE_URL must be set from environment variables
+  // Do NOT set defaults to localhost - this causes connection hangs
   if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = `postgresql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+    console.error('ERROR: DATABASE_URL environment variable is not set');
+    console.error('Please configure the database connection string');
+    process.exit(1);
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -47,3 +44,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+
