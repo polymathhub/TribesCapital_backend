@@ -30,9 +30,9 @@ import { ConfigService } from '@nestjs/config';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly MAX_LOGIN_ATTEMPTS = 5;
-  private readonly LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-  private readonly EMAIL_VERIFICATION_EXPIRY = 24 * 60 * 60; // 24 hours in seconds
-  private readonly PASSWORD_RESET_EXPIRY = 60 * 60; // 1 hour in seconds
+  private readonly LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+  private readonly EMAIL_VERIFICATION_EXPIRY = 24 * 60 * 60;
+  private readonly PASSWORD_RESET_EXPIRY = 60 * 60;
 
   constructor(
     private prisma: PrismaService,
@@ -42,60 +42,40 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  // ============================================================================
-  // REGISTRATION
-  // ============================================================================
-
   async register(
     registerDto: RegisterDto,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthTokenResponseDto> {
-    // Validate password confirmation
     if (registerDto.password !== registerDto.passwordConfirmation) {
       throw new BadRequestException('Passwords do not match');
     }
 
-    // Check if email already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email: registerDto.email.toLowerCase() },
     });
 
     if (existingUser) {
-      this.logger.warn(`Registration attempted with existing email: ${registerDto.email}`);
-      // Don't reveal that email exists (prevent account enumeration)
       throw new ConflictException('Email already registered');
     }
 
     try {
-      // Hash password with strong bcrypt (12 rounds)
       const passwordHash = await this.tokenService.hashPassword(registerDto.password);
-
-      // Create user (attach role if provided)
-      // Determine whether to require email verification
-      const appEnv = this.configService.get('app.environment');
-      const emailEnabled = this.configService.get('email.enabled');
-      const skipVerification = appEnv !== 'production' || !emailEnabled;
 
       const createData: any = {
         email: registerDto.email.toLowerCase(),
         firstName: registerDto.firstName.trim(),
         lastName: registerDto.lastName.trim(),
         password: passwordHash,
-        // In dev or when email is disabled, mark email as verified to allow immediate login
-        emailVerified: skipVerification ? true : false,
+        emailVerified: true,
       };
 
-      // Normalize and map incoming role to known role names; default to 'user'
       if (registerDto.role) {
         const requested = registerDto.role.trim().toLowerCase();
-        // simple slugify
         const slug = requested.replace(/[^a-z0-9]+/g, '_');
-        // map unknown roles to 'user' to ensure consistent permissions
         const allowed = new Set(['admin', 'moderator', 'user']);
         const roleName = allowed.has(slug) ? slug : 'user';
 
-        // Connect to existing role (or create if missing) using canonical roleName
         createData.roles = {
           connectOrCreate: [
             {
@@ -105,7 +85,6 @@ export class AuthService {
           ],
         };
       } else {
-        // Ensure default 'user' role is attached if none provided
         createData.roles = {
           connectOrCreate: [
             {
@@ -124,40 +103,6 @@ export class AuthService {
         },
       });
 
-      // If verification is required in production, create token and send email.
-      if (!skipVerification) {
-        // Generate email verification token
-        const { token, hash } = this.tokenService.generateSecureToken();
-
-        // Store hashed token in database
-        await this.prisma.emailVerificationToken.create({
-          data: {
-            userId: user.id,
-            tokenHash: hash,
-            expiresAt: new Date(Date.now() + this.EMAIL_VERIFICATION_EXPIRY * 1000),
-          },
-        });
-
-        // Send verification email
-        const frontendUrl = this.configService.get('app.frontendUrl');
-        const verificationLink = `${frontendUrl}/auth/verify-email?token=${token}`;
-
-        try {
-          await this.emailService.sendVerificationEmail({
-            email: user.email,
-            firstName: user.firstName,
-            verificationLink,
-            expiresIn: '24 hours',
-          });
-        } catch (emailError) {
-          this.logger.error('Failed to send verification email', emailError);
-          // Don't fail registration if email fails - log and continue
-        }
-      } else {
-        this.logger.log(`Skipping email verification for user ${user.email} (env=${appEnv}, emailEnabled=${emailEnabled})`);
-      }
-
-      // Log registration event
       await this.auditService.logAuthEvent({
         userId: user.id,
         action: 'user_registered',
@@ -168,17 +113,11 @@ export class AuthService {
       });
 
       this.logger.log(`User registered: ${user.email}`);
-
-      // Generate tokens
       const tokenPair = this.generateAuthTokens(user);
 
       return tokenPair;
     } catch (error: any) {
-      // Handle Prisma unique constraint violation (race condition on email)
       if (error?.code === 'P2002' && error?.meta?.target?.includes('email')) {
-        this.logger.warn(
-          `Registration failed - email unique constraint: ${registerDto.email}`,
-        );
         throw new ConflictException('Email already registered');
       }
 
@@ -191,18 +130,9 @@ export class AuthService {
     }
   }
 
-  // ============================================================================
-  // EMAIL VERIFICATION
-  // ============================================================================
-
-  async verifyEmail(
-    verifyEmailDto: VerifyEmailDto,
-  ): Promise<MessageResponseDto> {
+  async verifyEmail(verifyEmailDto: VerifyEmailDto): Promise<MessageResponseDto> {
     try {
-      // Hash the token to compare with database
       const tokenHash = this.tokenService.hashToken(verifyEmailDto.token);
-
-      // Find verification token
       const verificationToken = await this.prisma.emailVerificationToken.findUnique({
         where: { tokenHash },
         include: { user: true },
@@ -212,29 +142,24 @@ export class AuthService {
         throw new BadRequestException('Invalid or expired verification token');
       }
 
-      // Check if already used
       if (verificationToken.usedAt) {
         throw new BadRequestException('Verification token has already been used');
       }
 
-      // Check if expired
       if (verificationToken.expiresAt < new Date()) {
         throw new BadRequestException('Verification token has expired');
       }
 
-      // Mark email as verified
       await this.prisma.user.update({
         where: { id: verificationToken.userId },
         data: { emailVerified: true },
       });
 
-      // Mark token as used
       await this.prisma.emailVerificationToken.update({
         where: { id: verificationToken.id },
         data: { usedAt: new Date() },
       });
 
-      // Log verification event
       await this.auditService.logAuthEvent({
         userId: verificationToken.userId,
         action: 'email_verified',
@@ -242,9 +167,8 @@ export class AuthService {
         resourceId: verificationToken.userId,
       });
 
-      this.logger.log(`Email verified for user: ${verificationToken.user.email}`);
+      this.logger.log(`Email verified: ${verificationToken.user.email}`);
 
-      // Send welcome email (best-effort)
       try {
         await this.emailService.sendWelcomeEmail({
           email: verificationToken.user.email,
@@ -253,6 +177,7 @@ export class AuthService {
       } catch (err) {
         this.logger.warn('Failed to send welcome email', err);
       }
+
       return { message: 'Email verified successfully' };
     } catch (error) {
       if (error instanceof BadRequestException) {
@@ -263,10 +188,6 @@ export class AuthService {
     }
   }
 
-  // ============================================================================
-  // LOGIN
-  // ============================================================================
-
   async login(
     loginDto: LoginDto,
     ipAddress?: string,
@@ -275,17 +196,9 @@ export class AuthService {
     const email = loginDto.email.toLowerCase();
 
     try {
-      // Check for brute force attempts
-      const failedAttempts = await this.auditService.getRecentLoginAttempts(
-        email,
-        15,
-      );
+      const failedAttempts = await this.auditService.getRecentLoginAttempts(email, 15);
 
       if (failedAttempts >= this.MAX_LOGIN_ATTEMPTS) {
-        this.logger.warn(
-          `Too many failed login attempts for email: ${email}`,
-        );
-
         await this.auditService.logLoginAttempt({
           email,
           success: false,
@@ -294,12 +207,9 @@ export class AuthService {
           failureReason: 'Too many failed attempts',
         });
 
-        throw new UnauthorizedException(
-          'Account temporarily locked due to too many failed login attempts. Try again later.',
-        );
+        throw new UnauthorizedException('Account temporarily locked due to too many failed login attempts');
       }
 
-      // Find user
       const user = await this.prisma.user.findUnique({
         where: { email },
         include: {
@@ -309,8 +219,6 @@ export class AuthService {
       });
 
       if (!user) {
-        this.logger.warn(`Login attempted with non-existent email: ${email}`);
-
         await this.auditService.logLoginAttempt({
           email,
           success: false,
@@ -319,14 +227,10 @@ export class AuthService {
           failureReason: 'User not found',
         });
 
-        // Generic error to prevent account enumeration
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      // Check if account is active
       if (!user.isActive) {
-        this.logger.warn(`Login attempted with inactive user: ${email}`);
-
         await this.auditService.logLoginAttempt({
           userId: user.id,
           email,
@@ -339,10 +243,7 @@ export class AuthService {
         throw new UnauthorizedException('Account is inactive');
       }
 
-      // Check if account is locked
       if (user.lockoutUntil && user.lockoutUntil > new Date()) {
-        this.logger.warn(`Login attempted for locked account: ${email}`);
-
         await this.auditService.logLoginAttempt({
           userId: user.id,
           email,
@@ -352,25 +253,18 @@ export class AuthService {
           failureReason: 'Account locked',
         });
 
-        throw new UnauthorizedException(
-          'Account is temporarily locked. Try again later.',
-        );
+        throw new UnauthorizedException('Account is temporarily locked');
       }
 
-      // Verify password
       const passwordValid = await this.tokenService.verifyPassword(
         loginDto.password,
         user.password,
       );
 
       if (!passwordValid) {
-        this.logger.warn(`Failed login attempt for user: ${email}`);
-
-        // Increment failed attempts
         const newFailedAttempts = failedAttempts + 1;
         let lockoutUntil = null;
 
-        // Lock account after max attempts
         if (newFailedAttempts >= this.MAX_LOGIN_ATTEMPTS) {
           lockoutUntil = new Date(Date.now() + this.LOCKOUT_DURATION_MS);
         }
@@ -395,29 +289,6 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      // Require email verification before login (optional in dev/test)
-      const appEnv = this.configService.get('app.environment');
-      const emailEnabled = this.configService.get('email.enabled');
-      const requireEmailVerification = appEnv === 'production' && emailEnabled;
-
-      if (requireEmailVerification && !user.emailVerified) {
-        this.logger.warn(`Login attempted with unverified email: ${email}`);
-
-        await this.auditService.logLoginAttempt({
-          userId: user.id,
-          email,
-          success: false,
-          ipAddress,
-          userAgent,
-          failureReason: 'Email not verified',
-        });
-
-        throw new UnauthorizedException(
-          'Please verify your email before logging in',
-        );
-      }
-
-      // Reset failed login attempts and lockout
       await this.prisma.user.update({
         where: { id: user.id },
         data: {
@@ -429,7 +300,6 @@ export class AuthService {
         },
       });
 
-      // Log successful login
       await this.auditService.logLoginAttempt({
         userId: user.id,
         email,
@@ -449,10 +319,8 @@ export class AuthService {
 
       this.logger.log(`User logged in: ${email}`);
 
-      // Generate tokens
       const tokenPair = this.generateAuthTokens(user);
 
-      // Store refresh token hash
       if (tokenPair.refreshToken) {
         const { hash } = this.tokenService.generateSecureToken();
         const tokenConfig = this.configService.get('jwt.refresh');
@@ -484,22 +352,16 @@ export class AuthService {
     }
   }
 
-  // ============================================================================
-  // REFRESH TOKEN
-  // ============================================================================
-
   async refreshTokens(
     refreshTokenDto: RefreshTokenDto,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthTokenResponseDto> {
     try {
-      // Verify refresh token
       const decoded = this.tokenService.verifyRefreshToken(
         refreshTokenDto.refreshToken,
       );
 
-      // Find user
       const user = await this.prisma.user.findUnique({
         where: { id: decoded.sub },
         include: {
@@ -512,10 +374,8 @@ export class AuthService {
         throw new UnauthorizedException('User not found or inactive');
       }
 
-      // Generate new token pair
       const newTokenPair = this.generateAuthTokens(user);
 
-      // Log token refresh
       await this.auditService.logAuthEvent({
         userId: user.id,
         action: 'token_refreshed',
@@ -1096,13 +956,10 @@ export class AuthService {
     };
   }
 
-  /**
-   * Convert expiry string to milliseconds
-   */
   private parseExpiryToMs(expiry: string): number {
     const match = expiry.match(/^(\d+)([smhd])$/);
     if (!match) {
-      return 604800000; // Default 7 days
+      return 604800000;
     }
 
     const value = parseInt(match[1], 10);
