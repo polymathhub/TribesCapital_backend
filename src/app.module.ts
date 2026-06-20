@@ -7,6 +7,7 @@ import configurations from './config';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { SpaFallbackController } from './spa-fallback.controller';
 // Module imports
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -34,12 +35,13 @@ import { SpaFallbackController } from './spa-fallback.controller';
       load: configurations,
       envFilePath: ['.env', '.env.local'],
     }),
-    // Serve frontend static files with correct path
+    // Serve frontend static files — both backend and frontend compile into /dist,
+    // so the frontend build lives at /dist/frontend relative to the compiled output.
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '../frontend/dist'),
+      rootPath: join(__dirname, './frontend'),
       exclude: ['/api*'],
       serveStaticOptions: {
-        index: ['index.html'],
+        index: false, // Disable automatic index serving; SpaFallbackController handles it
       },
     }),
     DatabaseModule,
