@@ -186,75 +186,64 @@ export class AuthService {
   ): Promise<AuthTokenResponseDto> {
     const email = loginDto.email.toLowerCase();
 
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { email },
-        include: {
-          roles: true,
-          permissions: true,
-        },
-      });
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        roles: true,
+        permissions: true,
+      },
+    });
 
-      if (!user) {
-        this.logger.warn(`Login failed - user not found: ${email}`);
-        throw new UnauthorizedException('Invalid email or password');
-      }
-
-      if (!user.isActive) {
-        this.logger.warn(`Login failed - account inactive: ${email}`);
-        throw new BadRequestException('Account is inactive');
-      }
-
-      const passwordValid = await this.tokenService.verifyPassword(
-        loginDto.password,
-        user.password,
-      );
-
-      if (!passwordValid) {
-        this.logger.warn(`Login failed - invalid password: ${email}`);
-        throw new UnauthorizedException('Invalid email or password');
-      }
-
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          lastLogin: new Date(),
-          lastLoginIp: ipAddress,
-          lastLoginUserAgent: userAgent,
-        },
-      });
-
-      this.logger.log(`User logged in: ${email}`);
-
-      const tokenPair = this.generateAuthTokens(user);
-
-      if (tokenPair.refreshToken) {
-        const { hash } = this.tokenService.generateSecureToken();
-        const tokenConfig = this.configService.get('jwt.refresh');
-
-        try {
-          await this.prisma.refreshToken.create({
-            data: {
-              userId: user.id,
-              tokenHash: hash,
-              deviceInfo: userAgent,
-              ipAddress,
-              expiresAt: new Date(Date.now() + this.parseExpiryToMs(tokenConfig.expiry)),
-            },
-          });
-        } catch (err) {
-          this.logger.warn('Failed to store refresh token', err);
-        }
-      }
-
-      return tokenPair;
-    } catch (error) {
-      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
-        throw error;
-      }
-      this.logger.error('Login error', error);
-      throw new InternalServerErrorException('Login failed. Please try again.');
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
     }
+
+    if (!user.isActive) {
+      throw new BadRequestException('Account is inactive');
+    }
+
+    const passwordValid = await this.tokenService.verifyPassword(
+      loginDto.password,
+      user.password,
+    );
+
+    if (!passwordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLogin: new Date(),
+        lastLoginIp: ipAddress,
+        lastLoginUserAgent: userAgent,
+      },
+    });
+
+    this.logger.log(`User logged in: ${email}`);
+
+    const tokenPair = this.generateAuthTokens(user);
+
+    if (tokenPair.refreshToken) {
+      const { hash } = this.tokenService.generateSecureToken();
+      const tokenConfig = this.configService.get('jwt.refresh');
+
+      try {
+        await this.prisma.refreshToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: hash,
+            deviceInfo: userAgent,
+            ipAddress,
+            expiresAt: new Date(Date.now() + this.parseExpiryToMs(tokenConfig.expiry)),
+          },
+        });
+      } catch (err) {
+        this.logger.warn('Failed to store refresh token', err);
+      }
+    }
+
+    return tokenPair;
   }
 
   async refreshTokens(
