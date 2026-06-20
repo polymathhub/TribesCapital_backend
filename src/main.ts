@@ -68,15 +68,14 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ValidationPipe());
 
-  // Run database migrations in production
+  // Verify database connection on startup
   if (isProduction) {
     try {
       const prisma = app.get(PrismaService);
-      console.log('Running database migrations...');
-      await prisma.$executeRawUnsafe('SELECT 1'); // Test connection
+      await prisma.$executeRawUnsafe('SELECT 1');
       console.log('✅ Database connection verified');
     } catch (error) {
-      console.error('❌ Database migration failed:', error);
+      console.error('❌ Database connection failed:', error);
       process.exit(1);
     }
   }
