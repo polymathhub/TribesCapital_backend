@@ -12,7 +12,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
-      message = exception.getResponse() as any;
+      const exceptionResponse = exception.getResponse();
+      
+      // Extract message from various response formats
+      if (typeof exceptionResponse === 'string') {
+        message = exceptionResponse;
+      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        const obj = exceptionResponse as any;
+        message = obj.message || obj.error || JSON.stringify(obj);
+      }
+    } else if (exception instanceof Error) {
+      message = exception.message || 'Internal server error';
     }
 
     response.status(status).json({
