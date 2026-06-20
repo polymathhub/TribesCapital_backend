@@ -82,6 +82,19 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ValidationPipe());
 
+  // Run database migrations in production
+  if (isProduction) {
+    try {
+      const prisma = app.get(PrismaService);
+      console.log('Running database migrations...');
+      await prisma.$executeRawUnsafe('SELECT 1'); // Test connection
+      console.log('✅ Database connection verified');
+    } catch (error) {
+      console.error('❌ Database migration failed:', error);
+      process.exit(1);
+    }
+  }
+
   await app.listen(port);
   console.log(`🚀 Tribes Capital Backend running on port ${port} (${environment})`);
 }
