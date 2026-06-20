@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-// import { ServeStaticModule } from '@nestjs/serve-static'; // DISABLED: caused OOM crash on startup
-// import { join } from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import configurations from './config';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
-// import { SpaFallbackController } from './spa-fallback.controller'; // DISABLED: not needed without static serving
-
 // Module imports
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -35,13 +33,14 @@ import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module
       load: configurations,
       envFilePath: ['.env', '.env.local'],
     }),
-    // ServeStaticModule.forRoot({                  // DISABLED: incorrect path caused OOM crash on startup
-    //   rootPath: join(__dirname, 'frontend'),      // resolved to /app/frontend instead of /app/dist/frontend
-    //   exclude: ['/api*'],
-    //   serveStaticOptions: {
-    //     index: ['index.html'],
-    //   },
-    // }),
+    // Serve frontend static files with correct path
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '../frontend/dist'),
+      exclude: ['/api*'],
+      serveStaticOptions: {
+        index: ['index.html'],
+      },
+    }),
     DatabaseModule,
     AuthModule,
     UsersModule,
@@ -56,7 +55,7 @@ import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module
     AnalyticsModule,
     DueDiligenceModule,
   ],
-  controllers: [], // SpaFallbackController removed: not needed without static file serving
+  controllers: [],
   providers: [
     {
       provide: APP_GUARD,
