@@ -36,7 +36,7 @@ import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module
       envFilePath: ['.env', '.env.local'],
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'dist', 'frontend'),
+      rootPath: join(__dirname, 'frontend'),
       exclude: ['/api*'],
       serveStaticOptions: {
         index: ['index.html'],
