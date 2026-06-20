@@ -19,6 +19,7 @@ export interface PasswordResetEmailData {
 export interface WelcomeEmailData {
   email: string;
   firstName: string;
+
 }
 
 export interface PasswordChangedEmailData {

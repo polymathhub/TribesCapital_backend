@@ -173,10 +173,19 @@ export class AuthService {
       const tokenPair = this.generateAuthTokens(user);
 
       return tokenPair;
-    } catch (error) {
+    } catch (error: any) {
+      // Handle Prisma unique constraint violation (race condition on email)
+      if (error?.code === 'P2002' && error?.meta?.target?.includes('email')) {
+        this.logger.warn(
+          `Registration failed - email unique constraint: ${registerDto.email}`,
+        );
+        throw new ConflictException('Email already registered');
+      }
+
       if (error instanceof ConflictException) {
         throw error;
       }
+      
       this.logger.error('Registration failed', error);
       throw new InternalServerErrorException('Registration failed');
     }

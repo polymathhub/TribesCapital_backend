@@ -25,7 +25,25 @@ async function bootstrap() {
 
   const port = configService.get<number>('app.port') || 3000;
   const environment = configService.get<string>('app.environment') || 'development';
-  const corsOrigin = configService.get<string>('app.corsOrigin') || 'http://localhost:3000';
+  let corsOrigin: string | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void) = 'http://localhost:3000';
+
+  const corsOriginConfig = configService.get<string>('app.corsOrigin') || 'http://localhost:3000,http://localhost:5173';
+  
+  // Parse multiple origins if comma-separated
+  const allowedOrigins = corsOriginConfig.split(',').map(origin => origin.trim()).filter(Boolean);
+  
+  // If multiple origins, use a function to validate dynamically
+  if (allowedOrigins.length > 1) {
+    corsOrigin = (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    };
+  } else if (allowedOrigins.length === 1) {
+    corsOrigin = allowedOrigins[0];
+  }
 
   app.use(helmet());
   app.enableCors({

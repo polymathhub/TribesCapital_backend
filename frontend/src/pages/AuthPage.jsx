@@ -976,6 +976,8 @@ function SignupPage({ onNavigate, onSuccess }) {
 
       if (err.name === 'AbortError') {
         userMessage = 'Request timed out. Please check your connection and try again.';
+      } else if (err.response?.status === 401) {
+        userMessage = err.response.data?.message || 'Unauthorized. Please check your information.';
       } else if (err.response?.status === 409) {
         userMessage = 'This email is already registered. Please sign in or use a different email.';
       } else if (err.response?.status === 400) {
@@ -984,7 +986,7 @@ function SignupPage({ onNavigate, onSuccess }) {
         userMessage = 'Server error. Our team has been notified. Please try again in a moment.';
       } else if (err.message?.includes('Network')) {
         userMessage = 'Network error. Please check your connection and try again.';
-      } else if (err.response?.data?.message) {
+      } else if (typeof err.response?.data?.message === 'string') {
         userMessage = err.response.data.message;
       } else if (err.message) {
         userMessage = err.message;
@@ -1252,10 +1254,9 @@ function VerifyPage({ onNavigate, onSuccess }) {
   );
 }
 
-function ForgotPasswordPage({ onNavigate, onSuccess }) {
-  const [step, setStep] = useState('email');
+function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
+  const [step, setStep] = useState(resetToken ? 'password' : 'email');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1271,9 +1272,11 @@ function ForgotPasswordPage({ onNavigate, onSuccess }) {
     setLoading(true);
     try {
       await authAPI.forgotPassword(email);
-      setStep('code');
+      setError('');
+      // Show success message
+      setStep('email-sent');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send reset code');
+      setError(err.response?.data?.message || 'Failed to send reset email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -1281,49 +1284,107 @@ function ForgotPasswordPage({ onNavigate, onSuccess }) {
 
   const handleResetPassword = async () => {
     setError('');
-    if (!code) {
-      setError('Please enter the code from your email');
+    
+    if (!password) {
+      setError('Please enter your new password');
       return;
     }
-    if (!validatePassword(password).minLength) {
-      setError('Password must be at least 12 characters with mixed types');
+    
+    const pwValidation = validatePassword(password);
+    if (!pwValidation.minLength) {
+      setError('Password must be at least 12 characters');
       return;
     }
+    if (!pwValidation.hasUppercase) {
+      setError('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!pwValidation.hasLowercase) {
+      setError('Password must contain at least one lowercase letter');
+      return;
+    }
+    if (!pwValidation.hasNumber) {
+      setError('Password must contain at least one number');
+      return;
+    }
+    if (!pwValidation.hasSymbol) {
+      setError('Password must contain at least one symbol (!@#$%^&*)');
+      return;
+    }
+    
     setLoading(true);
     try {
-      await authAPI.resetPassword({ email, code, password, passwordConfirmation: password });
+      // Use token from URL if available, otherwise should not reach here
+      if (!resetToken) {
+        setError('Invalid reset link. Please request a new password reset.');
+        return;
+      }
+      
+      await authAPI.resetPassword({ token: resetToken, password, passwordConfirmation: password });
       setStep('success');
       setTimeout(() => onNavigate('login'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to reset password');
+      console.error('Password reset error:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to reset password';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
+
+  if (step === 'email-sent') {
+    return (
+      <FormContainer isMobile={isMobile}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 80, height: 80, background: COLORS.successLight, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+            <div style={{ color: COLORS.success, fontSize: 32 }}>✓</div>
+          </div>
+          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 12px' }}>
+            Check your email!
+          </h1>
+          <p style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.6 }}>
+            We've sent a password reset link to <strong>{email}</strong>. Click the link in the email to reset your password.
+          </p>
+          <p style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 20 }}>
+            Didn't receive it? Check your spam folder or{' '}
+            <button
+              onClick={() => { setStep('email'); setEmail(''); }}
+              style={{ background: 'none', border: 'none', color: COLORS.primaryLight, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+            >
+              try another email
+            </button>
+          </p>
+          <Button onClick={() => onNavigate('login')} style={{ marginTop: 24 }}>
+            Back to sign in
+          </Button>
+        </div>
+      </FormContainer>
+    );
+  }
 
   if (step === 'success') {
     return (
       <FormContainer isMobile={isMobile}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: 80, height: 80, background: COLORS.successLight, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
-            <div style={{ color: COLORS.success }}>✓</div>
+            <div style={{ color: COLORS.success, fontSize: 32 }}>✓</div>
           </div>
           <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 12px' }}>
             Password reset!
           </h1>
           <p style={{ fontSize: 14, color: COLORS.textSecondary }}>
-            Your password has been reset. Redirecting to sign in...
+            Your password has been reset successfully. Redirecting to sign in...
           </p>
         </div>
       </FormContainer>
     );
   }
 
-  if (step === 'code') {
+  if (step === 'password') {
     return (
       <FormContainer isMobile={isMobile}>
         <button
-          onClick={() => setStep('email')}
+          onClick={() => onNavigate('login')}
           style={{
             background: 'none',
             border: 'none',
@@ -1335,25 +1396,16 @@ function ForgotPasswordPage({ onNavigate, onSuccess }) {
             marginBottom: 20,
           }}
         >
-          ← Back
+          ← Back to sign in
         </button>
         <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
-          Reset your password
+          Create new password
         </h1>
         <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
-          Enter the code from your email and create a new password
+          Enter a strong password to secure your account
         </p>
 
         {error && <Alert type="error" message={error} />}
-
-        <FormField label="Reset code" required>
-          <TextInput
-            placeholder="Enter 6-digit code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            disabled={loading}
-          />
-        </FormField>
 
         <FormField label="New password" required>
           <TextInput
@@ -1368,52 +1420,68 @@ function ForgotPasswordPage({ onNavigate, onSuccess }) {
           {password && <PasswordStrengthBar password={password} />}
         </FormField>
 
-        <Button onClick={handleResetPassword} loading={loading} disabled={loading}>
+        <Button onClick={handleResetPassword} loading={loading} disabled={loading || !resetToken}>
           Reset password
         </Button>
       </FormContainer>
     );
   }
 
+  // Only show email form if no reset token provided
+  if (!resetToken) {
+    return (
+      <FormContainer isMobile={isMobile}>
+        <button
+          onClick={() => onNavigate('login')}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: 13,
+            color: COLORS.primaryLight,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            marginBottom: 20,
+          }}
+        >
+          ← Back to sign in
+        </button>
+        <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
+          Forgot password?
+        </h1>
+        <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+          Enter your email and we'll send you a link to reset your password
+        </p>
+
+        {error && <Alert type="error" message={error} />}
+
+        <FormField label="Email address" required>
+          <TextInput
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+          />
+        </FormField>
+
+        <Button onClick={handleSendCode} loading={loading} disabled={loading}>
+          Send reset link
+        </Button>
+      </FormContainer>
+    );
+  }
+  
+  // This should not happen if token validation is done in parent component
   return (
     <FormContainer isMobile={isMobile}>
-      <button
-        onClick={() => onNavigate('login')}
-        style={{
-          background: 'none',
-          border: 'none',
-          fontSize: 13,
-          color: COLORS.primaryLight,
-          fontWeight: 600,
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-          marginBottom: 20,
-        }}
-      >
-        ← Back to sign in
-      </button>
-      <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
-        Forgot password?
-      </h1>
-      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
-        Enter your email and we'll send you a code to reset your password
-      </p>
-
-      {error && <Alert type="error" message={error} />}
-
-      <FormField label="Email address" required>
-        <TextInput
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={loading}
-        />
-      </FormField>
-
-      <Button onClick={handleSendCode} loading={loading} disabled={loading}>
-        Send reset code
-      </Button>
+      <div style={{ textAlign: 'center', color: COLORS.error }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700 }}>Invalid Reset Link</h1>
+        <p>This password reset link is invalid or expired.</p>
+        <Button onClick={() => onNavigate('login')} style={{ marginTop: 20 }}>
+          Back to sign in
+        </Button>
+      </div>
     </FormContainer>
   );
 }
@@ -1421,21 +1489,25 @@ function ForgotPasswordPage({ onNavigate, onSuccess }) {
 /* ─── MAIN COMPONENT ───────────────────────────────── */
 export default function AuthPage({ onLogin }) {
   const [page, setPage] = useState('login');
+  const [resetToken, setResetToken] = useState(null);
   const { isMobile } = useBreakpoint();
 
   // Detect if we're on verify or forgot-password page based on URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const verifyToken = params.get('token');
-    const code = params.get('code');
-    const resetEmail = params.get('email');
+    const resetPasswordToken = params.get('token'); // For password reset, also uses 'token' param
 
-    if (verifyToken) {
-      // Email verification link
+    // Check URL path to determine if this is a reset password link
+    const isResetPasswordPath = window.location.pathname.includes('reset-password');
+    
+    if (verifyToken && !isResetPasswordPath) {
+      // Email verification link (uses /verify-email route)
       setPage('verify');
-    } else if (code && resetEmail) {
-      // Password reset link
+    } else if (resetPasswordToken && isResetPasswordPath) {
+      // Password reset link (uses /reset-password route with token)
       setPage('forgot');
+      setResetToken(resetPasswordToken);
     }
   }, []);
 
@@ -1470,7 +1542,7 @@ export default function AuthPage({ onLogin }) {
       {page === 'login' && <LoginPage onNavigate={setPage} onSuccess={handleSuccess} />}
       {page === 'signup' && <SignupPage onNavigate={setPage} onSuccess={handleSuccess} />}
       {page === 'verify' && <VerifyPage onNavigate={setPage} onSuccess={handleSuccess} />}
-      {page === 'forgot' && <ForgotPasswordPage onNavigate={setPage} onSuccess={handleSuccess} />}
+      {page === 'forgot' && <ForgotPasswordPage onNavigate={setPage} onSuccess={handleSuccess} resetToken={resetToken} />}
     </div>
   );
 }

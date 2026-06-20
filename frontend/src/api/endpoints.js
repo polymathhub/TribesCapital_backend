@@ -9,8 +9,7 @@ export const authAPI = {
   resendVerification: (email) => apiClient.post('/auth/resend-verification', { email }),
   refreshToken: () => apiClient.post('/auth/refresh', { refreshToken: localStorage.getItem('refreshToken') }),
   forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
-  verifyCode: (email, code) => apiClient.post('/auth/verify-code', { email, code }),
-  resetPassword: (email, code, password) => apiClient.post('/auth/reset-password', { email, code, password }),
+  resetPassword: (data) => apiClient.post('/auth/reset-password', { token: data.token, password: data.password, passwordConfirmation: data.passwordConfirmation }),
   logout: () => apiClient.post('/auth/logout'),
 };
 
