@@ -103,7 +103,7 @@ export class EmailService {
     } catch (error) {
       this.logger.error('Failed to send password reset email to the gmail provided', error);
       throw error;
-    }d
+    }
   }
 
   async sendWelcomeEmail(data: WelcomeEmailData): Promise<boolean> {
