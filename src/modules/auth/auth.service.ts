@@ -103,15 +103,6 @@ export class AuthService {
         },
       });
 
-      await this.auditService.logAuthEvent({
-        userId: user.id,
-        action: 'user_registered',
-        resource: 'user',
-        resourceId: user.id,
-        ipAddress,
-        userAgent,
-      });
-
       this.logger.log(`User registered: ${user.email}`);
       const tokenPair = this.generateAuthTokens(user);
 
@@ -125,8 +116,8 @@ export class AuthService {
         throw error;
       }
       
-      this.logger.error('Registration failed', error);
-      throw new InternalServerErrorException('Registration failed');
+      this.logger.error('Registration error', error);
+      throw new BadRequestException('Signup failed. Please check your information.');
     }
   }
 
@@ -196,20 +187,6 @@ export class AuthService {
     const email = loginDto.email.toLowerCase();
 
     try {
-      const failedAttempts = await this.auditService.getRecentLoginAttempts(email, 15);
-
-      if (failedAttempts >= this.MAX_LOGIN_ATTEMPTS) {
-        await this.auditService.logLoginAttempt({
-          email,
-          success: false,
-          ipAddress,
-          userAgent,
-          failureReason: 'Too many failed attempts',
-        });
-
-        throw new UnauthorizedException('Account temporarily locked due to too many failed login attempts');
-      }
-
       const user = await this.prisma.user.findUnique({
         where: { email },
         include: {
@@ -219,41 +196,13 @@ export class AuthService {
       });
 
       if (!user) {
-        await this.auditService.logLoginAttempt({
-          email,
-          success: false,
-          ipAddress,
-          userAgent,
-          failureReason: 'User not found',
-        });
-
+        this.logger.warn(`Login failed - user not found: ${email}`);
         throw new UnauthorizedException('Invalid email or password');
       }
 
       if (!user.isActive) {
-        await this.auditService.logLoginAttempt({
-          userId: user.id,
-          email,
-          success: false,
-          ipAddress,
-          userAgent,
-          failureReason: 'Account inactive',
-        });
-
-        throw new UnauthorizedException('Account is inactive');
-      }
-
-      if (user.lockoutUntil && user.lockoutUntil > new Date()) {
-        await this.auditService.logLoginAttempt({
-          userId: user.id,
-          email,
-          success: false,
-          ipAddress,
-          userAgent,
-          failureReason: 'Account locked',
-        });
-
-        throw new UnauthorizedException('Account is temporarily locked');
+        this.logger.warn(`Login failed - account inactive: ${email}`);
+        throw new BadRequestException('Account is inactive');
       }
 
       const passwordValid = await this.tokenService.verifyPassword(
@@ -262,59 +211,17 @@ export class AuthService {
       );
 
       if (!passwordValid) {
-        const newFailedAttempts = failedAttempts + 1;
-        let lockoutUntil = null;
-
-        if (newFailedAttempts >= this.MAX_LOGIN_ATTEMPTS) {
-          lockoutUntil = new Date(Date.now() + this.LOCKOUT_DURATION_MS);
-        }
-
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: {
-            failedLoginAttempts: newFailedAttempts,
-            lockoutUntil,
-          },
-        });
-
-        await this.auditService.logLoginAttempt({
-          userId: user.id,
-          email,
-          success: false,
-          ipAddress,
-          userAgent,
-          failureReason: 'Invalid password',
-        });
-
+        this.logger.warn(`Login failed - invalid password: ${email}`);
         throw new UnauthorizedException('Invalid email or password');
       }
 
       await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          failedLoginAttempts: 0,
-          lockoutUntil: null,
           lastLogin: new Date(),
           lastLoginIp: ipAddress,
           lastLoginUserAgent: userAgent,
         },
-      });
-
-      await this.auditService.logLoginAttempt({
-        userId: user.id,
-        email,
-        success: true,
-        ipAddress,
-        userAgent,
-      });
-
-      await this.auditService.logAuthEvent({
-        userId: user.id,
-        action: 'user_login',
-        resource: 'user',
-        resourceId: user.id,
-        ipAddress,
-        userAgent,
       });
 
       this.logger.log(`User logged in: ${email}`);
@@ -325,30 +232,28 @@ export class AuthService {
         const { hash } = this.tokenService.generateSecureToken();
         const tokenConfig = this.configService.get('jwt.refresh');
 
-        await this.prisma.refreshToken.create({
-          data: {
-            userId: user.id,
-            tokenHash: hash,
-            deviceInfo: userAgent,
-            ipAddress,
-            expiresAt: new Date(
-              Date.now() +
-              this.parseExpiryToMs(tokenConfig.expiry),
-            ),
-          },
-        });
+        try {
+          await this.prisma.refreshToken.create({
+            data: {
+              userId: user.id,
+              tokenHash: hash,
+              deviceInfo: userAgent,
+              ipAddress,
+              expiresAt: new Date(Date.now() + this.parseExpiryToMs(tokenConfig.expiry)),
+            },
+          });
+        } catch (err) {
+          this.logger.warn('Failed to store refresh token', err);
+        }
       }
 
       return tokenPair;
     } catch (error) {
-      if (
-        error instanceof UnauthorizedException ||
-        error instanceof BadRequestException
-      ) {
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
         throw error;
       }
-      this.logger.error('Login failed', error);
-      throw new InternalServerErrorException('Login failed');
+      this.logger.error('Login error', error);
+      throw new InternalServerErrorException('Login failed. Please try again.');
     }
   }
 
@@ -376,17 +281,9 @@ export class AuthService {
 
       const newTokenPair = this.generateAuthTokens(user);
 
-      await this.auditService.logAuthEvent({
-        userId: user.id,
-        action: 'token_refreshed',
-        resource: 'auth',
-        ipAddress,
-        userAgent,
-      });
-
       return newTokenPair;
     } catch (error) {
-      this.logger.error('Token refresh failed', error);
+      this.logger.warn('Token refresh failed', error);
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }

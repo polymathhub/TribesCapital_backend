@@ -656,34 +656,18 @@ function LoginPage({ onNavigate, onSuccess }) {
         throw new Error('No access token in response');
       }
     } catch (err) {
-      console.error('❌ Login failed:', {
-        status: err.response?.status,
-        message: err.response?.data?.message,
-        error: err.message,
-      });
+      console.error('Login error:', err.response?.status, err.response?.data?.message);
 
-      // Provide user-friendly error messages based on response
       let userMessage = 'Failed to sign in. Please try again.';
 
-      if (err.response?.status === 429) {
-        userMessage = '⏳ Too many login attempts. Please try again in 15 minutes.';
-      } else if (err.response?.status === 401) {
-        const backendMsg = err.response.data?.message || '';
-        if (backendMsg.includes('verify')) {
-          userMessage = '📧 Please verify your email first. Check your inbox for the verification link.';
-        } else if (backendMsg.includes('locked')) {
-          userMessage = '🔒 Account is temporarily locked. Please try again in 15 minutes.';
-        } else if (backendMsg.includes('inactive')) {
-          userMessage = '⚠️ This account is inactive. Please contact support.';
-        } else {
-          userMessage = '❌ Invalid email or password. Please try again.';
-        }
+      if (err.response?.status === 401) {
+        userMessage = 'Invalid email or password.';
       } else if (err.response?.status === 400) {
-        userMessage = err.response.data?.message || 'Invalid email or password. Please try again.';
+        userMessage = err.response.data?.message || 'Please check your email and password.';
       } else if (err.response?.status === 500) {
-        userMessage = '🔧 Server error. Our team has been notified. Please try again in a moment.';
+        userMessage = 'Server error. Please try again in a moment.';
       } else if (err.message?.includes('Network')) {
-        userMessage = '🌐 Network error. Please check your connection and try again.';
+        userMessage = 'Network error. Check your connection.';
       }
 
       setError(userMessage);
@@ -963,37 +947,23 @@ function SignupPage({ onNavigate, onSuccess }) {
       }, 300);
 
     } catch (err) {
-      console.error('❌ Signup error:', {
-        name: err.name,
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data,
-        isAbortError: err.name === 'AbortError',
-      });
+      console.error('Signup error:', err.response?.status, err.response?.data?.message);
 
-      // Determine user-friendly error message
       let userMessage = 'Signup failed. Please try again.';
 
       if (err.name === 'AbortError') {
-        userMessage = 'Request timed out. Please check your connection and try again.';
-      } else if (err.response?.status === 401) {
-        userMessage = err.response.data?.message || 'Unauthorized. Please check your information.';
+        userMessage = 'Request timed out. Check your connection and try again.';
       } else if (err.response?.status === 409) {
-        userMessage = 'This email is already registered. Please sign in or use a different email.';
+        userMessage = 'Email is already registered. Please sign in instead.';
       } else if (err.response?.status === 400) {
-        userMessage = err.response.data?.message || 'Invalid signup data. Please check your information.';
+        userMessage = err.response.data?.message || 'Please check your information.';
       } else if (err.response?.status === 500) {
-        userMessage = 'Server error. Our team has been notified. Please try again in a moment.';
+        userMessage = 'Server error. Please try again in a moment.';
       } else if (err.message?.includes('Network')) {
-        userMessage = 'Network error. Please check your connection and try again.';
-      } else if (typeof err.response?.data?.message === 'string') {
-        userMessage = err.response.data.message;
-      } else if (err.message) {
-        userMessage = err.message;
+        userMessage = 'Network error. Check your connection.';
       }
 
       setError(userMessage);
-      console.warn('User message set:', userMessage);
       
     } finally {
       setLoading(false);
