@@ -12,9 +12,7 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-// ============================================================================
-// REGISTRATION DTO
-// ============================================================================
+
 
 export class RegisterDto {
   @ApiProperty({
@@ -88,9 +86,7 @@ export class RegisterDto {
   role?: string;
 }
 
-// ============================================================================
-// LOGIN DTO
-// ============================================================================
+
 
 export class LoginDto {
   @ApiProperty({
@@ -111,10 +107,6 @@ export class LoginDto {
   password!: string;
 }
 
-// ============================================================================
-// EMAIL VERIFICATION DTO
-// ============================================================================
-
 export class VerifyEmailDto {
   @ApiProperty({
     example:
@@ -126,9 +118,6 @@ export class VerifyEmailDto {
   token!: string;
 }
 
-// ============================================================================
-// FORGOT PASSWORD DTO
-// ============================================================================
 
 export class ForgotPasswordDto {
   @ApiProperty({
@@ -140,9 +129,6 @@ export class ForgotPasswordDto {
   email!: string;
 }
 
-// ============================================================================
-// RESET PASSWORD DTO
-// ============================================================================
 
 export class ResetPasswordDto {
   @ApiProperty({
@@ -185,9 +171,7 @@ export class ResetPasswordDto {
   passwordConfirmation!: string;
 }
 
-// ============================================================================
-// REFRESH TOKEN DTO
-// ============================================================================
+
 
 export class RefreshTokenDto {
   @ApiProperty({
@@ -200,9 +184,6 @@ export class RefreshTokenDto {
   refreshToken!: string;
 }
 
-// ============================================================================
-// GOOGLE AUTH DTO
-// ============================================================================
 
 export class GoogleAuthDto {
   @ApiProperty({
@@ -222,9 +203,6 @@ export class GoogleAuthDto {
   accessToken?: string;
 }
 
-// ============================================================================
-// RESPONSE DTOs
-// ============================================================================
 
 export class UserResponseDto {
   @ApiProperty({
