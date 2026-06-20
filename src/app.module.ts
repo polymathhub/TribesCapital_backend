@@ -21,7 +21,7 @@ import { CommunityModule } from './modules/community/community.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module';
-import { SpaFallbackController } from './spa-fallback.controller';
+
 // DISABLED MODULES - not yet fully implemented
 // import { ProgressModule } from './modules/progress/progress.module';
 // import { RsvpModule } from './modules/rsvp/rsvp.module';
