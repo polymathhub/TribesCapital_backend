@@ -94,16 +94,16 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.configService.get('email.from'),
         to: data.email,
-        subject: 'Reset Your Password - Tribes Capital',
+        subject: 'Reset Your Password -Tribes Capital',
         html,
       });
 
       this.logger.debug(`Password reset email sent to ${data.email}`);
       return true;
     } catch (error) {
-      this.logger.error('Failed to send password reset email', error);
+      this.logger.error('Failed to send password reset email to the gmail provided', error);
       throw error;
-    }
+    }d
   }
 
   async sendWelcomeEmail(data: WelcomeEmailData): Promise<boolean> {

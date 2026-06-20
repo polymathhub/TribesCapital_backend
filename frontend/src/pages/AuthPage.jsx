@@ -625,9 +625,11 @@ function LoginPage({ onNavigate, onSuccess }) {
 
     setLoading(true);
     try {
+      console.log('🔐 Attempting login for:', email);
       const response = await authAPI.login({ email, password });
+      
       if (response.data?.accessToken) {
-        // Store auth data
+        // Build user data with fallbacks
         const userData = {
           email: email,
           firstName: response.data.user?.firstName || email.split('@')[0],
@@ -635,6 +637,7 @@ function LoginPage({ onNavigate, onSuccess }) {
           ...response.data.user
         };
         
+        // Persist session
         localStorage.setItem('accessToken', response.data.accessToken);
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
@@ -646,11 +649,44 @@ function LoginPage({ onNavigate, onSuccess }) {
           localStorage.setItem('rememberEmail', email);
         }
         
+        console.log('✅ Login successful for:', userData.email);
         // Call success handler with user data to update app state immediately
         onSuccess(userData);
+      } else {
+        throw new Error('No access token in response');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to sign in. Please try again.');
+      console.error('❌ Login failed:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        error: err.message,
+      });
+
+      // Provide user-friendly error messages based on response
+      let userMessage = 'Failed to sign in. Please try again.';
+
+      if (err.response?.status === 429) {
+        userMessage = '⏳ Too many login attempts. Please try again in 15 minutes.';
+      } else if (err.response?.status === 401) {
+        const backendMsg = err.response.data?.message || '';
+        if (backendMsg.includes('verify')) {
+          userMessage = '📧 Please verify your email first. Check your inbox for the verification link.';
+        } else if (backendMsg.includes('locked')) {
+          userMessage = '🔒 Account is temporarily locked. Please try again in 15 minutes.';
+        } else if (backendMsg.includes('inactive')) {
+          userMessage = '⚠️ This account is inactive. Please contact support.';
+        } else {
+          userMessage = '❌ Invalid email or password. Please try again.';
+        }
+      } else if (err.response?.status === 400) {
+        userMessage = err.response.data?.message || 'Invalid email or password. Please try again.';
+      } else if (err.response?.status === 500) {
+        userMessage = '🔧 Server error. Our team has been notified. Please try again in a moment.';
+      } else if (err.message?.includes('Network')) {
+        userMessage = '🌐 Network error. Please check your connection and try again.';
+      }
+
+      setError(userMessage);
     } finally {
       setLoading(false);
     }
@@ -839,6 +875,16 @@ function SignupPage({ onNavigate, onSuccess }) {
     setAttempt(prev => prev + 1);
 
     try {
+      // Step 1: Check if email exists
+      console.log(' Checking email availability...');
+      const emailCheck = await authAPI.checkEmail(formData.email.trim().toLowerCase());
+      
+      if (emailCheck.data?.exists) {
+        setError('This email is already registered. Please sign in or use a different email.');
+        setLoading(false);
+        return;
+      }
+
       // Parse name
       const nameParts = formData.fullName.trim().split(/\s+/);
       const firstName = nameParts[0];
@@ -861,7 +907,7 @@ function SignupPage({ onNavigate, onSuccess }) {
         role: payload.role,
       });
 
-      // Send request with timeout
+      // Step 2: Register user (this sends verification email automatically)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
@@ -872,10 +918,11 @@ function SignupPage({ onNavigate, onSuccess }) {
         clearTimeout(timeoutId);
       }
 
-      console.log('✅ Signup response received:', {
+      console.log(' Signup response received:', {
         status: response.status,
         hasData: !!response.data,
         hasAccessToken: !!response.data?.accessToken,
+        email: response.data?.user?.email,
       });
 
       // Validate response
@@ -883,11 +930,12 @@ function SignupPage({ onNavigate, onSuccess }) {
         throw new Error('No data in response from server');
       }
 
-      // Success - if server returned tokens, sign the user in immediately
+      // Step 3: Store verification email for verification page
       localStorage.setItem('verificationEmail', formData.email.trim().toLowerCase());
 
-      // If backend returned an access token, persist session and navigate to app
+      // Step 4: Check what to do next
       if (response.data?.accessToken) {
+        // Production flow: Backend sent tokens (email verified automatically in dev)
         try {
           localStorage.setItem('accessToken', response.data.accessToken);
           if (response.data.refreshToken) {
@@ -903,13 +951,13 @@ function SignupPage({ onNavigate, onSuccess }) {
           console.warn('Failed to persist session to localStorage', storageErr);
         }
 
-        // Trigger success flow with user data
+        // Auto-login user and navigate to home
+        console.log('Account created successfully! Logging you in...');
         onSuccess(response.data.user);
         return;
       }
-
-      // Otherwise, navigate to verification step (production flow)
-      console.log('🎉 Signup successful, navigating to verification page');
+      // Otherwise, navigate to verification step (required in production with email enabled)
+      console.log(' Verification email sent! Please check your inbox.');
       setTimeout(() => {
         onNavigate('verify');
       }, 300);
@@ -1069,6 +1117,7 @@ function VerifyPage({ onNavigate, onSuccess }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [message, setMessage] = useState('');
+  const [verificationAttempts, setVerificationAttempts] = useState(0);
   const { isMobile } = useBreakpoint();
 
   useEffect(() => {
@@ -1081,26 +1130,41 @@ function VerifyPage({ onNavigate, onSuccess }) {
 
   const verifyEmail = async (token) => {
     setLoading(true);
+    setVerificationAttempts(prev => prev + 1);
     try {
-      await authAPI.verifyEmail(token);
+      const response = await authAPI.verifyEmail(token);
+      console.log('✅ Email verified successfully');
       setSuccess(true);
-      setMessage('Email verified successfully!');
-      // Auto-redirect after 3 seconds
-      setTimeout(() => onNavigate('login'), 3000);
+      setMessage('Email verified successfully! Redirecting to sign in...');
+      // Auto-redirect after 2.5 seconds
+      setTimeout(() => onNavigate('login'), 2500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Verification failed');
+      console.error('❌ Verification failed:', err);
+      const errorMsg = err.response?.data?.message || 'Verification failed. Your link may have expired.';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendEmail = async () => {
+    if (!email) {
+      setError('No email found. Please sign up again.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await authAPI.resendVerification(email);
-      setMessage('Verification email sent!');
+      const response = await authAPI.resendVerification(email);
+      console.log('📧 Verification email resent');
+      setMessage('Verification email sent! Check your inbox and spam folder.');
+      setError('');
+      // Clear success message after 5 seconds
+      setTimeout(() => setMessage(''), 5000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resend');
+      console.error('❌ Failed to resend:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to resend verification email. Please try again.';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -1119,7 +1183,7 @@ function VerifyPage({ onNavigate, onSuccess }) {
             Email verified!
           </h1>
           <p style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 }}>
-            Your account is ready. Redirecting to sign in...
+            Your account is ready to use. You'll be redirected to sign in shortly.
           </p>
           <Button onClick={() => onNavigate('login')} fullWidth>
             Go to Sign In
@@ -1131,21 +1195,44 @@ function VerifyPage({ onNavigate, onSuccess }) {
 
   return (
     <FormContainer isMobile={isMobile}>
-      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
+      <div style={{ marginBottom: 24, textAlign: 'center' }}>
+        <div style={{ width: 60, height: 60, background: COLORS.primaryFaint, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={COLORS.primary} strokeWidth={2}>
+            <circle cx={12} cy={12} r={9} />
+            <line x1={12} y1={8} x2={12} y2={12} />
+            <line x1={12} y1={16} x2={12.01} y2={16} />
+          </svg>
+        </div>
+      </div>
+
+      <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px', textAlign: 'center' }}>
         Verify your email
       </h1>
-      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
-        We sent a verification link to <span style={{ fontWeight: 600 }}>{email}</span>
+      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6, textAlign: 'center' }}>
+        We sent a verification link to <span style={{ fontWeight: 600, color: COLORS.text }}>{email}</span>
       </p>
 
       {error && <Alert type="error" message={error} />}
       {message && <Alert type="success" message={message} />}
 
+      <div style={{ background: COLORS.background, padding: '16px 14px', borderRadius: 8, marginBottom: 24, fontSize: 13, lineHeight: 1.6, color: COLORS.textSecondary, textAlign: 'center' }}>
+        <p style={{ margin: '0 0 8px' }}>
+          ✓ Check your inbox for an email from <strong>hello@tribes.capital</strong>
+        </p>
+        <p style={{ margin: '0 0 8px' }}>
+          ✓ If you don't see it, check your spam folder
+        </p>
+        <p style={{ margin: 0 }}>
+          ✓ The link expires in 24 hours
+        </p>
+      </div>
+
       <Button onClick={handleResendEmail} loading={loading} disabled={loading} style={{ marginBottom: 16 }}>
-        Resend verification email
+        {loading ? 'Sending...' : 'Resend verification email'}
       </Button>
 
       <p style={{ textAlign: 'center', fontSize: 13, color: COLORS.textSecondary }}>
+        Already verified?{' '}
         <button
           onClick={() => onNavigate('login')}
           style={{
@@ -1158,7 +1245,7 @@ function VerifyPage({ onNavigate, onSuccess }) {
             fontFamily: 'inherit',
           }}
         >
-          Back to sign in
+          Sign in here
         </button>
       </p>
     </FormContainer>

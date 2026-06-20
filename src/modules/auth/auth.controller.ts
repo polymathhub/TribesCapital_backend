@@ -241,6 +241,23 @@ export class AuthController {
     );
   }
 
+  @Public()
+  @Post('check-email')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Check if email exists',
+    description: 'Check if an email is already registered (for UX validation)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email status returned',
+  })
+  async checkEmailExists(
+    @Body() { email }: { email: string },
+  ): Promise<{ exists: boolean; message: string }> {
+    return this.authService.checkEmailExists(email);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   @HttpCode(200)

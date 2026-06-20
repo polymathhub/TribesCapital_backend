@@ -997,6 +997,39 @@ export class AuthService {
   /**
    * Validate user for JWT strategy
    */
+  /**
+   * Check if an email is already registered
+   */
+  async checkEmailExists(email: string): Promise<{ exists: boolean; message: string }> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+
+      if (user) {
+        return {
+          exists: true,
+          message: 'This email is already registered. Please sign in or use a different email.',
+        };
+      }
+
+      return {
+        exists: false,
+        message: 'Email is available for registration',
+      };
+    } catch (error) {
+      this.logger.error('Email check failed', error);
+      return {
+        exists: false,
+        message: 'Unable to check email availability',
+      };
+    }
+  }
+
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
   async validateUser(userId: string): Promise<UserResponseDto | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
