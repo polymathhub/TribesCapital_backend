@@ -27,8 +27,16 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      window.location.href = '/auth/login';
+      // Avoid a full page redirect here so callers (e.g. the login form)
+      // can receive the error and display a helpful message.
+      // Emit a custom event in case the app wants to react globally.
+      try {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      } catch (e) {
+        // ignore in non-browser environments
+      }
     }
+
     return Promise.reject(error);
   }
 );
