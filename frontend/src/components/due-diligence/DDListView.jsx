@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import '../../styles/due-diligence.css';
 
 const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange, pagination }) => {
   const [localFilters, setLocalFilters] = useState({

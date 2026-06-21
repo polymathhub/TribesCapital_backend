@@ -4,7 +4,6 @@ import DDItemsPanel from './DDItemsPanel';
 import DDDocumentsPanel from './DDDocumentsPanel';
 import DDCommentsPanel from './DDCommentsPanel';
 import DDApprovalsPanel from './DDApprovalsPanel';
-import '../../styles/due-diligence.css';
 
 const DDDetailView = ({ item, onBack, onRefresh }) => {
   const [activeTab, setActiveTab] = useState('items');

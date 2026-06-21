@@ -1,6 +1,3 @@
-/* Import responsive design system */
-@import './styles/responsive.css';
-
 :root {
   --primary: #5B21B6;
   --primary-light: #7C3AED;
