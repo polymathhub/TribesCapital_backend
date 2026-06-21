@@ -5,7 +5,7 @@ import OfficeHoursEvents from './OfficeHoursEvents';
 import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
 
-/* ─── DESIGN TOKENS ─────────────────────────────────── */
+/* ─── DESIGN TOKENS ─── */
 const P   = '#5B21B6';
 const PL  = '#7C3AED';
 const PD  = '#4C1D95';
@@ -25,7 +25,7 @@ const BD  = '#E5E7EB';
 const BG  = '#F9FAFB';
 const W   = '#FFFFFF';
 
-/* ─── TUTORIAL STEPS ────────────────────────────────── */
+/* ─── TUTORIAL STEPS ──────*/
 const STEPS = [
   { id:'welcome',  target:null,       pos:'center', icon:'👋', title:'Welcome to Tribes Capital',
     desc:"You're now part of a community of 240+ clean energy investors and professionals across Africa. Let us show you around in 8 quick steps." },
