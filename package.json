@@ -23,6 +23,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "ts-node prisma/seed.ts",
+    "db:reset": "ts-node scripts/reset-db.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
