@@ -11,56 +11,76 @@ import helmet from 'helmet';
 
 async function bootstrap() {
   const isProduction = process.env.NODE_ENV === 'production';
+  const startTime = Date.now();
 
-  // SECURITY: Validate critical environment variables in production
-  if (isProduction) {
-    const requiredSecrets = [
-      'JWT_ACCESS_SECRET',
-      'JWT_REFRESH_SECRET',
-      'DATABASE_URL',
-    ];
-    const missingSecrets = requiredSecrets.filter(secret => !process.env[secret]);
-    
-    if (missingSecrets.length > 0) {
-      console.error(
-        `❌ SECURITY ERROR: Missing required environment variables in production:\n` +
-        missingSecrets.map(s => `   - ${s}`).join('\n') +
-        `\n\nApplication will not start without these secrets.`
-      );
-      process.exit(1);
-    }
+  console.log(`\n📋 Starting Tribes Capital Backend...`);
+  console.log(`Environment: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}\n`);
+
+  // ============================================================================
+  // STEP 1: Validate Critical Environment Variables
+  // ============================================================================
+  const requiredSecrets = [
+    'JWT_ACCESS_SECRET',
+    'JWT_REFRESH_SECRET',
+    'DATABASE_URL',
+  ];
+  
+  const missingSecrets = requiredSecrets.filter(secret => !process.env[secret]);
+
+  if (missingSecrets.length > 0) {
+    console.error(
+      `\n❌ STARTUP ERROR: Missing critical environment variables:\n` +
+      missingSecrets.map(s => `   • ${s}`).join('\n') +
+      `\n\nPlease set these variables and try again.` +
+      `\nFor Railway deployment: Set via dashboard Variables tab.` +
+      `\nFor local development: Copy .env.example to .env.local and configure.\n`
+    );
+    process.exit(1);
   }
 
-  // Load database config early to ensure DATABASE_URL is set for Prisma
-  const dbHost = process.env.DB_HOST || 'localhost';
-  const dbPort = process.env.DB_PORT || '5432';
-  const dbUsername = process.env.DB_USERNAME || 'postgres';
-  const dbPassword = process.env.DB_PASSWORD || 'postgres';
-  const dbName = process.env.DB_NAME || 'tribes_capital';
-
+  // ============================================================================
+  // STEP 2: Set Database URL (fallback if not already set)
+  // ============================================================================
   if (!process.env.DATABASE_URL) {
+    const dbHost = process.env.DB_HOST || 'localhost';
+    const dbPort = process.env.DB_PORT || '5432';
+    const dbUsername = process.env.DB_USERNAME || 'postgres';
+    const dbPassword = process.env.DB_PASSWORD || 'postgres';
+    const dbName = process.env.DB_NAME || 'tribes_capital';
+
     process.env.DATABASE_URL = `postgresql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+    console.log(`✅ Generated DATABASE_URL from individual components`);
   }
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  const configService = app.get(ConfigService);
+  // ============================================================================
+  // STEP 3: Create NestJS Application
+  // ============================================================================
+  let app: NestExpressApplication;
+  try {
+    app = await NestFactory.create<NestExpressApplication>(AppModule);
+    console.log(`✅ Application created successfully`);
+  } catch (error) {
+    console.error(`\n❌ Failed to create application:`, error);
+    process.exit(1);
+  }
 
+  const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port') || 3000;
   const environment = configService.get<string>('app.environment') || 'development';
 
+  // ============================================================================
+  // STEP 4: Configure Security & Middleware
+  // ============================================================================
   app.use(helmet());
-  
-  // CORS: In production, frontend is served from same domain, so allow all origins
-  // This prevents CORS issues with API calls from frontend
+
   app.enableCors({
-    origin: true, // Allow all origins (frontend is same-domain anyway)
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   app.setGlobalPrefix('api');
-
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(
     new TransformInterceptor(),
@@ -68,20 +88,37 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ValidationPipe());
 
-  // Verify database connection on startup
-  if (isProduction) {
-    try {
-      const prisma = app.get(PrismaService);
-      await prisma.$executeRawUnsafe('SELECT 1');
-      console.log('✅ Database connection verified');
-    } catch (error) {
-      console.error('❌ Database connection failed:', error);
-      process.exit(1);
-    }
+  console.log(`✅ Security & middleware configured`);
+
+  // ============================================================================
+  // STEP 5: Verify Database Connection
+  // ============================================================================
+  try {
+    const prisma = app.get(PrismaService);
+    await prisma.$executeRawUnsafe('SELECT 1');
+    console.log(`✅ Database connection verified`);
+  } catch (error) {
+    console.error(
+      `\n❌ Database connection failed. Check DATABASE_URL configuration.\n`,
+      error instanceof Error ? error.message : error
+    );
+    process.exit(1);
   }
 
-  await app.listen(port);
-  console.log(`🚀 Tribes Capital Backend running on port ${port} (${environment})`);
+  // ============================================================================
+  // STEP 6: Start Server
+  // ============================================================================
+  try {
+    await app.listen(port);
+    const uptime = Date.now() - startTime;
+    console.log(`\n🚀 Server started successfully!`);
+    console.log(`   Port: ${port}`);
+    console.log(`   Env: ${environment}`);
+    console.log(`   Startup time: ${uptime}ms\n`);
+  } catch (error) {
+    console.error(`\n❌ Failed to start server:`, error);
+    process.exit(1);
+  }
 }
 
 bootstrap();

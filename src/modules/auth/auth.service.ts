@@ -109,61 +109,54 @@ export class AuthService {
   }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDto): Promise<MessageResponseDto> {
-    try {
-      const tokenHash = this.tokenService.hashToken(verifyEmailDto.token);
-      const verificationToken = await this.prisma.emailVerificationToken.findUnique({
-        where: { tokenHash },
-        include: { user: true },
-      });
+    const tokenHash = this.tokenService.hashToken(verifyEmailDto.token);
+    const verificationToken = await this.prisma.emailVerificationToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
 
-      if (!verificationToken) {
-        throw new BadRequestException('Invalid or expired verification token');
-      }
-
-      if (verificationToken.usedAt) {
-        throw new BadRequestException('Verification token has already been used');
-      }
-
-      if (verificationToken.expiresAt < new Date()) {
-        throw new BadRequestException('Verification token has expired');
-      }
-
-      await this.prisma.user.update({
-        where: { id: verificationToken.userId },
-        data: { emailVerified: true },
-      });
-
-      await this.prisma.emailVerificationToken.update({
-        where: { id: verificationToken.id },
-        data: { usedAt: new Date() },
-      });
-
-      await this.auditService.logAuthEvent({
-        userId: verificationToken.userId,
-        action: 'email_verified',
-        resource: 'user',
-        resourceId: verificationToken.userId,
-      });
-
-      this.logger.log(`Email verified: ${verificationToken.user.email}`);
-
-      try {
-        await this.emailService.sendWelcomeEmail({
-          email: verificationToken.user.email,
-          firstName: verificationToken.user.firstName || 'User',
-        });
-      } catch (err) {
-        this.logger.warn('Failed to send welcome email', err);
-      }
-
-      return { message: 'Email verified successfully' };
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      this.logger.error('Email verification failed', error);
-      throw new InternalServerErrorException('Email verification failed');
+    if (!verificationToken) {
+      throw new BadRequestException('Invalid or expired verification token');
     }
+
+    if (verificationToken.usedAt) {
+      throw new BadRequestException('Verification token has already been used');
+    }
+
+    if (verificationToken.expiresAt < new Date()) {
+      throw new BadRequestException('Verification token has expired');
+    }
+
+    await this.prisma.user.update({
+      where: { id: verificationToken.userId },
+      data: { emailVerified: true },
+    });
+
+    await this.prisma.emailVerificationToken.update({
+      where: { id: verificationToken.id },
+      data: { usedAt: new Date() },
+    });
+
+    await this.auditService.logAuthEvent({
+      userId: verificationToken.userId,
+      action: 'email_verified',
+      resource: 'user',
+      resourceId: verificationToken.userId,
+    });
+
+    this.logger.log(`Email verified: ${verificationToken.user.email}`);
+
+    // Send welcome email (best-effort, don't fail if email fails)
+    try {
+      await this.emailService.sendWelcomeEmail({
+        email: verificationToken.user.email,
+        firstName: verificationToken.user.firstName || 'User',
+      });
+    } catch (err) {
+      this.logger.warn('Failed to send welcome email', err);
+    }
+
+    return { message: 'Email verified successfully' };
   }
 
   async login(
@@ -358,87 +351,80 @@ export class AuthService {
       throw new BadRequestException('Passwords do not match');
     }
 
-    try {
-      // Hash the token to find it
-      const tokenHash = this.tokenService.hashToken(resetPasswordDto.token);
+    // Hash the token to find it
+    const tokenHash = this.tokenService.hashToken(resetPasswordDto.token);
 
-      // Find reset token
-      const resetToken = await this.prisma.passwordResetToken.findUnique({
-        where: { tokenHash },
-        include: { user: true },
-      });
+    // Find reset token
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
 
-      if (!resetToken) {
-        throw new BadRequestException('Invalid or expired reset token');
-      }
-
-      // Check if already used
-      if (resetToken.usedAt) {
-        throw new BadRequestException('Reset token has already been used');
-      }
-
-      // Check if expired
-      if (resetToken.expiresAt < new Date()) {
-        throw new BadRequestException('Reset token has expired');
-      }
-
-      // Hash new password
-      const newPasswordHash = await this.tokenService.hashPassword(
-        resetPasswordDto.password,
-      );
-
-      // Update password and mark token as used
-      await this.prisma.user.update({
-        where: { id: resetToken.userId },
-        data: {
-          password: newPasswordHash,
-          failedLoginAttempts: 0,
-          lockoutUntil: null,
-        },
-      });
-
-      await this.prisma.passwordResetToken.update({
-        where: { id: resetToken.id },
-        data: { usedAt: new Date() },
-      });
-
-      // Revoke all refresh tokens (force re-login on all devices)
-      await this.prisma.refreshToken.updateMany({
-        where: { userId: resetToken.userId },
-        data: { revokedAt: new Date() },
-      });
-
-      // Log password reset
-      await this.auditService.logAuthEvent({
-        userId: resetToken.userId,
-        action: 'password_reset',
-        resource: 'user',
-        resourceId: resetToken.userId,
-        ipAddress,
-        userAgent,
-      });
-
-      this.logger.log(
-        `Password reset completed for user: ${resetToken.user.email}`,
-      );
-
-      // Send password changed confirmation email (best-effort)
-      try {
-        await this.emailService.sendPasswordChangedEmail({
-          email: resetToken.user.email,
-          firstName: resetToken.user.firstName || 'User',
-        });
-      } catch (err) {
-        this.logger.warn('Failed to send password changed email', err);
-      }
-      return { message: 'Password has been reset successfully' };
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      this.logger.error('Password reset failed', error);
-      throw new InternalServerErrorException('Password reset failed');
+    if (!resetToken) {
+      throw new BadRequestException('Invalid or expired reset token');
     }
+
+    // Check if already used
+    if (resetToken.usedAt) {
+      throw new BadRequestException('Reset token has already been used');
+    }
+
+    // Check if expired
+    if (resetToken.expiresAt < new Date()) {
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    // Hash new password
+    const newPasswordHash = await this.tokenService.hashPassword(
+      resetPasswordDto.password,
+    );
+
+    // Update password and mark token as used
+    await this.prisma.user.update({
+      where: { id: resetToken.userId },
+      data: {
+        password: newPasswordHash,
+        failedLoginAttempts: 0,
+        lockoutUntil: null,
+      },
+    });
+
+    await this.prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { usedAt: new Date() },
+    });
+
+    // Revoke all refresh tokens (force re-login on all devices)
+    await this.prisma.refreshToken.updateMany({
+      where: { userId: resetToken.userId },
+      data: { revokedAt: new Date() },
+    });
+
+    // Log password reset
+    await this.auditService.logAuthEvent({
+      userId: resetToken.userId,
+      action: 'password_reset',
+      resource: 'user',
+      resourceId: resetToken.userId,
+      ipAddress,
+      userAgent,
+    });
+
+    this.logger.log(
+      `Password reset completed for user: ${resetToken.user.email}`,
+    );
+
+    // Send password changed confirmation email (best-effort)
+    try {
+      await this.emailService.sendPasswordChangedEmail({
+        email: resetToken.user.email,
+        firstName: resetToken.user.firstName || 'User',
+      });
+    } catch (err) {
+      this.logger.warn('Failed to send password changed email', err);
+    }
+
+    return { message: 'Password has been reset successfully' };
   }
 
 
@@ -447,35 +433,30 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<MessageResponseDto> {
-    try {
-      // Revoke current refresh token session
-      await this.prisma.refreshToken.updateMany({
-        where: {
-          userId,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: new Date(),
-        },
-      });
-
-      // Log logout
-      await this.auditService.logAuthEvent({
+    // Revoke current refresh token session
+    await this.prisma.refreshToken.updateMany({
+      where: {
         userId,
-        action: 'user_logout',
-        resource: 'user',
-        resourceId: userId,
-        ipAddress,
-        userAgent,
-      });
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
 
-      this.logger.log(`User logged out: ${userId}`);
+    // Log logout
+    await this.auditService.logAuthEvent({
+      userId,
+      action: 'user_logout',
+      resource: 'user',
+      resourceId: userId,
+      ipAddress,
+      userAgent,
+    });
 
-      return { message: 'Logged out successfully' };
-    } catch (error) {
-      this.logger.error('Logout failed', error);
-      throw new InternalServerErrorException('Logout failed');
-    }
+    this.logger.log(`User logged out: ${userId}`);
+
+    return { message: 'Logged out successfully' };
   }
 
 
@@ -486,30 +467,25 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<MessageResponseDto> {
-    try {
-      // Revoke all refresh tokens
-      await this.prisma.refreshToken.updateMany({
-        where: { userId },
-        data: { revokedAt: new Date() },
-      });
+    // Revoke all refresh tokens
+    await this.prisma.refreshToken.updateMany({
+      where: { userId },
+      data: { revokedAt: new Date() },
+    });
 
-      // Log logout from all devices
-      await this.auditService.logAuthEvent({
-        userId,
-        action: 'user_logout_all_devices',
-        resource: 'user',
-        resourceId: userId,
-        ipAddress,
-        userAgent,
-      });
+    // Log logout from all devices
+    await this.auditService.logAuthEvent({
+      userId,
+      action: 'user_logout_all_devices',
+      resource: 'user',
+      resourceId: userId,
+      ipAddress,
+      userAgent,
+    });
 
-      this.logger.log(`User logged out from all devices: ${userId}`);
+    this.logger.log(`User logged out from all devices: ${userId}`);
 
-      return { message: 'Logged out from all devices successfully' };
-    } catch (error) {
-      this.logger.error('Logout all devices failed', error);
-      throw new InternalServerErrorException('Logout all devices failed');
-    }
+    return { message: 'Logged out from all devices successfully' };
   }
 
 
@@ -642,7 +618,9 @@ export class AuthService {
       }
 
       this.logger.error('OAuth authentication failed', error);
-      throw new BadRequestException('OAuth authentication failed');
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'OAuth authentication failed',
+      );
     }
   }
 
@@ -729,29 +707,21 @@ export class AuthService {
    * Check if an email is already registered
    */
   async checkEmailExists(email: string): Promise<{ exists: boolean; message: string }> {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { email: email.toLowerCase() },
-      });
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
 
-      if (user) {
-        return {
-          exists: true,
-          message: 'This email is already registered. Please sign in or use a different email.',
-        };
-      }
-
+    if (user) {
       return {
-        exists: false,
-        message: 'Email is available for registration',
-      };
-    } catch (error) {
-      this.logger.error('Email check failed', error);
-      return {
-        exists: false,
-        message: 'Unable to check email availability',
+        exists: true,
+        message: 'This email is already registered. Please sign in or use a different email.',
       };
     }
+
+    return {
+      exists: false,
+      message: 'Email is available for registration',
+    };
   }
 
 
