@@ -56,6 +56,23 @@ export class AuthService {
     });
 
     if (existingUser) {
+      // Log failed registration attempt (duplicate email)
+      await this.auditService.logAuthEvent({
+        userId: existingUser.id,
+        action: 'registration_attempted',
+        resource: 'user',
+        resourceId: existingUser.id,
+        ipAddress,
+        userAgent,
+        status: 'failure',
+        metadata: {
+          reason: 'Email already registered',
+          email: registerDto.email.toLowerCase(),
+        },
+      }).catch((err) => {
+        this.logger.error('Failed to log failed registration attempt', err);
+      });
+
       throw new ConflictException('Email already registered');
     }
 
@@ -103,6 +120,24 @@ export class AuthService {
     });
 
     this.logger.log(`User registered: ${user.email}`);
+
+    // Log registration event for audit trail
+    await this.auditService.logAuthEvent({
+      userId: user.id,
+      action: 'user_registered',
+      resource: 'user',
+      resourceId: user.id,
+      ipAddress,
+      userAgent,
+      status: 'success',
+      metadata: {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.roles.map((r) => r.name),
+      },
+    });
+
     const tokenPair = this.generateAuthTokens(user);
 
     return tokenPair;
