@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "npm run build:backend && npm run build:frontend",
+    "build": "nest build",
     "build:backend": "nest build",
     "build:frontend": "cd frontend && npm install && npm run build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
