@@ -110,7 +110,7 @@ model Course {
   creator         User        @relation("CourseCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   
   instructorId    String
-  instructor      User        @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
+  instructor      User        @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
 
   lessons         Lesson[]
   enrollments     Enrollment[]
@@ -281,7 +281,7 @@ model MarketplaceItem {
   description     String?
   price           Float
   category        String
-  tags            String[]
+  tags            Json?
   isActive        Boolean     @default(true)
   views           Int         @default(0)
   createdAt       DateTime    @default(now())
@@ -300,7 +300,7 @@ model Document {
   title           String
   content         String
   type            String
-  tags            String[]
+  tags            Json?
   status          String      @default("draft")
   version         Int         @default(1)
   isPublished     Boolean     @default(false)
@@ -509,7 +509,7 @@ model DueDiligenceDocument {
   fileSize            Int
   category            String
   description         String?
-  tags                String[]
+  tags                Json?
   
   uploadedBy          User        @relation("DDDocUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
   uploadedById        String
@@ -536,8 +536,8 @@ model DueDiligenceDocument {
 model DueDiligenceComment {
   id                  String      @id @default(cuid())
   content             String
-  mentions            String[]
-  attachments         String[]
+  mentions            Json?
+  attachments         Json?
   
   author              User        @relation("DDCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   authorId            String
