@@ -17,13 +17,13 @@ async function bootstrap() {
   const dbName = process.env.DB_NAME || 'tribes_capital';
 
   if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = `postgresql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+    process.env.DATABASE_URL = `mysql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
-  const port = configService.get<number>('app.port') || 3000;
+  const port = configService.get<number>('app.port') || 3001;
   const environment = configService.get<string>('app.environment') || 'development';
   const corsOrigin = configService.get<string>('app.corsOrigin') || 'http://localhost:3000';
 
