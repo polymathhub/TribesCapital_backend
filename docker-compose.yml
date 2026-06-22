@@ -7,8 +7,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-tribes_capital}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    # No `ports:` block on purpose — the database is NOT published to the host.
+    # It is reachable only by other services on this compose network via the
+    # hostname `postgres:5432`, so it won't clash with the VPS's own Postgres
+    # and isn't exposed to the host or the internet.
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
