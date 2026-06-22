@@ -58,16 +58,19 @@ export function useAuthForm(apiCall, onSuccess) {
       try {
         const result = await apiCall(formData);
         
+        // Handle nested data structure from API response
+        const responseData = result.data?.data || result.data;
+        
         // Standard response structure
-        if (result.data?.accessToken) {
-          localStorage.setItem('token', result.data.accessToken);
-          localStorage.setItem('refreshToken', result.data.refreshToken);
-          localStorage.setItem('user', JSON.stringify(result.data.user));
+        if (responseData?.accessToken) {
+          localStorage.setItem('accessToken', responseData.accessToken);
+          localStorage.setItem('refreshToken', responseData.refreshToken);
+          localStorage.setItem('user', JSON.stringify(responseData.user));
           
-          onSuccess?.(result.data);
+          onSuccess?.(responseData);
         }
 
-        return result.data;
+        return responseData;
       } catch (err) {
         const userMessage = getErrorMessage(err);
         setError(userMessage);
