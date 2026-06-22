@@ -91,18 +91,34 @@ async function bootstrap() {
   console.log(`✅ Security & middleware configured`);
 
   // ============================================================================
-  // STEP 5: Verify Database Connection
+  // STEP 5: Verify Database Connection (with retries)
   // ============================================================================
-  try {
-    const prisma = app.get(PrismaService);
-    await prisma.$executeRawUnsafe('SELECT 1');
-    console.log(`✅ Database connection verified`);
-  } catch (error) {
-    console.error(
-      `\n❌ Database connection failed. Check DATABASE_URL configuration.\n`,
-      error instanceof Error ? error.message : error
-    );
-    process.exit(1);
+  let dbConnected = false;
+  let retries = 0;
+  const maxRetries = 3;
+  
+  while (!dbConnected && retries < maxRetries) {
+    try {
+      const prisma = app.get(PrismaService);
+      await prisma.$executeRawUnsafe('SELECT 1');
+      dbConnected = true;
+      console.log(`✅ Database connection verified`);
+    } catch (error) {
+      retries++;
+      if (retries < maxRetries) {
+        console.warn(
+          `⚠️  Database connection attempt ${retries} failed. Retrying in 2s...`
+        );
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        console.error(
+          `\n❌ Database connection failed after ${maxRetries} attempts.`,
+          `Check DATABASE_URL configuration.\n`,
+          error instanceof Error ? error.message : error
+        );
+        process.exit(1);
+      }
+    }
   }
 
   // ============================================================================
