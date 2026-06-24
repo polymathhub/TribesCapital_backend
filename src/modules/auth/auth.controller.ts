@@ -28,7 +28,7 @@ export class AuthController {
   }
 
   @Public()
-  @Post('refresh')
+  @Post(['refresh', 'refresh-token'])
   @HttpCode(200)
   async refresh(@Body() refreshTokenDto: RefreshTokenDto): Promise<TokenResponseDto> {
     return this.authService.refreshTokens(refreshTokenDto);
@@ -46,6 +46,13 @@ export class AuthController {
   @HttpCode(200)
   async verifyCode(@Body() verifyCodeDto: VerifyCodeDto): Promise<{ valid: boolean }> {
     return this.authService.verifyResetCode(verifyCodeDto);
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(200)
+  async verifyEmail(@Body('token') token: string): Promise<{ valid: boolean; message: string }> {
+    return this.authService.verifyEmailToken(token);
   }
 
   @Public()

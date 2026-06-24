@@ -71,7 +71,7 @@ class GoogleOAuthService {
 
     this.initPromise = (async () => {
       try {
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '583975141707-rtbpuh9ieopencfdf6agbq21v1j87gps.apps.googleusercontent.com';
         if (!clientId) {
           throw new Error('Google Client ID not configured');
         }
@@ -142,7 +142,7 @@ class GoogleOAuthService {
       };
 
       window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '583975141707-rtbpuh9ieopencfdf6agbq21v1j87gps.apps.googleusercontent.com',
         callback: handleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -703,7 +703,7 @@ function LoginPage({ onNavigate, onSuccess }) {
         <LogoFull size="medium" />
       </div>
       <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px', letterSpacing: -0.5 }}>
-        Welcome back
+        Welcome
       </h1>
       <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
         Sign in to access your community
@@ -874,16 +874,6 @@ function SignupPage({ onNavigate, onSuccess }) {
     setAttempt(prev => prev + 1);
 
     try {
-      // Step 1: Check if email exists
-      console.log(' Checking email availability...');
-      const emailCheck = await authAPI.checkEmail(formData.email.trim().toLowerCase());
-      
-      if (emailCheck.data?.exists) {
-        setError('This email is already registered. Please sign in or use a different email.');
-        setLoading(false);
-        return;
-      }
-
       // Parse name
       const nameParts = formData.fullName.trim().split(/\s+/);
       const firstName = nameParts[0];
@@ -906,9 +896,9 @@ function SignupPage({ onNavigate, onSuccess }) {
         role: payload.role,
       });
 
-      // Step 2: Register user (this sends verification email automatically)
+      // Register user directly with the backend.
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       let response;
       try {
@@ -929,12 +919,9 @@ function SignupPage({ onNavigate, onSuccess }) {
         throw new Error('No data in response from server');
       }
 
-      // Step 3: Store verification email for verification page
       localStorage.setItem('verificationEmail', formData.email.trim().toLowerCase());
 
-      // Step 4: Check what to do next
       if (response.data?.accessToken) {
-        // Production flow: Backend sent tokens (email verified automatically in dev)
         try {
           localStorage.setItem('accessToken', response.data.accessToken);
           if (response.data.refreshToken) {
@@ -950,16 +937,13 @@ function SignupPage({ onNavigate, onSuccess }) {
           console.warn('Failed to persist session to localStorage', storageErr);
         }
 
-        // Auto-login user and navigate to home
-        console.log('Account created successfully! Logging you in...');
-        onSuccess(response.data.user);
+        console.log('Account created successfully');
+        onNavigate('login');
         return;
       }
-      // Otherwise, navigate to verification step (required in production with email enabled)
-      console.log(' Verification email sent! Please check your inbox.');
-      setTimeout(() => {
-        onNavigate('verify');
-      }, 300);
+
+      console.log('Signup successful. Redirecting to login.');
+      onNavigate('login');
 
     } catch (err) {
       console.error('Signup error:', err.response?.status, err.response?.data?.message);
@@ -1051,7 +1035,7 @@ function SignupPage({ onNavigate, onSuccess }) {
         {formData.password && <PasswordStrengthBar password={formData.password} />}
       </FormField>
 
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 24, maxHeight: isMobile ? 240 : 'none', overflowY: isMobile ? 'auto' : 'visible' }}>
         <CheckboxInput
           id="terms"
           label={

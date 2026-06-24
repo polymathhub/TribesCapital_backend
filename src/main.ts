@@ -17,23 +17,25 @@ async function bootstrap() {
   const dbName = process.env.DB_NAME || 'tribes_capital';
 
   if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = `mysql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+    process.env.DATABASE_URL = `postgresql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
-  const port = configService.get<number>('app.port') || 3001;
+  const port = configService.get<number>('app.port') || 3000;
+  const host = configService.get<string>('app.host') || '0.0.0.0';
   const environment = configService.get<string>('app.environment') || 'development';
-  const corsOrigin = configService.get<string>('app.corsOrigin') || 'http://localhost:3000';
+  const corsOrigin = configService.get<string>('app.corsOrigin') || 'http://localhost:3000,http://localhost:5173';
+  const apiPrefix = configService.get<string>('app.apiPrefix') || 'api';
 
   app.use(helmet());
   app.enableCors({
-    origin: corsOrigin,
+    origin: corsOrigin.split(',').map((value) => value.trim()).filter(Boolean),
     credentials: true,
   });
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix(apiPrefix);
 
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(
@@ -42,8 +44,8 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ValidationPipe());
 
-  await app.listen(port);
-  console.log(`🚀 Tribes Capital Backend running on port ${port} (${environment})`);
+  await app.listen(port, host);
+  console.log(`🚀 Tribes Capital Backend running on http://${host}:${port} (${environment})`);
 }
 
 bootstrap();

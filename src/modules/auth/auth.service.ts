@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma.service';
 import { RegisterDto, LoginDto, TokenResponseDto, RefreshTokenDto, GoogleAuthDto, ForgotPasswordDto, VerifyCodeDto, ResetPasswordDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +22,7 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+    const verificationToken = randomBytes(32).toString('hex');
 
     const user = await this.prisma.user.create({
       data: {
@@ -28,6 +30,7 @@ export class AuthService {
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
         password: hashedPassword,
+        emailVerificationToken: verificationToken,
       },
     });
 
@@ -196,6 +199,33 @@ export class AuthService {
       expiresIn: parseInt(process.env.JWT_EXPIRATION || '900', 10),
       user: (user || { id: userId, email, firstName: '', lastName: '' }) as any,
     } as TokenResponseDto;
+  }
+
+  async verifyEmailToken(token: string): Promise<{ valid: boolean; message: string }> {
+    if (!token) {
+      throw new BadRequestException('Missing verification token');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { emailVerificationToken: token },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+      },
+    });
+
+    return {
+      valid: true,
+      message: 'Email verified successfully',
+    };
   }
 
   async forgotPassword(forgotPasswordDto: any): Promise<{ message: string }> {
