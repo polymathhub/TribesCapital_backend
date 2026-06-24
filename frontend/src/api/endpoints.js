@@ -3,6 +3,7 @@ import apiClient from './client';
 export const authAPI = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   register: (data) => apiClient.post('/auth/register', data),
+  checkEmail: (email) => apiClient.post('/auth/check-email', { email }),
   googleAuth: (googleData) => apiClient.post('/auth/google', googleData),
   refreshToken: () => apiClient.post('/auth/refresh', { refreshToken: localStorage.getItem('refreshToken') }),
   forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),

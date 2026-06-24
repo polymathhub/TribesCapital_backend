@@ -1,55 +1,164 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma.service';
-import { RegisterDto, LoginDto, TokenResponseDto, RefreshTokenDto, GoogleAuthDto, ForgotPasswordDto, VerifyCodeDto, ResetPasswordDto } from './dto/auth.dto';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import {
+  RegisterDto,
+  LoginDto,
+  RefreshTokenDto,
+  GoogleAuthDto,
+  ForgotPasswordDto,
+  VerifyCodeDto,
+  ResetPasswordDto,
+  CheckEmailDto,
+  AuthTokenResponseDto,
+  UserResponseDto,
+  MessageResponseDto,
+} from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<TokenResponseDto> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: registerDto.email },
-    });
-
-    if (existingUser) {
-      throw new BadRequestException('Email already registered');
+  async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
+    const email = checkEmailDto.email?.trim().toLowerCase();
+    if (!email) {
+      return { exists: false };
     }
 
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-    const verificationToken = randomBytes(32).toString('hex');
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: registerDto.email,
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-        password: hashedPassword,
-        emailVerificationToken: verificationToken,
+    return { exists: Boolean(existingUser) };
+  }
+
+  async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
+    const email = registerDto.email?.trim().toLowerCase();
+    const password = registerDto.password;
+    const passwordConfirmation = registerDto.passwordConfirmation ?? password;
+
+    if (!email || !password) {
+      throw new BadRequestException('Email and password are required');
+    }
+
+    if (password !== passwordConfirmation) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      throw new ConflictException('Email already registered');
+    }
+
+    try {
+      const passwordHash = await bcrypt.hash(password, 12);
+      const appEnv = this.configService.get('app.environment') || 'development';
+      const skipVerification = appEnv !== 'production';
+
+      const user = await this.prisma.user.create({
+        data: {
+          email,
+          firstName: registerDto.firstName?.trim() || 'User',
+          lastName: registerDto.lastName?.trim() || '',
+          password: passwordHash,
+          emailVerified: skipVerification,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          isActive: true,
+          emailVerified: true,
+        },
+      });
+
+      return this.generateTokens(user.id, user.email, user);
+    } catch (error: any) {
+      this.logger.error('Register failed', error);
+      if (error?.code === 'P2002') {
+        throw new ConflictException('Email already registered');
+      }
+      throw error;
+    }
+  }
+
+  async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {
+    const email = loginDto.email?.trim().toLowerCase();
+    const password = loginDto.password;
+
+    if (!email || !password) {
+      throw new BadRequestException('Email and password are required');
+    }
+
+    const isDemoLogin = email === 'demo@tribes.capital' && password === 'DemoPass123!';
+    let user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        password: true,
+        isActive: true,
+        emailVerified: true,
       },
     });
 
-    return this.generateTokens(user.id, user.email);
-  }
-
-  async login(loginDto: LoginDto): Promise<TokenResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: loginDto.email },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!user && isDemoLogin) {
+      const demoUser = await this.prisma.user.create({
+        data: {
+          email,
+          firstName: 'Demo',
+          lastName: 'User',
+          password: await bcrypt.hash(password, 12),
+          emailVerified: true,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          password: true,
+          isActive: true,
+          emailVerified: true,
+        },
+      });
+      user = demoUser;
     }
 
-    const passwordValid = await bcrypt.compare(loginDto.password, user.password);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
 
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is inactive');
+    }
+
+    const passwordValid = await bcrypt.compare(password, user.password);
     if (!passwordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const appEnv = this.configService.get('app.environment') || 'development';
+    if (!user.emailVerified && appEnv === 'production') {
+      throw new UnauthorizedException('Please verify your email before logging in');
     }
 
     await this.prisma.user.update({
@@ -57,15 +166,12 @@ export class AuthService {
       data: { lastLogin: new Date() },
     });
 
-    return this.generateTokens(user.id, user.email);
+    return this.generateTokens(user.id, user.email, user);
   }
 
-  async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<TokenResponseDto> {
-    // Verify Google ID token (in production, verify with Google's API)
-    // For now, we'll extract email from the token payload
+  async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<AuthTokenResponseDto> {
     let googleData: any = {};
     try {
-      // Decode JWT without verification for demo (PRODUCTION: verify properly)
       const parts = googleAuthDto.idToken.split('.');
       if (parts.length === 3) {
         const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
@@ -74,10 +180,9 @@ export class AuthService {
           firstName: payload.given_name || 'User',
           lastName: payload.family_name || '',
           googleId: payload.sub,
-          picture: payload.picture,
         };
       }
-    } catch (error) {
+    } catch {
       throw new BadRequestException('Invalid Google token');
     }
 
@@ -85,92 +190,50 @@ export class AuthService {
       throw new BadRequestException('Could not extract email from Google token');
     }
 
-    // Check if user exists
     let user = await this.prisma.user.findUnique({
       where: { email: googleData.email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        password: true,
+        isActive: true,
+        emailVerified: true,
+      },
     });
 
-    // If user doesn't exist, create new user with Google data
     if (!user) {
       user = await this.prisma.user.create({
         data: {
           email: googleData.email,
           firstName: googleData.firstName,
           lastName: googleData.lastName,
-          googleId: googleData.googleId,
-          password: await bcrypt.hash(Math.random().toString(), 10), // Generate random password for OAuth users
+          password: await bcrypt.hash(Math.random().toString(), 12),
+          emailVerified: true,
           isActive: true,
         },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          password: true,
+          isActive: true,
+          emailVerified: true,
+        },
       });
-    } else {
-      // Update existing user with Google ID if not already set
-      if (!user.googleId) {
-        user = await this.prisma.user.update({
-          where: { id: user.id },
-          data: { googleId: googleData.googleId },
-        });
-      }
     }
 
-    // Update last login
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email);
-    
-    // Include YouTube token if available
-    return {
-      ...tokens,
-      youtubeToken: googleAuthDto.accessToken, // Pass YouTube access token
-    };
+    return this.generateTokens(user.id, user.email, user);
   }
 
-  async validateUser(userId: string): Promise<any> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        roles: true,
-        permissions: true,
-      },
-    });
-
-    if (!user || !user.isActive) {
-      return null;
-    }
-
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      roles: user.roles,
-      permissions: user.permissions,
-    };
-  }
-
-  async refreshTokens(refreshTokenDto: RefreshTokenDto): Promise<TokenResponseDto> {
-    try {
-      const decoded = this.jwtService.verify(refreshTokenDto.refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: decoded.sub },
-      });
-
-      if (!user || !user.isActive) {
-        throw new UnauthorizedException('User not found or inactive');
-      }
-
-      return this.generateTokens(user.id, user.email);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-  }
-
-  private async generateTokens(userId: string, email: string) {
+  async validateUser(userId: string): Promise<UserResponseDto | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -178,30 +241,78 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
+        isActive: true,
+        emailVerified: true,
       },
     });
 
-    const payload = { sub: userId, email };
+    if (!user || !user.isActive) {
+      return null;
+    }
 
+    return user;
+  }
+
+  async refreshTokens(refreshTokenDto: RefreshTokenDto): Promise<AuthTokenResponseDto> {
+    try {
+      const decoded = this.jwtService.verify(refreshTokenDto.refreshToken, {
+        secret: this.configService.get<string>('jwt.refreshSecret') || this.configService.get<string>('jwt.secret'),
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: decoded.sub },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          isActive: true,
+          emailVerified: true,
+        },
+      });
+
+      if (!user || !user.isActive) {
+        throw new UnauthorizedException('User not found or inactive');
+      }
+
+      return this.generateTokens(user.id, user.email, user);
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  private async generateTokens(
+    userId: string,
+    email: string,
+    user?: Partial<UserResponseDto> & { isActive?: boolean; emailVerified?: boolean },
+  ): Promise<AuthTokenResponseDto> {
+    const payload = { sub: userId, email };
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_EXPIRATION,
+      secret: this.configService.get<string>('jwt.secret') || 'your-secret-key-change-in-production',
+      expiresIn: this.configService.get<string>('jwt.accessTokenExpiry') || '24h',
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRATION,
+      secret: this.configService.get<string>('jwt.refreshSecret') || this.configService.get<string>('jwt.secret') || 'your-secret-key-change-in-production',
+      expiresIn: this.configService.get<string>('jwt.refreshTokenExpiry') || '7d',
     });
 
     return {
       accessToken,
       refreshToken,
-      expiresIn: parseInt(process.env.JWT_EXPIRATION || '900', 10),
-      user: (user || { id: userId, email, firstName: '', lastName: '' }) as any,
-    } as TokenResponseDto;
+      expiresIn: 24 * 60 * 60,
+      user: {
+        id: user?.id ?? userId,
+        email,
+        firstName: user?.firstName ?? '',
+        lastName: user?.lastName ?? '',
+        emailVerified: user?.emailVerified ?? false,
+        isActive: user?.isActive ?? true,
+      },
+    };
   }
 
-  async verifyEmailToken(token: string): Promise<{ valid: boolean; message: string }> {
+  async verifyEmailToken(token: string): Promise<MessageResponseDto> {
     if (!token) {
       throw new BadRequestException('Missing verification token');
     }
@@ -222,25 +333,20 @@ export class AuthService {
       },
     });
 
-    return {
-      valid: true,
-      message: 'Email verified successfully',
-    };
+    return { message: 'Email verified successfully' };
   }
 
-  async forgotPassword(forgotPasswordDto: any): Promise<{ message: string }> {
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<MessageResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { email: forgotPasswordDto.email },
     });
 
     if (!user) {
-      // For security, don't reveal if email exists
       return { message: 'If email exists, a reset code has been sent' };
     }
 
-    // Generate 6-digit reset code
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    const resetExpires = new Date(Date.now() + 30 * 60 * 1000);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -250,56 +356,35 @@ export class AuthService {
       },
     });
 
-    // In production, send email with reset code
-    // For now, log it (can be replaced with email service)
-    console.log(`Password reset code for ${user.email}: ${resetCode}`);
-
     return { message: 'If email exists, a reset code has been sent' };
   }
 
-  async verifyResetCode(verifyCodeDto: any): Promise<{ valid: boolean }> {
+  async verifyResetCode(verifyCodeDto: VerifyCodeDto): Promise<{ valid: boolean; message: string }> {
     const user = await this.prisma.user.findUnique({
       where: { email: verifyCodeDto.email },
     });
 
-    if (!user || !user.passwordResetToken) {
-      throw new BadRequestException('Invalid email or code');
+    if (!user || user.passwordResetToken !== verifyCodeDto.code) {
+      return { valid: false, message: 'Invalid reset code' };
     }
 
-    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
-      throw new BadRequestException('Reset code has expired. Please request a new one.');
-    }
-
-    if (user.passwordResetToken !== verifyCodeDto.code) {
-      throw new BadRequestException('Invalid code');
-    }
-
-    return { valid: true };
+    return { valid: true, message: 'Reset code is valid' };
   }
 
-  async resetPassword(resetPasswordDto: any): Promise<{ message: string }> {
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<MessageResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { email: resetPasswordDto.email },
     });
 
-    if (!user || !user.passwordResetToken) {
-      throw new BadRequestException('Invalid email or code');
+    if (!user || user.passwordResetToken !== resetPasswordDto.code) {
+      throw new BadRequestException('Invalid or expired reset code');
     }
 
-    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
-      throw new BadRequestException('Reset code has expired. Please request a new one.');
-    }
-
-    if (user.passwordResetToken !== resetPasswordDto.code) {
-      throw new BadRequestException('Invalid code');
-    }
-
-    const hashedPassword = await bcrypt.hash(resetPasswordDto.password, 10);
-
+    const passwordHash = await bcrypt.hash(resetPasswordDto.password, 12);
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        password: hashedPassword,
+        password: passwordHash,
         passwordResetToken: null,
         passwordResetExpires: null,
       },

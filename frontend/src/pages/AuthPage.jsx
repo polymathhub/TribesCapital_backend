@@ -45,19 +45,6 @@ class GoogleOAuthService {
   }
 
   async waitForSDK(maxAttempts = 50) {
-    if (window.google?.accounts?.id) {
-      return true;
-    }
-
-    const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    if (!script) {
-      const newScript = document.createElement('script');
-      newScript.src = 'https://accounts.google.com/gsi/client';
-      newScript.async = true;
-      newScript.defer = true;
-      document.head.appendChild(newScript);
-    }
-
     let attempts = 0;
     while (!window.google?.accounts?.id && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -71,7 +58,7 @@ class GoogleOAuthService {
 
     this.initPromise = (async () => {
       try {
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '583975141707-rtbpuh9ieopencfdf6agbq21v1j87gps.apps.googleusercontent.com';
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
         if (!clientId) {
           throw new Error('Google Client ID not configured');
         }
@@ -142,13 +129,11 @@ class GoogleOAuthService {
       };
 
       window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '583975141707-rtbpuh9ieopencfdf6agbq21v1j87gps.apps.googleusercontent.com',
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
       });
 
-      // Trigger the One Tap UI only when the SDK is ready and the user can see it.
+      // Trigger the One Tap UI
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           // One Tap not displayed, user can still click button
@@ -161,7 +146,7 @@ class GoogleOAuthService {
   }
 
   renderButton(element, customOptions = {}) {
-    if (!this.isReady || !element || !window.google?.accounts?.id) return;
+    if (!this.isReady) return;
 
     const defaultOptions = {
       type: 'standard',
@@ -671,18 +656,34 @@ function LoginPage({ onNavigate, onSuccess }) {
         throw new Error('No access token in response');
       }
     } catch (err) {
-      console.error('Login error:', err.response?.status, err.response?.data?.message);
+      console.error('❌ Login failed:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        error: err.message,
+      });
 
+      // Provide user-friendly error messages based on response
       let userMessage = 'Failed to sign in. Please try again.';
 
-      if (err.response?.status === 401) {
-        userMessage = 'Invalid email or password.';
+      if (err.response?.status === 429) {
+        userMessage = '⏳ Too many login attempts. Please try again in 15 minutes.';
+      } else if (err.response?.status === 401) {
+        const backendMsg = err.response.data?.message || '';
+        if (backendMsg.includes('verify')) {
+          userMessage = '📧 Please verify your email first. Check your inbox for the verification link.';
+        } else if (backendMsg.includes('locked')) {
+          userMessage = '🔒 Account is temporarily locked. Please try again in 15 minutes.';
+        } else if (backendMsg.includes('inactive')) {
+          userMessage = '⚠️ This account is inactive. Please contact support.';
+        } else {
+          userMessage = '❌ Invalid email or password. Please try again.';
+        }
       } else if (err.response?.status === 400) {
-        userMessage = err.response.data?.message || 'Please check your email and password.';
+        userMessage = err.response.data?.message || 'Invalid email or password. Please try again.';
       } else if (err.response?.status === 500) {
-        userMessage = 'Server error. Please try again in a moment.';
+        userMessage = '🔧 Server error. Our team has been notified. Please try again in a moment.';
       } else if (err.message?.includes('Network')) {
-        userMessage = 'Network error. Check your connection.';
+        userMessage = '🌐 Network error. Please check your connection and try again.';
       }
 
       setError(userMessage);
@@ -703,7 +704,7 @@ function LoginPage({ onNavigate, onSuccess }) {
         <LogoFull size="medium" />
       </div>
       <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px', letterSpacing: -0.5 }}>
-        Welcome
+        Welcome back
       </h1>
       <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
         Sign in to access your community
@@ -874,6 +875,16 @@ function SignupPage({ onNavigate, onSuccess }) {
     setAttempt(prev => prev + 1);
 
     try {
+      // Step 1: Check if email exists
+      console.log(' Checking email availability...');
+      const emailCheck = await authAPI.checkEmail(formData.email.trim().toLowerCase());
+      
+      if (emailCheck.data?.exists) {
+        setError('This email is already registered. Please sign in or use a different email.');
+        setLoading(false);
+        return;
+      }
+
       // Parse name
       const nameParts = formData.fullName.trim().split(/\s+/);
       const firstName = nameParts[0];
@@ -896,9 +907,9 @@ function SignupPage({ onNavigate, onSuccess }) {
         role: payload.role,
       });
 
-      // Register user directly with the backend.
+      // Step 2: Register user (this sends verification email automatically)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
       let response;
       try {
@@ -919,9 +930,12 @@ function SignupPage({ onNavigate, onSuccess }) {
         throw new Error('No data in response from server');
       }
 
+      // Step 3: Store verification email for verification page
       localStorage.setItem('verificationEmail', formData.email.trim().toLowerCase());
 
+      // Step 4: Check what to do next
       if (response.data?.accessToken) {
+        // Production flow: Backend sent tokens (email verified automatically in dev)
         try {
           localStorage.setItem('accessToken', response.data.accessToken);
           if (response.data.refreshToken) {
@@ -937,32 +951,49 @@ function SignupPage({ onNavigate, onSuccess }) {
           console.warn('Failed to persist session to localStorage', storageErr);
         }
 
-        console.log('Account created successfully');
-        onNavigate('login');
+        // Auto-login user and navigate to home
+        console.log('Account created successfully! Logging you in...');
+        onSuccess(response.data.user);
         return;
       }
-
-      console.log('Signup successful. Redirecting to login.');
-      onNavigate('login');
+      // Otherwise, navigate to verification step (required in production with email enabled)
+      console.log(' Verification email sent! Please check your inbox.');
+      setTimeout(() => {
+        onNavigate('verify');
+      }, 300);
 
     } catch (err) {
-      console.error('Signup error:', err.response?.status, err.response?.data?.message);
+      console.error('❌ Signup error:', {
+        name: err.name,
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+        isAbortError: err.name === 'AbortError',
+      });
 
+      // Determine user-friendly error message
       let userMessage = 'Signup failed. Please try again.';
 
       if (err.name === 'AbortError') {
-        userMessage = 'Request timed out. Check your connection and try again.';
+        userMessage = 'Request timed out. Please check your connection and try again.';
+      } else if (err.response?.status === 401) {
+        userMessage = err.response.data?.message || 'Unauthorized. Please check your information.';
       } else if (err.response?.status === 409) {
-        userMessage = 'Email is already registered. Please sign in instead.';
+        userMessage = 'This email is already registered. Please sign in or use a different email.';
       } else if (err.response?.status === 400) {
-        userMessage = err.response.data?.message || 'Please check your information.';
+        userMessage = err.response.data?.message || 'Invalid signup data. Please check your information.';
       } else if (err.response?.status === 500) {
-        userMessage = 'Server error. Please try again in a moment.';
+        userMessage = 'Server error. Our team has been notified. Please try again in a moment.';
       } else if (err.message?.includes('Network')) {
-        userMessage = 'Network error. Check your connection.';
+        userMessage = 'Network error. Please check your connection and try again.';
+      } else if (typeof err.response?.data?.message === 'string') {
+        userMessage = err.response.data.message;
+      } else if (err.message) {
+        userMessage = err.message;
       }
 
       setError(userMessage);
+      console.warn('User message set:', userMessage);
       
     } finally {
       setLoading(false);
@@ -1035,7 +1066,7 @@ function SignupPage({ onNavigate, onSuccess }) {
         {formData.password && <PasswordStrengthBar password={formData.password} />}
       </FormField>
 
-      <div style={{ marginBottom: 24, maxHeight: isMobile ? 240 : 'none', overflowY: isMobile ? 'auto' : 'visible' }}>
+      <div style={{ marginBottom: 24 }}>
         <CheckboxInput
           id="terms"
           label={

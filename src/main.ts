@@ -24,18 +24,34 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   const port = configService.get<number>('app.port') || 3000;
-  const host = configService.get<string>('app.host') || '0.0.0.0';
   const environment = configService.get<string>('app.environment') || 'development';
-  const corsOrigin = configService.get<string>('app.corsOrigin') || 'http://localhost:3000,http://localhost:5173';
-  const apiPrefix = configService.get<string>('app.apiPrefix') || 'api';
+  let corsOrigin: string | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void) = 'http://localhost:3000';
+
+  const corsOriginConfig = configService.get<string>('app.corsOrigin') || 'http://localhost:3000,http://localhost:5173';
+  
+  // Parse multiple origins if comma-separated
+  const allowedOrigins = corsOriginConfig.split(',').map(origin => origin.trim()).filter(Boolean);
+  
+  // If multiple origins, use a function to validate dynamically
+  if (allowedOrigins.length > 1) {
+    corsOrigin = (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    };
+  } else if (allowedOrigins.length === 1) {
+    corsOrigin = allowedOrigins[0];
+  }
 
   app.use(helmet());
   app.enableCors({
-    origin: corsOrigin.split(',').map((value) => value.trim()).filter(Boolean),
+    origin: corsOrigin,
     credentials: true,
   });
 
-  app.setGlobalPrefix(apiPrefix);
+  app.setGlobalPrefix('api');
 
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(
@@ -44,8 +60,8 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ValidationPipe());
 
-  await app.listen(port, host);
-  console.log(`🚀 Tribes Capital Backend running on http://${host}:${port} (${environment})`);
+  await app.listen(port);
+  console.log(`🚀 Tribes Capital Backend running on port ${port} (${environment})`);
 }
 
 bootstrap();
