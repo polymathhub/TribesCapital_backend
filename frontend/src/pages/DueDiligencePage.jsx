@@ -4,7 +4,7 @@ import DDListView from '../components/due-diligence/DDListView';
 import DDDetailView from '../components/due-diligence/DDDetailView';
 import DDCreateDialog from '../components/due-diligence/DDCreateDialog';
 
-const DueDiligencePage = () => {
+const DueDiligencePage = ({ onBack, onToggleSidebar, isMobile, isTablet }) => {
   const [view, setView] = useState('list');
   const [dueDiligences, setDueDiligences] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
