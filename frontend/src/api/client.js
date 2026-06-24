@@ -27,7 +27,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      window.location.href = '/auth/login';
+      window.location.href = '/';
     }
     return Promise.reject(error);
   }
