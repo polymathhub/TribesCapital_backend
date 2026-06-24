@@ -45,6 +45,19 @@ class GoogleOAuthService {
   }
 
   async waitForSDK(maxAttempts = 50) {
+    if (window.google?.accounts?.id) {
+      return true;
+    }
+
+    const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (!script) {
+      const newScript = document.createElement('script');
+      newScript.src = 'https://accounts.google.com/gsi/client';
+      newScript.async = true;
+      newScript.defer = true;
+      document.head.appendChild(newScript);
+    }
+
     let attempts = 0;
     while (!window.google?.accounts?.id && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -131,9 +144,11 @@ class GoogleOAuthService {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true,
       });
 
-      // Trigger the One Tap UI
+      // Trigger the One Tap UI only when the SDK is ready and the user can see it.
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           // One Tap not displayed, user can still click button
@@ -146,7 +161,7 @@ class GoogleOAuthService {
   }
 
   renderButton(element, customOptions = {}) {
-    if (!this.isReady) return;
+    if (!this.isReady || !element || !window.google?.accounts?.id) return;
 
     const defaultOptions = {
       type: 'standard',
