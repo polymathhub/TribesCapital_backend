@@ -13,6 +13,11 @@ export class EventsService {
         description: createEventDto.description,
         location: createEventDto.location,
         isVirtual: createEventDto.isVirtual || false,
+        eventType: createEventDto.eventType,
+        meetingPlatform: createEventDto.meetingPlatform,
+        meetingLink: createEventDto.meetingLink,
+        meetingHandle: createEventDto.meetingHandle,
+        meetingInstructions: createEventDto.meetingInstructions,
         startDate: new Date(createEventDto.startDate),
         endDate: new Date(createEventDto.endDate),
         capacity: createEventDto.capacity || 100,
@@ -150,7 +155,13 @@ export class EventsService {
 
     const updatedEvent = await this.prisma.event.update({
       where: { id },
-      data: updateEventDto,
+      data: {
+        ...updateEventDto,
+        meetingPlatform: updateEventDto.meetingPlatform,
+        meetingLink: updateEventDto.meetingLink,
+        meetingHandle: updateEventDto.meetingHandle,
+        meetingInstructions: updateEventDto.meetingInstructions,
+      } as any,
       include: {
         rsvps: true,
       },
@@ -196,6 +207,11 @@ export class EventsService {
       endDate: event.endDate,
       location: event.location,
       isVirtual: event.isVirtual,
+      eventType: event.eventType,
+      meetingPlatform: event.meetingPlatform,
+      meetingLink: event.meetingLink,
+      meetingHandle: event.meetingHandle,
+      meetingInstructions: event.meetingInstructions,
       capacity: event.capacity,
       rsvpCount: event.rsvps?.reduce((sum: number, r: any) => sum + r.guestCount, 0) || 0,
       organizerId: event.organizerId,

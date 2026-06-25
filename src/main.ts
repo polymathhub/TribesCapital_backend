@@ -42,7 +42,7 @@ async function bootstrap() {
       }
     };
   } else if (allowedOrigins.length === 1) {
-    corsOrigin = allowedOrigins[0];
+    corsOrigin = allowedOrigins[0]; 
   }
 
   app.use(helmet());

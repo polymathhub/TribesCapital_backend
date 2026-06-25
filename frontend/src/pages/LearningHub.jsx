@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
+import apiClient from '../api/client';
 
 /* ═══════════════════════════════════════════════════════
    BREAKPOINT HOOK — tracks viewport width live
@@ -79,15 +81,6 @@ function Ico({ name, size=16, color=T2, sw=1.5, fill='none' }) {
 /* ═══════════════════════════════════════════════════════
    DATA
 ═══════════════════════════════════════════════════════ */
-const COURSES = [
-  { id:1, cat:'Energy Finance',  title:'Understanding Clean Energy Ownership Structures',   desc:'Learn how C&I solar assets are owned, financed, and structured across emerging markets in plain English.',                            dur:'3h 20m', lessons:7, level:'Beginner',     progress:62,  status:'inProgress' },
-  { id:2, cat:'Solar & Storage', title:'Solar Asset Fundamentals for Non-Engineers',         desc:'Demystify solar panel technology, battery systems, and grid integration without needing an engineering background.',                  dur:'3h 20m', lessons:7, level:'Beginner',     progress:100, status:'completed'  },
-  { id:3, cat:'Risk & FX',       title:'FX Risk for African Energy Investments',              desc:'Understand how foreign exchange volatility affects returns on African infrastructure.',                                                dur:'3h 20m', lessons:7, level:'Beginner',     progress:0,   status:'notStarted' },
-  { id:4, cat:'Policy & ESG',    title:'ESG Reporting for Energy Infrastructure',             desc:'Navigate ESG frameworks GRI, TCFD, and SFDR and understand what investors and regulators require.',                                 dur:'3h 20m', lessons:7, level:'Intermediate', progress:62,  status:'inProgress' },
-  { id:5, cat:'Energy Finance',  title:'Project Finance Masterclass',                         desc:'A comprehensive course on how large-scale energy projects are financed from term sheets to financial close.',                         dur:'3h 20m', lessons:7, level:'Advanced',     progress:100, status:'completed'  },
-  { id:6, cat:'Policy & ESG',    title:'African Energy Policy & Regulatory Landscape',        desc:'Map the regulatory environment across key African markets: Nigeria, Ghana, Kenya, and South Africa.',                               dur:'3h 20m', lessons:7, level:'Beginner',     progress:0,   status:'notStarted' },
-];
-
 const LESSONS = [
   { id:1, title:'Introduction to energy ownership', dur:'18 min' },
   { id:2, title:'Types of project structures',      dur:'22 min' },
@@ -118,6 +111,14 @@ const NAV_ITEMS = [
   {label:'Announcements & Feedback',icon:'bell'},
   {label:'Help',                    icon:'help'},
 ];
+
+function buildYouTubeEmbedUrl(videoId) {
+  return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&modestbranding=1&controls=1&rel=0&fs=1`;
+}
+
+function buildYouTubeThumbnailUrl(videoId) {
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+}
 
 /* ═══════════════════════════════════════════════════════
    SIDEBAR
@@ -192,18 +193,6 @@ function HubTopBar({ onMenuToggle, isMobile, isTablet }) {
           <span style={{fontSize:14,fontWeight:600,color:T1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Learning Hub</span>
         )}
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:isMobile?8:12,flexShrink:0}}>
-        {isMobile && (
-          <button style={{background:'none',border:'none',cursor:'pointer',padding:4,display:'flex'}}>
-            <Ico name="search" size={18} color={T2}/>
-          </button>
-        )}
-        <div style={{width:34,height:34,border:`1px solid ${BD}`,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:'pointer',flexShrink:0}}>
-          <Ico name="bell" size={16} color={T2} sw={1.5}/>
-          <div style={{width:7,height:7,background:'#EF4444',borderRadius:'50%',border:'1.5px solid #fff',position:'absolute',top:6,right:6}}/>
-        </div>
-        <div style={{width:34,height:34,background:PU,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:W,fontSize:13,fontWeight:600,flexShrink:0}}>A</div>
-      </div>
     </header>
   );
 }
@@ -226,13 +215,6 @@ function PlayerTopBar({ onBack, onMenuToggle, isMobile, isTablet }) {
         {!isMobile && <Ico name="arrow" size={13} color={T3} sw={1.5}/>}
         {!isMobile && <span style={{color:T1,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Understanding Clean Energy Ownership Structures</span>}
         {isMobile && <span style={{color:T1,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:13}}>Clean Energy Ownership</span>}
-      </div>
-      <div style={{display:'flex',alignItems:'center',gap:isMobile?8:12,flexShrink:0}}>
-        <div style={{width:34,height:34,border:`1px solid ${BD}`,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:'pointer',flexShrink:0}}>
-          <Ico name="bell" size={16} color={T2} sw={1.5}/>
-          <div style={{width:7,height:7,background:'#EF4444',borderRadius:'50%',border:'1.5px solid #fff',position:'absolute',top:6,right:6}}/>
-        </div>
-        <div style={{width:34,height:34,background:PU,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:W,fontSize:13,fontWeight:600,flexShrink:0}}>A</div>
       </div>
     </header>
   );
@@ -499,31 +481,41 @@ function CourseModal({ course, onClose, onContinue, isMobile }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   LESSON PLAYER — Images 6-11
+   LESSON PLAYER — real lesson-driven course flow
 ═══════════════════════════════════════════════════════ */
 function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
-  const initState = course.status==='completed'?'completed':course.status==='inProgress'?'inProgress':'notStarted';
-  const [pState,     setPState]     = useState(initState);
   const [bookmarked, setBookmarked] = useState(false);
-  const [bkMsg,      setBkMsg]      = useState(null);
-  const [shareOpen,  setShareOpen]  = useState(false);
+  const [bkMsg, setBkMsg] = useState(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [expanded,   setExpanded]   = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [lessons, setLessons] = useState([]);
+  const [loadingLessons, setLoadingLessons] = useState(true);
+  const [activeLessonIndex, setActiveLessonIndex] = useState(0);
+  const [completedLessonIds, setCompletedLessonIds] = useState([]);
+  const [videoEmbedUrl, setVideoEmbedUrl] = useState('');
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState(course?.thumbnail || '');
+  const [videoReady, setVideoReady] = useState(false);
+  const [isVideoVisible, setIsVideoVisible] = useState(false);
 
-  // 4-state machine
-  // notStarted → Start course → started (lesson 1, 5%)
-  // started / inProgress → Continue → inProgress (lesson 4, 62%)
-  // completed → Review → completed (lesson 7, 100%)
-  const STATE_DATA = {
-    notStarted: { progress:0,   lessonsDone:0, currentLesson:1, videoText:'Introduction to energy ownership · 18 min' },
-    started:    { progress:5,   lessonsDone:0, currentLesson:1, videoText:'Introduction to energy ownership · 18 min' },
-    inProgress: { progress:62,  lessonsDone:4, currentLesson:4, videoText:'Resume from 12:30' },
-    completed:  { progress:100, lessonsDone:7, currentLesson:7, videoText:null },
-  };
-  const sd            = STATE_DATA[pState] || STATE_DATA.notStarted;
-  const progress      = sd.progress;
-  const lessonsDone   = sd.lessonsDone;
-  const currentLesson = sd.currentLesson;
+  const fallbackLessonCount = Math.max(1, Math.min(4, Number(course?.lessons) || 4));
+  const fallbackLessons = Array.from({ length: fallbackLessonCount }, (_, index) => ({
+    id: `${course?.id || 'course'}-${index + 1}`,
+    title: index === 0 ? `${course?.title || 'Course'} overview` : `${course?.title || 'Course'} lesson ${index + 1}`,
+    description: index === 0 ? 'Start with the overview to understand the course.' : 'Continue through the lesson flow.',
+    duration: `${Math.max(8, 10 + index * 4)} min`,
+    order: index + 1,
+    videoId: course?.videoId || 'aqz-KE-bpKQ',
+  }));
+
+  const lessonItems = lessons.length ? lessons : fallbackLessons;
+  const activeLesson = lessonItems[activeLessonIndex] || lessonItems[0];
+  const lessonCount = lessonItems.length || 1;
+  const completedCount = completedLessonIds.length;
+  const progress = lessonCount > 0 ? Math.round((completedCount / lessonCount) * 100) : 0;
+  const currentLessonNumber = Math.min(activeLessonIndex + 1, lessonCount);
+  const selectedVideoId = activeLesson?.videoId || course?.videoId || 'aqz-KE-bpKQ';
+  const isCompleted = progress >= 100;
 
   function handleBookmark() {
     const next = !bookmarked;
@@ -537,6 +529,126 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
     setTimeout(() => setLinkCopied(false), 2800);
   }
 
+  async function handleCompleteLesson(lesson) {
+    if (!lesson || completedLessonIds.includes(lesson.id)) return;
+    try {
+      await lessonsAPI.markComplete(lesson.id);
+      setCompletedLessonIds((prev) => [...prev, lesson.id]);
+      if (activeLessonIndex < lessonItems.length - 1) {
+        setActiveLessonIndex((prev) => Math.min(prev + 1, lessonItems.length - 1));
+      }
+    } catch (error) {
+      setCompletedLessonIds((prev) => (prev.includes(lesson.id) ? prev : [...prev, lesson.id]));
+    }
+  }
+
+  function handleStartCourse() {
+    setActiveLessonIndex(0);
+    setIsVideoVisible(true);
+  }
+
+  function handleContinue() {
+    const nextIndex = lessonItems.findIndex((lesson, index) => index > activeLessonIndex && !completedLessonIds.includes(lesson.id));
+    setActiveLessonIndex(nextIndex >= 0 ? nextIndex : Math.min(activeLessonIndex + 1, lessonItems.length - 1));
+    setIsVideoVisible(true);
+  }
+
+  async function handleReview() {
+    if (!lessonItems.length) return;
+    for (const lesson of lessonItems) {
+      try {
+        await lessonsAPI.markComplete(lesson.id);
+      } catch (error) {
+        // ignore and keep UI consistent
+      }
+    }
+    setCompletedLessonIds(lessonItems.map((lesson) => lesson.id));
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+    const fallbackEmbedUrl = buildYouTubeEmbedUrl(selectedVideoId);
+
+    const loadVideo = async () => {
+      try {
+        const response = await lessonsAPI.getYouTubeProxy(selectedVideoId);
+        const embedUrl = response?.data?.embedUrls?.[0] || fallbackEmbedUrl;
+        if (isMounted) {
+          setVideoEmbedUrl(embedUrl);
+          setVideoPreviewUrl(course?.thumbnail || buildYouTubeThumbnailUrl(selectedVideoId));
+          setVideoReady(false);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setVideoEmbedUrl(fallbackEmbedUrl);
+          setVideoPreviewUrl(course?.thumbnail || buildYouTubeThumbnailUrl(selectedVideoId));
+          setVideoReady(false);
+        }
+      }
+    };
+
+    loadVideo();
+    lessonsAPI.trackWatch({
+      videoId: selectedVideoId,
+      courseId: String(course?.id || '1'),
+      lessonId: activeLesson?.id || '1',
+      watchDuration: 0,
+      totalDuration: 0,
+      percentageWatched: 0,
+      isCompleted: false,
+    }).catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [course?.id, course?.thumbnail, selectedVideoId, activeLesson?.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadLessons = async () => {
+      if (!course?.id) {
+        setLessons([]);
+        setLoadingLessons(false);
+        return;
+      }
+
+      try {
+        setLoadingLessons(true);
+        const response = await lessonsAPI.getByCourse(course.id);
+        const normalized = (response?.data || []).map((lesson, index) => ({
+          id: lesson.id,
+          title: lesson.title || `Lesson ${index + 1}`,
+          description: lesson.description || 'Continue learning with this lesson.',
+          duration: lesson.duration ? `${Math.max(1, Math.round(lesson.duration / 60))} min` : `${Math.max(8, 10 + index * 4)} min`,
+          order: lesson.order || index + 1,
+          videoId: lesson.videoId || course?.videoId || 'aqz-KE-bpKQ',
+        }));
+        if (isMounted) {
+          setLessons(normalized.length ? normalized : fallbackLessons);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setLessons(fallbackLessons);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingLessons(false);
+        }
+      }
+    };
+
+    loadLessons();
+    return () => {
+      isMounted = false;
+    };
+  }, [course?.id, course?.title, course?.lessons]);
+
+  useEffect(() => {
+    if (!lessonItems.length) return;
+    if (activeLessonIndex >= lessonItems.length) {
+      setActiveLessonIndex(lessonItems.length - 1);
+    }
+  }, [activeLessonIndex, lessonItems.length]);
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
@@ -550,16 +662,15 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
           </div>
           <div style={{flex:1,minWidth:0,width:isMobile?'100%':'auto'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
-              <span style={{fontSize:isMobile?13:15,fontWeight:600,color:T1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'70%'}}>Understanding Clean Energy Ownership Structures</span>
+              <span style={{fontSize:isMobile?13:15,fontWeight:600,color:T1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'70%'}}>{course.title}</span>
               <span style={{fontSize:13,color:progress>0?PU:T3,flexShrink:0,marginLeft:12}}>{progress}% complete</span>
             </div>
             <div style={{height:4,background:'#F3F4F6',borderRadius:4,marginBottom:7}}>
               <div style={{height:4,width:`${progress}%`,background:PU,borderRadius:4,transition:'width .35s ease'}}/>
             </div>
-            <span style={{fontSize:12,color:T3}}>Energy Finance · Beginner · 7 lessons · 3h 20m</span>
+            <span style={{fontSize:12,color:T3}}>{`${course.cat || 'General'} · ${course.level || 'Beginner'} · ${lessonCount} lessons · ${course.dur || 'Self-paced'}`}</span>
           </div>
           <div style={{display:'flex',gap:8,flexShrink:0,width:isMobile?'100%':'auto'}}>
-            {/* Bookmark */}
             <div style={{position:'relative',flex:isMobile?1:0}}>
               <button onClick={handleBookmark} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:`1px solid ${BD}`,borderRadius:8,background:W,color:T2,fontSize:13,cursor:'pointer',width:isMobile?'100%':'auto',whiteSpace:'nowrap'}}>
                 <Ico name="bookmark" size={15} color={bookmarked?PU:T2} fill={bookmarked?PU:'none'} sw={1.5}/>
@@ -571,7 +682,6 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
                 </div>
               )}
             </div>
-            {/* Share */}
             <div style={{position:'relative',flex:isMobile?1:0}}>
               <button onClick={() => { setShareOpen(o=>!o); if(shareOpen) setLinkCopied(false); }}
                 style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:`1px solid ${BD}`,borderRadius:8,background:W,color:T2,fontSize:13,cursor:'pointer',width:isMobile?'100%':'auto',whiteSpace:'nowrap'}}>
@@ -583,23 +693,16 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
                   <div style={{position:'fixed',inset:0,zIndex:9}} onClick={()=>{setShareOpen(false);setLinkCopied(false);}}/>
                   <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:224,background:W,border:`1px solid ${BD}`,borderRadius:12,boxShadow:'0 8px 28px rgba(0,0,0,.13)',zIndex:10,overflow:'hidden'}}>
                     <div style={{padding:'13px 16px',fontSize:13,fontWeight:600,color:T1,borderBottom:`1px solid ${BD}`}}>Share this course</div>
-                    {/* Copy link row — changes to "Link copied" on click */}
                     <div onClick={handleCopyLink} style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:10,fontSize:13,cursor:'pointer',borderBottom:`1px solid ${BD}`,color:linkCopied?GR:T1,background:linkCopied?GRB:W}}>
                       <Ico name="check" size={15} color={linkCopied?GR:T2} sw={2} style={{visibility:linkCopied?'visible':'hidden'}}/>
                       {linkCopied ? 'Link copied to clipboard!' : (
-                        <>
-                          <span style={{display:'flex',alignItems:'center',gap:10,color:T1}}>
-                            <Ico name="link" size={15} color={T2} sw={1.5}/>
-                            Copy link
-                          </span>
-                        </>
+                        <span style={{display:'flex',alignItems:'center',gap:10,color:T1}}>
+                          <Ico name="link" size={15} color={T2} sw={1.5}/>
+                          Copy link
+                        </span>
                       )}
                     </div>
-                    {[
-                      {label:'Share on WhatsApp', iconEl:<div style={{width:20,height:20,borderRadius:'50%',background:'#25D366',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ico name="msgCircle" size={11} color={W} sw={1.5}/></div>},
-                      {label:'Share on LinkedIn',  iconEl:<div style={{width:20,height:20,borderRadius:3,background:'#0A66C2',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><span style={{color:W,fontSize:9,fontWeight:700}}>in</span></div>},
-                      {label:'Send via mail',      iconEl:<Ico name="mail" size={17} color={T2} sw={1.5}/>},
-                    ].map(s => (
+                    {[{label:'Share on WhatsApp', iconEl:<div style={{width:20,height:20,borderRadius:'50%',background:'#25D366',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ico name="msgCircle" size={11} color={W} sw={1.5}/></div>},{label:'Share on LinkedIn', iconEl:<div style={{width:20,height:20,borderRadius:3,background:'#0A66C2',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><span style={{color:W,fontSize:9,fontWeight:700}}>in</span></div>},{label:'Send via mail', iconEl:<Ico name="mail" size={17} color={T2} sw={1.5}/>},].map(s => (
                       <div key={s.label} style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:10,fontSize:13,color:T1,cursor:'pointer',borderBottom:`1px solid ${BD}`}}>
                         {s.iconEl}
                         {s.label}
@@ -612,117 +715,93 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
           </div>
         </div>
 
-        {/* ── Video + lesson panel ── */}
         <div style={{display:'flex',flexDirection:isMobile||isTablet?'column':'row',gap:20,padding:isMobile?'0 14px 20px':'0 24px 20px',alignItems:'flex-start'}}>
-          {/* Video */}
           <div style={{flex:1,minWidth:0}}>
-            <div style={{borderRadius:12,overflow:'hidden',background:'#111',position:'relative',aspectRatio:'16/9'}}>
-              {/* Simulated video background */}
-              <div style={{position:'absolute',inset:0,background:'linear-gradient(160deg,#1a3a28 0%,#0d1f16 40%,#0a1a22 100%)',opacity:.85}}/>
-              {/* "Lesson N of 7" badge */}
+            <div style={{borderRadius:14,overflow:'hidden',background:'#0f172a',position:'relative',aspectRatio:'16/9',width:'100%',maxWidth:'100%',border:'1px solid rgba(255,255,255,0.08)',boxShadow:'0 18px 40px rgba(0,0,0,.18)'}}>
+              {!isVideoVisible ? (
+                <div onClick={() => setIsVideoVisible(true)} style={{ position:'absolute', inset:0, backgroundImage:`url(${videoPreviewUrl})`, backgroundSize:'cover', backgroundPosition:'center', cursor:'pointer' }}>
+                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(145deg, rgba(17,24,39,0.28) 0%, rgba(17,24,39,0.56) 100%)' }} />
+                  <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
+                    <div style={{ padding:'10px 16px', borderRadius:999, background:'rgba(17,24,39,0.72)', color:W, fontSize:13, fontWeight:600, backdropFilter:'blur(12px)' }}>
+                      {loadingLessons ? 'Preparing lesson flow…' : 'Open lesson'}
+                    </div>
+                  </div>
+                </div>
+              ) : videoEmbedUrl ? (
+                <iframe title="Learning lesson" src={videoEmbedUrl} style={{ position:'absolute', inset:0, width:'100%', height:'100%', border:0 }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="lazy" onLoad={() => setVideoReady(true)} />
+              ) : (
+                <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(145deg, #111827 0%, #1f2937 100%)', color:W }}>
+                  <div style={{ fontSize:14, fontWeight:600 }}>Loading video…</div>
+                </div>
+              )}
               <div style={{position:'absolute',top:14,left:14,background:PU,color:W,fontSize:12,fontWeight:600,padding:'4px 10px',borderRadius:6,zIndex:3}}>
-                Lesson {currentLesson} of 7
+                Lesson {currentLessonNumber} of {lessonCount}
               </div>
-
-              {/* Overlay content per state */}
-              <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:2}}>
-                {pState === 'completed' ? (
-                  <>
-                    <div style={{width:56,height:56,background:GR,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12}}>
-                      <Ico name="check" size={26} color={W} sw={3}/>
-                    </div>
-                    <div style={{color:W,fontSize:16,fontWeight:700,marginBottom:4}}>Course completed</div>
-                    <div style={{color:'rgba(255,255,255,.75)',fontSize:13}}>All 7 lessons finished</div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{width:52,height:52,background:'rgba(255,255,255,.9)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12}}>
-                      <Ico name="play" size={20} color='#111' fill='#111' sw={0}/>
-                    </div>
-                    <div style={{color:'rgba(255,255,255,.85)',fontSize:13,textAlign:'center',padding:'0 20px'}}>
-                      {sd.videoText}
-                    </div>
-                  </>
-                )}
+              <div style={{position:'absolute',top:14,right:14,background:'rgba(255,255,255,0.16)',color:W,fontSize:11,fontWeight:600,padding:'4px 10px',borderRadius:999,zIndex:3,backdropFilter:'blur(8px)'}}>
+                YouTube • Live lesson
               </div>
-
-              {/* Video scrub bar */}
-              <div style={{position:'absolute',bottom:46,left:16,right:16,height:3,background:'rgba(255,255,255,.25)',borderRadius:3,zIndex:3}}>
-                <div style={{height:3,width:`${progress}%`,background:pState==='completed'?GR:'rgba(255,255,255,.9)',borderRadius:3}}/>
-              </div>
-
-              {/* Controls bar */}
-              <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'10px 16px',display:'flex',alignItems:'center',gap:12,background:'linear-gradient(to top,rgba(0,0,0,.65),transparent)',zIndex:3}}>
-                <Ico name="play" size={16} color={W} fill={W} sw={0}/>
-                <span style={{fontSize:12,color:W,flex:1}}>0:00 / 18:00</span>
-                <Ico name="volume" size={16} color={W} sw={1.5}/>
-                <button onClick={()=>setExpanded(e=>!e)} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'flex'}}>
-                  <Ico name={expanded?'minimize':'maximize'} size={16} color={W} sw={1.5}/>
-                </button>
-              </div>
+              {!videoReady && isVideoVisible && videoEmbedUrl && (
+                <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(15, 23, 42, 0.35)', pointerEvents:'none' }}>
+                  <div style={{ color:W, fontSize:13, fontWeight:600, padding:'8px 12px', borderRadius:999, background:'rgba(0,0,0,0.45)' }}>Preparing player…</div>
+                </div>
+              )}
             </div>
 
-            {/* Completion banner — only when completed */}
-            {pState==='completed' && (
+            {isCompleted && (
               <div style={{display:'flex',alignItems:'center',gap:12,padding:'14px 18px',background:'#F0FDF4',border:`1px solid ${GR}`,borderRadius:10,margin:'16px 0'}}>
                 <div style={{width:28,height:28,background:GR,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                   <Ico name="check" size={14} color={W} sw={2.5}/>
                 </div>
                 <div>
                   <div style={{fontSize:14,fontWeight:700,color:GR}}>You completed this course</div>
-                  <div style={{fontSize:12,color:GR}}>Finished on April 28, 2026 · 3h 20m total learning time</div>
+                  <div style={{fontSize:12,color:GR}}>All available lessons are now marked complete · {course.dur || 'Self-paced'} total learning time</div>
                 </div>
               </div>
             )}
 
-            {/* Course meta + key points */}
             <div style={{marginTop:16}}>
-              <span style={{fontSize:12,fontWeight:700,color:CAT['Energy Finance'].c,display:'block',marginBottom:8}}>Energy Finance</span>
-              <h2 style={{fontSize:16,fontWeight:700,color:T1,margin:'0 0 8px'}}>Understanding Clean Energy Ownership Structures</h2>
-              <p style={{fontSize:13,color:T2,lineHeight:1.7,margin:'0 0 16px'}}>This lesson covers introduction to energy ownership. You'll gain a clear, practical understanding that applies directly to real C&I solar deals across African markets.</p>
+              <span style={{fontSize:12,fontWeight:700,color:CAT[course.cat] ? CAT[course.cat].c : PU,display:'block',marginBottom:8}}>{course.cat || 'General'}</span>
+              <h2 style={{fontSize:16,fontWeight:700,color:T1,margin:'0 0 8px'}}>{activeLesson?.title || course.title}</h2>
+              <p style={{fontSize:13,color:T2,lineHeight:1.7,margin:'0 0 16px'}}>{activeLesson?.description || course.desc || 'Continue your learning with this course.'}</p>
               <div style={{border:`1px solid ${BD}`,borderRadius:10,padding:'16px 18px'}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
                   <Ico name="checkSq" size={16} color={T2} sw={1.5}/>
-                  <span style={{fontSize:14,fontWeight:600,color:T1}}>Key points</span>
+                  <span style={{fontSize:14,fontWeight:600,color:T1}}>Current lesson</span>
                 </div>
-                {["What an SPV is and why it's used in energy deals","The difference between asset ownership and revenue rights","How ownership affects tax exposure and investor returns"].map(kp=>(
-                  <div key={kp} style={{display:'flex',gap:8,marginBottom:8,fontSize:13,color:T2}}>
-                    <span style={{flexShrink:0,marginTop:1}}>·</span>{kp}
-                  </div>
-                ))}
+                <div style={{fontSize:13,color:T2,lineHeight:1.6}}>
+                  {loadingLessons ? 'Loading course lessons…' : `${activeLesson?.title || 'Lesson'} · ${activeLesson?.duration || 'Self-paced'}${completedLessonIds.includes(activeLesson?.id) ? ' · completed' : ''}`}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Lesson list panel — hidden when fullscreen */}
           {!expanded && (
             <div style={{width:isMobile||isTablet?'100%':238,flexShrink:0,background:W,border:`1px solid ${BD}`,borderRadius:12,overflow:'hidden',position:isMobile||isTablet?'relative':'sticky',top:16}}>
               <div style={{padding:'16px 16px 12px'}}>
-                <h3 style={{fontSize:13,fontWeight:700,color:T1,margin:'0 0 12px',lineHeight:1.35}}>Understanding Clean Energy Ownership Structures</h3>
-                {/* Panel progress */}
+                <h3 style={{fontSize:13,fontWeight:700,color:T1,margin:'0 0 12px',lineHeight:1.35}}>{course.title}</h3>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
                   <div style={{flex:1,height:4,background:'#F3F4F6',borderRadius:4}}>
                     <div style={{height:4,width:`${progress}%`,background:PU,borderRadius:4,transition:'width .35s'}}/>
                   </div>
                   <span style={{fontSize:12,color:T2,flexShrink:0}}>{progress}%</span>
                 </div>
-                <p style={{fontSize:12,color:T3,margin:0}}>{lessonsDone} of 7 lessons complete</p>
+                <p style={{fontSize:12,color:T3,margin:0}}>{completedCount} of {lessonCount} lessons complete</p>
               </div>
-              {/* Lessons */}
               <div>
-                {LESSONS.map((l, i) => {
-                  const done = i < lessonsDone;
+                {lessonItems.map((l, index) => {
+                  const done = completedLessonIds.includes(l.id);
+                  const active = activeLessonIndex === index;
                   return (
-                    <div key={l.id} style={{padding:'10px 16px',borderTop:`1px solid ${BD}`}}>
+                    <div key={l.id} onClick={() => { setActiveLessonIndex(index); setIsVideoVisible(true); }} style={{padding:'10px 16px',borderTop:`1px solid ${BD}`,cursor:'pointer',background:active?PUF:'transparent'}}>
                       <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
                         {done ? (
                           <Ico name="check" size={14} color={PU} sw={2.5}/>
                         ) : (
-                          <span style={{width:18,height:18,borderRadius:'50%',border:`1.5px solid ${BD}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:T3,flexShrink:0,lineHeight:1}}>{l.id}</span>
+                          <span style={{width:18,height:18,borderRadius:'50%',border:`1.5px solid ${active?PU:BD}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:active?PU:T3,flexShrink:0,lineHeight:1}}>{index + 1}</span>
                         )}
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:12,color:done?T1:T2,lineHeight:1.35,marginBottom:2}}>{l.title}</div>
-                          <div style={{fontSize:11,color:T3}}>{l.dur}</div>
+                          <div style={{fontSize:12,color:active||done?T1:T2,lineHeight:1.35,marginBottom:2}}>{l.title}</div>
+                          <div style={{fontSize:11,color:T3}}>{l.duration || l.dur}</div>
                           {done && <div style={{fontSize:11,color:GR,marginTop:1}}>complete</div>}
                         </div>
                       </div>
@@ -734,32 +813,27 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
           )}
         </div>
 
-        {/* ── Action bar — Start course | Continue | Review ── */}
         <div style={{position:'sticky',bottom:0,background:W,border:`1px solid ${BD}`,borderRadius:12,padding:'12px 18px',margin:isMobile?'0 14px 20px':'0 24px 24px',display:'flex',gap:10,flexWrap:'wrap'}}>
-          {/* Start course — always starts from lesson 1 */}
           <button
-            onClick={() => setPState('started')}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',
-              background: (pState==='notStarted'||pState==='started') ? PU : W,
-              color:      (pState==='notStarted'||pState==='started') ? W  : T2,
-              border:     (pState==='notStarted'||pState==='started') ? 'none' : `1px solid ${BD}`,
-            }}>Start course</button>
-          {/* Continue — resume from current position */}
+            onClick={handleStartCourse}
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: progress === 0 ? PU : W, color: progress === 0 ? W : T2, border: progress === 0 ? 'none' : `1px solid ${BD}`}}>
+            {progress === 0 ? 'Start course' : 'Restart course'}
+          </button>
           <button
-            onClick={() => setPState('inProgress')}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',
-              background: pState==='inProgress' ? PU : W,
-              color:      pState==='inProgress' ? W  : T2,
-              border:     pState==='inProgress' ? 'none' : `1px solid ${BD}`,
-            }}>Continue</button>
-          {/* Review — completed mode */}
+            onClick={handleContinue}
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: progress > 0 && progress < 100 ? PU : W, color: progress > 0 && progress < 100 ? W : T2, border: progress > 0 && progress < 100 ? 'none' : `1px solid ${BD}`}}>
+            {progress >= 100 ? 'Review course' : 'Continue'}
+          </button>
           <button
-            onClick={() => setPState('completed')}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',
-              background: pState==='completed' ? PU : W,
-              color:      pState==='completed' ? W  : T2,
-              border:     pState==='completed' ? 'none' : `1px solid ${BD}`,
-            }}>Review</button>
+            onClick={() => handleCompleteLesson(activeLesson)}
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: activeLesson && completedLessonIds.includes(activeLesson.id) ? GRB : W, color: activeLesson && completedLessonIds.includes(activeLesson.id) ? GR : T2, border: activeLesson && completedLessonIds.includes(activeLesson.id) ? `1px solid ${GR}` : `1px solid ${BD}`}}>
+            {activeLesson && completedLessonIds.includes(activeLesson.id) ? 'Completed' : 'Mark complete'}
+          </button>
+          <button
+            onClick={handleReview}
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: W, color: T2, border: `1px solid ${BD}`}}>
+            Review all
+          </button>
         </div>
 
       </div>
@@ -777,26 +851,98 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   const [sortOpen,     setSortOpen]     = useState(false);
   const [sortBy,       setSortBy]       = useState('progress');
   const [modalCourse,  setModalCourse]  = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
 
   const TABS    = [{id:'all',label:'All courses'},{id:'inProgress',label:'In progress'},{id:'completed',label:'Completed'},{id:'saved',label:'Saved'}];
   const FILTERS = [{id:'thisMonth',label:'This month'},{id:'energyFinance',label:'Energy Finance'},{id:'solarStorage',label:'Solar & Storage'},{id:'riskFX',label:'Risk & FX'},{id:'policyESG',label:'Policy & ESG'}];
   const SORTS   = [{id:'progress',label:'Progress'},{id:'newest',label:'Newest'},{id:'az',label:'A–Z'}];
   const FILTER_CAT = { energyFinance:'Energy Finance', solarStorage:'Solar & Storage', riskFX:'Risk & FX', policyESG:'Policy & ESG' };
+  const demoLessons = [
+    {
+      id: 'demo-1',
+      title: 'Energy ownership explained',
+      subtitle: 'A short walkthrough of SPVs and investor rights',
+      videoId: 'aqz-KE-bpKQ',
+      cat: 'Demo',
+      level: 'Beginner',
+      dur: '12 min',
+      lessons: 4,
+    },
+    {
+      id: 'demo-2',
+      title: 'Inside a clean energy deal',
+      subtitle: 'See how project finance and equity stack together',
+      videoId: 'M7lc1UVf-VE',
+      cat: 'Demo',
+      level: 'Intermediate',
+      dur: '10 min',
+      lessons: 3,
+    },
+  ];
 
-  const filtered = COURSES.filter(c => {
+  useEffect(() => {
+    let isMounted = true;
+    const loadCourses = async () => {
+      try {
+        const [coursesResponse, profileResponse] = await Promise.all([
+          coursesAPI.list({ take: 20 }),
+          usersAPI.getProfile(),
+        ]);
+        const enrolledResponse = await apiClient.get(`/courses/${profileResponse.data.id}/enrollments`);
+        const enrolledMap = new Map((enrolledResponse.data || []).map((course) => [course.id, course]));
+
+        const transformed = (coursesResponse.data || []).map((course) => {
+          const enrollment = enrolledMap.get(course.id);
+          const progress = enrollment?.progress ?? 0;
+          const status = progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted';
+          return {
+            id: course.id,
+            cat: course.category || 'General',
+            title: course.title,
+            desc: course.description || 'Continue your learning with this course.',
+            dur: course.duration ? `${Math.round(course.duration / 60)}h ${course.duration % 60}m` : 'Self-paced',
+            lessons: course.lessons || 0,
+            level: course.difficulty || 'Beginner',
+            progress,
+            status,
+            thumbnail: course.thumbnail || 'https://img.youtube.com/vi/aqz-KE-bpKQ/hqdefault.jpg',
+          };
+        });
+
+        if (isMounted) {
+          setCourses(transformed);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setCourses([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingCourses(false);
+        }
+      }
+    };
+
+    loadCourses();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filtered = courses.filter(c => {
     if (activeTab === 'inProgress' && c.status !== 'inProgress') return false;
     if (activeTab === 'completed'  && c.status !== 'completed')  return false;
-    if (activeTab === 'saved') return false; // no saved courses in demo
+    if (activeTab === 'saved') return false;
     const cat = FILTER_CAT[activeFilter];
     if (cat && c.cat !== cat) return false;
     return true;
   });
 
-  const resumeCourse = COURSES.find(c => c.status === 'inProgress');
+  const resumeCourse = courses.find(c => c.status === 'inProgress');
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
-      <HubTopBar onMenuToggle={onMenuToggle} isMobile={isMobile} isTablet={isTablet}/>
       <main style={{flex:1,overflowY:'auto',padding:isMobile?'16px 14px 60px':'28px 32px 60px'}}>
 
         {/* Page header */}
@@ -804,7 +950,11 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
         <p style={{fontSize:13,color:T2,margin:'0 0 20px'}}>Expand your knowledge on energy infrastructure, finance, and policy</p>
 
         {/* ── RESUME BLOCK — matches exact design ── */}
-        {resumeCourse && (
+        {loadingCourses ? (
+          <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 14, padding: '16px 20px', marginBottom: 24, color: T2 }}>
+            Loading your learning hub…
+          </div>
+        ) : resumeCourse && (
           <div style={{
             background: W, border: `1px solid ${BD}`, borderRadius: 14,
             padding: isMobile?'14px':'16px 20px', marginBottom: 24,
@@ -855,10 +1005,10 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
         <h2 style={{fontSize:isMobile?14:16,fontWeight:600,color:T1,margin:'0 0 12px'}}>Next best actions</h2>
         <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?10:16,marginBottom:24}}>
           {[
-            {l:'Courses enrolled',v:7,   badge:'3 in progress', bc:PU, bb:PUF},
-            {l:'Completed',       v:7,   badge:'Well done',     bc:GR, bb:GRB},
-            {l:'Hours learned',   v:'18.5',badge:'This month',  bc:TL, bb:TLB},
-            {l:'Weekly streak',   v:5,   badge:'Keep going!',   bc:AM, bb:AMB},
+            {l:'Courses enrolled',v: courses.filter(c => c.status !== 'notStarted').length, badge:`${courses.filter(c => c.status === 'inProgress').length} in progress`, bc:PU, bb:PUF},
+            {l:'Completed',       v: courses.filter(c => c.status === 'completed').length, badge:'Well done', bc:GR, bb:GRB},
+            {l:'Hours learned',   v: `${courses.reduce((sum, c) => sum + (Number(c.dur?.split('h')[0]) || 0), 0)}h`, badge:'This month', bc:TL, bb:TLB},
+            {l:'Active lessons',  v: courses.reduce((sum, c) => sum + (c.lessons || 0), 0), badge:'Keep going!', bc:AM, bb:AMB},
           ].map(s => (
             <div key={s.l} style={{background:W,border:`1px solid ${BD}`,borderRadius:10,padding:'14px 18px'}}>
               <div style={{fontSize:12,color:T2,marginBottom:6}}>{s.l}</div>
@@ -888,6 +1038,46 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
           <button style={{background:'rgba(255,255,255,.15)',color:W,border:'1.5px solid rgba(255,255,255,.4)',borderRadius:8,padding:'9px 18px',fontSize:13,fontWeight:500,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
             View full path
           </button>
+        </div>
+
+        {/* Demo lessons */}
+        <div style={{marginBottom:24}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <h2 style={{fontSize:15,fontWeight:600,color:T1,margin:0}}>Featured demo lessons</h2>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 1fr':'repeat(2,1fr)',gap:isMobile?12:16}}>
+            {demoLessons.map((demo) => (
+              <div key={demo.id} style={{background:W,border:`1px solid ${BD}`,borderRadius:12,overflow:'hidden'}}>
+                <div style={{height:140,backgroundImage:`url(${buildYouTubeThumbnailUrl(demo.videoId)})`,backgroundSize:'cover',backgroundPosition:'center'}}/>
+                <div style={{padding:'12px 14px 14px'}}>
+                  <div style={{fontSize:11,fontWeight:700,color:PU,marginBottom:6,letterSpacing:.3,textTransform:'uppercase'}}>{demo.cat}</div>
+                  <div style={{fontSize:14,fontWeight:700,color:T1,marginBottom:6,lineHeight:1.35}}>{demo.title}</div>
+                  <div style={{fontSize:12,color:T2,marginBottom:10,lineHeight:1.5}}>{demo.subtitle}</div>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:10,flexWrap:'wrap'}}>
+                    <span style={{fontSize:12,color:T3}}>{demo.dur}</span>
+                    <span style={{fontSize:12,color:T3}}>{demo.level}</span>
+                  </div>
+                  <button
+                    onClick={() => onPlay({
+                      id: demo.id,
+                      title: demo.title,
+                      cat: demo.cat,
+                      desc: demo.subtitle,
+                      dur: demo.dur,
+                      lessons: demo.lessons,
+                      level: demo.level,
+                      progress: 0,
+                      status: 'notStarted',
+                      thumbnail: buildYouTubeThumbnailUrl(demo.videoId),
+                      videoId: demo.videoId,
+                    })}
+                    style={{width:'100%',background:PU,color:W,border:'none',borderRadius:8,padding:'10px 12px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
+                    Watch demo
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -935,7 +1125,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
 
         {/* Count + grid/table toggle */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18}}>
-          <span style={{fontSize:14,fontWeight:500,color:T1}}>All courses <span style={{color:T3,fontWeight:400}}>({COURSES.length})</span></span>
+          <span style={{fontSize:14,fontWeight:500,color:T1}}>All courses <span style={{color:T3,fontWeight:400}}>({courses.length})</span></span>
           <div style={{display:'flex',gap:2,background:'#F3F4F6',borderRadius:8,padding:3}}>
             {(['grid','list'] ).map(v => (
               <button key={v} onClick={()=>setCourseView(v)}

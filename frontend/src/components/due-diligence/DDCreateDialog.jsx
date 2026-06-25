@@ -12,6 +12,8 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,15 +28,26 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = validateForm();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setSubmitError('Please complete the required fields before creating the diligence case.');
       return;
     }
-    onCreate(formData);
-    onClose();
+
+    try {
+      setIsSubmitting(true);
+      setSubmitError('');
+      await onCreate(formData);
+      onClose();
+    } catch (error) {
+      console.error('Create due diligence failed:', error);
+      setSubmitError('We could not create the diligence case right now. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -71,6 +84,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
         </h2>
 
         <form onSubmit={handleSubmit}>
+          {submitError && (
+            <div style={{ marginBottom: '16px', padding: '10px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: '6px', fontSize: '13px', fontWeight: 600 }}>
+              {submitError}
+            </div>
+          )}
           {/* Title */}
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
@@ -239,6 +257,7 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
             <button
               type="button"
               onClick={onClose}
+              disabled={isSubmitting}
               style={{
                 padding: '10px 20px',
                 border: '1px solid #E5E7EB',
@@ -253,6 +272,7 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
             </button>
             <button
               type="submit"
+              disabled={isSubmitting}
               style={{
                 padding: '10px 20px',
                 background: '#5B21B6',

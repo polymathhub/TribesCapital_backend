@@ -13,8 +13,9 @@ export const authAPI = {
 };
 
 export const usersAPI = {
-  getProfile: () => apiClient.get('/users/profile'),
-  updateProfile: (data) => apiClient.patch('/users/profile', data),
+  getProfile: () => apiClient.get('/users/me'),
+  getAll: (params) => apiClient.get('/users', { params }),
+  updateProfile: (data) => apiClient.patch('/users/me', data),
   getById: (id) => apiClient.get(`/users/${id}`),
 };
 
@@ -30,6 +31,9 @@ export const lessonsAPI = {
   getByCourse: (courseId) => apiClient.get(`/lessons/courses/${courseId}`),
   getById: (id) => apiClient.get(`/lessons/${id}`),
   getVideoUrl: (lessonId) => apiClient.get(`/lessons/${lessonId}/video-url`),
+  getYouTubeProxy: (videoId) => apiClient.post(`/lessons/youtube-proxy/${videoId}`),
+  trackWatch: (data) => apiClient.post('/lessons/track/watch', data),
+  getAnalytics: (courseId) => apiClient.get(`/lessons/track/analytics/${courseId}`),
   create: (courseId, data, file) => {
     const formData = new FormData();
     Object.keys(data).forEach(key => formData.append(key, data[key]));
@@ -53,6 +57,9 @@ export const lessonsAPI = {
 export const eventsAPI = {
   list: (params) => apiClient.get('/events', { params }),
   getById: (id) => apiClient.get(`/events/${id}`),
+  create: (data) => apiClient.post('/events', data),
+  update: (id, data) => apiClient.put(`/events/${id}`, data),
+  delete: (id) => apiClient.delete(`/events/${id}`),
   getRSVPStatus: (eventId) => apiClient.get(`/events/${eventId}/rsvp-status`),
   rsvp: (eventId) => apiClient.post(`/events/${eventId}/rsvp`),
   cancelRSVP: (eventId) => apiClient.delete(`/events/${eventId}/rsvp`),

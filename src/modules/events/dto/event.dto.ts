@@ -32,6 +32,22 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   eventType?: string;
+
+  @IsOptional()
+  @IsString()
+  meetingPlatform?: string;
+
+  @IsOptional()
+  @IsString()
+  meetingLink?: string;
+
+  @IsOptional()
+  @IsString()
+  meetingHandle?: string;
+
+  @IsOptional()
+  @IsString()
+  meetingInstructions?: string;
 }
 
 export class CreateRsvpDto {
@@ -52,6 +68,11 @@ export class EventResponseDto {
   endDate!: Date;
   location?: string;
   isVirtual!: boolean;
+  eventType?: string;
+  meetingPlatform?: string;
+  meetingLink?: string;
+  meetingHandle?: string;
+  meetingInstructions?: string;
   capacity?: number;
   rsvpCount!: number;
   organizerId!: string;

@@ -85,6 +85,9 @@ export default function HelpPage({ onBack, onToggleSidebar, isMobile, isTablet }
             <Icon name="menu" size={20} color={T2} />
           </button>
         )}
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: PF, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon name="help" size={20} color={P} />
+        </div>
         <div>
           <h1 style={{ fontSize: isMobileLocal ? 18 : 24, fontWeight: 700, color: T1, margin: '0 0 4px' }}>Help & Support</h1>
           <p style={{ fontSize: 12, color: T2, margin: 0 }}>Find answers and get support when you need it</p>

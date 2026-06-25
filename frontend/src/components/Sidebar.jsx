@@ -4,21 +4,21 @@ import Icon from './Icon';
 import { LogoMark } from './Logo';
 
 const NAV_ITEMS = [
-  { label: 'Home', active: true },
-  { label: 'Learning Hub' },
-  { label: 'Due Diligence Vault' },
-  { label: 'Office Hours & Events' },
+  { label: 'Home', page: 'home', icon: 'home' },
+  { label: 'Learning Hub', page: 'learning', icon: 'book' },
+  { label: 'Due Diligence Vault', page: 'vault', icon: 'folder' },
+  { label: 'Office Hours & Events', page: 'events', icon: 'calendar' },
   null,
-  { label: 'Announcements & Feedback' },
-  { label: 'Help' },
+  { label: 'Announcements & Feedback', page: 'announcements', icon: 'bell' },
+  { label: 'Help', page: 'help', icon: 'help' },
 ];
 
-function Sidebar({ sidebarRef }) {
+function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {} }) {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
 
   return (
     <div ref={sidebarRef} style={{
-      width: 200, minWidth: 200, background: COLORS.W, borderRight: `1px solid ${COLORS.BD}`,
+      width: 220, minWidth: 220, background: COLORS.W, borderRight: `1px solid ${COLORS.BD}`,
       display: 'flex', flexDirection: 'column', overflowY: 'auto', flexShrink: 0, zIndex: 5,
     }}>
       <style>{`
@@ -99,40 +99,64 @@ function Sidebar({ sidebarRef }) {
         }
       `}</style>
       
-      <div style={{ padding: '12px 12px 12px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        <LogoMark size={36} animate={true}/>
-        <span style={{ fontWeight: 700, fontSize: 11, color: COLORS.T1, letterSpacing: .8, textTransform: 'uppercase' }}>Tribes Capital</span>
+      <div style={{ padding: '12px 12px 12px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <LogoMark size={36} animate={true}/>
+          <span style={{ fontWeight: 700, fontSize: 11, color: COLORS.T1, letterSpacing: .8, textTransform: 'uppercase' }}>Tribes Capital</span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: COLORS.T2, fontSize: 18, lineHeight: 1, padding: 4 }}
+          aria-label="Close sidebar"
+        >
+          ×
+        </button>
       </div>
 
       <div style={{ flex: 1, padding: '8px 0' }}>
         {NAV_ITEMS.map((item, i) => {
-          if (!item) return <div key={i} style={{ height: 1, background: COLORS.BD, margin: '6px 14px' }}/>;
+          if (!item) return <div key={i} style={{ height: 1, background: COLORS.BD, margin: '6px 14px' }}/>
+          const isActive = activePage === item.page;
           const isHovered = hoveredIndex === i;
           return (
-            <div 
-              key={i} 
-              className={`nav-item ${item.active ? 'active' : ''}`}
+            <div
+              key={i}
+              className={`nav-item ${isActive ? 'active' : ''}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                onNavigate(item.page);
+                onClose();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onNavigate(item.page);
+                  onClose();
+                }
+              }}
               style={{
-                display: 'flex', 
-                alignItems: 'center', 
+                display: 'flex',
+                alignItems: 'center',
                 gap: 12,
-                padding: '10px 14px', 
-                margin: '2px 6px', 
-                borderRadius: 8, 
+                padding: '10px 14px',
+                margin: '2px 6px',
+                borderRadius: 8,
                 cursor: 'pointer',
-                background: item.active ? COLORS.PF : isHovered ? '#F3F4F6' : 'transparent',
-                color: item.active ? COLORS.P : COLORS.T2,
-                fontWeight: item.active ? 500 : 400,
+                background: isActive ? COLORS.PF : isHovered ? '#F3F4F6' : 'transparent',
+                color: isActive ? COLORS.P : COLORS.T2,
+                fontWeight: isActive ? 500 : 400,
                 fontSize: 13,
-                borderLeft: item.active ? `3px solid ${COLORS.P}` : '3px solid transparent',
+                borderLeft: isActive ? `3px solid ${COLORS.P}` : '3px solid transparent',
                 transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 transform: isHovered ? 'translateX(2px)' : 'translateX(0)',
               }}
               onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              <div 
-                className="nav-icon" 
+              <div
+                className="nav-icon"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -143,16 +167,43 @@ function Sidebar({ sidebarRef }) {
                   transform: isHovered ? 'scale(1.2) rotate(-5deg)' : 'scale(1) rotate(0deg)',
                 }}
               >
-                <Icon 
-                  name={item.label} 
-                  size={18} 
-                  color={item.active ? COLORS.P : isHovered ? '#5B21B6' : COLORS.T3}
+                <Icon
+                  name={item.icon}
+                  size={18}
+                  color={isActive ? COLORS.P : isHovered ? '#5B21B6' : COLORS.T3}
                 />
               </div>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
             </div>
           );
         })}
+      </div>
+
+      <div style={{ marginTop: 'auto', padding: '10px 12px 14px', borderTop: `1px solid ${COLORS.BD}` }}>
+        <button
+          type="button"
+          onClick={() => {
+            onLogout();
+            onClose();
+          }}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 12px',
+            border: `1px solid ${COLORS.BD}`,
+            borderRadius: 10,
+            background: '#FFF7F7',
+            color: '#B91C1C',
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          <Icon name="logout" size={16} color="#B91C1C" />
+          <span>Log out</span>
+        </button>
       </div>
     </div>
   );

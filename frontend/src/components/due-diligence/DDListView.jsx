@@ -15,6 +15,12 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
     onFilterChange(newFilters);
   };
 
+  const handleClearFilters = () => {
+    const resetFilters = { search: '', status: 'all', priority: 'all', type: 'all' };
+    setLocalFilters(resetFilters);
+    onFilterChange(resetFilters);
+  };
+
   const priorityDot = (priority) => {
     const colors = {
       low: '#10B981',
@@ -67,6 +73,7 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
   };
 
   const totalPages = Math.ceil(pagination.total / pagination.limit);
+  const hasActiveFilters = Object.values(localFilters).some((value) => value !== 'all' && value !== '');
 
   return (
     <div className="dd-list-container">
@@ -112,6 +119,11 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
           <option value="company">Company</option>
           <option value="fund">Fund</option>
         </select>
+        {hasActiveFilters && (
+          <button type="button" onClick={handleClearFilters} className="dd-btn-secondary" style={{ justifySelf: 'start' }}>
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Table */}

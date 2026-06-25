@@ -9,6 +9,8 @@
     "build": "npm run build:frontend && npm run build:backend",
     "build:backend": "nest build",
     "build:frontend": "cd frontend && npm install && npm run build",
+    "dev": "npm --prefix frontend run dev -- --host 0.0.0.0",
+    "dev:frontend": "npm --prefix frontend run dev -- --host 0.0.0.0",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

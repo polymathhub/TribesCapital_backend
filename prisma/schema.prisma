@@ -193,6 +193,11 @@ model Event {
   thumbnail       String?
   location        String?
   isVirtual       Boolean     @default(false)
+  eventType       String?
+  meetingPlatform String?
+  meetingLink     String?
+  meetingHandle   String?
+  meetingInstructions String?
   startDate       DateTime
   endDate         DateTime
   capacity        Int

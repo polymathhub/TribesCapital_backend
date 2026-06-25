@@ -108,10 +108,12 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
       <ErrorAlert message={error} onDismiss={clearError} />
 
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+        <label htmlFor="login-email" style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
           Email Address
         </label>
         <input
+          id="login-email"
+          name="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -135,11 +137,13 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
       </div>
 
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+        <label htmlFor="login-password" style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
           Password
         </label>
         <div style={{ position: 'relative' }}>
           <input
+            id="login-password"
+            name="password"
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

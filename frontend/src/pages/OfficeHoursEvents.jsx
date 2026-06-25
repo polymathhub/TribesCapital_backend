@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { eventsAPI } from '../api/endpoints';
 
 /* ─── DESIGN TOKENS ─── */
 const C = {
@@ -17,6 +18,37 @@ const EV_TYPES = {
   'Podcast'      : { c:'#DB2777', b:'#FDF2F8', label:'PODCAST'       },
 };
 const EV_OPTS = Object.keys(EV_TYPES);
+const MEETING_PLATFORMS = [
+  { value: 'Google Meet', label: 'Google Meet', placeholder: 'meet.google.com/abc-defg-hij' },
+  { value: 'Slack', label: 'Slack', placeholder: '#community-ops or your channel link' },
+  { value: 'Zoom', label: 'Zoom', placeholder: 'https://zoom.us/j/123456789' },
+  { value: 'Microsoft Teams', label: 'Microsoft Teams', placeholder: 'https://teams.microsoft.com/...' },
+  { value: 'Discord', label: 'Discord', placeholder: 'https://discord.gg/abc123' },
+  { value: 'Other', label: 'Other', placeholder: 'Paste a direct join link or handle' },
+];
+
+function inferMeetingPlatform(platform, link) {
+  const normalized = `${platform || ''} ${link || ''}`.toLowerCase();
+  if (platform) return platform;
+  if (normalized.includes('meet.google.com') || normalized.includes('google meet')) return 'Google Meet';
+  if (normalized.includes('slack')) return 'Slack';
+  if (normalized.includes('zoom')) return 'Zoom';
+  if (normalized.includes('teams.microsoft') || normalized.includes('microsoft teams')) return 'Microsoft Teams';
+  if (normalized.includes('discord')) return 'Discord';
+  return '';
+}
+
+function buildMeetingHref(platform, link) {
+  const value = `${link || ''}`.trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (platform === 'Google Meet') return `https://meet.google.com/${value.replace(/^\//, '')}`;
+  if (platform === 'Slack') return `https://slack.com/app_redirect?channel=${encodeURIComponent(value.replace(/^#/, ''))}`;
+  if (platform === 'Zoom') return `https://zoom.us/j/${encodeURIComponent(value)}`;
+  if (platform === 'Microsoft Teams') return `https://teams.microsoft.com/l/meetup-join/${encodeURIComponent(value)}`;
+  if (platform === 'Discord') return `https://discord.gg/${encodeURIComponent(value)}`;
+  return value;
+}
 
 /* ─── BREAKPOINT HOOK ─── */
 function useBreakpoint() {
@@ -239,6 +271,7 @@ function CalWidget({ eventDays, onDayClick }) {
 ═══════════════════════════════════════════ */
 function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg,label:ev.type.toUpperCase()};
+  const joinHref = buildMeetingHref(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
   return (
     <div style={{display:'flex',background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden',marginBottom:12}}>
       {/* Purple date block */}
@@ -282,12 +315,20 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
         {/* Separator */}
         <div style={{height:1,background:C.bd,margin:isMobile?'8px -12px':'10px -16px'}}/>
         {/* Spots + RSVP */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}>
           <span style={{fontSize:12,color:C.pu,fontWeight:500}}>{ev.spotsLeft} spots left</span>
-          <button onClick={()=>onRsvp(ev.id)}
-            style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:ev.rsvped?C.w:C.pu,color:ev.rsvped?C.gr:C.w,border:ev.rsvped?`1px solid ${C.gr}`:'none'}}>
-            {ev.rsvped&&<I k="check" s={11} c={C.gr} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP'}
-          </button>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+            {joinHref && (
+              <button onClick={(e)=>{e.stopPropagation(); window.open(joinHref, '_blank', 'noopener,noreferrer');}}
+                style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.puf,color:C.pu,border:`1px solid ${C.pu}`}}>
+                <I k="monitor" s={11} c={C.pu}/>Join
+              </button>
+            )}
+            <button onClick={()=>onRsvp(ev.id)}
+              style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:ev.rsvped?C.w:C.pu,color:ev.rsvped?C.gr:C.w,border:ev.rsvped?`1px solid ${C.gr}`:'none'}}>
+              {ev.rsvped&&<I k="check" s={11} c={C.gr} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -298,7 +339,7 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
    EVENT FORM MODAL — responsive width
 ═══════════════════════════════════════════ */
 function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
-  const blank = {title:'',speakers:'',type:'',duration:'',date:'',time:'',maxCap:'',avail:'',desc:'',agenda:[]};
+  const blank = {title:'',speakers:'',type:'',duration:'',date:'',time:'',maxCap:'',avail:'',desc:'',agenda:[], meetingPlatform:'', meetingLink:'', meetingInstructions:''};
   const [f, setF] = useState(initial||blank);
   const [typeOpen, setTypeOpen] = useState(false);
   const set = k => e => setF(p=>({...p,[k]:e.target.value}));
@@ -319,8 +360,8 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
           <button onClick={onClose} style={{width:28,height:28,borderRadius:'50%',border:`1px solid ${C.bd}`,background:C.w,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><I k="x" s={14} c={C.t2} sw={2}/></button>
         </div>
         <div style={{flex:1,overflowY:'auto',padding:'18px 20px'}}>
-          <div style={GP}><label style={LB}>Event title <span style={{color:'#EF4444'}}>*</span></label><input value={f.title} onChange={set('title')} placeholder="Enter event title" style={IN}/></div>
-          <div style={GP}><label style={LB}>Speaker name(s)</label><input value={f.speakers} onChange={set('speakers')} placeholder="Enter speaker names" style={IN}/></div>
+          <div style={GP}><label htmlFor="event-title" style={LB}>Event title <span style={{color:'#EF4444'}}>*</span></label><input id="event-title" name="title" value={f.title} onChange={set('title')} placeholder="Enter event title" style={IN}/></div>
+          <div style={GP}><label htmlFor="event-speakers" style={LB}>Speaker name(s)</label><input id="event-speakers" name="speakers" value={f.speakers} onChange={set('speakers')} placeholder="Enter speaker names" style={IN}/></div>
           {/* Type + Duration — stack on mobile */}
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,...GP}}>
             <div>
@@ -339,36 +380,50 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
                 )}
               </div>
             </div>
-            <div><label style={LB}>Duration</label><input value={f.duration} onChange={set('duration')} placeholder="e.g. 90 min" style={IN}/></div>
+            <div><label htmlFor="event-duration" style={LB}>Duration</label><input id="event-duration" name="duration" value={f.duration} onChange={set('duration')} placeholder="e.g. 90 min" style={IN}/></div>
           </div>
           {/* Date + Time — stack on mobile */}
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,...GP}}>
             <div>
               <label style={LB}>Date <span style={{color:'#EF4444'}}>*</span></label>
               <div style={{position:'relative'}}>
-                <input value={f.date} onChange={set('date')} placeholder="mm/dd/yyyy" style={{...IN,paddingRight:36}}/>
+                <input id="event-date" name="date" value={f.date} onChange={set('date')} placeholder="mm/dd/yyyy" style={{...IN,paddingRight:36}}/>
                 <span style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}><I k="cal" s={14} c={C.t3}/></span>
               </div>
             </div>
             <div>
               <label style={LB}>Time (GMT) <span style={{color:'#EF4444'}}>*</span></label>
               <div style={{position:'relative'}}>
-                <input value={f.time} onChange={set('time')} placeholder="00:00" style={{...IN,paddingRight:36}}/>
+                <input id="event-time" name="time" value={f.time} onChange={set('time')} placeholder="00:00" style={{...IN,paddingRight:36}}/>
                 <span style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}><I k="clock" s={14} c={C.t3}/></span>
               </div>
             </div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,...GP}}>
-            <div><label style={LB}>Max capacity</label><input type="number" value={f.maxCap} onChange={set('maxCap')} placeholder="0" style={IN}/></div>
-            <div><label style={LB}>Available spots</label><input type="number" value={f.avail} onChange={set('avail')} placeholder="0" style={IN}/></div>
+            <div><label htmlFor="event-max-cap" style={LB}>Max capacity</label><input id="event-max-cap" name="maxCap" type="number" value={f.maxCap} onChange={set('maxCap')} placeholder="0" style={IN}/></div>
+            <div><label htmlFor="event-avail" style={LB}>Available spots</label><input id="event-avail" name="avail" type="number" value={f.avail} onChange={set('avail')} placeholder="0" style={IN}/></div>
           </div>
-          <div style={GP}><label style={LB}>Description <span style={{color:'#EF4444'}}>*</span></label><textarea value={f.desc} onChange={set('desc')} placeholder="write something here..." rows={4} style={{...IN,resize:'vertical',lineHeight:1.6}}/></div>
+          <div style={GP}><label htmlFor="event-description" style={LB}>Description <span style={{color:'#EF4444'}}>*</span></label><textarea id="event-description" name="desc" value={f.desc} onChange={set('desc')} placeholder="write something here..." rows={4} style={{...IN,resize:'vertical',lineHeight:1.6}}/></div>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,...GP}}>
+            <div>
+              <label htmlFor="event-meeting-platform" style={LB}>Meeting platform</label>
+              <select id="event-meeting-platform" name="meetingPlatform" value={f.meetingPlatform} onChange={set('meetingPlatform')} style={IN}>
+                <option value="">Select a platform</option>
+                {MEETING_PLATFORMS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="event-meeting-link" style={LB}>Meeting link / handle</label>
+              <input id="event-meeting-link" name="meetingLink" value={f.meetingLink} onChange={set('meetingLink')} placeholder={MEETING_PLATFORMS.find(option => option.value === f.meetingPlatform)?.placeholder || 'Paste a direct join link or handle'} style={IN}/>
+            </div>
+          </div>
+          <div style={GP}><label htmlFor="event-meeting-instructions" style={LB}>Meeting instructions <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label><textarea id="event-meeting-instructions" name="meetingInstructions" value={f.meetingInstructions} onChange={set('meetingInstructions')} placeholder="Share access notes, passwords, or Slack channel details" rows={3} style={{...IN,resize:'vertical',lineHeight:1.6}}/></div>
           <div style={GP}>
             <label style={LB}>Agenda items <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label>
             {f.agenda.map((a,i)=>(
               <div key={i} style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
-                <input value={a.t} onChange={e=>setAg(i,'t',e.target.value)} placeholder="Time" style={{...IN,width:65,flexShrink:0,padding:'9px 8px'}}/>
-                <input value={a.d} onChange={e=>setAg(i,'d',e.target.value)} placeholder="Agenda item description" style={{...IN,flex:1}}/>
+                <input id={`agenda-time-${i}`} name={`agenda-time-${i}`} value={a.t} onChange={e=>setAg(i,'t',e.target.value)} placeholder="Time" style={{...IN,width:65,flexShrink:0,padding:'9px 8px'}}/>
+                <input id={`agenda-description-${i}`} name={`agenda-description-${i}`} value={a.d} onChange={e=>setAg(i,'d',e.target.value)} placeholder="Agenda item description" style={{...IN,flex:1}}/>
                 <button onClick={()=>delAg(i)} style={{background:'none',border:'none',cursor:'pointer',padding:4,flexShrink:0,display:'flex'}}><I k="x" s={16} c={C.t3} sw={2}/></button>
               </div>
             ))}
@@ -403,6 +458,16 @@ function DetailModal({ ev, onClose, onRsvp, isMobile }) {
           <span style={{display:'inline-block',fontSize:11,fontWeight:700,color:ec.c,padding:'3px 10px',background:ec.b,borderRadius:20,marginBottom:12}}>
             {ev.type.charAt(0).toUpperCase()+ev.type.slice(1)}
           </span>
+          {(ev.meetingPlatform || ev.meetingLink) && (
+            <div style={{background:C.puf,border:`1px solid ${C.pu}`,borderRadius:10,padding:'12px 14px',marginBottom:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.pu,marginBottom:4}}>Join session</div>
+              <div style={{fontSize:13,fontWeight:600,color:C.t1,marginBottom:4}}>{ev.meetingPlatform || 'Meeting link'}</div>
+              <div style={{fontSize:12,color:C.t2,marginBottom:10,wordBreak:'break-all'}}>{ev.meetingLink || ev.meetingHandle}</div>
+              <button onClick={() => window.open(buildMeetingHref(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle), '_blank', 'noopener,noreferrer')} style={{padding:'8px 12px',borderRadius:8,border:'none',background:C.pu,color:C.w,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+                Open {ev.meetingPlatform || 'meeting'}
+              </button>
+            </div>
+          )}
           <h2 style={{fontSize:16,fontWeight:700,color:C.t1,margin:'0 0 10px',lineHeight:1.4}}>{ev.title}</h2>
           <p style={{fontSize:13,color:C.t2,margin:'0 0 18px',lineHeight:1.7}}>{ev.desc}</p>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
@@ -504,6 +569,48 @@ function Toast({ msg, onDone }) {
   );
 }
 
+function formatEventForUi(event) {
+  const start = event.startDate ? new Date(event.startDate) : new Date();
+  const end = event.endDate ? new Date(event.endDate) : new Date(start.getTime() + 90 * 60000);
+  const durationMinutes = Math.max(30, Math.round((end.getTime() - start.getTime()) / 60000));
+  const month = start.toLocaleDateString('en', { month: 'short' }).toUpperCase();
+  const day = start.getDate();
+  const weekday = start.toLocaleDateString('en', { weekday: 'short' }).toUpperCase();
+  const time = start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const dateLabel = start.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const dateShort = start.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' }) + ` · ${time}`;
+  const type = event.eventType || 'Office hours';
+  const meetingPlatform = inferMeetingPlatform(event.meetingPlatform, event.meetingLink || event.meetingHandle);
+  const meetingLink = event.meetingLink || event.meetingHandle || '';
+  const spotsLeft = Math.max(0, (event.capacity || 0) - (event.rsvpCount || 0));
+
+  return {
+    id: event.id,
+    title: event.title,
+    desc: event.description || 'Join this live session with the Tribes Capital team.',
+    dateLabel,
+    dateShort,
+    time,
+    dur: `${durationMinutes} min`,
+    format: meetingPlatform ? `Live ${meetingPlatform}` : (event.isVirtual ? 'Live Zoom · Recorded' : 'In person'),
+    month,
+    day: String(day),
+    weekday,
+    calDay: start.getDate(),
+    calMonth: start.getMonth(),
+    calYear: start.getFullYear(),
+    spotsLeft,
+    totalSpots: event.capacity || 0,
+    rsvped: false,
+    type,
+    speakers: [SPK.KA],
+    agenda: [],
+    meetingPlatform,
+    meetingLink,
+    meetingInstructions: event.meetingInstructions || '',
+  };
+}
+
 /* ═══════════════════════════════════════════
    MAIN
 ═══════════════════════════════════════════ */
@@ -512,8 +619,9 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   const isMobile = isMobileParam !== undefined ? isMobileParam : bp.isMobile;
   const isTablet = isTabletParam !== undefined ? isTabletParam : bp.isTablet;
   const isDesktop = bp.isDesktop;
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [events,      setEvents]      = useState(INIT_EVENTS);
+  const [events,      setEvents]      = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [eventsError, setEventsError] = useState(null);
   const [activeTab,   setTab]         = useState('upcoming');
   const [activeFilter,setFilter]      = useState('all');
   const [sortBy,      setSort]        = useState('soonest');
@@ -524,26 +632,97 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   const [detailEv,    setDetail]      = useState(null);
   const [viewAll,     setViewAll]     = useState(false);
   const [toast,       setToast]       = useState(null);
-  const [calEvDays,   setCalEvDays]   = useState([{day:8,month:4,year:2026}]);
+  const [calEvDays,   setCalEvDays]   = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadEvents = async () => {
+      try {
+        const response = await eventsAPI.list({ skip: 0, take: 20 });
+        const mapped = (response.data || []).map(formatEventForUi);
+        if (isMounted) {
+          setEvents(mapped);
+          setCalEvDays(mapped.map(event => ({ day: event.calDay, month: event.calMonth, year: event.calYear })));
+          setEventsError(null);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setEvents([]);
+          setEventsError('Unable to load events from the server right now.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingEvents(false);
+        }
+      }
+    };
+
+    loadEvents();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const showToast = msg => setToast(msg);
 
-  const handleRsvp = id => {
-    setEvents(p=>p.map(e=>e.id===id?{...e,rsvped:!e.rsvped}:e));
-    if (detailEv?.id===id) setDetail(p=>({...p,rsvped:!p.rsvped}));
+  const handleRsvp = async id => {
+    const event = events.find(e => e.id === id);
+    if (!event) return;
+
+    try {
+      if (!event.rsvped) {
+        await eventsAPI.rsvp(id);
+      } else {
+        await eventsAPI.cancelRSVP(id);
+      }
+
+      setEvents(p => p.map(e => e.id === id ? { ...e, rsvped: !e.rsvped } : e));
+      if (detailEv?.id === id) setDetail(p => ({ ...p, rsvped: !p.rsvped }));
+      showToast(event.rsvped ? 'RSVP cancelled.' : 'RSVP confirmed.');
+    } catch (error) {
+      showToast('Unable to update your RSVP right now.');
+    }
   };
 
-  const handleSave = form => {
+  const handleSave = async form => {
     const parts = form.date ? form.date.split('/') : [];
-    const calDay=parts[1]?parseInt(parts[1]):8, calMonth=parts[0]?parseInt(parts[0])-1:4, calYear=parts[2]?parseInt(parts[2]):2026;
-    if (editEv) {
-      setEvents(p=>p.map(e=>e.id===editEv.id?{...e,...form,dur:form.duration||e.dur,dateLabel:form.date||e.dateLabel,calDay,calMonth,calYear}:e));
-      setEdit(null); showToast('Event updated successfully');
-    } else {
-      const ne={...form,id:Date.now(),month:parts[0]||'MAY',day:String(calDay),weekday:'THU',dateLabel:form.date||'TBD',dateShort:`${form.date||'TBD'} · ${form.time||'TBD'}`,time:form.time||'TBD',dur:form.duration||'TBD',format:'Live Zoom · Recorded',calDay,calMonth,calYear,spotsLeft:parseInt(form.avail)||0,totalSpots:parseInt(form.maxCap)||0,rsvped:false,speakers:[SPK.KA],agenda:form.agenda||[]};
-      setEvents(p=>[...p,ne]);
-      setCalEvDays(p=>[...p,{day:calDay,month:calMonth,year:calYear}]);
-      setCreate(false); showToast('Event created successfully');
+    const startDate = parts[2] && parts[0] && parts[1]
+      ? new Date(`${parts[2]}-${parts[0]}-${parts[1]}T${form.time || '00:00'}`)
+      : new Date();
+    const endDate = new Date(startDate.getTime() + 90 * 60000);
+    const payload = {
+      title: form.title,
+      description: form.desc || '',
+      slug: (form.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      location: form.meetingPlatform ? 'Virtual' : 'TBD',
+      isVirtual: Boolean(form.meetingPlatform || form.meetingLink),
+      capacity: parseInt(form.maxCap, 10) || 100,
+      eventType: form.type || 'Office hours',
+      meetingPlatform: inferMeetingPlatform(form.meetingPlatform, form.meetingLink),
+      meetingLink: form.meetingLink || '',
+      meetingHandle: form.meetingLink || '',
+      meetingInstructions: form.meetingInstructions || '',
+    };
+
+    try {
+      if (editEv) {
+        const response = await eventsAPI.update(editEv.id, payload);
+        const updated = formatEventForUi(response.data || response);
+        setEvents(p => p.map(e => e.id === editEv.id ? { ...updated, rsvped: e.rsvped } : e));
+        setEdit(null);
+        showToast('Event updated successfully');
+      } else {
+        const response = await eventsAPI.create(payload);
+        const created = formatEventForUi(response.data || response);
+        setEvents(p => [created, ...p]);
+        setCalEvDays(p => [...p, { day: created.calDay, month: created.calMonth, year: created.calYear }]);
+        setCreate(false);
+        showToast('Event created successfully');
+      }
+    } catch (error) {
+      showToast('Unable to save this event right now.');
     }
   };
 
@@ -557,11 +736,11 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
     if (found) setDetail(found);
   };
 
-  const TABS    = [{id:'upcoming',l:'Upcoming',n:events.length},{id:'rsvps',l:'My RSVPs',n:events.filter(e=>e.rsvped).length},{id:'replays',l:'Replays',n:24}];
+  const TABS    = [{id:'upcoming',l:'Upcoming',n:events.length},{id:'rsvps',l:'My RSVPs',n:events.filter(e=>e.rsvped).length},{id:'replays',l:'Replays',n:0}];
   const FILTERS = [{id:'all',l:'All types'},{id:'oh',l:'Office Hours'},{id:'mc',l:'Member Circles'},{id:'ws',l:'Workshops'},{id:'wb',l:'Webinars'}];
   const SORTS   = [{id:'soonest',l:'Soonest first'},{id:'latest',l:'Latest first'},{id:'popular',l:'Most popular'}];
   const RSVPS   = [{dot:C.pu,title:'Project Financing Deep Dive',dt:'Thu, May 8 · 3:00 PM GMT'},{dot:C.gr,title:'Project Financing Deep Dive',dt:'Thu, May 8 · 3:00 PM GMT'},{dot:C.pu,title:'Project Financing Deep Dive',dt:'Thu, May 8 · 3:00 PM GMT'}];
-  const HOSTS   = [{dot:C.pu,n:'Kwame Asante',r:'Lead Investment Analyst',s:'8 sessions'},{dot:C.gr,n:'Ngozi Fakoya',r:'ESG & Policy Lead',s:'8 sessions'},{dot:C.am,n:'Bola Oladele',r:'Risk & FX Specialist',s:'8 sessions'}];
+  const HOSTS   = [{dot:C.gr,n:'Fatai',r:'Chief MO',s:'8 sessions'},{dot:C.pu,n:'David O',r:'Lead Investment Analyst',s:'8 sessions'},{dot:C.am,n:'Olatunde',r:'CTO',s:'8 sessions'}];
   const displayEvents = activeTab==='rsvps' ? events.filter(e=>e.rsvped) : events;
 
   /* Right-column width responsive */
@@ -570,15 +749,8 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   const mainPad = isMobile ? '16px 14px 60px' : '24px 28px 60px';
 
   return (
-    <div style={{display:'flex',height:'100vh',background:C.bg,fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',fontSize:14,overflow:'hidden'}}>
-
-      {/* Sidebar */}
-      <Sidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)} isMobile={isMobile} isTablet={isTablet}/>
-
-      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
-        <TopBar onMenuToggle={()=>setSidebarOpen(true)} isMobile={isMobile} isTablet={isTablet}/>
-
-        <main style={{flex:1,overflowY:'auto',padding:mainPad}}>
+    <div style={{display:'flex',flexDirection:'column',height:'100%',minHeight:0,background:C.bg,fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',fontSize:14,overflow:'hidden'}}>
+      <main style={{flex:1,overflowY:'auto',padding:mainPad}}>
 
           {/* ── Page header ── */}
           <div style={{display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',marginBottom:20,gap:12,flexDirection:isMobile?'column':'row'}}>
@@ -611,24 +783,32 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
           {/* ── Live banner ── */}
           <div style={{background:`linear-gradient(135deg,${C.pud},${C.pu} 55%,${C.pul})`,borderRadius:14,padding:isMobile?'18px 16px':'22px 28px',marginBottom:22}}>
-            <div style={{display:'inline-flex',alignItems:'center',gap:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.3)',borderRadius:20,padding:'4px 12px',marginBottom:12}}>
-              <div style={{width:8,height:8,borderRadius:'50%',background:'#FCD34D'}}/>
-              <span style={{fontSize:11,fontWeight:700,color:C.w,letterSpacing:.7}}>LIVE THIS THURSDAY</span>
-            </div>
-            <h2 style={{fontSize:isMobile?16:20,fontWeight:700,color:C.w,margin:'0 0 8px',lineHeight:1.3}}>Project Financing Deep Dive: Structuring Your First Deal</h2>
-            <p style={{fontSize:13,color:'rgba(255,255,255,.8)',margin:'0 0 14px',lineHeight:1.6,maxWidth:580}}>Join our lead investment analyst as he walks through a real $2.4M C&I solar deal — from term sheet to financial close.</p>
-            <div style={{display:'flex',alignItems:'center',gap:isMobile?10:16,marginBottom:14,flexWrap:'wrap'}}>
-              {[{k:'cal',t:isMobile?'May 8 · 3:00 PM GMT':'Thursday, May 8 · 3:00 PM GMT'},{k:'users',t:'Office Hours'},{k:'clock',t:'90 min'}].map(m=>(
-                <span key={m.t} style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k={m.k} s={13} c='rgba(255,255,255,.65)'/>{m.t}</span>
-              ))}
-            </div>
-            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-              <button onClick={()=>showToast('RSVP confirmed! See you Thursday.')} style={{padding:isMobile?'8px 14px':'8px 18px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.5)',background:'rgba(255,255,255,.15)',color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>RSVP now</button>
-              <button onClick={addLiveToCalendar} style={{display:'flex',alignItems:'center',gap:6,padding:isMobile?'8px 12px':'8px 16px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.35)',background:'rgba(255,255,255,.08)',color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
-                <I k="plus" s={13} c={C.w} sw={2}/>Add to calendar
-              </button>
-            </div>
-            <p style={{fontSize:12,color:'rgba(255,255,255,.6)',margin:'10px 0 0'}}>14 spots remaining out of 40</p>
+            {loadingEvents ? (
+              <div style={{color:C.w,fontSize:13}}>Loading upcoming sessions…</div>
+            ) : events.length > 0 ? (
+              <>
+                <div style={{display:'inline-flex',alignItems:'center',gap:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.3)',borderRadius:20,padding:'4px 12px',marginBottom:12}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:'#FCD34D'}}/>
+                  <span style={{fontSize:11,fontWeight:700,color:C.w,letterSpacing:.7}}>UPCOMING SESSION</span>
+                </div>
+                <h2 style={{fontSize:isMobile?16:20,fontWeight:700,color:C.w,margin:'0 0 8px',lineHeight:1.3}}>{events[0].title}</h2>
+                <p style={{fontSize:13,color:'rgba(255,255,255,.8)',margin:'0 0 14px',lineHeight:1.6,maxWidth:580}}>{events[0].desc}</p>
+                <div style={{display:'flex',alignItems:'center',gap:isMobile?10:16,marginBottom:14,flexWrap:'wrap'}}>
+                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="cal" s={13} c='rgba(255,255,255,.65)'/>{events[0].dateShort}</span>
+                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="users" s={13} c='rgba(255,255,255,.65)'/>{events[0].type}</span>
+                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="clock" s={13} c='rgba(255,255,255,.65)'/>{events[0].dur}</span>
+                </div>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                  <button onClick={() => setDetail(events[0])} style={{padding:isMobile?'8px 14px':'8px 18px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.5)',background:'rgba(255,255,255,.15)',color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>View details</button>
+                  <button onClick={() => handleRsvp(events[0].id)} style={{display:'flex',alignItems:'center',gap:6,padding:isMobile?'8px 12px':'8px 16px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.35)',background:'rgba(255,255,255,.08)',color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
+                    <I k="plus" s={13} c={C.w} sw={2}/>{events[0].rsvped ? 'Cancel RSVP' : 'RSVP now'}
+                  </button>
+                </div>
+                <p style={{fontSize:12,color:'rgba(255,255,255,.6)',margin:'10px 0 0'}}>{events[0].spotsLeft} spots remaining out of {events[0].totalSpots || '∞'}</p>
+              </>
+            ) : (
+              <div style={{color:C.w,fontSize:13}}>{eventsError || 'No sessions are available right now.'}</div>
+            )}
           </div>
 
           {/* ── Tabs — horizontally scrollable on mobile ── */}
@@ -680,7 +860,11 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
                   View all <I k="arr" s={13} c={C.pu}/>
                 </button>
               </div>
-              {displayEvents.map(ev=>(
+              {loadingEvents ? (
+                <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:'16px',color:C.t2}}>Loading sessions…</div>
+              ) : displayEvents.length === 0 ? (
+                <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:'16px',color:C.t2}}>{eventsError || 'No sessions match the current filter.'}</div>
+              ) : displayEvents.map(ev=>(
                 <EventCard key={ev.id} ev={ev} isMobile={isMobile}
                   onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>
               ))}
@@ -725,7 +909,6 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
             </div>
           </div>
         </main>
-      </div>
 
       {/* ── MODALS ── */}
       {showCreate && <EventFormModal title="Create event" onClose={()=>setCreate(false)} onSave={handleSave} isMobile={isMobile}/>}
