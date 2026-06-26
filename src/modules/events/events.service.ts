@@ -7,23 +7,28 @@ export class EventsService {
   constructor(private prisma: PrismaService) {}
 
   async create(organizerId: string, createEventDto: CreateEventDto): Promise<EventResponseDto> {
+    const eventData: any = {
+      title: createEventDto.title,
+      description: createEventDto.description,
+      location: createEventDto.location,
+      isVirtual: createEventDto.isVirtual || false,
+      meetingPlatform: createEventDto.meetingPlatform,
+      meetingLink: createEventDto.meetingLink,
+      meetingHandle: createEventDto.meetingHandle,
+      meetingInstructions: createEventDto.meetingInstructions,
+      startDate: new Date(createEventDto.startDate),
+      endDate: new Date(createEventDto.endDate),
+      capacity: createEventDto.capacity || 100,
+      isPublished: false,
+      creatorId: organizerId,
+    };
+
+    if (createEventDto.eventType) {
+      eventData.eventType = createEventDto.eventType;
+    }
+
     const event = await this.prisma.event.create({
-      data: {
-        title: createEventDto.title,
-        description: createEventDto.description,
-        location: createEventDto.location,
-        isVirtual: createEventDto.isVirtual || false,
-        eventType: createEventDto.eventType,
-        meetingPlatform: createEventDto.meetingPlatform,
-        meetingLink: createEventDto.meetingLink,
-        meetingHandle: createEventDto.meetingHandle,
-        meetingInstructions: createEventDto.meetingInstructions,
-        startDate: new Date(createEventDto.startDate),
-        endDate: new Date(createEventDto.endDate),
-        capacity: createEventDto.capacity || 100,
-        isPublished: false,
-        creatorId: organizerId,
-      },
+      data: eventData,
       include: {
         rsvps: true,
       },
