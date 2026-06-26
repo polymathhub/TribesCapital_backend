@@ -11,11 +11,22 @@ function App() {
   const [user, setUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
+  const [hasBootstrapped, setHasBootstrapped] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
+
+    const finishBootstrap = () => {
+      setIsLoading(false);
+      setHasBootstrapped(true);
+    };
+
+    const fallbackTimer = setTimeout(() => {
+      console.warn('Session bootstrap timed out; continuing with the app shell.');
+      finishBootstrap();
+    }, 2500);
 
     const loadSession = async () => {
       try {
@@ -44,7 +55,7 @@ function App() {
           setIsAuthenticated(true);
         }
       } finally {
-        setIsLoading(false);
+        finishBootstrap();
       }
     };
 
@@ -52,7 +63,10 @@ function App() {
       void loadSession();
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   const handleLogin = (userData) => {
@@ -81,7 +95,7 @@ function App() {
   if (!isAuthenticated) {
     return (
       <>
-        <LoadingScreen isVisible={isLoading} />
+        <LoadingScreen isVisible={isLoading && !hasBootstrapped} />
         <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out' }}>
           <AuthPage onLogin={handleLogin} />
         </div>
@@ -91,7 +105,7 @@ function App() {
 
   return (
     <>
-      <LoadingScreen isVisible={isLoading} />
+      <LoadingScreen isVisible={isLoading && !hasBootstrapped} />
       <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out', display: 'flex', width: '100%', height: '100vh', overflow: 'hidden', background: '#f9fafb' }}>
         {isSidebarOpen && (
           <Sidebar activePage={currentPage} onNavigate={handleNavigate} onClose={handleToggleSidebar} onLogout={handleLogout} />

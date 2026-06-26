@@ -9,19 +9,23 @@ function LoadingScreen({ isVisible = true, onLoadComplete = () => {} }) {
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    if (!isVisible) return;
-    
-    // Fade out after 2 seconds
+    if (!isVisible) {
+      setFadeOut(false);
+      return;
+    }
+
     const timer = setTimeout(() => {
       setFadeOut(true);
-      // Remove from DOM after fade completes
-      setTimeout(onLoadComplete, 500);
+      window.setTimeout(() => {
+        onLoadComplete();
+      }, 500);
     }, 2000);
 
     return () => clearTimeout(timer);
   }, [isVisible, onLoadComplete]);
 
-  if (!isVisible && fadeOut) return null;
+  if (!isVisible && !fadeOut) return null;
+  if (fadeOut) return null;
 
   return (
     <div
