@@ -293,6 +293,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   };
   const profileAvatar = getProfileAvatar(user);
 
+  const achievementImages = [
+    'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=1200&q=80',
+  ];
+
   useEffect(() => {
     const metricTimer = window.setInterval(() => {
       setActiveMetricIndex((prev) => (prev + 1) % 4);
@@ -614,17 +621,17 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           <>
           <div ref={bannerRef} style={{
             background:'linear-gradient(135deg, #2E1065 0%, #4C1D95 45%, #5B21B6 100%)',
-            borderRadius:18, padding:isMobile?'20px 18px':'26px 32px', marginBottom:22,
+            borderRadius:18, padding:isMobile?'18px 16px':'26px 32px', marginBottom:22,
             display:'flex', flexDirection:isMobile?'column':'row',
-            justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?16:24,
+            justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?14:24,
             boxShadow:'0 24px 60px rgba(76,29,149,0.28), inset 0 1px 0 rgba(255,255,255,0.24)', position:'relative', overflow:'hidden',
           }}>
-            <div style={{ minWidth:0 }}>
+            <div style={{ minWidth:0, width:'100%' }}>
               <p style={{ color:'rgba(255,255,255,.76)', fontSize:10, fontWeight:700, letterSpacing:1.3,
                 textTransform:'uppercase', margin:'0 0 8px' }}>WELCOME</p>
-              <h1 style={{ color:W, fontSize:isMobile?20:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8 }}>
+              <h1 style={{ color:W, fontSize:isMobile?18:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', lineHeight:1.2 }}>
                 <span>{greeting}, {displayName}</span>
-                <svg width="24" height="24" viewBox="0 0 128 128" fill="none" aria-hidden="true" style={{ flexShrink:0, animation:'wave 1.2s ease-in-out infinite', transformOrigin:'70% 60%' }} xmlns="http://www.w3.org/2000/svg">
+                <svg width="22" height="22" viewBox="0 0 128 128" fill="none" aria-hidden="true" style={{ flexShrink:0, animation:'wave 1.2s ease-in-out infinite', transformOrigin:'70% 60%' }} xmlns="http://www.w3.org/2000/svg">
                   <path d="M59.53 107.44c-3.95-3.17-40.63-38.84-41.04-39.23-1.62-1.62-2.64-3.3-2.92-4.84-.29-1.6.2-3 1.5-4.3 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59l16.63 15.98c.29.28.67.42 1.04.42a1.494 1.494 0 0 0 1.07-2.54L19.13 46.25c-2.66-2.66-3.91-6.73-.75-9.89 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59l27.16 26.48c.29.28.67.43 1.05.43s.77-.15 1.06-.44c.58-.58.59-1.52.01-2.11L24.91 28.02c-1.51-1.51-2.42-3.32-2.58-5.08-.15-1.79.48-3.45 1.83-4.8 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.58L67.3 51.31c.29.28.67.43 1.05.43s.77-.15 1.06-.44c.58-.58.59-1.52.01-2.11L45.26 24.36c-1.52-1.52-2.43-3.32-2.58-5.08-.15-1.79.48-3.45 1.83-4.8 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59 8.86 8.7 31.99 31.45 32.77 32.29 2.97 2.05 3.57-1.05 3.72-3.06.17-2.34-2.51-10.51-.95-17.86 2.62-9.77 10.17-8.17 10.34-8.09 4.14 1.94 3.35 4.84 1.88 10.67l-.15 1.15c-1.54 7.62 9.04 30.2 9.82 31.89 4.15 9.08 8.93 27.49-6.9 43.32-17.35 17.35-38.83 8.46-45.38 1.91z" fill="#ffb300"/>
                   <path d="M81.79 117.18c-10.64 0-19.69-5.09-23.26-8.62-3.21-2.62-23.47-22.18-39.97-38.19-.67-.65-1.06-1.02-1.1-1.07-1.87-1.87-3.03-3.82-3.36-5.66-.38-2.09.27-3.98 1.91-5.63 1.5-1.5 3.34-2.29 5.34-2.29 2.35 0 4.71 1.08 6.65 3.03l16.61 15.96-26.56-27.42c-3.06-3.06-4.6-8.13-.73-11.99 1.5-1.5 3.34-2.29 5.34-2.29 2.35 0 4.71 1.08 6.65 3.03L56.45 62.5L23.84 29.07c-1.74-1.74-2.81-3.87-3-5.99-.19-2.26.59-4.33 2.26-6 1.5-1.5 3.34-2.29 5.34-2.29 2.34 0 4.7 1.07 6.65 3.02l33.26 32.43-24.16-24.83c-1.75-1.75-2.82-3.88-3-6-.19-2.25.59-4.32 2.26-5.99 1.5-1.5 3.34-2.29 5.34-2.29 2.35 0 4.71 1.08 6.65 3.03l7.21 7.07c12.85 12.6 23.59 23.15 24.74 24.33.56.45 1.29.62 1.6.47.2-.1.42-.56.38-1.53-.06-1.7-.3-3.81-.55-6.04-.5-4.48-1.02-9.12-.37-12.18 1.42-5.31 4.21-7.56 6.29-8.53 2.86-1.32 5.63-.86 6.16-.61 5.2 2.44 4.17 6.52 2.75 12.18l-.03.14-.16 1.17c-1.04 5.12 4.3 19.27 9.64 30.8l.08.16c3.57 7.8 10 27.81-7.2 45.01-7.91 7.89-16.47 10.58-24.19 10.58zM21.35 58.72c-1.18 0-2.3.49-3.22 1.41-.95.95-1.28 1.87-1.08 2.97.22 1.21 1.11 2.65 2.5 4.05.01.01.41.4 1.1 1.06 23.42 22.73 37.56 36.24 39.82 38.06l.12.11c5.52 5.52 26.03 15.32 43.26-1.91 15.87-15.87 9.9-34.4 6.59-41.64l-.07-.15c-3.44-7.42-11.26-25.42-9.87-32.6l.23-1.5c1.54-6.12 1.63-7.4-.98-8.66-.77-.14-6.29-.81-8.4 7.06-.53 2.51-.02 7.1.43 11.15.26 2.29.5 4.46.56 6.27.1 2.85-1.25 3.94-2.07 4.34-1.67.81-3.66.12-4.9-.92l-.13-.12c-.61-.66-15.12-14.89-24.72-24.31L53.3 16.3c-2.46-2.47-5.63-2.88-7.76-.75-1.04 1.04-1.51 2.26-1.4 3.61.12 1.41.88 2.88 2.15 4.15L70.5 48.14a3.012 3.012 0 0 1-.02 4.22c-1.11 1.11-3.07 1.13-4.21.03L32.98 19.94c-2.46-2.46-5.64-2.87-7.76-.74-1.04 1.04-1.51 2.26-1.4 3.61.13 1.41.89 2.89 2.15 4.14L58.6 60.41c1.15 1.16 1.14 3.06-.02 4.22-1.11 1.11-3.07 1.13-4.21.03L27.2 38.17c-2.46-2.48-5.64-2.88-7.76-.75-2.59 2.59-1.21 5.8.75 7.77l26.57 27.44a2.988 2.988 0 0 1-.03 4.2c-1.12 1.12-3.06 1.13-4.2.04L25.9 60.89c-1.4-1.41-3.01-2.17-4.55-2.17z" fill="#eda600"/>
                   <path d="M84.76 46.54c-5.49 11.21-4.78 26.9 3.46 39.49.93 1.7 2.52.87 1.71-.88-9.95-21.29.48-36.63.48-36.63l-5.65-1.98z" fill="#eda600"/>
@@ -632,7 +639,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <path d="M64 13.98c1.67-1.06 3.76-1.28 5.73-.93 1.99.35 3.89 1.34 5.39 2.71 1.49 1.39 2.55 3.14 3.21 4.96.32.91.48 1.87.63 2.8.05.96.05 1.92-.1 2.88-.69-.73-1.23-1.46-1.74-2.17-.59-.67-1.05-1.38-1.58-2.03-1.04-1.29-2.05-2.46-3.14-3.5-1.12-1.01-2.3-1.9-3.67-2.67-1.36-.79-2.89-1.45-4.73-2.05z" fill="#90a4ae"/>
                 </svg>
               </h1>
-              <p style={{ color:'rgba(255,255,255,.86)', fontSize:13, margin:'0 0 16px', maxWidth:430, lineHeight:1.65 }}>
+              <p style={{ color:'rgba(255,255,255,.86)', fontSize:isMobile?12:13, margin:'0 0 16px', maxWidth:430, lineHeight:isMobile?1.5:1.65 }}>
                 Welcome to Tribes Capital, your home for clean energy learning, live sessions, and the momentum behind every next move.
               </p>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -644,13 +651,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 ))}
               </div>
             </div>
-            <div style={{ position:'relative', flexShrink:0, width:isMobile?'100%':'240px', minHeight:isMobile?'180px':'170px', display:'flex', alignItems:'center', justifyContent:'flex-end' }}>
-              {[
-                { value: memberCount || 0, label: 'Members' },
-                { value: dashboardCourses.length, label: 'Courses' },
-                { value: dashboardEvents.length, label: 'Sessions' },
-                { value: dashboardLoading ? '—' : Math.max(1, dashboardCourses.length + dashboardEvents.length), label: 'Updates' },
-              ].map((item, index) => {
+            <div style={{ position:'relative', flexShrink:0, width:isMobile?'100%':'240px', minHeight:isMobile?'170px':'170px', display:'flex', alignItems:'center', justifyContent:isMobile?'center':'flex-end', marginTop:isMobile?6:0 }}>
+              {achievementImages.map((src, index) => {
                 const offset = (index - activeMetricIndex + 4) % 4;
                 const translateX = offset === 0 ? 0 : offset === 1 ? 16 : offset === 2 ? 32 : 48;
                 const translateY = offset === 0 ? 0 : offset === 1 ? -6 : offset === 2 ? -12 : -18;
@@ -659,7 +661,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 const scale = offset === 0 ? 1 : offset === 1 ? 0.96 : 0.91;
                 const zIndex = 4 - offset;
                 return (
-                  <div key={item.label} style={{
+                  <div key={src} style={{
                     position:'absolute',
                     inset:0,
                     top:0,
@@ -667,10 +669,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     right:0,
                     background:'rgba(255,255,255,0.16)',
                     border:'1px solid rgba(255,255,255,0.24)',
-                    borderRadius:12,
-                    padding:isMobile?'10px 14px':'12px 18px',
-                    textAlign:'center',
-                    minWidth:isMobile?0:90,
+                    borderRadius:isMobile?10:12,
+                    overflow:'hidden',
                     backdropFilter:'blur(16px)',
                     WebkitBackdropFilter:'blur(16px)',
                     boxShadow:'inset 0 1px 0 rgba(255,255,255,0.24), 0 8px 24px rgba(15,23,42,0.08)',
@@ -678,12 +678,12 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     opacity,
                     zIndex,
                     transition:'all 0.8s cubic-bezier(.2,.8,.2,1)',
-                    display:'flex',
-                    flexDirection:'column',
-                    justifyContent:'center',
                   }}>
-                    <div style={{ fontSize:isMobile?20:24, fontWeight:800, color:W, letterSpacing:-.7, lineHeight:1.05 }}>{item.value}</div>
-                    <div style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.9)', marginTop:4, letterSpacing:0.3, textTransform:'uppercase' }}>{item.label}</div>
+                    <img
+                      src={src}
+                      alt={`Tribes Capital achievement ${index + 1}`}
+                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                    />
                   </div>
                 );
               })}
