@@ -20,7 +20,12 @@ function App() {
     const loadSession = async () => {
       try {
         if (token) {
-          const response = await usersAPI.getProfile();
+          const profileRequest = usersAPI.getProfile();
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Session check timed out')), 3500);
+          });
+
+          const response = await Promise.race([profileRequest, timeoutPromise]);
           const profile = response?.data || {};
           setUser({
             ...profile,
@@ -33,6 +38,7 @@ function App() {
           setIsAuthenticated(true);
         }
       } catch (error) {
+        console.warn('Session bootstrap failed:', error);
         if (userEmail) {
           setUser({ email: userEmail, name: userEmail.split('@')[0] });
           setIsAuthenticated(true);
@@ -42,7 +48,10 @@ function App() {
       }
     };
 
-    const timer = setTimeout(loadSession, 500);
+    const timer = setTimeout(() => {
+      void loadSession();
+    }, 500);
+
     return () => clearTimeout(timer);
   }, []);
 

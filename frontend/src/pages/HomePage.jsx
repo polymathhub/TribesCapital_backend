@@ -47,6 +47,15 @@ const STEPS = [
 ];
 
 /* ─── SMALL ICON SVGs ────────────────────────────────── */
+const TOUR_VISITS_KEY = 'tribescapital_welcome_tour_visits';
+
+const getTourVisitCount = () => {
+  if (typeof window === 'undefined') return 0;
+  const storedValue = window.localStorage.getItem(TOUR_VISITS_KEY);
+  const parsedValue = Number(storedValue);
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 0;
+};
+
 function Icon({ name, size=15, color=T3 }) {
   const s = { width:size, height:size, flexShrink:0 };
   const paths = {
@@ -165,6 +174,13 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
           from { opacity:0; transform: scale(.95) translateY(8px); }
           to   { opacity:1; transform: scale(1) translateY(0); }
         }
+        @keyframes wave {
+          0%, 100% { transform: rotate(0deg); }
+          20% { transform: rotate(-10deg); }
+          40% { transform: rotate(14deg); }
+          60% { transform: rotate(-8deg); }
+          80% { transform: rotate(10deg); }
+        }
       `}</style>
     </>
   );
@@ -224,7 +240,7 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = P }) {
 /* ─── MAIN APP ───────────────────────────────────────── */
 export default function HomePage({ user, currentPage = 'home', onNavigate = () => {}, onLogout = () => {}, onToggleSidebar = () => {}, isMobile = false, isTablet = false, isSidebarOpen = true }) {
   const [tourStep,   setTourStep]   = useState(0);
-  const [tourActive, setTourActive] = useState(true);
+  const [tourActive, setTourActive] = useState(() => getTourVisitCount() < 2);
   const [spotlight,  setSpotlight]  = useState(null);
   const [tipPos,     setTipPos]     = useState({ top:'50%', left:'50%', transform:'translate(-50%,-50%)' });
   const [memberCount, setMemberCount] = useState(0);
@@ -233,11 +249,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [activeVideo, setActiveVideo] = useState(null);
 
   const isOverlay = isMobile || isTablet;
   const displayName = user?.name || user?.firstName || user?.email?.split('@')[0] || 'there';
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [activeMetricIndex, setActiveMetricIndex] = useState(0);
   const notifications = dashboardEvents.slice(0,3).map((event) => ({
     title: event.title,
     detail: event.description || 'New session available',
@@ -253,23 +271,34 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       hash = (hash << 5) - hash + seed.charCodeAt(i);
       hash |= 0;
     }
-    const bgColors = ['#5B21B6', '#7C3AED', '#0D9488', '#1D4ED8', '#D97706', '#059669'];
+    const bgColors = ['#F5F3FF', '#ECFDF5', '#EFF6FF', '#FEF3C7', '#FCE7F3'];
     const skinTones = ['#F4CBA3', '#E6B28A', '#CA8A62', '#9A5B3A'];
-    const hairColors = ['#1F2937', '#4A2B22', '#2D1B12', '#774A25'];
-    const shirtColors = ['#EDE9FE', '#DBEAFE', '#FDE68A', '#DCFCE7'];
-    const accentColors = ['#F59E0B', '#EC4899', '#06B6D4'];
+    const hairColors = ['#1F2937', '#4A2B22', '#2D1B12', '#774A25', '#A16207'];
+    const shirtColors = ['#EDE9FE', '#DBEAFE', '#FDE68A', '#DCFCE7', '#FCE7F3'];
+    const accentColors = ['#5B21B6', '#7C3AED', '#0D9488', '#EC4899', '#F59E0B'];
+    const styleVariant = Math.abs(hash) % 5;
+    const hairStyle = Math.abs(hash >> 1) % 3;
+    const faceShape = Math.abs(hash >> 2) % 3;
+    const accessory = Math.abs(hash >> 3) % 3;
 
-    const bg = bgColors[Math.abs(hash) % bgColors.length];
-    const skin = skinTones[Math.abs(hash >> 2) % skinTones.length];
-    const hair = hairColors[Math.abs(hash >> 3) % hairColors.length];
-    const shirt = shirtColors[Math.abs(hash >> 4) % shirtColors.length];
-    const accent = accentColors[Math.abs(hash >> 5) % accentColors.length];
+    const bg = bgColors[Math.abs(hash >> 4) % bgColors.length];
+    const skin = skinTones[Math.abs(hash >> 5) % skinTones.length];
+    const hair = hairColors[Math.abs(hash >> 6) % hairColors.length];
+    const shirt = shirtColors[Math.abs(hash >> 7) % shirtColors.length];
+    const accent = accentColors[Math.abs(hash >> 8) % accentColors.length];
     const hairTilt = (Math.abs(hash) % 3) - 1;
     const eyeOffset = (Math.abs(hash >> 6) % 3) - 1;
 
-    return { bg, skin, hair, shirt, accent, hairTilt, eyeOffset };
+    return { bg, skin, hair, shirt, accent, hairTilt, eyeOffset, styleVariant, hairStyle, faceShape, accessory };
   };
   const profileAvatar = getProfileAvatar(user);
+
+  useEffect(() => {
+    const metricTimer = window.setInterval(() => {
+      setActiveMetricIndex((prev) => (prev + 1) % 4);
+    }, 3200);
+    return () => window.clearInterval(metricTimer);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -366,9 +395,25 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     return () => clearTimeout(id);
   }, [tourStep, tourActive, updatePositions]);
 
-  const next  = () => tourStep < STEPS.length-1 ? setTourStep(s=>s+1) : setTourActive(false);
+  const next  = () => {
+    if (tourStep < STEPS.length - 1) {
+      setTourStep((s) => s + 1);
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      const nextCount = getTourVisitCount() + 1;
+      window.localStorage.setItem(TOUR_VISITS_KEY, String(nextCount));
+    }
+    setTourActive(false);
+  };
   const back  = () => tourStep > 0 && setTourStep(s=>s-1);
-  const skip  = () => setTourActive(false);
+  const skip  = () => {
+    if (typeof window !== 'undefined') {
+      const nextCount = getTourVisitCount() + 1;
+      window.localStorage.setItem(TOUR_VISITS_KEY, String(nextCount));
+    }
+    setTourActive(false);
+  };
 
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
@@ -386,9 +431,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   ];
 
   const demoVideos = [
-    { title: 'How to evaluate a climate deal', duration: '12 min', tag: 'Demo lesson', videoId: 'aqz-KE-bpKQ' },
-    { title: 'Member circle: founder Q&A', duration: '18 min', tag: 'Live recap', videoId: 'M7lc1UVf-VE' },
-    { title: 'Office hours tips for new members', duration: '8 min', tag: 'Quick watch', videoId: 'dQw4w9WgXcQ' },
+    { title: 'How Clean Energy Is Transforming Schools & Communities in Africa', duration: '1 min', tag: 'Demo lesson', videoId: 'wMQDsjS9WC4' },
+    { title: 'Hospitals Are Going Dark in Africa — Tribes Capital is Fixing It', duration: '31 sec', tag: 'Live recap', videoId: 'Jdmt9BaYHnw' },
+    { title: 'How Clean Energy Powers Africa', duration: '45 sec', tag: 'Quick watch', videoId: 'DnjMO5L5QgI' },
   ];
 
   const buildYouTubeEmbedUrl = (videoId) => `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&modestbranding=1&controls=1&rel=0&fs=1`;
@@ -431,13 +476,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   /* ── RENDER ── */
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', minHeight:0, background:BG, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', minHeight:0, background:'radial-gradient(circle at top left, rgba(124,58,237,0.10), transparent 28%), linear-gradient(135deg, #f8f7ff 0%, #f5f7ff 42%, #f9fbff 100%)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
 
       {/* ══ TOPBAR ══ */}
       <div style={{
-        height:54, background:W, borderBottom:`1px solid ${BD}`,
-        display:'flex', alignItems:'center', padding:`0 ${isMobile?14:24}px`, gap:12,
-        flexShrink:0, justifyContent:'space-between', boxShadow:'0 1px 0 rgba(17,24,39,0.03)',
+        height:54, background:'rgba(255,255,255,0.58)', backdropFilter:'blur(18px) saturate(180%)', WebkitBackdropFilter:'blur(18px) saturate(180%)',
+        borderBottom:`1px solid rgba(255,255,255,0.65)`, display:'flex', alignItems:'center', padding:`0 ${isMobile?14:24}px`, gap:12,
+        flexShrink:0, justifyContent:'space-between', boxShadow:'0 10px 30px rgba(15,23,42,0.06)', position:'relative', zIndex:60,
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 }}>
           {/* Sidebar toggle */}
@@ -451,16 +496,22 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {/* Search — full on desktop, icon-only on mobile */}
           {!isMobile ? (
             <div ref={searchRef} style={{ flex:1, maxWidth:480, position:'relative' }}>
-              <div style={{ background:'#F9FAFB', border:`1px solid ${BD}`, borderRadius:10,
-                height:38, display:'flex', alignItems:'center', gap:8, padding:'0 12px', boxShadow:'0 1px 3px rgba(17,24,39,0.04)', transition:'border-color .2s ease, box-shadow .2s ease' }}>
-                <Icon name="search" size={14} color={T3}/>
+              <div style={{ background: searchFocused ? '#FCFBFF' : '#F9FAFB', border: searchFocused ? `1px solid rgba(91,33,182,0.25)` : `1px solid ${BD}`, borderRadius:10,
+                height:38, display:'flex', alignItems:'center', gap:8, padding:'0 12px', boxShadow: searchFocused ? '0 0 0 3px rgba(91,33,182,0.12)' : '0 1px 3px rgba(17,24,39,0.04)', transition:'all .2s ease' }}>
+                <Icon name="search" size={14} color={searchFocused ? P : T3}/>
+                <label htmlFor="homepage-search" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
+                  Search the platform
+                </label>
                 <input
+                  id="homepage-search"
+                  name="search"
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setIsSearchOpen(true);
                   }}
-                  onFocus={() => setIsSearchOpen(true)}
+                  onFocus={() => { setIsSearchOpen(true); setSearchFocused(true); }}
+                  onBlur={() => setSearchFocused(false)}
                   placeholder="Search topics, documents, people, events…"
                   style={{ flex:1, border:'none', outline:'none', background:'transparent', fontSize:13, color:T1, padding:0 }}
                 />
@@ -506,7 +557,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               type="button"
               onClick={() => setIsNotificationsOpen((prev) => !prev)}
               style={{ width:34, height:34, border:`1px solid ${BD}`, borderRadius:'50%',
-                display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', flexShrink:0, background:W }}
+                display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', flexShrink:0, background:W, transition:'all .2s ease', boxShadow:'0 1px 3px rgba(17,24,39,0.04)' }}
               aria-label="Open notifications"
             >
               <Icon name="bell2" size={16} color={T2}/>
@@ -514,7 +565,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 position:'absolute', top:6, right:6 }}/>
             </button>
             {isNotificationsOpen && (
-              <div style={{ position:'absolute', top:'calc(100% + 10px)', right:0, width:280, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 18px 42px rgba(17,24,39,0.12)', overflow:'hidden', zIndex:30 }}>
+              <div style={{ position:'fixed', top:isMobile ? 58 : 62, right:isMobile ? 12 : 22, width:280, maxHeight:'calc(100vh - 80px)', overflowY:'auto', background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 18px 42px rgba(17,24,39,0.16)', overflow:'hidden', zIndex:1000 }}>
                 <div style={{ padding:'12px 14px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <div>
                     <div style={{ fontSize:12, fontWeight:700, color:T1 }}>Notifications</div>
@@ -534,15 +585,22 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </div>
             )}
           </div>
-          <div title={displayName} style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'2px solid #111827', boxShadow:'0 6px 16px rgba(17,24,39,0.14)', background:'#FFFFFF', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>
+          <div title={displayName} style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'1.5px solid rgba(255,255,255,0.95)', boxShadow:'0 10px 24px rgba(17,24,39,0.16)', background:'linear-gradient(135deg, #f5f3ff 0%, #fdf2f8 100%)', display:'flex', alignItems:'center', justifyContent:'center', padding:0, transition:'transform .2s ease, box-shadow .2s ease' }}>
             <svg viewBox="0 0 64 64" width="46" height="46" role="img" aria-label={`${displayName} avatar`}>
-              <rect width="64" height="64" rx="32" fill="#FFFFFF" />
-              <circle cx="32" cy="24" r="12" fill={profileAvatar.skin} stroke="#111827" strokeWidth="2.5" />
-              <path d="M20 48c2-10 10-15 12-15s10 5 12 15" fill={profileAvatar.shirt} stroke="#111827" strokeWidth="2.5" />
-              <path d="M20 31c2-6 7-10 12-10 5 0 10 4 12 10" stroke={profileAvatar.hair} strokeWidth="4" strokeLinecap="round" fill="none" />
-              <rect x="27" y="24" width="3" height="3" rx="1.5" fill="#111827" />
-              <rect x="34" y="24" width="3" height="3" rx="1.5" fill="#111827" />
-              <path d="M28 31c2 2 6 2 8 0" stroke={profileAvatar.accent} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <defs>
+                <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={profileAvatar.bg} />
+                  <stop offset="100%" stopColor="#ffffff" />
+                </linearGradient>
+              </defs>
+              <rect width="64" height="64" rx="32" fill="url(#avatarGradient)" />
+              <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(255,255,255,0.74)" strokeWidth="1.2" />
+              <circle cx="32" cy="24" r="8" fill="#2f3b4a" />
+              <path d="M20 46c1-9 6-14 12-14s11 5 12 14" fill="#6b5b4b" />
+              <path d="M24 47c2-5 5-7 8-7 3 0 6 2 8 7" fill="none" stroke="#3b3128" strokeWidth="1.25" strokeLinecap="round" />
+              <circle cx="29" cy="24" r="1" fill="#f6d8bf" />
+              <circle cx="35" cy="24" r="1" fill="#f6d8bf" />
+              <path d="M28 31c2 1.2 6 1.2 8 0" stroke="#3b3128" strokeWidth="1.1" strokeLinecap="round" />
             </svg>
           </div>
         </div>
@@ -555,20 +613,27 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {currentPage === 'home' && (
           <>
           <div ref={bannerRef} style={{
-            background:`linear-gradient(135deg, ${PD} 0%, ${P} 55%, ${PL} 100%)`,
+            background:'linear-gradient(135deg, #2E1065 0%, #4C1D95 45%, #5B21B6 100%)',
             borderRadius:18, padding:isMobile?'20px 18px':'26px 32px', marginBottom:22,
             display:'flex', flexDirection:isMobile?'column':'row',
             justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?16:24,
-            boxShadow:'0 16px 36px rgba(91,33,182,0.18)', position:'relative', overflow:'hidden',
+            boxShadow:'0 24px 60px rgba(76,29,149,0.28), inset 0 1px 0 rgba(255,255,255,0.24)', position:'relative', overflow:'hidden',
           }}>
             <div style={{ minWidth:0 }}>
-              <p style={{ color:'rgba(255,255,255,.7)', fontSize:10, fontWeight:600, letterSpacing:1.2,
-                textTransform:'uppercase', margin:'0 0 8px' }}>{greeting.toUpperCase()}</p>
-              <h1 style={{ color:W, fontSize:isMobile?20:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5 }}>
-                {greeting}, {displayName} 👋
+              <p style={{ color:'rgba(255,255,255,.76)', fontSize:10, fontWeight:700, letterSpacing:1.3,
+                textTransform:'uppercase', margin:'0 0 8px' }}>WELCOME</p>
+              <h1 style={{ color:W, fontSize:isMobile?20:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8 }}>
+                <span>{greeting}, {displayName}</span>
+                <svg width="24" height="24" viewBox="0 0 128 128" fill="none" aria-hidden="true" style={{ flexShrink:0, animation:'wave 1.2s ease-in-out infinite', transformOrigin:'70% 60%' }} xmlns="http://www.w3.org/2000/svg">
+                  <path d="M59.53 107.44c-3.95-3.17-40.63-38.84-41.04-39.23-1.62-1.62-2.64-3.3-2.92-4.84-.29-1.6.2-3 1.5-4.3 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59l16.63 15.98c.29.28.67.42 1.04.42a1.494 1.494 0 0 0 1.07-2.54L19.13 46.25c-2.66-2.66-3.91-6.73-.75-9.89 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59l27.16 26.48c.29.28.67.43 1.05.43s.77-.15 1.06-.44c.58-.58.59-1.52.01-2.11L24.91 28.02c-1.51-1.51-2.42-3.32-2.58-5.08-.15-1.79.48-3.45 1.83-4.8 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.58L67.3 51.31c.29.28.67.43 1.05.43s.77-.15 1.06-.44c.58-.58.59-1.52.01-2.11L45.26 24.36c-1.52-1.52-2.43-3.32-2.58-5.08-.15-1.79.48-3.45 1.83-4.8 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59 8.86 8.7 31.99 31.45 32.77 32.29 2.97 2.05 3.57-1.05 3.72-3.06.17-2.34-2.51-10.51-.95-17.86 2.62-9.77 10.17-8.17 10.34-8.09 4.14 1.94 3.35 4.84 1.88 10.67l-.15 1.15c-1.54 7.62 9.04 30.2 9.82 31.89 4.15 9.08 8.93 27.49-6.9 43.32-17.35 17.35-38.83 8.46-45.38 1.91z" fill="#ffb300"/>
+                  <path d="M81.79 117.18c-10.64 0-19.69-5.09-23.26-8.62-3.21-2.62-23.47-22.18-39.97-38.19-.67-.65-1.06-1.02-1.1-1.07-1.87-1.87-3.03-3.82-3.36-5.66-.38-2.09.27-3.98 1.91-5.63 1.5-1.5 3.34-2.29 5.34-2.29 2.35 0 4.71 1.08 6.65 3.03l16.61 15.96-26.56-27.42c-3.06-3.06-4.6-8.13-.73-11.99 1.5-1.5 3.34-2.29 5.34-2.29 2.35 0 4.71 1.08 6.65 3.03L56.45 62.5L23.84 29.07c-1.74-1.74-2.81-3.87-3-5.99-.19-2.26.59-4.33 2.26-6 1.5-1.5 3.34-2.29 5.34-2.29 2.34 0 4.7 1.07 6.65 3.02l33.26 32.43-24.16-24.83c-1.75-1.75-2.82-3.88-3-6-.19-2.25.59-4.32 2.26-5.99 1.5-1.5 3.34-2.29 5.34-2.29 2.35 0 4.71 1.08 6.65 3.03l7.21 7.07c12.85 12.6 23.59 23.15 24.74 24.33.56.45 1.29.62 1.6.47.2-.1.42-.56.38-1.53-.06-1.7-.3-3.81-.55-6.04-.5-4.48-1.02-9.12-.37-12.18 1.42-5.31 4.21-7.56 6.29-8.53 2.86-1.32 5.63-.86 6.16-.61 5.2 2.44 4.17 6.52 2.75 12.18l-.03.14-.16 1.17c-1.04 5.12 4.3 19.27 9.64 30.8l.08.16c3.57 7.8 10 27.81-7.2 45.01-7.91 7.89-16.47 10.58-24.19 10.58zM21.35 58.72c-1.18 0-2.3.49-3.22 1.41-.95.95-1.28 1.87-1.08 2.97.22 1.21 1.11 2.65 2.5 4.05.01.01.41.4 1.1 1.06 23.42 22.73 37.56 36.24 39.82 38.06l.12.11c5.52 5.52 26.03 15.32 43.26-1.91 15.87-15.87 9.9-34.4 6.59-41.64l-.07-.15c-3.44-7.42-11.26-25.42-9.87-32.6l.23-1.5c1.54-6.12 1.63-7.4-.98-8.66-.77-.14-6.29-.81-8.4 7.06-.53 2.51-.02 7.1.43 11.15.26 2.29.5 4.46.56 6.27.1 2.85-1.25 3.94-2.07 4.34-1.67.81-3.66.12-4.9-.92l-.13-.12c-.61-.66-15.12-14.89-24.72-24.31L53.3 16.3c-2.46-2.47-5.63-2.88-7.76-.75-1.04 1.04-1.51 2.26-1.4 3.61.12 1.41.88 2.88 2.15 4.15L70.5 48.14a3.012 3.012 0 0 1-.02 4.22c-1.11 1.11-3.07 1.13-4.21.03L32.98 19.94c-2.46-2.46-5.64-2.87-7.76-.74-1.04 1.04-1.51 2.26-1.4 3.61.13 1.41.89 2.89 2.15 4.14L58.6 60.41c1.15 1.16 1.14 3.06-.02 4.22-1.11 1.11-3.07 1.13-4.21.03L27.2 38.17c-2.46-2.48-5.64-2.88-7.76-.75-2.59 2.59-1.21 5.8.75 7.77l26.57 27.44a2.988 2.988 0 0 1-.03 4.2c-1.12 1.12-3.06 1.13-4.2.04L25.9 60.89c-1.4-1.41-3.01-2.17-4.55-2.17z" fill="#eda600"/>
+                  <path d="M84.76 46.54c-5.49 11.21-4.78 26.9 3.46 39.49.93 1.7 2.52.87 1.71-.88-9.95-21.29.48-36.63.48-36.63l-5.65-1.98z" fill="#eda600"/>
+                  <path d="M63.17 4.5c3.02-.79 6.24-.72 9.37.01 3.11.75 6.22 2.33 8.53 4.91 2.26 2.56 3.65 5.67 4.12 8.93.44 3.23.03 6.56-1.5 9.32-.18-3.1-.72-5.95-1.63-8.58-.47-1.31-1.02-2.56-1.69-3.74-.66-1.17-1.44-2.33-2.27-3.28-1.69-1.95-3.98-3.47-6.55-4.65-2.58-1.22-5.39-2.12-8.38-2.92z" fill="#b0bec5"/>
+                  <path d="M64 13.98c1.67-1.06 3.76-1.28 5.73-.93 1.99.35 3.89 1.34 5.39 2.71 1.49 1.39 2.55 3.14 3.21 4.96.32.91.48 1.87.63 2.8.05.96.05 1.92-.1 2.88-.69-.73-1.23-1.46-1.74-2.17-.59-.67-1.05-1.38-1.58-2.03-1.04-1.29-2.05-2.46-3.14-3.5-1.12-1.01-2.3-1.9-3.67-2.67-1.36-.79-2.89-1.45-4.73-2.05z" fill="#90a4ae"/>
+                </svg>
               </h1>
-              <p style={{ color:'rgba(255,255,255,.8)', fontSize:13, margin:'0 0 16px', maxWidth:400, lineHeight:1.6 }}>
-                Your home dashboard is synced with the latest courses, events, and member activity from the platform.
+              <p style={{ color:'rgba(255,255,255,.86)', fontSize:13, margin:'0 0 16px', maxWidth:430, lineHeight:1.65 }}>
+                Welcome to Tribes Capital, your home for clean energy learning, live sessions, and the momentum behind every next move.
               </p>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                 {heroChips.map((chip) => (
@@ -579,28 +644,59 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 ))}
               </div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, flexShrink:0, width:isMobile?'100%':'auto' }}>
+            <div style={{ position:'relative', flexShrink:0, width:isMobile?'100%':'240px', minHeight:isMobile?'180px':'170px', display:'flex', alignItems:'center', justifyContent:'flex-end' }}>
               {[
                 { value: memberCount || 0, label: 'Members' },
                 { value: dashboardCourses.length, label: 'Courses' },
                 { value: dashboardEvents.length, label: 'Sessions' },
                 { value: dashboardLoading ? '—' : Math.max(1, dashboardCourses.length + dashboardEvents.length), label: 'Updates' },
-              ].map((item) => (
-                <div key={item.label} style={{ background:'rgba(255,255,255,.12)', border:'1px solid rgba(255,255,255,.18)',
-                  borderRadius:10, padding:isMobile?'10px 14px':'12px 18px', textAlign:'center', minWidth:isMobile?0:90 }}>
-                  <div style={{ fontSize:isMobile?17:20, fontWeight:700, color:W, letterSpacing:-.5 }}>{item.value}</div>
-                  <div style={{ fontSize:11, color:'rgba(255,255,255,.7)', marginTop:2 }}>{item.label}</div>
-                </div>
-              ))}
+              ].map((item, index) => {
+                const offset = (index - activeMetricIndex + 4) % 4;
+                const translateX = offset === 0 ? 0 : offset === 1 ? 16 : offset === 2 ? 32 : 48;
+                const translateY = offset === 0 ? 0 : offset === 1 ? -6 : offset === 2 ? -12 : -18;
+                const rotate = offset === 0 ? 0 : offset === 1 ? -2 : offset === 2 ? -4 : -6;
+                const opacity = offset === 0 ? 1 : offset === 1 ? 0.9 : offset === 2 ? 0.72 : 0.5;
+                const scale = offset === 0 ? 1 : offset === 1 ? 0.96 : 0.91;
+                const zIndex = 4 - offset;
+                return (
+                  <div key={item.label} style={{
+                    position:'absolute',
+                    inset:0,
+                    top:0,
+                    left:0,
+                    right:0,
+                    background:'rgba(255,255,255,0.16)',
+                    border:'1px solid rgba(255,255,255,0.24)',
+                    borderRadius:12,
+                    padding:isMobile?'10px 14px':'12px 18px',
+                    textAlign:'center',
+                    minWidth:isMobile?0:90,
+                    backdropFilter:'blur(16px)',
+                    WebkitBackdropFilter:'blur(16px)',
+                    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.24), 0 8px 24px rgba(15,23,42,0.08)',
+                    transform:`translateX(${translateX}px) translateY(${translateY}px) rotate(${rotate}deg) scale(${scale})`,
+                    opacity,
+                    zIndex,
+                    transition:'all 0.8s cubic-bezier(.2,.8,.2,1)',
+                    display:'flex',
+                    flexDirection:'column',
+                    justifyContent:'center',
+                  }}>
+                    <div style={{ fontSize:isMobile?20:24, fontWeight:800, color:W, letterSpacing:-.7, lineHeight:1.05 }}>{item.value}</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.9)', marginTop:4, letterSpacing:0.3, textTransform:'uppercase' }}>{item.label}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* ── RESUME CARD ── */}
           <div ref={resumeRef} style={{
-            background:W, border:`1px solid #EEEAFD`, borderRadius:14, padding:'18px 20px',
+            background:'rgba(255,255,255,0.68)', backdropFilter:'blur(16px) saturate(180%)', WebkitBackdropFilter:'blur(16px) saturate(180%)',
+            border:`1px solid rgba(255,255,255,0.7)`, borderRadius:14, padding:'18px 20px',
             marginBottom:24, display:'flex', flexDirection:isMobile?'column':'row',
             alignItems:isMobile?'flex-start':'center', gap:isMobile?10:16,
-            boxShadow:'0 10px 28px rgba(17,24,39,0.05)',
+            boxShadow:'0 16px 36px rgba(17,24,39,0.06)',
           }}>
             <div style={{ width:44, minWidth:44, height:52, background:PF, borderRadius:8,
               display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -634,11 +730,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   </button>
                 </div>
                 {dashboardLoading ? (
-                  <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:'16px', color:T2 }}>Loading courses…</div>
+                  <div style={{ background:'rgba(255,255,255,0.72)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, padding:'16px', color:T2, backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>Loading courses…</div>
                 ) : latestCourses.length > 0 ? latestCourses.map((course) => (
                   <CourseCard key={course.id} cat={course.category || 'COURSE'} title={course.title} meta={course.description || 'Live from the platform'} pct={null} btn="Open course"/>
                 )) : (
-                  <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, padding:'16px', color:T2 }}>No courses are available right now.</div>
+                  <div style={{ background:'rgba(255,255,255,0.72)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, padding:'16px', color:T2, backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>No courses are available right now.</div>
                 )}
               </div>
 
@@ -652,7 +748,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     View all <Icon name="arrow" size={13} color={P}/>
                   </button>
                 </div>
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, overflow:'hidden' }}>
+                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {dashboardLoading ? (
                     <div style={{ padding:'16px', color:T2 }}>Loading sessions…</div>
                   ) : upcomingEvents.length > 0 ? upcomingEvents.map((event, index, arr) => {
@@ -700,7 +796,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Recently added</h3>
                   <button onClick={() => onNavigate('vault')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer' }}>Open vault</button>
                 </div>
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:14, overflow:'hidden', boxShadow:'0 10px 24px rgba(17,24,39,0.04)' }}>
+                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {latestCourses.length > 0 ? latestCourses.map((course, index, arr) => (
                     <div key={course.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
                       borderBottom:index<arr.length-1?`1px solid ${BD}`:'none' }}>
@@ -722,7 +818,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Videos</h3>
                   <button onClick={() => onNavigate('learning')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer' }}>Watch more</button>
                 </div>
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, overflow:'hidden' }}>
+                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {demoVideos.map((video, index, arr) => (
                     <div key={video.title} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderBottom:index < arr.length - 1 ? `1px solid ${BD}` : 'none' }}>
                       <div style={{ width:36, height:36, borderRadius:10, background:PF, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>▶</div>
@@ -747,7 +843,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Announcements</h3>
                   <button onClick={() => onNavigate('events')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer' }}>View all</button>
                 </div>
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:14, overflow:'hidden', boxShadow:'0 10px 24px rgba(17,24,39,0.04)' }}>
+                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {notifications.length > 0 ? notifications.map((item, index, arr) => (
                     <div key={`${item.title}-${index}`} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
                       borderBottom:index<arr.length-1?`1px solid ${BD}`:'none' }}>
@@ -767,7 +863,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               {/* Recent activity */}
               <div>
                 <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 12px' }}>Recent activity</h3>
-                <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:14, overflow:'hidden', boxShadow:'0 10px 24px rgba(17,24,39,0.04)' }}>
+                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {dashboardEvents.length > 0 ? dashboardEvents.slice(0,3).map((event, index, arr) => (
                     <div key={event.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
                       borderBottom:index<arr.length-1?`1px solid ${BD}`:'none' }}>

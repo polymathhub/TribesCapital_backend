@@ -235,7 +235,7 @@ function CourseCard({ course, onAction, onOpenModal }) {
   return (
     <div
       onClick={() => onOpenModal(course)}
-      style={{background:W,border:`1px solid ${BD}`,borderRadius:12,overflow:'hidden',display:'flex',flexDirection:'column',cursor:'pointer',transition:'box-shadow .15s'}}
+      style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,overflow:'hidden',display:'flex',flexDirection:'column',cursor:'pointer',transition:'box-shadow .15s',backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}
       onMouseEnter={e=>e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}
       onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}
     >
@@ -341,7 +341,7 @@ function CourseCard({ course, onAction, onOpenModal }) {
 function CourseTable({ courses, onOpenModal }) {
   return (
     <div>
-      <div style={{background:W,border:`1px solid ${BD}`,borderRadius:12,overflow:'hidden'}}>
+      <div style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,overflow:'hidden',backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
           <thead>
             <tr style={{background:BG}}>
@@ -505,7 +505,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
     description: index === 0 ? 'Start with the overview to understand the course.' : 'Continue through the lesson flow.',
     duration: `${Math.max(8, 10 + index * 4)} min`,
     order: index + 1,
-    videoId: course?.videoId || 'aqz-KE-bpKQ',
+    videoId: course?.videoId || 'wMQDsjS9WC4',
   }));
 
   const lessonItems = lessons.length ? lessons : fallbackLessons;
@@ -514,7 +514,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   const completedCount = completedLessonIds.length;
   const progress = lessonCount > 0 ? Math.round((completedCount / lessonCount) * 100) : 0;
   const currentLessonNumber = Math.min(activeLessonIndex + 1, lessonCount);
-  const selectedVideoId = activeLesson?.videoId || course?.videoId || 'aqz-KE-bpKQ';
+  const selectedVideoId = activeLesson?.videoId || course?.videoId || 'wMQDsjS9WC4';
   const isCompleted = progress >= 100;
 
   function handleBookmark() {
@@ -621,7 +621,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
           description: lesson.description || 'Continue learning with this lesson.',
           duration: lesson.duration ? `${Math.max(1, Math.round(lesson.duration / 60))} min` : `${Math.max(8, 10 + index * 4)} min`,
           order: lesson.order || index + 1,
-          videoId: lesson.videoId || course?.videoId || 'aqz-KE-bpKQ',
+          videoId: lesson.videoId || course?.videoId || 'wMQDsjS9WC4',
         }));
         if (isMounted) {
           setLessons(normalized.length ? normalized : fallbackLessons);
@@ -853,6 +853,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   const [modalCourse,  setModalCourse]  = useState(null);
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [isPathDetailsOpen, setIsPathDetailsOpen] = useState(false);
 
   const TABS    = [{id:'all',label:'All courses'},{id:'inProgress',label:'In progress'},{id:'completed',label:'Completed'},{id:'saved',label:'Saved'}];
   const FILTERS = [{id:'thisMonth',label:'This month'},{id:'energyFinance',label:'Energy Finance'},{id:'solarStorage',label:'Solar & Storage'},{id:'riskFX',label:'Risk & FX'},{id:'policyESG',label:'Policy & ESG'}];
@@ -861,22 +862,22 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   const demoLessons = [
     {
       id: 'demo-1',
-      title: 'Energy ownership explained',
-      subtitle: 'A short walkthrough of SPVs and investor rights',
-      videoId: 'aqz-KE-bpKQ',
+      title: 'How Clean Energy Is Transforming Schools & Communities in Africa',
+      subtitle: 'A short public clip from the TribesCapital channel',
+      videoId: 'wMQDsjS9WC4',
       cat: 'Demo',
       level: 'Beginner',
-      dur: '12 min',
+      dur: '1 min',
       lessons: 4,
     },
     {
       id: 'demo-2',
-      title: 'Inside a clean energy deal',
-      subtitle: 'See how project finance and equity stack together',
-      videoId: 'M7lc1UVf-VE',
+      title: 'Hospitals Are Going Dark in Africa — Tribes Capital is Fixing It',
+      subtitle: 'A short showcase of their healthcare energy work',
+      videoId: 'Jdmt9BaYHnw',
       cat: 'Demo',
       level: 'Intermediate',
-      dur: '10 min',
+      dur: '31 sec',
       lessons: 3,
     },
   ];
@@ -906,7 +907,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
             level: course.difficulty || 'Beginner',
             progress,
             status,
-            thumbnail: course.thumbnail || 'https://img.youtube.com/vi/aqz-KE-bpKQ/hqdefault.jpg',
+            thumbnail: course.thumbnail || 'https://img.youtube.com/vi/wMQDsjS9WC4/hqdefault.jpg',
           };
         });
 
@@ -943,6 +944,17 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
+      <style>{`
+        @keyframes pathPulse {
+          0% { opacity: 0; transform: translateY(6px); }
+          60% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pathGlow {
+          0% { transform: translateX(-120%); }
+          100% { transform: translateX(120%); }
+        }
+      `}</style>
       <main style={{flex:1,overflowY:'auto',padding:isMobile?'16px 14px 60px':'28px 32px 60px'}}>
 
         {/* Page header */}
@@ -951,16 +963,16 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
 
         {/* ── RESUME BLOCK — matches exact design ── */}
         {loadingCourses ? (
-          <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 14, padding: '16px 20px', marginBottom: 24, color: T2 }}>
+          <div style={{ background: 'rgba(255,255,255,0.74)', border: '1px solid rgba(91,33,182,0.16)', borderRadius: 14, padding: '16px 20px', marginBottom: 24, color: T2, backdropFilter: 'blur(16px)', boxShadow: '0 12px 30px rgba(15,23,42,0.04)' }}>
             Loading your learning hub…
           </div>
         ) : resumeCourse && (
           <div style={{
-            background: W, border: `1px solid ${BD}`, borderRadius: 14,
+            background: 'rgba(255,255,255,0.74)', border: '1px solid rgba(91,33,182,0.16)', borderRadius: 14,
             padding: isMobile?'14px':'16px 20px', marginBottom: 24,
             display: 'flex', flexDirection: isMobile?'column':'row',
             alignItems: isMobile?'flex-start':'center', gap: isMobile?10:16,
-            boxShadow: '0 1px 4px rgba(0,0,0,.06)',
+            boxShadow: '0 12px 30px rgba(15,23,42,0.04)', backdropFilter: 'blur(16px)',
           }}>
             {/* Plain gray document icon — no coloured background */}
             <div style={{
@@ -1010,7 +1022,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
             {l:'Hours learned',   v: `${courses.reduce((sum, c) => sum + (Number(c.dur?.split('h')[0]) || 0), 0)}h`, badge:'This month', bc:TL, bb:TLB},
             {l:'Active lessons',  v: courses.reduce((sum, c) => sum + (c.lessons || 0), 0), badge:'Keep going!', bc:AM, bb:AMB},
           ].map(s => (
-            <div key={s.l} style={{background:W,border:`1px solid ${BD}`,borderRadius:10,padding:'14px 18px'}}>
+            <div key={s.l} style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:12,padding:'14px 18px',backdropFilter:'blur(16px)',boxShadow:'0 10px 24px rgba(15,23,42,0.04)'}}>
               <div style={{fontSize:12,color:T2,marginBottom:6}}>{s.l}</div>
               <div style={{fontSize:28,fontWeight:700,color:T1,marginBottom:8,letterSpacing:-.8}}>{s.v}</div>
               <span style={{background:s.bb,color:s.bc,fontSize:11,fontWeight:500,padding:'2px 10px',borderRadius:20}}>{s.badge}</span>
@@ -1019,25 +1031,48 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
         </div>
 
         {/* Learning path banner */}
-        <div style={{background:`linear-gradient(135deg,${PUD},${PU} 55%,${PUL})`,borderRadius:14,padding:isMobile?'18px 16px':'22px 28px',marginBottom:24,display:'flex',flexDirection:isMobile?'column':'row',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',gap:16}}>
-          <div>
+        <div style={{background:`linear-gradient(135deg,${PUD},${PU} 55%,${PUL})`,borderRadius:14,padding:isMobile?'16px 14px':'18px 20px',marginBottom:24,display:'flex',flexDirection:isMobile?'column':'row',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',gap:14}}>
+          <div style={{minWidth:0,flex:1}}>
             <div style={{color:W,fontSize:15,fontWeight:700,marginBottom:5}}>Your recommended learning path</div>
-            <div style={{color:'rgba(255,255,255,.75)',fontSize:13,marginBottom:18,lineHeight:1.5}}>Tailored for Community Members new to energy infrastructure investment</div>
-            <div style={{display:'flex',alignItems:'center',flexWrap:isMobile?'wrap':'nowrap',gap:isMobile?6:0}}>
-              {PATH_STEPS.map((s,i) => (
-                <div key={i} style={{display:'flex',alignItems:'center'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <div style={{width:26,height:26,borderRadius:'50%',background:i===0?W:'rgba(255,255,255,.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:i===0?PU:'rgba(255,255,255,.9)',flexShrink:0}}>{s.n}</div>
-                    <span style={{fontSize:13,color:'rgba(255,255,255,.85)',fontWeight:i===0?600:400,whiteSpace:'nowrap'}}>{s.label}</span>
+            <div style={{color:'rgba(255,255,255,.75)',fontSize:13,marginBottom:12,lineHeight:1.5}}>Tailored for Community Members new to energy infrastructure investment</div>
+            <div style={{display:'flex',alignItems:'center',flexWrap:isMobile?'wrap':'nowrap',gap:isMobile?4:6,overflowX:isMobile?'auto':'visible',paddingBottom:isMobile?2:0}}>
+              {PATH_STEPS.map((s,i) => {
+                const isActive = i === 0;
+                return (
+                  <div key={i} style={{display:'flex',alignItems:'center',animation:`pathPulse 0.8s ease ${i * 0.12}s both`,flexShrink:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,position:'relative',padding:'5px 8px',borderRadius:999,background:isActive?'rgba(255,255,255,0.18)':'rgba(255,255,255,0.08)',border:isActive?'1px solid rgba(255,255,255,0.35)':'1px solid rgba(255,255,255,0.16)',boxShadow:isActive?'0 6px 14px rgba(255,255,255,0.12)':'none',transition:'all .25s ease'}}>
+                      <div style={{width:22,height:22,borderRadius:'50%',background:isActive?W:'rgba(255,255,255,.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:isActive?PU:'rgba(255,255,255,.9)',flexShrink:0,transition:'all .25s ease',transform:isActive?'scale(1.02)':'scale(1)'}}>{s.n}</div>
+                      <span style={{fontSize:12,color:'rgba(255,255,255,.9)',fontWeight:isActive?600:400,whiteSpace:'nowrap'}}>{s.label}</span>
+                    </div>
+                    {i < PATH_STEPS.length-1 && <div style={{width:18,height:1,background:'linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,0.18))',margin:'0 6px',position:'relative',overflow:'hidden'}}><div style={{position:'absolute',inset:0,background:'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)',animation:'pathGlow 1.4s linear infinite'}}/></div>}
                   </div>
-                  {i < PATH_STEPS.length-1 && <div style={{width:28,height:1,background:'rgba(255,255,255,.35)',margin:'0 10px'}}/>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
-          <button style={{background:'rgba(255,255,255,.15)',color:W,border:'1.5px solid rgba(255,255,255,.4)',borderRadius:8,padding:'9px 18px',fontSize:13,fontWeight:500,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
-            View full path
-          </button>
+          <div style={{position:'relative',flexShrink:0,marginTop:isMobile?8:0}}>
+            <button
+              onClick={() => setIsPathDetailsOpen((prev) => !prev)}
+              style={{background:'rgba(255,255,255,.15)',color:W,border:'1.5px solid rgba(255,255,255,.4)',borderRadius:8,padding:'8px 14px',fontSize:13,fontWeight:500,cursor:'pointer',whiteSpace:'nowrap'}}>
+              View full path
+            </button>
+            {isPathDetailsOpen && (
+              <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:260,background:'rgba(255,255,255,0.95)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:12,padding:'12px 12px 10px',boxShadow:'0 16px 36px rgba(15,23,42,0.16)',backdropFilter:'blur(14px)',zIndex:20}}>
+                <div style={{fontSize:12,fontWeight:700,color:PU,marginBottom:8,letterSpacing:0.3,textTransform:'uppercase'}}>Learning path preview</div>
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  {PATH_STEPS.map((step, index) => (
+                    <div key={step.label} style={{display:'flex',alignItems:'flex-start',gap:8,padding:'8px 9px',borderRadius:10,background:index === 0 ? 'rgba(91,33,182,0.06)' : 'rgba(17,24,39,0.03)'}}>
+                      <div style={{width:20,height:20,borderRadius:'50%',background:index === 0 ? PU : 'rgba(17,24,39,0.12)',color:index === 0 ? W : T1,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>{step.n}</div>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:600,color:T1,marginBottom:1}}>{step.label}</div>
+                        <div style={{fontSize:11,color:T2}}>{index === 0 ? 'Start with core concepts' : index === 1 ? 'Build practical context' : 'Apply your understanding'}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Demo lessons */}
@@ -1047,7 +1082,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
           </div>
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 1fr':'repeat(2,1fr)',gap:isMobile?12:16}}>
             {demoLessons.map((demo) => (
-              <div key={demo.id} style={{background:W,border:`1px solid ${BD}`,borderRadius:12,overflow:'hidden'}}>
+              <div key={demo.id} style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,overflow:'hidden',backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}>
                 <div style={{height:140,backgroundImage:`url(${buildYouTubeThumbnailUrl(demo.videoId)})`,backgroundSize:'cover',backgroundPosition:'center'}}/>
                 <div style={{padding:'12px 14px 14px'}}>
                   <div style={{fontSize:11,fontWeight:700,color:PU,marginBottom:6,letterSpacing:.3,textTransform:'uppercase'}}>{demo.cat}</div>
@@ -1138,7 +1173,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
 
         {/* Course content */}
         {filtered.length === 0 ? (
-          <div style={{textAlign:'center',padding:'60px 20px',background:W,border:`1px solid ${BD}`,borderRadius:14}}>
+          <div style={{textAlign:'center',padding:'60px 20px',background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}>
             <div style={{fontSize:36,marginBottom:12}}>📚</div>
             <h3 style={{fontSize:15,fontWeight:600,color:T1,margin:'0 0 6px'}}>No courses found</h3>
             <p style={{fontSize:13,color:T2,margin:'0 0 20px'}}>No courses match the selected filter.</p>

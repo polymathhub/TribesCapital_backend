@@ -48,7 +48,9 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
         <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '12px' }}>
+              <label htmlFor="dd-approval-email" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Reviewer email</label>
               <input
+                id="dd-approval-email"
                 type="email"
                 name="reviewerEmail"
                 value={formData.reviewerEmail}
@@ -65,7 +67,9 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
                 }}
               />
             </div>
+            <label htmlFor="dd-approval-notes" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Approval notes</label>
             <textarea
+              id="dd-approval-notes"
               name="notes"
               value={formData.notes}
               onChange={handleChange}

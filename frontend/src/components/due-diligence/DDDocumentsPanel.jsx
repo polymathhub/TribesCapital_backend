@@ -69,118 +69,148 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
         <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-              <input
-                type="text"
-                name="fileName"
-                value={formData.fileName}
+              <div>
+                <label htmlFor="dd-doc-name" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File name</label>
+                <input
+                  id="dd-doc-name"
+                  type="text"
+                  name="fileName"
+                  value={formData.fileName}
+                  onChange={handleChange}
+                  placeholder="File name"
+                  required
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+              <div>
+                <label htmlFor="dd-doc-url" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File URL</label>
+                <input
+                  id="dd-doc-url"
+                  type="text"
+                  name="fileUrl"
+                  value={formData.fileUrl}
+                  onChange={handleChange}
+                  placeholder="File URL or path"
+                  required
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label htmlFor="dd-doc-description" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Description</label>
+              <textarea
+                id="dd-doc-description"
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
-                placeholder="File name"
-                required
+                placeholder="Description"
+                rows="2"
                 style={{
+                  width: '100%',
                   padding: '8px',
                   border: '1px solid #E5E7EB',
                   borderRadius: '4px',
                   fontSize: '14px',
-                }}
-              />
-              <input
-                type="text"
-                name="fileUrl"
-                value={formData.fileUrl}
-                onChange={handleChange}
-                placeholder="File URL or path"
-                required
-                style={{
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '4px',
-                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
                 }}
               />
             </div>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Description"
-              rows="2"
-              style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #E5E7EB',
-                borderRadius: '4px',
-                fontSize: '14px',
-                marginBottom: '12px',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
-            />
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-              <select
-                name="fileType"
-                value={formData.fileType}
-                onChange={handleChange}
-                style={{
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="pdf">PDF</option>
-                <option value="excel">Excel</option>
-                <option value="word">Word</option>
-                <option value="image">Image</option>
-                <option value="video">Video</option>
-                <option value="other">Other</option>
-              </select>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                style={{
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="financial">Financial</option>
-                <option value="legal">Legal</option>
-                <option value="technical">Technical</option>
-                <option value="compliance">Compliance</option>
-                <option value="other">Other</option>
-              </select>
+              <div>
+                <label htmlFor="dd-doc-type" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File type</label>
+                <select
+                  id="dd-doc-type"
+                  name="fileType"
+                  value={formData.fileType}
+                  onChange={handleChange}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="pdf">PDF</option>
+                  <option value="excel">Excel</option>
+                  <option value="word">Word</option>
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="dd-doc-category" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Category</label>
+                <select
+                  id="dd-doc-category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="financial">Financial</option>
+                  <option value="legal">Legal</option>
+                  <option value="technical">Technical</option>
+                  <option value="compliance">Compliance</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="dd-doc-size" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File size</label>
+                <input
+                  id="dd-doc-size"
+                  type="text"
+                  name="fileSize"
+                  value={formData.fileSize}
+                  onChange={handleChange}
+                  placeholder="File size (e.g., 2.5MB)"
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label htmlFor="dd-doc-tags" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Tags</label>
               <input
+                id="dd-doc-tags"
                 type="text"
-                name="fileSize"
-                value={formData.fileSize}
+                name="tags"
+                value={formData.tags}
                 onChange={handleChange}
-                placeholder="File size (e.g., 2.5MB)"
+                placeholder="Tags (comma separated)"
                 style={{
+                  width: '100%',
                   padding: '8px',
                   border: '1px solid #E5E7EB',
                   borderRadius: '4px',
                   fontSize: '14px',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
-            <input
-              type="text"
-              name="tags"
-              value={formData.tags}
-              onChange={handleChange}
-              placeholder="Tags (comma separated)"
-              style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #E5E7EB',
-                borderRadius: '4px',
-                fontSize: '14px',
-                marginBottom: '12px',
-                boxSizing: 'border-box',
-              }}
-            />
+
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 type="submit"

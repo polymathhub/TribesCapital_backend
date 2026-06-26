@@ -91,10 +91,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
           )}
           {/* Title */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
+            <label htmlFor="dd-title" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
               Title *
             </label>
             <input
+              id="dd-title"
               type="text"
               name="title"
               value={formData.title}
@@ -114,10 +115,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
 
           {/* Description */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
+            <label htmlFor="dd-description" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
               Description
             </label>
             <textarea
+              id="dd-description"
               name="description"
               value={formData.description}
               onChange={handleChange}
@@ -138,10 +140,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
           {/* Type & Target Type */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
+              <label htmlFor="dd-type" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
                 Type
               </label>
               <select
+                id="dd-type"
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
@@ -161,10 +164,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
+              <label htmlFor="dd-target-type" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
                 Target Type
               </label>
               <select
+                id="dd-target-type"
                 name="targetType"
                 value={formData.targetType}
                 onChange={handleChange}
@@ -185,10 +189,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
 
           {/* Target Name */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
+            <label htmlFor="dd-target-name" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
               Target Name *
             </label>
             <input
+              id="dd-target-name"
               type="text"
               name="targetName"
               value={formData.targetName}
@@ -209,10 +214,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
           {/* Priority & Deadline */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
+              <label htmlFor="dd-priority" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
                 Priority
               </label>
               <select
+                id="dd-priority"
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
@@ -232,10 +238,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
+              <label htmlFor="dd-target-deadline" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '14px' }}>
                 Target Deadline
               </label>
               <input
+                id="dd-target-deadline"
                 type="date"
                 name="targetDeadline"
                 value={formData.targetDeadline}

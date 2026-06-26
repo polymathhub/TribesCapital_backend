@@ -365,9 +365,9 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
           {/* Type + Duration — stack on mobile */}
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,...GP}}>
             <div>
-              <label style={LB}>Event type <span style={{color:'#EF4444'}}>*</span></label>
+              <label htmlFor="event-type" style={LB}>Event type <span style={{color:'#EF4444'}}>*</span></label>
               <div style={{position:'relative'}}>
-                <button onClick={()=>setTypeOpen(o=>!o)} style={{...IN,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',color:f.type?C.t1:C.t3,padding:'10px 12px'}}>
+                <button id="event-type" name="type" onClick={()=>setTypeOpen(o=>!o)} style={{...IN,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',color:f.type?C.t1:C.t3,padding:'10px 12px'}}>
                   <span>{f.type||'Select your role'}</span><I k="chd" s={14} c={C.t3}/>
                 </button>
                 {typeOpen&&(
@@ -422,7 +422,9 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
             <label style={LB}>Agenda items <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label>
             {f.agenda.map((a,i)=>(
               <div key={i} style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
+                <label htmlFor={`agenda-time-${i}`} style={{position:'absolute',width:1,height:1,overflow:'hidden',clip:'rect(0 0 0 0)',whiteSpace:'nowrap'}}>{`Agenda time ${i + 1}`}</label>
                 <input id={`agenda-time-${i}`} name={`agenda-time-${i}`} value={a.t} onChange={e=>setAg(i,'t',e.target.value)} placeholder="Time" style={{...IN,width:65,flexShrink:0,padding:'9px 8px'}}/>
+                <label htmlFor={`agenda-description-${i}`} style={{position:'absolute',width:1,height:1,overflow:'hidden',clip:'rect(0 0 0 0)',whiteSpace:'nowrap'}}>{`Agenda description ${i + 1}`}</label>
                 <input id={`agenda-description-${i}`} name={`agenda-description-${i}`} value={a.d} onChange={e=>setAg(i,'d',e.target.value)} placeholder="Agenda item description" style={{...IN,flex:1}}/>
                 <button onClick={()=>delAg(i)} style={{background:'none',border:'none',cursor:'pointer',padding:4,flexShrink:0,display:'flex'}}><I k="x" s={16} c={C.t3} sw={2}/></button>
               </div>

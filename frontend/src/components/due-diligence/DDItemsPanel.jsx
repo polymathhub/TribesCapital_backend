@@ -65,103 +65,129 @@ const DDItemsPanel = ({ dueDiligenceId, items = [], onRefresh }) => {
         <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
+              <div>
+                <label htmlFor="dd-item-title" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Item title</label>
+                <input
+                  id="dd-item-title"
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="Item title"
+                  required
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+              <div>
+                <label htmlFor="dd-item-category" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Category</label>
+                <select
+                  id="dd-item-category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="financial">Financial</option>
+                  <option value="legal">Legal</option>
+                  <option value="technical">Technical</option>
+                  <option value="compliance">Compliance</option>
+                  <option value="operational">Operational</option>
+                  <option value="market">Market</option>
+                  <option value="team">Team</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label htmlFor="dd-item-description" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Description</label>
+              <textarea
+                id="dd-item-description"
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
-                placeholder="Item title"
-                required
+                placeholder="Description"
+                rows="2"
                 style={{
+                  width: '100%',
                   padding: '8px',
                   border: '1px solid #E5E7EB',
                   borderRadius: '4px',
                   fontSize: '14px',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
                 }}
               />
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                style={{
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="financial">Financial</option>
-                <option value="legal">Legal</option>
-                <option value="technical">Technical</option>
-                <option value="compliance">Compliance</option>
-                <option value="operational">Operational</option>
-                <option value="market">Market</option>
-                <option value="team">Team</option>
-                <option value="other">Other</option>
-              </select>
             </div>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Description"
-              rows="2"
-              style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #E5E7EB',
-                borderRadius: '4px',
-                fontSize: '14px',
-                marginBottom: '12px',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
-            />
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-              <select
-                name="priority"
-                value={formData.priority}
-                onChange={handleChange}
-                style={{
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
-              <input
-                type="number"
-                name="maxScore"
-                value={formData.maxScore}
-                onChange={handleChange}
-                placeholder="Max score"
-                min="1"
-                max="100"
-                style={{
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-              />
-              <input
-                type="date"
-                name="dueDate"
-                value={formData.dueDate}
-                onChange={handleChange}
-                style={{
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-              />
+              <div>
+                <label htmlFor="dd-item-priority" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Priority</label>
+                <select
+                  id="dd-item-priority"
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleChange}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="dd-item-max-score" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Max score</label>
+                <input
+                  id="dd-item-max-score"
+                  type="number"
+                  name="maxScore"
+                  value={formData.maxScore}
+                  onChange={handleChange}
+                  placeholder="Max score"
+                  min="1"
+                  max="100"
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+              <div>
+                <label htmlFor="dd-item-due-date" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Due date</label>
+                <input
+                  id="dd-item-due-date"
+                  type="date"
+                  name="dueDate"
+                  value={formData.dueDate}
+                  onChange={handleChange}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
             </div>
+
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 type="submit"

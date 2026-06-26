@@ -18,8 +18,9 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
 
   return (
     <div ref={sidebarRef} style={{
-      width: 220, minWidth: 220, background: COLORS.W, borderRight: `1px solid ${COLORS.BD}`,
-      display: 'flex', flexDirection: 'column', overflowY: 'auto', flexShrink: 0, zIndex: 5,
+      width: 220, minWidth: 220, background: 'rgba(255,255,255,0.54)', backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+      borderRight: `1px solid rgba(255,255,255,0.6)`, display: 'flex', flexDirection: 'column', overflowY: 'auto', flexShrink: 0, zIndex: 5,
+      boxShadow: '0 18px 50px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.7)',
     }}>
       <style>{`
         @keyframes slideInLeft {
@@ -37,13 +38,17 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
             transform: scale(1) rotate(0deg);
             filter: brightness(1) drop-shadow(0 0 0px rgba(123, 58, 237, 0));
           }
-          50% {
-            transform: scale(1.25) rotate(-8deg);
-            filter: brightness(1.1) drop-shadow(0 0 8px rgba(123, 58, 237, 0.4));
+          40% {
+            transform: scale(1.18) rotate(-6deg);
+            filter: brightness(1.08) drop-shadow(0 0 8px rgba(123, 58, 237, 0.3));
+          }
+          70% {
+            transform: scale(1.28) rotate(-10deg);
+            filter: brightness(1.14) drop-shadow(0 0 14px rgba(123, 58, 237, 0.45));
           }
           100% {
-            transform: scale(1.3) rotate(-12deg);
-            filter: brightness(1.15) drop-shadow(0 0 12px rgba(123, 58, 237, 0.6));
+            transform: scale(1.32) rotate(-12deg);
+            filter: brightness(1.18) drop-shadow(0 0 18px rgba(123, 58, 237, 0.6));
           }
         }
         @keyframes pulse {
@@ -73,13 +78,15 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
           top: 0;
           width: 0;
           height: 100%;
-          background: rgba(123, 58, 237, 0.05);
-          border-radius: 8px;
-          transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          background: linear-gradient(90deg, rgba(123, 58, 237, 0.12) 0%, rgba(167, 139, 250, 0.22) 100%);
+          border-radius: 10px;
+          box-shadow: inset 0 0 0 1px rgba(123, 58, 237, 0.08);
+          transition: width 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.28s ease;
           z-index: -1;
         }
         .nav-item:hover::before {
           width: 100%;
+          transform: translateX(2px);
         }
         .nav-item:hover {
           animation: none;
@@ -142,13 +149,14 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
                 gap: 12,
                 padding: '10px 14px',
                 margin: '2px 6px',
-                borderRadius: 8,
+                borderRadius: 10,
                 cursor: 'pointer',
-                background: isActive ? COLORS.PF : isHovered ? '#F3F4F6' : 'transparent',
+                background: isActive ? COLORS.PF : isHovered ? 'rgba(123, 58, 237, 0.08)' : 'transparent',
                 color: isActive ? COLORS.P : COLORS.T2,
-                fontWeight: isActive ? 500 : 400,
+                fontWeight: isActive ? 600 : 400,
                 fontSize: 13,
                 borderLeft: isActive ? `3px solid ${COLORS.P}` : '3px solid transparent',
+                boxShadow: isHovered ? '0 8px 18px rgba(123, 58, 237, 0.12)' : 'none',
                 transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 transform: isHovered ? 'translateX(2px)' : 'translateX(0)',
               }}

@@ -37,111 +37,148 @@ function useBreakpoint() {
 }
 
 /* ─── PROFESSIONAL GOOGLE OAUTH SERVICE ─────────────────── */
+const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+const GOOGLE_SCRIPT_ID = 'google-gsi-script';
+
+function loadGoogleScript() {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.getElementById(GOOGLE_SCRIPT_ID);
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Google SDK failed to load')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = GOOGLE_SCRIPT_ID;
+    script.src = GOOGLE_SCRIPT_URL;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Google SDK failed to load'));
+    document.head.appendChild(script);
+  });
+}
+
 class GoogleOAuthService {
   constructor() {
     this.isInitialized = false;
     this.isReady = false;
     this.initPromise = null;
-  }
-
-  async waitForSDK(maxAttempts = 50) {
-    let attempts = 0;
-    while (!window.google?.accounts?.id && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    return !!window.google?.accounts?.id;
+    this.pendingAuthResolver = null;
+    this.pendingAuthRejecter = null;
   }
 
   async initialize() {
-    if (this.isInitialized) return this.initPromise;
+    if (this.isInitialized) return this.initPromise || Promise.resolve();
 
-    this.initPromise = (async () => {
-      try {
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-        if (!clientId) {
-          throw new Error('Google Client ID not configured');
+    if (!this.initPromise) {
+      this.initPromise = (async () => {
+        try {
+          const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+          if (!clientId) {
+            throw new Error('Google Client ID not configured');
+          }
+
+          await loadGoogleScript();
+          if (!window.google?.accounts?.id) {
+            throw new Error('Google SDK failed to load');
+          }
+
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            callback: this.handleCredentialResponse.bind(this),
+          });
+
+          this.isInitialized = true;
+          this.isReady = true;
+        } catch (error) {
+          this.isInitialized = false;
+          this.isReady = false;
+          throw error;
         }
-
-        const isReady = await this.waitForSDK();
-        if (!isReady) {
-          throw new Error('Google SDK failed to load');
-        }
-
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
-
-        this.isInitialized = true;
-        this.isReady = true;
-      } catch (error) {
-        this.isInitialized = false;
-        this.isReady = false;
-        throw error;
-      }
-    })();
+      })();
+    }
 
     return this.initPromise;
   }
 
-  async authenticate() {
-    if (!this.isReady) {
-      await this.initialize();
+  async handleCredentialResponse(response) {
+    if (!response?.credential) {
+      if (this.pendingAuthRejecter) {
+        this.pendingAuthRejecter(new Error('No credential received from Google'));
+      }
+      this.pendingAuthResolver = null;
+      this.pendingAuthRejecter = null;
+      return;
     }
 
+    try {
+      const authResult = await authAPI.googleAuth({
+        idToken: response.credential,
+        accessToken: response.credential,
+      });
+
+      if (!authResult?.data?.accessToken) {
+        throw new Error('No authentication token in response');
+      }
+
+      localStorage.setItem('accessToken', authResult.data.accessToken);
+      if (authResult.data.refreshToken) {
+        localStorage.setItem('refreshToken', authResult.data.refreshToken);
+      }
+      if (authResult.data.user?.email) {
+        localStorage.setItem('userEmail', authResult.data.user.email);
+      }
+      if (authResult.data.user?.firstName) {
+        localStorage.setItem('userName', authResult.data.user.firstName);
+      }
+      if (authResult.data.user) {
+        localStorage.setItem('user', JSON.stringify(authResult.data.user));
+      }
+
+      if (this.pendingAuthResolver) {
+        this.pendingAuthResolver({
+          success: true,
+          user: authResult.data.user,
+          accessToken: authResult.data.accessToken,
+        });
+      }
+    } catch (error) {
+      if (this.pendingAuthRejecter) {
+        this.pendingAuthRejecter(error);
+      }
+    } finally {
+      this.pendingAuthResolver = null;
+      this.pendingAuthRejecter = null;
+    }
+  }
+
+  async authenticate() {
+    await this.initialize();
+
     return new Promise((resolve, reject) => {
-      const handleCredentialResponse = async (response) => {
-        try {
-          if (!response?.credential) {
-            reject(new Error('No credential received from Google'));
-            return;
-          }
+      this.pendingAuthResolver = resolve;
+      this.pendingAuthRejecter = reject;
 
-          const authResult = await authAPI.googleAuth({ idToken: response.credential });
-          
-          if (!authResult?.data?.accessToken) {
-            reject(new Error('No authentication token in response'));
-            return;
+      try {
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isSkippedMoment()) {
+            // The user dismissed the prompt; let the caller handle a graceful fallback.
           }
-
-          // Store auth data
-          localStorage.setItem('accessToken', authResult.data.accessToken);
-          if (authResult.data.refreshToken) {
-            localStorage.setItem('refreshToken', authResult.data.refreshToken);
-          }
-          if (authResult.data.user?.email) {
-            localStorage.setItem('userEmail', authResult.data.user.email);
-          }
-          if (authResult.data.user?.firstName) {
-            localStorage.setItem('userName', authResult.data.user.firstName);
-          }
-
-          resolve({
-            success: true,
-            user: authResult.data.user,
-            accessToken: authResult.data.accessToken,
-          });
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse,
-      });
-
-      // Trigger the One Tap UI
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // One Tap not displayed, user can still click button
-        }
-        if (notification.isSkippedMoment()) {
-          // User dismissed the One Tap UI
-        }
-      });
+        });
+      } catch (error) {
+        this.pendingAuthResolver = null;
+        this.pendingAuthRejecter = null;
+        reject(error);
+      }
     });
   }
 
@@ -217,6 +254,43 @@ function getPasswordStrength(password) {
     { level: 5, label: 'Very Strong', color: COLORS.success, percentage: 100 },
   ];
   return strengths[score];
+}
+
+function getLoginErrorMessage(err) {
+  const status = err?.response?.status;
+  const backendMessage = err?.response?.data?.message || '';
+  const normalizedMessage = (backendMessage || '').toLowerCase();
+
+  if (status === 429) {
+    return 'Too many sign-in attempts. Please wait 15 minutes and try again.';
+  }
+
+  if (status === 401) {
+    if (normalizedMessage.includes('verify')) {
+      return 'Please verify your email before signing in.';
+    }
+    if (normalizedMessage.includes('inactive')) {
+      return 'This account is inactive. Please contact support.';
+    }
+    if (normalizedMessage.includes('locked')) {
+      return 'This account is temporarily locked. Please try again shortly.';
+    }
+    return 'That email and password combination was not recognized. Please try again or create an account.';
+  }
+
+  if (status === 400) {
+    return backendMessage || 'Please enter a valid email address and password.';
+  }
+
+  if (status && [500, 502, 503, 504].includes(status)) {
+    return 'We could not sign you in right now. Please try again in a moment.';
+  }
+
+  if (err?.code === 'ERR_NETWORK' || err?.message?.toLowerCase().includes('network') || !err?.response) {
+    return 'We could not reach the sign-in service. Please try again in a moment.';
+  }
+
+  return 'We could not sign you in right now. Please try again in a moment.';
 }
 
 /* ─── ICON COMPONENTS ──────────────────────────────── */
@@ -306,31 +380,46 @@ function Alert({ type = 'error', message }) {
   );
 }
 
-function FormField({ label, required = false, error = null, children }) {
+function FormField({ label, required = false, error = null, children, inputId }) {
+  const labelFor = inputId || (React.isValidElement(children) ? children.props.id : undefined);
+  const field = React.isValidElement(children)
+    ? React.cloneElement(children, {
+        id: children.props.id || inputId,
+        name: children.props.name || inputId,
+      })
+    : children;
+
   return (
     <div style={{ marginBottom: 20 }}>
       {label && (
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: COLORS.text, marginBottom: 8 }}>
+        <label htmlFor={labelFor} style={{ display: 'block', fontSize: 13, fontWeight: 500, color: COLORS.text, marginBottom: 8 }}>
           {label}
           {required && <span style={{ color: COLORS.error }}> *</span>}
         </label>
       )}
-      {children}
+      {field}
       {error && <p style={{ fontSize: 12, color: COLORS.error, margin: '6px 0 0' }}>{error}</p>}
     </div>
   );
 }
 
-function TextInput({ type = 'text', placeholder, value, onChange, disabled = false, icon: IconComponent = null, onIconClick = null }) {
+function TextInput({ type = 'text', placeholder, value, onChange, disabled = false, icon: IconComponent = null, onIconClick = null, id, name, autoComplete, ariaLabel, required = false, onKeyPress, onKeyDown }) {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
       <input
+        id={id}
+        name={name}
         type={type}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
         disabled={disabled}
+        required={required}
+        autoComplete={autoComplete}
+        aria-label={ariaLabel}
+        onKeyPress={onKeyPress}
+        onKeyDown={onKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={{
@@ -374,14 +463,20 @@ function TextInput({ type = 'text', placeholder, value, onChange, disabled = fal
   );
 }
 
-function SelectInput({ options, value, onChange, disabled = false, placeholder = 'Select an option' }) {
+function SelectInput({ options, value, onChange, disabled = false, placeholder = 'Select an option', id, name, ariaLabel, required = false, onKeyPress, onKeyDown }) {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
       <select
+        id={id}
+        name={name}
         value={value}
         onChange={onChange}
         disabled={disabled}
+        required={required}
+        aria-label={ariaLabel}
+        onKeyPress={onKeyPress}
+        onKeyDown={onKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={{
@@ -662,31 +757,7 @@ function LoginPage({ onNavigate, onSuccess }) {
         error: err.message,
       });
 
-      // Provide user-friendly error messages based on response
-      let userMessage = 'Failed to sign in. Please try again.';
-
-      if (err.response?.status === 429) {
-        userMessage = '⏳ Too many login attempts. Please try again in 15 minutes.';
-      } else if (err.response?.status === 401) {
-        const backendMsg = err.response.data?.message || '';
-        if (backendMsg.includes('verify')) {
-          userMessage = '📧 Please verify your email first. Check your inbox for the verification link.';
-        } else if (backendMsg.includes('locked')) {
-          userMessage = '🔒 Account is temporarily locked. Please try again in 15 minutes.';
-        } else if (backendMsg.includes('inactive')) {
-          userMessage = '⚠️ This account is inactive. Please contact support.';
-        } else {
-          userMessage = '❌ Invalid email or password. Please try again.';
-        }
-      } else if (err.response?.status === 400) {
-        userMessage = err.response.data?.message || 'Invalid email or password. Please try again.';
-      } else if (err.response?.status === 500) {
-        userMessage = '🔧 Server error. Our team has been notified. Please try again in a moment.';
-      } else if (err.message?.includes('Network')) {
-        userMessage = '🌐 Network error. Please check your connection and try again.';
-      }
-
-      setError(userMessage);
+      setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -712,8 +783,10 @@ function LoginPage({ onNavigate, onSuccess }) {
 
       {error && <Alert type="error" message={error} />}
 
-      <FormField label="Email address" required>
+      <FormField label="Email address" required inputId="login-email">
         <TextInput
+          id="login-email"
+          name="email"
           type="email"
           placeholder="you@example.com"
           value={email}
@@ -723,8 +796,10 @@ function LoginPage({ onNavigate, onSuccess }) {
         />
       </FormField>
 
-      <FormField label="Password" required>
+      <FormField label="Password" required inputId="login-password">
         <TextInput
+          id="login-password"
+          name="password"
           type={showPassword ? 'text' : 'password'}
           placeholder="Enter your password"
           value={password}
@@ -1021,8 +1096,10 @@ function SignupPage({ onNavigate, onSuccess }) {
 
       {error && <Alert type="error" message={error} />}
 
-      <FormField label="Full name" required error={fieldErrors.fullName}>
+      <FormField label="Full name" required error={fieldErrors.fullName} inputId="signup-full-name">
         <TextInput
+          id="signup-full-name"
+          name="fullName"
           placeholder="Ali Hassan"
           value={formData.fullName}
           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
@@ -1031,8 +1108,10 @@ function SignupPage({ onNavigate, onSuccess }) {
         />
       </FormField>
 
-      <FormField label="Email address" required error={fieldErrors.email}>
+      <FormField label="Email address" required error={fieldErrors.email} inputId="signup-email">
         <TextInput
+          id="signup-email"
+          name="email"
           type="email"
           placeholder="letsgo@example.com"
           value={formData.email}
@@ -1042,8 +1121,10 @@ function SignupPage({ onNavigate, onSuccess }) {
         />
       </FormField>
 
-      <FormField label="Account type" required error={fieldErrors.role}>
+      <FormField label="Account type" required error={fieldErrors.role} inputId="signup-role">
         <SelectInput
+          id="signup-role"
+          name="role"
           options={['Facility Operator', 'Investor', 'Community Member']}
           value={formData.role}
           onChange={(e) => setFormData({ ...formData, role: e.target.value })}
@@ -1052,8 +1133,10 @@ function SignupPage({ onNavigate, onSuccess }) {
         />
       </FormField>
 
-      <FormField label="Password" required error={fieldErrors.password}>
+      <FormField label="Password" required error={fieldErrors.password} inputId="signup-password">
         <TextInput
+          id="signup-password"
+          name="password"
           type={showPassword ? 'text' : 'password'}
           placeholder="Create a strong password"
           value={formData.password}
@@ -1407,8 +1490,10 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
 
         {error && <Alert type="error" message={error} />}
 
-        <FormField label="New password" required>
+        <FormField label="New password" required inputId="reset-password">
           <TextInput
+            id="reset-password"
+            name="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="Create strong password"
             value={password}
@@ -1455,8 +1540,10 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
 
         {error && <Alert type="error" message={error} />}
 
-        <FormField label="Email address" required>
+        <FormField label="Email address" required inputId="reset-email">
           <TextInput
+            id="reset-email"
+            name="email"
             type="email"
             placeholder="you@example.com"
             value={email}

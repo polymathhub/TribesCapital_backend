@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { COLORS } from '../constants/colors';
 import Icon from './Icon';
 
 function CourseCard({ cat, title, meta, pct, btn, catColor = COLORS.P }) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
-    <div style={{ background: COLORS.W, border: `1px solid ${COLORS.BD}`, borderRadius: 12, marginBottom: 12, overflow: 'hidden' }}>
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(16px) saturate(180%)', WebkitBackdropFilter: 'blur(16px) saturate(180%)', border: `1px solid rgba(255,255,255,0.75)`, borderRadius: 12, marginBottom: 12, overflow: 'hidden', boxShadow: isHovered ? '0 18px 36px rgba(17,24,39,0.08)' : '0 10px 22px rgba(17,24,39,0.05)', transform: isHovered ? 'translateY(-2px)' : 'translateY(0)', transition: 'all 0.2s ease' }}
+    >
       <div style={{ height: 3, background: '#F3F4F6' }}>
         <div style={{ height: 3, width: `${pct}%`, background: catColor, borderRadius: '0 3px 3px 0' }}/>
       </div>

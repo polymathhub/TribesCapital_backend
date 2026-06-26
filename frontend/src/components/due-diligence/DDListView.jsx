@@ -79,14 +79,20 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
     <div className="dd-list-container">
       {/* Filters */}
       <div className="dd-filter-bar">
+        <label htmlFor="dd-search" className="sr-only">Search due diligence</label>
         <input
+          id="dd-search"
+          name="search"
           type="text"
           placeholder="Search by title, target, or description..."
           value={localFilters.search}
           onChange={(e) => handleFilterChange('search', e.target.value)}
           className="dd-search-input"
         />
+        <label htmlFor="dd-status" className="sr-only">Filter by status</label>
         <select
+          id="dd-status"
+          name="status"
           value={localFilters.status}
           onChange={(e) => handleFilterChange('status', e.target.value)}
           className="dd-filter-select"
@@ -97,7 +103,10 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
           <option value="completed">Completed</option>
           <option value="on_hold">On Hold</option>
         </select>
+        <label htmlFor="dd-priority-filter" className="sr-only">Filter by priority</label>
         <select
+          id="dd-priority-filter"
+          name="priority"
           value={localFilters.priority}
           onChange={(e) => handleFilterChange('priority', e.target.value)}
           className="dd-filter-select"
@@ -108,7 +117,10 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
           <option value="high">High</option>
           <option value="critical">Critical</option>
         </select>
+        <label htmlFor="dd-type-filter" className="sr-only">Filter by type</label>
         <select
+          id="dd-type-filter"
+          name="type"
           value={localFilters.type}
           onChange={(e) => handleFilterChange('type', e.target.value)}
           className="dd-filter-select"

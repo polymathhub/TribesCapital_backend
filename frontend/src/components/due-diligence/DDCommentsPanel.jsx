@@ -52,7 +52,10 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
   return (
     <div>
       <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
+        <label htmlFor="dd-comment-input" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Comment</label>
         <textarea
+          id="dd-comment-input"
+          name="comment"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder="Add a comment..."
