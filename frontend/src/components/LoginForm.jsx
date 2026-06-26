@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { authAPI } from '../api/endpoints';
 import { useAuthForm, useEmailValidation, validateAuthForm } from '../hooks/useAuthForm';
 import { COLORS } from '../constants/theme';
+import { persistDemoSession, shouldUseDemoFallback } from '../utils/authSession';
 
 /**
  * Reusable error alert component
@@ -84,22 +85,32 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
     try {
       await submit({ email: email.toLowerCase(), password });
     } catch (err) {
+      if (shouldUseDemoFallback({ email, password, error: err })) {
+        const demoSession = persistDemoSession();
+        onSuccess?.({
+          ...demoSession.user,
+          name: demoSession.user.name || 'Demo User',
+        });
+        return;
+      }
+
       // Error is already handled by useAuthForm hook
     }
   };
 
   const handleDemoLogin = async () => {
     clearError();
-    
+
     if (!validateEmail('demo@tribes.capital')) return;
 
     try {
-      await submit({
-        email: 'demo@tribes.capital',
-        password: 'DemoPass123!',
+      const demoSession = persistDemoSession();
+      onSuccess?.({
+        ...demoSession.user,
+        name: demoSession.user.name || 'Demo User',
       });
     } catch (err) {
-      // Error is already handled
+      console.error('Demo login failed', err);
     }
   };
 

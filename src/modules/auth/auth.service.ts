@@ -107,7 +107,77 @@ export class AuthService {
     }
 
     const isDemoLogin = email === 'demo@tribes.capital' && password === 'DemoPass123!';
-    let user = await this.prisma.user.findUnique({
+
+    if (isDemoLogin) {
+      try {
+        let user = await this.prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            password: true,
+            isActive: true,
+            emailVerified: true,
+          },
+        });
+
+        if (!user) {
+          user = await this.prisma.user.create({
+            data: {
+              email,
+              firstName: 'Demo',
+              lastName: 'User',
+              password: await bcrypt.hash(password, 12),
+              emailVerified: true,
+              isActive: true,
+            },
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              password: true,
+              isActive: true,
+              emailVerified: true,
+            },
+          });
+        }
+
+        if (!user.isActive) {
+          throw new UnauthorizedException('Account is inactive');
+        }
+
+        const passwordValid = await bcrypt.compare(password, user.password);
+        if (!passwordValid) {
+          throw new UnauthorizedException('Invalid email or password');
+        }
+
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() },
+        });
+
+        return this.generateTokens(user.id, user.email, user);
+      } catch (error) {
+        if (error instanceof UnauthorizedException) {
+          throw error;
+        }
+
+        this.logger.warn('Falling back to demo auth response because the database is unavailable', error);
+        return this.generateTokens('demo-user', email, {
+          id: 'demo-user',
+          email,
+          firstName: 'Demo',
+          lastName: 'User',
+          emailVerified: true,
+          isActive: true,
+        });
+      }
+    }
+
+    const user = await this.prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
@@ -119,29 +189,6 @@ export class AuthService {
         emailVerified: true,
       },
     });
-
-    if (!user && isDemoLogin) {
-      const demoUser = await this.prisma.user.create({
-        data: {
-          email,
-          firstName: 'Demo',
-          lastName: 'User',
-          password: await bcrypt.hash(password, 12),
-          emailVerified: true,
-          isActive: true,
-        },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          password: true,
-          isActive: true,
-          emailVerified: true,
-        },
-      });
-      user = demoUser;
-    }
 
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');

@@ -160,7 +160,7 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
                 transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 transform: isHovered ? 'translateX(2px)' : 'translateX(0)',
               }}
-              onMouseEnter={() => setHoveredIndex(i)}
+               onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               <div

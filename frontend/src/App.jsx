@@ -4,11 +4,36 @@ import HomePage from './pages/HomePage';
 import LoadingScreen from './components/LoadingScreen';
 import Sidebar from './components/Sidebar';
 import { usersAPI } from './api/endpoints';
+import { persistDemoSession, clearAuthSession } from './utils/authSession';
 import './App.css';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window === 'undefined') return false;
+
+    const token = localStorage.getItem('accessToken');
+    const userEmail = localStorage.getItem('userEmail');
+    return Boolean(token || userEmail || import.meta.env.DEV);
+  });
+  const [user, setUser] = useState(() => {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        return JSON.parse(storedUser);
+      }
+    } catch {
+      // Ignore invalid stored user data and fall back to email-based defaults.
+    }
+
+    const userEmail = localStorage.getItem('userEmail');
+    if (userEmail) {
+      return { email: userEmail, name: userEmail.split('@')[0] };
+    }
+
+    return null;
+  });
   const [currentPage, setCurrentPage] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
   const [hasBootstrapped, setHasBootstrapped] = useState(false);
@@ -17,6 +42,16 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
+
+    if (import.meta.env.DEV && !token && !userEmail) {
+      const demoSession = persistDemoSession();
+      setUser(demoSession.user);
+      setIsAuthenticated(true);
+      setCurrentPage('home');
+      setIsLoading(false);
+      setHasBootstrapped(true);
+      return;
+    }
 
     const finishBootstrap = () => {
       setIsLoading(false);
@@ -70,14 +105,21 @@ function App() {
   }, []);
 
   const handleLogin = (userData) => {
-    setUser(userData);
+    const normalizedUser = {
+      ...userData,
+      name: userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email?.split('@')[0] || 'there',
+    };
+
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    localStorage.setItem('userEmail', normalizedUser.email);
+    localStorage.setItem('userName', normalizedUser.firstName || normalizedUser.name || normalizedUser.email?.split('@')[0] || 'there');
+    setUser(normalizedUser);
     setIsAuthenticated(true);
     setCurrentPage('home');
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('userEmail');
+    clearAuthSession();
     setIsAuthenticated(false);
     setUser(null);
     setCurrentPage('login');
