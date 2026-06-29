@@ -550,7 +550,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               )}
             </div>
           ) : (
-            <span style={{ fontSize:14, fontWeight:600, color:T1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Home</span>
+            <div style={{ display:'flex', alignItems:'baseline', minWidth:0 }}>
+              <span style={{ fontSize:14, fontWeight:800, color:P, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', letterSpacing:'0.6px', fontFamily:'"Segoe UI", "Inter", "Arial", sans-serif' }}>TribesCapital</span>
+            </div>
           )}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:isMobile?8:12, flexShrink:0 }}>
@@ -711,8 +713,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 {dashboardCourses[0]?.description || 'Open the learning hub to explore the latest content from the backend.'}
               </p>
             </div>
-            <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', P, W, 13), padding:'10px 20px', borderRadius:8, fontWeight:500,
-              flexShrink:0, whiteSpace:'nowrap', width:isMobile?'100%':'auto' }}>
+            <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 13), padding:'10px 20px', borderRadius:8, fontWeight:600,
+              flexShrink:0, whiteSpace:'nowrap', width:isMobile?'100%':'auto', boxShadow:'0 10px 22px rgba(91, 33, 182, 0.18)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
               Open learning
             </button>
           </div>
@@ -775,10 +777,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                           <p style={{ fontSize:11, color:T2, margin:0 }}>{meta}</p>
                         </div>
                         <button onClick={() => onNavigate('events')} style={{
-                          ...btnStyle('none', P, W, 12),
-                          padding:'7px 14px', borderRadius:7, fontWeight:500, flexShrink:0,
+                          ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 12),
+                          padding:'7px 14px', borderRadius:7, fontWeight:600, flexShrink:0,
                           marginTop:isMobile?4:0,
                           width:isMobile?'100%':'auto',
+                          boxShadow:'0 8px 18px rgba(91, 33, 182, 0.16)', transition:'transform 0.2s ease, box-shadow 0.2s ease',
                         }}>Open</button>
                       </div>
                     );
@@ -831,7 +834,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       <button
                         type="button"
                         onClick={() => setActiveVideo(video)}
-                        style={{ ...btnStyle('none', P, W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:isMobile?'100%':'auto', marginTop:isMobile?4:0 }}>
+                        style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:isMobile?'100%':'auto', marginTop:isMobile?4:0, boxShadow:'0 8px 16px rgba(91, 33, 182, 0.16)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
                         Play
                       </button>
                     </div>

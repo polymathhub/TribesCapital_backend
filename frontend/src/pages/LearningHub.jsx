@@ -96,6 +96,39 @@ const PATH_STEPS = [
   {n:3,label:'Due Diligence'},{n:4,label:'Deal Structuring'},
 ];
 
+const QUICK_QUIZ = [
+  {
+    id: 'q1',
+    question: 'What is the main focus of Tribes Capital’s learning content?',
+    options: ['Clean energy infrastructure and investment', 'Luxury property finance', 'Retail trading', 'Social media growth'],
+    correct: 0,
+  },
+  {
+    id: 'q2',
+    question: 'Why do community energy projects matter in Africa?',
+    options: ['They reduce energy access gaps and improve resilience', 'They only apply to large cities', 'They replace all local governments', 'They increase fuel imports'],
+    correct: 0,
+  },
+  {
+    id: 'q3',
+    question: 'Which topic is most relevant to the learning hub?',
+    options: ['Energy infrastructure finance', 'Travel booking', 'Fast fashion', 'Video gaming'],
+    correct: 0,
+  },
+  {
+    id: 'q4',
+    question: 'What should learners do after watching a short video lesson?',
+    options: ['Reflect on the key takeaway and test their understanding', 'Ignore the lesson and move on', 'Delete the notes', 'Skip to the next platform'],
+    correct: 0,
+  },
+  {
+    id: 'q5',
+    question: 'Which of these best describes the tone of Tribes Capital’s learning experience?',
+    options: ['Practical and investor-focused', 'Unclear and random', 'Purely entertainment', 'Only technical without context'],
+    correct: 0,
+  },
+];
+
 const NAV_ITEMS = [
   {label:'Home',                    icon:'home'},
   {label:'Learning Hub',            icon:'book', active:true},
@@ -197,18 +230,10 @@ function HubTopBar({ onMenuToggle, isMobile, isTablet }) {
   );
 }
 
-function PlayerTopBar({ onBack, onMenuToggle, isMobile, isTablet }) {
-  const showHamburger = isMobile || isTablet;
+function PlayerTopBar({ onBack, isMobile, isTablet }) {
   return (
     <header style={{height:54,background:W,borderBottom:`1px solid ${BD}`,display:'flex',alignItems:'center',padding:`0 ${isMobile?14:24}px`,justifyContent:'space-between',flexShrink:0,gap:12}}>
-      <div style={{display:'flex',alignItems:'center',gap:isMobile?8:6,fontSize:13,flex:1,minWidth:0}}>
-        {showHamburger && (
-          <button onClick={onMenuToggle} style={{background:'none',border:'none',cursor:'pointer',padding:4,display:'flex',flexShrink:0}}>
-            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={T1} strokeWidth={2} strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-            </svg>
-          </button>
-        )}
+      <div style={{display:'flex',alignItems:'center',gap:isMobile?8:10,fontSize:13,flex:1,minWidth:0}}>
         <span onClick={onBack} style={{color:PU,cursor:'pointer',flexShrink:0,fontWeight:500}}>
           {isMobile ? '← Hub' : 'Learning Hub'}
         </span>
@@ -223,6 +248,63 @@ function PlayerTopBar({ onBack, onMenuToggle, isMobile, isTablet }) {
 /* ═══════════════════════════════════════════════════════
    COURSE CARD — grid view, exact design
 ═══════════════════════════════════════════════════════ */
+function QuickQuiz({ questions, title = 'Short 5-question quiz', subtitle = 'A quick recap after the featured video lessons' }) {
+  const [answers, setAnswers] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const allAnswered = questions.every((question) => answers[question.id] !== undefined);
+  const score = questions.reduce((total, question) => total + (answers[question.id] === question.correct ? 1 : 0), 0);
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.74)', border: '1px solid rgba(91,33,182,0.16)', borderRadius: 14, padding: '16px 18px', backdropFilter: 'blur(16px)', boxShadow: '0 12px 30px rgba(15,23,42,0.04)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T1 }}>{title}</div>
+          <div style={{ fontSize: 12, color: T2 }}>{subtitle}</div>
+        </div>
+        <div style={{ fontSize: 12, color: PU, fontWeight: 600 }}>{submitted ? `Score ${score}/5` : 'Complete it in under 2 minutes'}</div>
+      </div>
+      {questions.map((question, index) => (
+        <div key={question.id} style={{ padding: '10px 0', borderTop: index === 0 ? 'none' : `1px solid ${BD}` }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T1, marginBottom: 8 }}>{index + 1}. {question.question}</div>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {question.options.map((option, optionIndex) => {
+              const selected = answers[question.id] === optionIndex;
+              return (
+                <button
+                  key={option}
+                  onClick={() => setAnswers((prev) => ({ ...prev, [question.id]: optionIndex }))}
+                  style={{
+                    display: 'flex', justifyContent: 'flex-start', alignItems: 'center', textAlign: 'left', padding: '8px 10px', borderRadius: 8,
+                    border: selected ? `1.5px solid ${PU}` : `1px solid ${BD}`, background: selected ? PUF : W, color: T1, cursor: 'pointer', fontSize: 12,
+                  }}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 12, color: T2 }}>{submitted ? 'You can retry by refreshing the page or re-opening the quiz.' : 'Pick one answer for each question.'}</div>
+        <button
+          onClick={() => setSubmitted(true)}
+          disabled={!allAnswered}
+          style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: allAnswered ? PU : '#E5E7EB', color: allAnswered ? W : T2, cursor: allAnswered ? 'pointer' : 'default', fontSize: 13, fontWeight: 600 }}
+        >
+          Submit answers
+        </button>
+      </div>
+      {submitted && (
+        <div style={{ marginTop: 10, fontSize: 12, color: score >= 4 ? GR : PU, fontWeight: 600 }}>
+          {score >= 4 ? 'Great work — you’ve got the core concepts.' : `You answered ${score} out of 5 correctly. Review the videos and try again.`}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CourseCard({ course, onAction, onOpenModal }) {
   const [progOpen, setProgOpen] = useState(false);
   const cs    = CAT[course.cat] || { c:T2, b:BG };
@@ -239,8 +321,11 @@ function CourseCard({ course, onAction, onOpenModal }) {
       onMouseEnter={e=>e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}
       onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}
     >
-      {/* Gray image placeholder */}
-      <div style={{height:175,background:'#D1D5DB',flexShrink:0}}/>
+      {/* Video thumbnail */}
+      <div style={{height:175,backgroundImage:`url(${course.thumbnail || buildYouTubeThumbnailUrl(course.videoId || 'wMQDsjS9WC4')})`,backgroundSize:'cover',backgroundPosition:'center',position:'relative',flexShrink:0}}>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg, rgba(17,24,39,0.08) 0%, rgba(17,24,39,0.28) 100%)'}}/>
+        <div style={{position:'absolute',top:10,left:10,background:'rgba(17,24,39,0.72)',color:W,padding:'4px 8px',borderRadius:999,fontSize:11,fontWeight:600,letterSpacing:0.3}}>Video lesson</div>
+      </div>
 
       <div style={{padding:'14px 16px 16px',display:'flex',flexDirection:'column',gap:0}}>
         {/* Category */}
@@ -326,7 +411,7 @@ function CourseCard({ course, onAction, onOpenModal }) {
           </span>
           <button
             onClick={e => { e.stopPropagation(); onAction(course); }}
-            style={{background:W,color:T1,border:`1px solid ${BD}`,borderRadius:7,padding:'6px 14px',fontSize:13,fontWeight:400,cursor:'pointer'}}
+            style={{background:'linear-gradient(135deg, #7C3AED, #A855F7)',color:W,border:'none',borderRadius:7,padding:'10px 16px',fontSize:13,fontWeight:600,cursor:'pointer',boxShadow:'0 14px 30px rgba(124,58,237,0.22)'}}
           >{btnLbl}</button>
         </div>
       </div>
@@ -397,7 +482,7 @@ function CourseTable({ courses, onOpenModal }) {
                   </td>
                   {/* Action */}
                   <td style={{padding:'14px 16px'}}>
-                    <button onClick={e=>e.stopPropagation()} style={{background:W,color:T1,border:`1px solid ${BD}`,borderRadius:7,padding:'6px 14px',fontSize:12,fontWeight:400,cursor:'pointer',whiteSpace:'nowrap'}}>
+                    <button onClick={e=>e.stopPropagation()} style={{background:'linear-gradient(135deg, #7C3AED, #A855F7)',color:W,border:'none',borderRadius:7,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap',boxShadow:'0 12px 26px rgba(124,58,237,0.18)'}}>
                       {btnLbl}
                     </button>
                   </td>
@@ -471,7 +556,7 @@ function CourseModal({ course, onClose, onContinue, isMobile }) {
         </div>
         {/* Continue button */}
         <div style={{padding:'16px 24px',borderTop:`1px solid ${BD}`,flexShrink:0}}>
-          <button onClick={onContinue} style={{width:'100%',background:PU,color:W,border:'none',borderRadius:10,padding:'14px',fontSize:14,fontWeight:600,cursor:'pointer'}}>
+          <button onClick={onContinue} style={{width:'100%',background:'linear-gradient(135deg, #7C3AED, #A855F7)',color:W,border:'none',borderRadius:10,padding:'14px',fontSize:14,fontWeight:600,cursor:'pointer',boxShadow:'0 14px 30px rgba(124,58,237,0.24)'}}>
             Continue
           </button>
         </div>
@@ -497,6 +582,10 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState(course?.thumbnail || '');
   const [videoReady, setVideoReady] = useState(false);
   const [isVideoVisible, setIsVideoVisible] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [quizRetakeRequired, setQuizRetakeRequired] = useState(false);
 
   const fallbackLessonCount = Math.max(1, Math.min(4, Number(course?.lessons) || 4));
   const fallbackLessons = Array.from({ length: fallbackLessonCount }, (_, index) => ({
@@ -508,7 +597,8 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
     videoId: course?.videoId || 'wMQDsjS9WC4',
   }));
 
-  const lessonItems = lessons.length ? lessons : fallbackLessons;
+  const seededLessonItems = course?.lessonItems?.length ? course.lessonItems : fallbackLessons;
+  const lessonItems = lessons.length ? lessons : seededLessonItems;
   const activeLesson = lessonItems[activeLessonIndex] || lessonItems[0];
   const lessonCount = lessonItems.length || 1;
   const completedCount = completedLessonIds.length;
@@ -516,6 +606,12 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   const currentLessonNumber = Math.min(activeLessonIndex + 1, lessonCount);
   const selectedVideoId = activeLesson?.videoId || course?.videoId || 'wMQDsjS9WC4';
   const isCompleted = progress >= 100;
+
+  const quizAllAnswered = QUICK_QUIZ.every((question) => quizAnswers[question.id] !== undefined);
+  const quizScore = QUICK_QUIZ.reduce((total, question) => total + (quizAnswers[question.id] === question.correct ? 1 : 0), 0);
+  const quizPercent = Math.round((quizScore / QUICK_QUIZ.length) * 100);
+  const quizPassed = quizSubmitted && quizPercent >= 70;
+  const quizFailed = quizSubmitted && quizPercent < 70;
 
   function handleBookmark() {
     const next = !bookmarked;
@@ -529,16 +625,52 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
     setTimeout(() => setLinkCopied(false), 2800);
   }
 
+  function openQuiz() {
+    setQuizOpen(true);
+    setQuizAnswers({});
+    setQuizSubmitted(false);
+    setQuizRetakeRequired(false);
+  }
+
+  function handleQuizOption(questionId, optionIndex) {
+    setQuizAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
+  }
+
+  function handleQuizSubmit() {
+    if (!quizAllAnswered) return;
+    setQuizSubmitted(true);
+    if (quizPercent >= 70) {
+      return;
+    }
+    setQuizRetakeRequired(true);
+    setCompletedLessonIds((prev) => prev.filter((id) => id !== activeLesson?.id));
+    setIsVideoVisible(true);
+  }
+
+  function handleRetryLesson() {
+    setQuizOpen(false);
+    setQuizSubmitted(false);
+    setQuizRetakeRequired(false);
+    setQuizAnswers({});
+    setIsVideoVisible(true);
+  }
+
   async function handleCompleteLesson(lesson) {
     if (!lesson || completedLessonIds.includes(lesson.id)) return;
+    const isLastLesson = activeLessonIndex >= lessonItems.length - 1;
     try {
       await lessonsAPI.markComplete(lesson.id);
       setCompletedLessonIds((prev) => [...prev, lesson.id]);
-      if (activeLessonIndex < lessonItems.length - 1) {
+      if (isLastLesson) {
+        openQuiz();
+      } else if (activeLessonIndex < lessonItems.length - 1) {
         setActiveLessonIndex((prev) => Math.min(prev + 1, lessonItems.length - 1));
       }
     } catch (error) {
       setCompletedLessonIds((prev) => (prev.includes(lesson.id) ? prev : [...prev, lesson.id]));
+      if (isLastLesson) {
+        openQuiz();
+      }
     }
   }
 
@@ -609,6 +741,23 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
       if (!course?.id) {
         setLessons([]);
         setLoadingLessons(false);
+        return;
+      }
+
+      const isDemoCourse = String(course.id).startsWith('demo-');
+      if (isDemoCourse) {
+        const demoLessonsForCourse = (course.lessonItems || seededLessonItems).map((lesson, index) => ({
+          id: lesson.id || `${course.id}-${index + 1}`,
+          title: lesson.title || `${course.title || 'Lesson'} ${index + 1}`,
+          description: lesson.description || 'Continue learning with this lesson.',
+          duration: lesson.duration || `${Math.max(8, 10 + index * 4)} min`,
+          order: lesson.order || index + 1,
+          videoId: lesson.videoId || course?.videoId || 'wMQDsjS9WC4',
+        }));
+        if (isMounted) {
+          setLessons(demoLessonsForCourse);
+          setLoadingLessons(false);
+        }
         return;
       }
 
@@ -772,7 +921,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
                   {loadingLessons ? 'Loading course lessons…' : `${activeLesson?.title || 'Lesson'} · ${activeLesson?.duration || 'Self-paced'}${completedLessonIds.includes(activeLesson?.id) ? ' · completed' : ''}`}
                 </div>
               </div>
-            </div>
+              </div>
           </div>
 
           {!expanded && (
@@ -816,12 +965,12 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
         <div style={{position:'sticky',bottom:0,background:W,border:`1px solid ${BD}`,borderRadius:12,padding:'12px 18px',margin:isMobile?'0 14px 20px':'0 24px 24px',display:'flex',gap:10,flexWrap:'wrap'}}>
           <button
             onClick={handleStartCourse}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: progress === 0 ? PU : W, color: progress === 0 ? W : T2, border: progress === 0 ? 'none' : `1px solid ${BD}`}}>
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background:'linear-gradient(135deg, #7C3AED, #A855F7)', color: W, border:'none', boxShadow:'0 14px 30px rgba(124,58,237,0.24)'}}>
             {progress === 0 ? 'Start course' : 'Restart course'}
           </button>
           <button
             onClick={handleContinue}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: progress > 0 && progress < 100 ? PU : W, color: progress > 0 && progress < 100 ? W : T2, border: progress > 0 && progress < 100 ? 'none' : `1px solid ${BD}`}}>
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: progress > 0 && progress < 100 ? 'linear-gradient(135deg, #7C3AED, #A855F7)' : W, color: progress > 0 && progress < 100 ? W : T2, border: progress > 0 && progress < 100 ? 'none' : `1px solid ${BD}`, boxShadow: progress > 0 && progress < 100 ? '0 14px 30px rgba(124,58,237,0.24)' : 'none'}}>
             {progress >= 100 ? 'Review course' : 'Continue'}
           </button>
           <button
@@ -835,6 +984,86 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
             Review all
           </button>
         </div>
+
+        {quizOpen && (
+          <div style={{position:'fixed',inset:0,zIndex:400,background:'rgba(15,23,42,0.65)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+            <div style={{width:'100%',maxWidth:680,background:W,borderRadius:20,overflow:'hidden',boxShadow:'0 18px 80px rgba(15,23,42,0.35)',maxHeight:'calc(100vh - 40px)',display:'flex',flexDirection:'column'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 24px',borderBottom:`1px solid ${BD}`}}>
+                <div>
+                  <div style={{fontSize:16,fontWeight:700,color:T1}}>Lesson completion quiz</div>
+                  <div style={{fontSize:13,color:T2,marginTop:4}}>Finish this quick check before this course is considered complete.</div>
+                </div>
+                {quizPassed && (
+                  <button onClick={() => setQuizOpen(false)} style={{background:'none',border:'none',cursor:'pointer',color:T2,padding:8}}>
+                    <Ico name="x" size={18} color={T2} sw={2}/>
+                  </button>
+                )}
+              </div>
+              <div style={{padding:'20px 24px',overflowY:'auto',flex:1}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap',marginBottom:18}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:600,color:T1}}>5 questions about the course</div>
+                    <div style={{fontSize:12,color:T2,marginTop:4}}>Answer all questions to reach at least 70%.</div>
+                  </div>
+                  <div style={{fontSize:12,fontWeight:600,color:quizFailed ? AM : PU}}>
+                    {quizSubmitted ? `${quizPercent}% score` : `${Object.keys(quizAnswers).length}/${QUICK_QUIZ.length} answered`}
+                  </div>
+                </div>
+                {QUICK_QUIZ.map((question, index) => {
+                  const selected = quizAnswers[question.id];
+                  return (
+                    <div key={question.id} style={{padding:'10px 0',borderTop:index === 0 ? 'none' : `1px solid ${BD}`}}>
+                      <div style={{fontSize:13,fontWeight:600,color:T1,marginBottom:10}}>{index + 1}. {question.question}</div>
+                      <div style={{display:'grid',gap:10}}>
+                        {question.options.map((option, optionIndex) => (
+                          <button
+                            key={option}
+                            onClick={() => handleQuizOption(question.id, optionIndex)}
+                            style={{
+                              textAlign:'left',padding:'12px 14px',borderRadius:12,border:selected === optionIndex ? `1.5px solid ${PU}` : `1px solid ${BD}`,
+                              background:selected === optionIndex ? PUF : W,color:T1,cursor:'pointer',fontSize:13,display:'block',width:'100%'
+                            }}
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{padding:'18px 24px',borderTop:`1px solid ${BD}`,display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+                {!quizSubmitted ? (
+                  <button
+                    onClick={handleQuizSubmit}
+                    disabled={!quizAllAnswered}
+                    style={{width:'100%',maxWidth:220,padding:'12px 16px',borderRadius:10,border:'none',background:quizAllAnswered ? 'linear-gradient(135deg, #7C3AED, #A855F7)' : '#E5E7EB',color:quizAllAnswered ? W : T2,cursor:quizAllAnswered ? 'pointer' : 'default',fontSize:14,fontWeight:600,boxShadow:quizAllAnswered ? '0 14px 30px rgba(124,58,237,0.24)' : 'none'}}>
+                    Submit quiz
+                  </button>
+                ) : quizPassed ? (
+                  <button
+                    onClick={() => setQuizOpen(false)}
+                    style={{width:'100%',maxWidth:220,padding:'12px 16px',borderRadius:10,border:'none',background:'linear-gradient(135deg, #7C3AED, #A855F7)',color:W,cursor:'pointer',fontSize:14,fontWeight:600,boxShadow:'0 14px 30px rgba(124,58,237,0.24)'}}>
+                    Finish course
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleRetryLesson}
+                    style={{width:'100%',maxWidth:220,padding:'12px 16px',borderRadius:10,border:'none',background:'linear-gradient(135deg, #F59E0B, #FCD34D)',color:T1,cursor:'pointer',fontSize:14,fontWeight:600,boxShadow:'0 14px 30px rgba(245,158,11,0.2)'}}>
+                    Rewatch lesson
+                  </button>
+                )}
+                {quizSubmitted && (
+                  <div style={{flex:1,minWidth:240,padding:'14px 16px',borderRadius:12,background:quizPassed ? GRB : AMB,color:quizPassed ? GR : AM,fontSize:13,lineHeight:1.5}}>
+                    {quizPassed
+                      ? `Nice work! You scored ${quizPercent}%. This course is now complete.`
+                      : `You scored ${quizPercent}%. Review the lesson again and come back to retry the quiz.`}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
@@ -859,28 +1088,112 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   const FILTERS = [{id:'thisMonth',label:'This month'},{id:'energyFinance',label:'Energy Finance'},{id:'solarStorage',label:'Solar & Storage'},{id:'riskFX',label:'Risk & FX'},{id:'policyESG',label:'Policy & ESG'}];
   const SORTS   = [{id:'progress',label:'Progress'},{id:'newest',label:'Newest'},{id:'az',label:'A–Z'}];
   const FILTER_CAT = { energyFinance:'Energy Finance', solarStorage:'Solar & Storage', riskFX:'Risk & FX', policyESG:'Policy & ESG' };
-  const demoLessons = [
+  const channelCourseVideos = [
     {
-      id: 'demo-1',
+      id: 'channel-1',
       title: 'How Clean Energy Is Transforming Schools & Communities in Africa',
-      subtitle: 'A short public clip from the TribesCapital channel',
+      subtitle: 'A short Tribes Capital video on practical community impact',
       videoId: 'wMQDsjS9WC4',
-      cat: 'Demo',
+      cat: 'Course',
       level: 'Beginner',
       dur: '1 min',
       lessons: 4,
     },
     {
-      id: 'demo-2',
+      id: 'channel-2',
       title: 'Hospitals Are Going Dark in Africa — Tribes Capital is Fixing It',
-      subtitle: 'A short showcase of their healthcare energy work',
+      subtitle: 'A focused look at energy resilience in healthcare settings',
       videoId: 'Jdmt9BaYHnw',
-      cat: 'Demo',
+      cat: 'Course',
       level: 'Intermediate',
       dur: '31 sec',
       lessons: 3,
     },
+    {
+      id: 'channel-3',
+      title: 'How Clean Energy Powers Africa',
+      subtitle: 'A fast-paced overview of the sector opportunity and momentum',
+      videoId: 'DnjMO5L5QgI',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: '45 sec',
+      lessons: 3,
+    },
+    {
+      id: 'channel-4',
+      title: 'Financing resilient energy projects',
+      subtitle: 'Insights into project finance and structured deals for Africa',
+      videoId: 'byMAFK-2szg',
+      cat: 'Course',
+      level: 'Intermediate',
+      dur: '2 min',
+      lessons: 4,
+    },
+    {
+      id: 'channel-5',
+      title: 'The business case for community solar',
+      subtitle: 'How local generation changes the economics for communities',
+      videoId: 'bNMeYzFtnCI',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: '1 min',
+      lessons: 3,
+    },
+    {
+      id: 'channel-6',
+      title: 'From concept to commissioning: project development explained',
+      subtitle: 'A practical walkthrough of clean energy development stages',
+      videoId: 'XtgP-D04bAI',
+      cat: 'Course',
+      level: 'Intermediate',
+      dur: '2 min',
+      lessons: 4,
+    },
+    {
+      id: 'channel-7',
+      title: 'Renewable energy and community impact',
+      subtitle: 'A short case study on social benefits and resilience',
+      videoId: 'HdHUoRx-4ig',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: '1 min',
+      lessons: 3,
+    },
+    {
+      id: 'channel-8',
+      title: 'Scaling energy access with smart partnerships',
+      subtitle: 'Key lessons from partnerships that accelerate deployment',
+      videoId: 'u3sUE2dY7x0',
+      cat: 'Course',
+      level: 'Advanced',
+      dur: '1 min',
+      lessons: 4,
+    },
   ];
+
+  const channelCourseEntries = channelCourseVideos.map((course) => ({
+    id: course.id,
+    cat: course.cat,
+    title: course.title,
+    desc: course.subtitle,
+    dur: course.dur,
+    lessons: course.lessons,
+    level: course.level,
+    progress: 0,
+    status: 'notStarted',
+    videoId: course.videoId,
+    thumbnail: buildYouTubeThumbnailUrl(course.videoId),
+    lessonItems: [
+      {
+        id: `${course.id}-lesson`,
+        title: course.title,
+        description: course.subtitle,
+        duration: course.dur,
+        order: 1,
+        videoId: course.videoId,
+      },
+    ],
+  }));
 
   useEffect(() => {
     let isMounted = true;
@@ -907,16 +1220,17 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
             level: course.difficulty || 'Beginner',
             progress,
             status,
+            videoId: course.videoId || 'wMQDsjS9WC4',
             thumbnail: course.thumbnail || 'https://img.youtube.com/vi/wMQDsjS9WC4/hqdefault.jpg',
           };
         });
 
         if (isMounted) {
-          setCourses(transformed);
+          setCourses([...channelCourseEntries, ...transformed]);
         }
       } catch (error) {
         if (isMounted) {
-          setCourses([]);
+          setCourses(channelCourseEntries);
         }
       } finally {
         if (isMounted) {
@@ -1002,11 +1316,12 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
             <button
               onClick={() => onPlay(resumeCourse)}
               style={{
-                background: PU, color: W, border: 'none',
+                background: 'linear-gradient(135deg, #7C3AED, #A855F7)', color: W, border: 'none',
                 borderRadius: 9, padding: '10px 22px',
                 fontSize: 14, fontWeight: 500, cursor: 'pointer',
                 flexShrink: 0, whiteSpace:'nowrap',
                 width: isMobile?'100%':'auto',
+                boxShadow: '0 14px 30px rgba(124,58,237,0.24)',
               }}>
               Continue
             </button>
@@ -1072,46 +1387,6 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Demo lessons */}
-        <div style={{marginBottom:24}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-            <h2 style={{fontSize:15,fontWeight:600,color:T1,margin:0}}>Featured demo lessons</h2>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 1fr':'repeat(2,1fr)',gap:isMobile?12:16}}>
-            {demoLessons.map((demo) => (
-              <div key={demo.id} style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,overflow:'hidden',backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}>
-                <div style={{height:140,backgroundImage:`url(${buildYouTubeThumbnailUrl(demo.videoId)})`,backgroundSize:'cover',backgroundPosition:'center'}}/>
-                <div style={{padding:'12px 14px 14px'}}>
-                  <div style={{fontSize:11,fontWeight:700,color:PU,marginBottom:6,letterSpacing:.3,textTransform:'uppercase'}}>{demo.cat}</div>
-                  <div style={{fontSize:14,fontWeight:700,color:T1,marginBottom:6,lineHeight:1.35}}>{demo.title}</div>
-                  <div style={{fontSize:12,color:T2,marginBottom:10,lineHeight:1.5}}>{demo.subtitle}</div>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:10,flexWrap:'wrap'}}>
-                    <span style={{fontSize:12,color:T3}}>{demo.dur}</span>
-                    <span style={{fontSize:12,color:T3}}>{demo.level}</span>
-                  </div>
-                  <button
-                    onClick={() => onPlay({
-                      id: demo.id,
-                      title: demo.title,
-                      cat: demo.cat,
-                      desc: demo.subtitle,
-                      dur: demo.dur,
-                      lessons: demo.lessons,
-                      level: demo.level,
-                      progress: 0,
-                      status: 'notStarted',
-                      thumbnail: buildYouTubeThumbnailUrl(demo.videoId),
-                      videoId: demo.videoId,
-                    })}
-                    style={{width:'100%',background:PU,color:W,border:'none',borderRadius:8,padding:'10px 12px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
-                    Watch demo
-                  </button>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 

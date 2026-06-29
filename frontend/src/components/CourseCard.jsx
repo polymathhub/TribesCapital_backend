@@ -30,7 +30,7 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = COLORS.P }) {
               </div>
               <span style={{ fontSize: 12, color: COLORS.T2, whiteSpace: 'nowrap' }}>{pct}% complete</span>
             </div>
-            <button style={{ border: 'none', background: COLORS.P, color: COLORS.W, fontSize: 13, padding: '8px 16px', borderRadius: 8, fontWeight: 500, cursor: 'pointer', width: '100%', maxWidth: 120 }}>
+            <button style={{ border: 'none', background: 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', color: COLORS.W, fontSize: 13, padding: '8px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', width: '100%', maxWidth: 120, boxShadow: '0 8px 18px rgba(91, 33, 182, 0.18)', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}>
               {btn}
             </button>
           </div>

@@ -5,7 +5,7 @@
   "author": "Engineering Team",
   "license": "MIT",
   "scripts": {
-    "prebuild": "rimraf dist",
+    "prebuild": "node -e \"const fs=require('fs'); const path=require('path'); const target=path.resolve('dist'); if (fs.existsSync(target)) { try { fs.rmSync(target, { recursive: true, force: true }); } catch (error) { console.warn('Skipping dist cleanup:', error.message); } }\"",
     "build": "npm run build:frontend && npm run build:backend",
     "build:backend": "nest build",
     "build:frontend": "cd frontend && npm install && npm run build",
