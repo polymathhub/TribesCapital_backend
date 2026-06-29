@@ -36,6 +36,121 @@ function useBreakpoint() {
   };
 }
 
+/* ─── MOBILE APP UTILITIES ──────────────────────────── */
+function useHapticFeedback() {
+  return {
+    tap: () => {
+      if (navigator.vibrate) {
+        navigator.vibrate(10);
+      }
+    },
+    success: () => {
+      if (navigator.vibrate) {
+        navigator.vibrate([10, 20, 10]);
+      }
+    },
+    error: () => {
+      if (navigator.vibrate) {
+        navigator.vibrate([20, 10, 20]);
+      }
+    },
+  };
+}
+
+const MOBILE_APP_STYLES = `
+  @keyframes slideUp {
+    from {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-40px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .mobile-app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    background: ${COLORS.background};
+  }
+
+  .mobile-app-header {
+    flex-shrink: 0;
+    height: 56px;
+    background: ${COLORS.surface};
+    border-bottom: 1px solid ${COLORS.border};
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  .mobile-app-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 16px;
+  }
+
+  .mobile-form-container {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @media (max-width: 640px) {
+    .mobile-app-shell {
+      height: 100%;
+      max-height: none;
+    }
+    
+    .mobile-app-content {
+      padding-bottom: 24px;
+    }
+  }
+`;
+
+// Inject mobile app styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = MOBILE_APP_STYLES;
+  document.head.appendChild(style);
+}
+
 /* ─── PROFESSIONAL GOOGLE OAUTH SERVICE ─────────────────── */
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
 const GOOGLE_SCRIPT_ID = 'google-gsi-script';
@@ -390,21 +505,23 @@ function FormField({ label, required = false, error = null, children, inputId })
     : children;
 
   return (
-    <div style={{ marginBottom: 20 }}>
+    <div style={{ marginBottom: 24 }}>
       {label && (
-        <label htmlFor={labelFor} style={{ display: 'block', fontSize: 13, fontWeight: 500, color: COLORS.text, marginBottom: 8 }}>
+        <label htmlFor={labelFor} style={{ display: 'block', fontSize: 15, fontWeight: 600, color: COLORS.text, marginBottom: 10 }}>
           {label}
           {required && <span style={{ color: COLORS.error }}> *</span>}
         </label>
       )}
       {field}
-      {error && <p style={{ fontSize: 12, color: COLORS.error, margin: '6px 0 0' }}>{error}</p>}
+      {error && <p style={{ fontSize: 13, color: COLORS.error, margin: '8px 0 0', lineHeight: 1.4 }}>{error}</p>}
     </div>
   );
 }
 
 function TextInput({ type = 'text', placeholder, value, onChange, disabled = false, icon: IconComponent = null, onIconClick = null, id, name, autoComplete, ariaLabel, required = false, onKeyPress, onKeyDown }) {
   const [focused, setFocused] = useState(false);
+  const haptics = useHapticFeedback();
+
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
       <input
@@ -424,36 +541,48 @@ function TextInput({ type = 'text', placeholder, value, onChange, disabled = fal
         onBlur={() => setFocused(false)}
         style={{
           width: '100%',
-          height: 46,
-          paddingLeft: 14,
-          paddingRight: IconComponent ? 44 : 14,
-          border: `1px solid ${focused ? COLORS.primaryLight : COLORS.border}`,
-          borderRadius: 8,
-          fontSize: 14,
+          height: 56,
+          minHeight: 56,
+          paddingLeft: 16,
+          paddingRight: IconComponent ? 52 : 16,
+          border: `1.5px solid ${focused ? COLORS.primaryLight : COLORS.border}`,
+          borderRadius: 12,
+          fontSize: 16,
           color: COLORS.text,
           background: disabled ? '#F3F4F6' : COLORS.surface,
           outline: 'none',
           boxShadow: focused ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
-          transition: 'all 0.15s ease',
+          transition: 'all 0.2s ease',
           fontFamily: 'inherit',
           opacity: disabled ? 0.6 : 1,
+          WebkitAppearance: 'none',
+          WebkitBorderRadius: '12px',
         }}
       />
       {IconComponent && (
         <button
           type="button"
-          onClick={onIconClick}
+          onClick={() => {
+            haptics.tap();
+            onIconClick?.();
+          }}
           disabled={disabled}
           style={{
             position: 'absolute',
-            right: 14,
+            right: 12,
             background: 'none',
             border: 'none',
             cursor: 'pointer',
             color: COLORS.textMuted,
-            padding: 0,
+            padding: '12px',
             display: 'flex',
             alignItems: 'center',
+            minWidth: '44px',
+            minHeight: '44px',
+            justifyContent: 'center',
+            WebkitTouchCallout: 'none',
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
           }}
         >
           {IconComponent}
@@ -465,13 +594,18 @@ function TextInput({ type = 'text', placeholder, value, onChange, disabled = fal
 
 function SelectInput({ options, value, onChange, disabled = false, placeholder = 'Select an option', id, name, ariaLabel, required = false, onKeyPress, onKeyDown }) {
   const [focused, setFocused] = useState(false);
+  const haptics = useHapticFeedback();
+
   return (
     <div style={{ position: 'relative' }}>
       <select
         id={id}
         name={name}
         value={value}
-        onChange={onChange}
+        onChange={(e) => {
+          haptics.tap();
+          onChange(e);
+        }}
         disabled={disabled}
         required={required}
         aria-label={ariaLabel}
@@ -481,21 +615,24 @@ function SelectInput({ options, value, onChange, disabled = false, placeholder =
         onBlur={() => setFocused(false)}
         style={{
           width: '100%',
-          height: 46,
-          paddingLeft: 14,
-          paddingRight: 36,
-          border: `1px solid ${focused ? COLORS.primaryLight : COLORS.border}`,
-          borderRadius: 8,
-          fontSize: 14,
+          height: 56,
+          minHeight: 56,
+          paddingLeft: 16,
+          paddingRight: 44,
+          border: `1.5px solid ${focused ? COLORS.primaryLight : COLORS.border}`,
+          borderRadius: 12,
+          fontSize: 16,
           color: value ? COLORS.text : COLORS.textMuted,
           background: disabled ? '#F3F4F6' : COLORS.surface,
           outline: 'none',
           boxShadow: focused ? `0 0 0 3px rgba(124,58,237,0.12)` : 'none',
-          transition: 'all 0.15s ease',
+          transition: 'all 0.2s ease',
           fontFamily: 'inherit',
           appearance: 'none',
           cursor: 'pointer',
           opacity: disabled ? 0.6 : 1,
+          WebkitAppearance: 'none',
+          WebkitBorderRadius: '12px',
         }}
       >
         <option value="" disabled>{placeholder}</option>
@@ -503,7 +640,7 @@ function SelectInput({ options, value, onChange, disabled = false, placeholder =
           <option key={opt} value={opt}>{opt}</option>
         ))}
       </select>
-      <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
         <svg width={12} height={8} viewBox="0 0 12 8" fill="none">
           <path d="M1 1L6 6L11 1" stroke={COLORS.textMuted} strokeWidth={1.5} strokeLinecap="round" />
         </svg>
@@ -513,14 +650,23 @@ function SelectInput({ options, value, onChange, disabled = false, placeholder =
 }
 
 function CheckboxInput({ id, label, checked, onChange, disabled = false }) {
+  const haptics = useHapticFeedback();
+  
+  const handleChange = (e) => {
+    if (!disabled) {
+      haptics.tap();
+    }
+    onChange(e);
+  };
+
   // Accessible custom checkbox with larger hit target and modern style
   return (
-    <label htmlFor={id} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+    <label htmlFor={id} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: disabled ? 'not-allowed' : 'pointer', padding: '8px 0', minHeight: '44px' }}>
       <input
         id={id}
         type="checkbox"
         checked={checked}
-        onChange={onChange}
+        onChange={handleChange}
         disabled={disabled}
         aria-checked={checked}
         style={{
@@ -532,26 +678,28 @@ function CheckboxInput({ id, label, checked, onChange, disabled = false }) {
       <span
         aria-hidden
         style={{
-          width: 20,
-          height: 20,
-          borderRadius: 6,
+          width: 24,
+          height: 24,
+          minWidth: 24,
+          minHeight: 24,
+          borderRadius: 8,
           border: `1.5px solid ${checked ? COLORS.primary : COLORS.border}`,
           background: checked ? COLORS.primary : 'transparent',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: checked ? '0 4px 10px rgba(91,33,182,0.14)' : 'none',
-          transition: 'all 150ms ease',
+          transition: 'all 0.2s ease',
           flexShrink: 0,
         }}
       >
         {checked && (
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ color: '#fff' }}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ color: '#fff' }}>
             <polyline points="20 6 9 17 4 12" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </span>
-      <span style={{ fontSize: 14, color: disabled ? '#9CA3AF' : COLORS.textSecondary, lineHeight: 1.4 }}>
+      <span style={{ fontSize: 15, color: disabled ? '#9CA3AF' : COLORS.textSecondary, lineHeight: 1.5, flexGrow: 1 }}>
         {label}
       </span>
     </label>
@@ -636,27 +784,40 @@ function Divider() {
 }
 
 function GoogleButton({ onClick, loading = false, disabled = false }) {
+  const haptics = useHapticFeedback();
+  
+  const handleClick = (e) => {
+    if (!disabled && !loading) {
+      haptics.tap();
+    }
+    onClick?.(e);
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled || loading}
       style={{
         width: '100%',
-        height: 48,
+        height: 56,
+        minHeight: 56,
         background: COLORS.surface,
         color: COLORS.text,
         border: `1px solid ${COLORS.border}`,
-        borderRadius: 8,
+        borderRadius: 12,
         fontSize: 15,
         fontWeight: 600,
         cursor: disabled || loading ? 'not-allowed' : 'pointer',
-        transition: 'all 0.15s ease',
+        transition: 'all 0.2s ease',
         fontFamily: 'inherit',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 12,
         opacity: disabled || loading ? 0.6 : 1,
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        userSelect: 'none',
       }}
     >
       <GoogleIcon />
@@ -665,38 +826,116 @@ function GoogleButton({ onClick, loading = false, disabled = false }) {
   );
 }
 
-function FormContainer({ children, isMobile }) {
+function FormContainer({ children, isMobile, title, onBack }) {
   return (
-    <div
-      style={{
-        background: COLORS.surface,
-        borderRadius: isMobile ? 12 : 16,
-        padding: isMobile ? '20px 16px 28px' : '40px 48px',
-        maxWidth: 460,
-        width: '100%',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
-        display: 'flex',
-        flexDirection: 'column',
-        // On small screens, allow the form to scroll while keeping CTAs reachable
-        maxHeight: isMobile ? 'calc(100vh - 64px)' : 'none',
-        overflowY: isMobile ? 'auto' : 'visible',
-        WebkitOverflowScrolling: isMobile ? 'touch' : 'auto',
-      }}
-    >
-      {children}
+    <div className="mobile-app-shell">
+      {isMobile && title && (
+        <div className="mobile-app-header">
+          {onBack ? (
+            <button
+              onClick={onBack}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                color: COLORS.primary,
+                fontSize: '20px',
+              }}
+            >
+              ← Back
+            </button>
+          ) : (
+            <div />
+          )}
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: COLORS.text }}>
+            {title}
+          </h2>
+          <div style={{ width: '40px' }} />
+        </div>
+      )}
+      <div className="mobile-app-content">
+        <div
+          className="mobile-form-container"
+          style={{
+            background: COLORS.surface,
+            borderRadius: isMobile ? 12 : 16,
+            padding: isMobile ? '24px 20px' : '40px 48px',
+            maxWidth: 460,
+            width: '100%',
+            margin: isMobile ? '0' : '0 auto',
+            boxShadow: isMobile ? '0 4px 12px rgba(0,0,0,0.08)' : '0 20px 60px rgba(0,0,0,0.12)',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
 
-/*PAGES */
-function LoginPage({ onNavigate, onSuccess }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { isMobile } = useBreakpoint();
+function Button({ onClick, loading = false, disabled = false, variant = 'primary', children, fullWidth = true, haptic = true }) {
+  const haptics = useHapticFeedback();
+  const isDisabled = disabled || loading;
+  const styles = {
+    primary: {
+      bg: isDisabled ? '#C4B5FD' : COLORS.primary,
+      color: COLORS.surface,
+      border: 'none',
+    },
+    secondary: {
+      bg: COLORS.surface,
+      color: COLORS.primary,
+      border: `1px solid ${COLORS.primaryLight}`,
+    },
+  };
+  const style = styles[variant];
+
+  const handleClick = (e) => {
+    if (!isDisabled && haptic) {
+      haptics.tap();
+    }
+    onClick?.(e);
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isDisabled}
+      style={{
+        width: fullWidth ? '100%' : 'auto',
+        height: 56,
+        minHeight: 56,
+        background: style.bg,
+        color: style.color,
+        border: style.border,
+        borderRadius: 12,
+        fontSize: 15,
+        fontWeight: 600,
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        transition: 'all 0.2s ease',
+        fontFamily: 'inherit',
+        letterSpacing: 0.2,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        opacity: loading ? 0.8 : 1,
+        boxShadow: !isDisabled && variant === 'primary' ? '0 4px 12px rgba(91,33,182,0.2)' : 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        userSelect: 'none',
+      }}
+    >
+      {loading && <Spinner size={16} />}
+      {children}
+    </button>
+  );
+}
   
   const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
     (result) => {
