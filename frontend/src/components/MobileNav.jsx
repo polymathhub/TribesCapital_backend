@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
+import logoPng from '../assets/image.png';
 
 const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout }) => {
   const NAV_ITEMS = [
-    { label: 'Home', key: 'home' },
-    { label: 'Learning Hub', key: 'learning' },
-    { label: 'Due Diligence Vault', key: 'vault' },
-    { label: 'Office Hours & Events', key: 'events' },
+    { label: 'Home', key: 'home', icon: 'home' },
+    { label: 'Learning Hub', key: 'learning', icon: 'book' },
+    { label: 'Due Diligence Vault', key: 'vault', icon: 'folder' },
+    { label: 'Office Hours & Events', key: 'events', icon: 'calendar' },
+    { label: 'Announcements & Feedback', key: 'announcements', icon: 'bell' },
+    { label: 'Help', key: 'help', icon: 'help' },
   ];
 
   const handleNavClick = (key) => {
@@ -69,23 +73,18 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
               marginBottom: '16px',
             }}
           >
-            <div
+            <img
+              src={logoPng}
+              alt="Tribes Capital"
               style={{
                 width: '36px',
                 height: '36px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                fontWeight: 'bold',
-                fontSize: '14px',
+                objectFit: 'cover',
+                flexShrink: 0,
                 boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
               }}
-            >
-              T
-            </div>
+            />
             <div>
               <div
                 style={{
@@ -128,16 +127,19 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
+                  background: 'rgba(124, 58, 237, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#FFFFFF',
+                  color: '#5B21B6',
                   fontWeight: 'bold',
                   fontSize: '12px',
                 }}
               >
-                {user?.email?.[0]?.toUpperCase() || 'A'}
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="8" r="4" stroke="#5B21B6" strokeWidth="1.6" />
+                  <path d="M5 19a7 7 0 0114 0" stroke="#5B21B6" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
@@ -219,7 +221,10 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
                 }
               }}
             >
-              {item.label}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, flexShrink: 0 }}>
+                <Icon name={item.icon} size={16} color={currentPage === item.key ? '#5B21B6' : '#6B7280'} />
+              </div>
+              <span>{item.label}</span>
             </button>
           ))}
         </nav>

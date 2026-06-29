@@ -1,7 +1,7 @@
 import React from 'react';
 import { COLORS } from '../constants/colors';
 import Icon from './Icon';
-import { LogoMark } from './Logo';
+import logoPng from '../assets/image.png';
 
 const NAV_ITEMS = [
   { label: 'Home', page: 'home', icon: 'home' },
@@ -91,24 +91,11 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
         .nav-item:hover {
           animation: none;
         }
-        .nav-icon {
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          filter: brightness(0.85);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .nav-item:hover .nav-icon {
-          animation: scaleIcon 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        .nav-item.active .nav-icon {
-          animation: pulse 2s ease-in-out infinite;
-        }
       `}</style>
       
       <div style={{ padding: '12px 12px 12px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <LogoMark size={36} animate={true}/>
+          <img src={logoPng} alt="Tribes Capital" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
           <span style={{ fontWeight: 700, fontSize: 11, color: COLORS.T1, letterSpacing: .8, textTransform: 'uppercase' }}>Tribes Capital</span>
         </div>
         <button
@@ -160,26 +147,13 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
                 transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 transform: isHovered ? 'translateX(2px)' : 'translateX(0)',
               }}
-               onMouseEnter={() => setHoveredIndex(i)}
+              onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              <div
-                className="nav-icon"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 24,
-                  height: 24,
-                  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  transform: isHovered ? 'scale(1.2) rotate(-5deg)' : 'scale(1) rotate(0deg)',
-                }}
-              >
-                <Icon
-                  name={item.icon}
-                  size={18}
-                  color={isActive ? COLORS.P : isHovered ? '#5B21B6' : COLORS.T3}
-                />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, flexShrink: 0 }}>
+                <div style={{ animation: isHovered ? 'scaleIcon 0.35s ease-out forwards' : 'none' }}>
+                  <Icon name={item.icon} size={16} color={isActive ? COLORS.P : COLORS.T2} />
+                </div>
               </div>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
             </div>

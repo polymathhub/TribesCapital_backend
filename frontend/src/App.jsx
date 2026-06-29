@@ -3,11 +3,14 @@ import AuthPage from './pages/AuthPage';
 import HomePage from './pages/HomePage';
 import LoadingScreen from './components/LoadingScreen';
 import Sidebar from './components/Sidebar';
+import MobileNav from './components/MobileNav';
 import { usersAPI } from './api/endpoints';
 import { persistDemoSession, clearAuthSession } from './utils/authSession';
 import './App.css';
 
 function App() {
+  const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  const [width, setWidth] = useState(initialWidth);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window === 'undefined') return false;
 
@@ -37,7 +40,17 @@ function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
   const [hasBootstrapped, setHasBootstrapped] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(initialWidth >= 1024);
+
+  const isMobile = width < 640;
+  const isTablet = width >= 640 && width < 1024;
+  const isDesktop = width >= 1024;
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -149,8 +162,18 @@ function App() {
     <>
       <LoadingScreen isVisible={isLoading && !hasBootstrapped} />
       <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out', display: 'flex', width: '100%', height: '100vh', overflow: 'hidden', background: '#f9fafb' }}>
-        {isSidebarOpen && (
+        {isDesktop && isSidebarOpen && (
           <Sidebar activePage={currentPage} onNavigate={handleNavigate} onClose={handleToggleSidebar} onLogout={handleLogout} />
+        )}
+        {(isMobile || isTablet) && (
+          <MobileNav
+            isOpen={isSidebarOpen}
+            onClose={handleToggleSidebar}
+            currentPage={currentPage}
+            onNavigate={handleNavigate}
+            user={user}
+            onLogout={handleLogout}
+          />
         )}
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
           <HomePage 
@@ -160,6 +183,8 @@ function App() {
             onLogout={handleLogout}
             onToggleSidebar={handleToggleSidebar}
             isSidebarOpen={isSidebarOpen}
+            isMobile={isMobile}
+            isTablet={isTablet}
           />
         </div>
       </div>

@@ -494,7 +494,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 }}>
           {/* Sidebar toggle */}
           {(isOverlay || !isSidebarOpen) && (
-            <button onClick={onToggleSidebar} style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex', alignItems:'center', flexShrink:0 }}>
+            <button className="topbar-action" onClick={onToggleSidebar} style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex', alignItems:'center', flexShrink:0 }}>
               <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={T1} strokeWidth="2" strokeLinecap="round">
                 <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
@@ -555,7 +555,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:isMobile?8:12, flexShrink:0 }}>
           {isMobile && (
-            <button style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex' }}>
+            <button className="topbar-action" style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex' }}>
               <Icon name="search" size={18} color={T2}/>
             </button>
           )}
@@ -563,6 +563,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             <button
               type="button"
               onClick={() => setIsNotificationsOpen((prev) => !prev)}
+              className="topbar-action"
               style={{ width:34, height:34, border:`1px solid ${BD}`, borderRadius:'50%',
                 display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', flexShrink:0, background:W, transition:'all .2s ease', boxShadow:'0 1px 3px rgba(17,24,39,0.04)' }}
               aria-label="Open notifications"
@@ -592,7 +593,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </div>
             )}
           </div>
-          <div title={displayName} style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'1.5px solid rgba(255,255,255,0.95)', boxShadow:'0 10px 24px rgba(17,24,39,0.16)', background:'linear-gradient(135deg, #f5f3ff 0%, #fdf2f8 100%)', display:'flex', alignItems:'center', justifyContent:'center', padding:0, transition:'transform .2s ease, box-shadow .2s ease' }}>
+          <div title={displayName} className="topbar-avatar" style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'1.5px solid rgba(255,255,255,0.95)', boxShadow:'0 10px 24px rgba(17,24,39,0.16)', background:'linear-gradient(135deg, #f5f3ff 0%, #fdf2f8 100%)', display:'flex', alignItems:'center', justifyContent:'center', padding:0, transition:'transform .2s ease, box-shadow .2s ease' }}>
             <svg viewBox="0 0 64 64" width="46" height="46" role="img" aria-label={`${displayName} avatar`}>
               <defs>
                 <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -619,7 +620,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {/* ── HOME PAGE ── */}
           {currentPage === 'home' && (
           <>
-          <div ref={bannerRef} style={{
+          <div ref={bannerRef} className="soft-card" style={{
             background:'linear-gradient(135deg, #2E1065 0%, #4C1D95 45%, #5B21B6 100%)',
             borderRadius:18, padding:isMobile?'18px 16px':'26px 32px', marginBottom:22,
             display:'flex', flexDirection:isMobile?'column':'row',
@@ -691,7 +692,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           </div>
 
           {/* ── RESUME CARD ── */}
-          <div ref={resumeRef} style={{
+          <div ref={resumeRef} className="soft-card" style={{
             background:'rgba(255,255,255,0.68)', backdropFilter:'blur(16px) saturate(180%)', WebkitBackdropFilter:'blur(16px) saturate(180%)',
             border:`1px solid rgba(255,255,255,0.7)`, borderRadius:14, padding:'18px 20px',
             marginBottom:24, display:'flex', flexDirection:isMobile?'column':'row',
@@ -717,15 +718,15 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           </div>
 
           {/* ── TWO-COLUMN GRID ── */}
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 240px':'1fr 290px', gap:24 }}>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 240px':'1fr 290px', gap:isMobile?16:24 }}>
 
             {/* LEFT COLUMN */}
             <div>
               {/* Learning section */}
               <div ref={learningRef}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, gap:8, flexWrap:'wrap' }}>
                   <h2 style={{ fontSize:16, fontWeight:600, color:T1, margin:0 }}>Learning</h2>
-                  <button onClick={() => onNavigate('learning')} style={{ fontSize:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
+                  <button onClick={() => onNavigate('learning')} style={{ fontSize:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
                     Go to Learning Hub <Icon name="arrow" size={13} color={P}/>
                   </button>
                 </div>
@@ -740,11 +741,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
               {/* Events section */}
               <div ref={eventsRef} style={{ marginTop:8 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, gap:8, flexWrap:'wrap' }}>
                   <h2 style={{ fontSize:16, fontWeight:600, color:T1, margin:0 }}>
                     Upcoming events <span style={{ fontSize:13, color:T3, fontWeight:400 }}>(8)</span>
                   </h2>
-                  <button onClick={() => onNavigate('events')} style={{ fontSize:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
+                  <button onClick={() => onNavigate('events')} style={{ fontSize:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
                     View all <Icon name="arrow" size={13} color={P}/>
                   </button>
                 </div>
@@ -759,9 +760,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     const type = event.eventType || 'EVENT';
                     const meta = `${start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })} · ${event.meetingPlatform || 'Live session'} · ${event.capacity ? `${event.capacity} spots` : 'Open'}`;
                     return (
-                      <div key={event.id} style={{ display:'flex', alignItems:isMobile?'flex-start':'center', gap:14, padding:'14px 18px',
+                      <div key={event.id} style={{ display:'flex', alignItems:isMobile?'flex-start':'center', gap:14, padding:isMobile?'12px 14px':'14px 18px',
                         borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
-                        <div style={{ width:46, minWidth:46, background:PF, borderRadius:8, textAlign:'center', padding:'7px 4px' }}>
+                        <div style={{ width:isMobile?42:46, minWidth:isMobile?42:46, background:PF, borderRadius:8, textAlign:'center', padding:'7px 4px' }}>
                           <div style={{ fontSize:9, fontWeight:700, color:P, letterSpacing:.5, textTransform:'uppercase' }}>{month}</div>
                           <div style={{ fontSize:20, fontWeight:700, color:P, lineHeight:1.1 }}>{day}</div>
                           <div style={{ fontSize:9, color:P, fontWeight:500 }}>{weekday}</div>
@@ -777,6 +778,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                           ...btnStyle('none', P, W, 12),
                           padding:'7px 14px', borderRadius:7, fontWeight:500, flexShrink:0,
                           marginTop:isMobile?4:0,
+                          width:isMobile?'100%':'auto',
                         }}>Open</button>
                       </div>
                     );
@@ -792,9 +794,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
               {/* Recently added */}
               <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, gap:8, flexWrap:'wrap' }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Recently added</h3>
-                  <button onClick={() => onNavigate('vault')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer' }}>Open vault</button>
+                  <button onClick={() => onNavigate('vault')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Open vault</button>
                 </div>
                 <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {latestCourses.length > 0 ? latestCourses.map((course, index, arr) => (
@@ -814,13 +816,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
               {/* Demo videos */}
               <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, gap:8, flexWrap:'wrap' }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Videos</h3>
-                  <button onClick={() => onNavigate('learning')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer' }}>Watch more</button>
+                  <button onClick={() => onNavigate('learning')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Watch more</button>
                 </div>
                 <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {demoVideos.map((video, index, arr) => (
-                    <div key={video.title} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderBottom:index < arr.length - 1 ? `1px solid ${BD}` : 'none' }}>
+                    <div key={video.title} style={{ display:'flex', alignItems:'center', gap:10, padding:isMobile?'10px 12px':'12px 14px', borderBottom:index < arr.length - 1 ? `1px solid ${BD}` : 'none', flexWrap:isMobile?'wrap':'nowrap' }}>
                       <div style={{ width:36, height:36, borderRadius:10, background:PF, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>▶</div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <p style={{ fontSize:12, fontWeight:600, color:T1, margin:'0 0 2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{video.title}</p>
@@ -829,7 +831,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       <button
                         type="button"
                         onClick={() => setActiveVideo(video)}
-                        style={{ ...btnStyle('none', P, W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0 }}>
+                        style={{ ...btnStyle('none', P, W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:isMobile?'100%':'auto', marginTop:isMobile?4:0 }}>
                         Play
                       </button>
                     </div>
@@ -839,20 +841,20 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
               {/* Announcements */}
               <div style={{ marginTop:20 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, gap:8, flexWrap:'wrap' }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Announcements</h3>
-                  <button onClick={() => onNavigate('events')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer' }}>View all</button>
+                  <button onClick={() => onNavigate('announcements')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>View all</button>
                 </div>
                 <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {notifications.length > 0 ? notifications.map((item, index, arr) => (
-                    <div key={`${item.title}-${index}`} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
-                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none' }}>
+                    <div key={`${item.title}-${index}`} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:isMobile?'10px 12px':'11px 14px',
+                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
                       <div style={{ width:8, height:8, borderRadius:'50%', background:P, flexShrink:0 }}/>
                       <div style={{ flex:1, minWidth:0 }}>
                         <p style={{ fontSize:12, fontWeight:500, color:T1, margin:'0 0 2px' }}>{item.title}</p>
                         <p style={{ fontSize:11, color:T3, margin:0 }}>{item.detail}</p>
                       </div>
-                      <span style={{ background:PF, color:P, fontSize:11, fontWeight:500, padding:'2px 9px', borderRadius:6, flexShrink:0 }}>{item.time}</span>
+                      <span style={{ background:PF, color:P, fontSize:11, fontWeight:500, padding:'2px 9px', borderRadius:6, flexShrink:0, marginTop:isMobile?4:0 }}>{item.time}</span>
                     </div>
                   )) : (
                     <div style={{ padding:'12px 14px', color:T2 }}>No new updates yet.</div>
@@ -865,8 +867,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 12px' }}>Recent activity</h3>
                 <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {dashboardEvents.length > 0 ? dashboardEvents.slice(0,3).map((event, index, arr) => (
-                    <div key={event.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
-                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none' }}>
+                    <div key={event.id} style={{ display:'flex', alignItems:'center', gap:10, padding:isMobile?'10px 12px':'11px 14px',
+                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
                       <div style={{ width:30, height:30, borderRadius:'50%', background:PF, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
                         <div style={{ width:9, height:9, borderRadius:'50%', background:P }}/>
                       </div>
@@ -874,7 +876,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                         <p style={{ fontSize:12, fontWeight:500, color:T1, margin:'0 0 2px' }}>{event.title}</p>
                         <p style={{ fontSize:11, color:T3, margin:0 }}>{event.meetingPlatform || 'Live session'}</p>
                       </div>
-                      <span style={{ fontSize:12, color:P, fontWeight:500, flexShrink:0 }}>{new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
+                      <span style={{ fontSize:12, color:P, fontWeight:500, flexShrink:0, marginTop:isMobile?4:0 }}>{new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
                     </div>
                   )) : (
                     <div style={{ padding:'12px 14px', color:T2 }}>No recent activity yet.</div>
@@ -952,6 +954,14 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       <style>{`
         *{box-sizing:border-box;}
         button,input,select,textarea{font-family:inherit;}
+        .soft-card{transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;}
+        .soft-card:hover{transform:translateY(-1px); box-shadow:0 12px 30px rgba(15,23,42,0.08);}
+        .soft-button{transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;}
+        .soft-button:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(91,33,182,0.16); filter:brightness(1.01);}
+        .topbar-action{transition:transform .2s ease, box-shadow .2s ease, background-color .2s ease;}
+        .topbar-action:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(91,33,182,0.12); background-color:rgba(245,243,255,0.9);}
+        .topbar-avatar{transition:transform .2s ease, box-shadow .2s ease;}
+        .topbar-avatar:hover{transform:translateY(-1px) scale(1.01); box-shadow:0 12px 24px rgba(17,24,39,0.16);}
         ::-webkit-scrollbar{width:5px;height:4px;}
         ::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:10px;}
         ::-webkit-scrollbar-track{background:transparent;}
