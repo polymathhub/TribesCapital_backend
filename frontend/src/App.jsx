@@ -27,7 +27,7 @@ function App() {
         return JSON.parse(storedUser);
       }
     } catch {
-      // Ignore invalid stored user data and fall back to email-based defaults.
+    // this is to ignore invalid stored data
     }
 
     const userEmail = localStorage.getItem('userEmail');
@@ -161,7 +161,7 @@ function App() {
   return (
     <>
       <LoadingScreen isVisible={isLoading && !hasBootstrapped} />
-      <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out', display: 'flex', width: '100%', height: '100vh', overflow: 'hidden', background: '#f9fafb' }}>
+      <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out', display: 'flex', width: '100%', minHeight: '100dvh', height: '100dvh', overflow: 'hidden', background: '#f9fafb' }}>
         {isDesktop && isSidebarOpen && (
           <Sidebar activePage={currentPage} onNavigate={handleNavigate} onClose={handleToggleSidebar} onLogout={handleLogout} />
         )}

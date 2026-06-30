@@ -23,7 +23,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
-  const port = configService.get<number>('app.port') || 3000;
+  const port = Number(process.env.PORT || configService.get<number>('app.port') || 3000);
   const environment = configService.get<string>('app.environment') || 'development';
   let corsOrigin: string | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void) = 'http://localhost:3000';
 

@@ -4,7 +4,7 @@ import DueDiligencePage from './DueDiligencePage';
 import OfficeHoursEvents from './OfficeHoursEvents';
 import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
-import { usersAPI, coursesAPI, eventsAPI } from '../api/endpoints';
+import { usersAPI, coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
 
 /* ─── DESIGN TOKENS ─── */
 const P   = '#5B21B6';
@@ -198,36 +198,52 @@ const circleBtn = {
 };
 
 /* ─── COURSE CARD ────────────────────────────────────── */
-function CourseCard({ cat, title, meta, pct, btn, catColor = P }) {
+function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false, thumbnail = null, videoId = null, onPlay = null }) {
   const showProgress = pct !== undefined && pct !== null;
+  const hasVideo = Boolean(videoId || thumbnail);
+
   return (
     <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, marginBottom:12, overflow:'hidden', boxShadow:'0 8px 24px rgba(17,24,39,0.04)', transition:'transform .2s ease, box-shadow .2s ease' }}>
-      {/* Top progress stripe */}
       <div style={{ height:3, background:'#F3F4F6' }}>
-        <div style={{ height:3, width:`${pct}%`, background:catColor === GR ? GR : P, borderRadius:'0 3px 3px 0' }}/>
+        <div style={{ height:3, width:`${showProgress ? pct : 100}%`, background:catColor === GR ? GR : P, borderRadius:'0 3px 3px 0' }}/>
       </div>
-      <div style={{ padding:'14px 18px 16px', display:'flex', gap:14 }}>
-        {/* Doc icon */}
-        <div style={{ width:36, height:44, background:PF, borderRadius:8, display:'flex', alignItems:'center',
-          justifyContent:'center', flexShrink:0, color:P, fontSize:16 }}>
-          <Icon name="doc" size={18} color={P}/>
-        </div>
-        <div style={{ flex:1 }}>
+      <div style={{ padding:'14px 18px 16px', display:'flex', flexDirection:isMobile ? 'column' : 'row', gap:14 }}>
+        {hasVideo ? (
+          <div style={{ width:isMobile ? '100%' : 96, minWidth:isMobile ? 0 : 96, aspectRatio:'16 / 9', borderRadius:10, overflow:'hidden', background:PF, position:'relative', flexShrink:0 }}>
+            {thumbnail ? (
+              <img src={thumbnail} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+            ) : (
+              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:P, fontSize:20 }}>
+                ▶
+              </div>
+            )}
+            {onPlay && (
+              <button type="button" onClick={(event) => { event.stopPropagation(); onPlay(); }} style={{ position:'absolute', inset:0, border:'none', background:'rgba(17,24,39,0.25)', color:W, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>
+                ▶
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ width:36, height:44, background:PF, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:P, fontSize:16 }}>
+            <Icon name="doc" size={18} color={P}/>
+          </div>
+        )}
+        <div style={{ flex:1, minWidth:0 }}>
           <p style={{ fontSize:10, fontWeight:700, color:catColor, letterSpacing:.6, textTransform:'uppercase', margin:'0 0 5px' }}>{cat}</p>
           <p style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 4px', lineHeight:1.35 }}>{title}</p>
-          <p style={{ fontSize:12, color:T2, margin:'0 0 14px' }}>{meta}</p>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+          <p style={{ fontSize:12, color:T2, margin:'0 0 14px', lineHeight:1.45 }}>{meta}</p>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, flexWrap:'wrap' }}>
             {showProgress ? (
-              <div style={{ display:'flex', alignItems:'center', gap:8, flex:1 }}>
-                <div style={{ width:160, height:4, background:'#F3F4F6', borderRadius:4 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:0, width:isMobile ? '100%' : 'auto' }}>
+                <div style={{ flex:1, minWidth:0, height:4, background:'#F3F4F6', borderRadius:4 }}>
                   <div style={{ width:`${pct}%`, height:4, background: catColor === GR ? GR : P, borderRadius:4 }}/>
                 </div>
-                <span style={{ fontSize:12, color:T2 }}>{pct}% complete</span>
+                <span style={{ fontSize:12, color:T2, whiteSpace:'nowrap' }}>{pct}% complete</span>
               </div>
             ) : (
               <span style={{ fontSize:12, color:T2 }}>{meta}</span>
             )}
-            <button style={{ ...btnStyle('none', P, W, 13), padding:'8px 16px', borderRadius:8, fontWeight:500, flexShrink:0 }}>
+            <button type="button" onClick={onPlay ? (event) => { event.stopPropagation(); onPlay(); } : undefined} style={{ ...btnStyle('none', P, W, 13), padding:'8px 16px', borderRadius:8, fontWeight:500, flexShrink:0, width:isMobile ? '100%' : 'auto' }}>
               {btn}
             </button>
           </div>
@@ -255,14 +271,12 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const isOverlay = isMobile || isTablet;
   const displayName = user?.name || user?.firstName || user?.email?.split('@')[0] || 'there';
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [activeMetricIndex, setActiveMetricIndex] = useState(0);
-  const notifications = dashboardEvents.slice(0,3).map((event) => ({
-    title: event.title,
-    detail: event.description || 'New session available',
-    time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-  }));
   const notifRef = useRef(null);
   const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
   const getAvatarSeed = (profile) => profile?.id || profile?.email || profile?.name || displayName || 'user';
   const getProfileAvatar = (profile) => {
     const seed = String(getAvatarSeed(profile));
@@ -313,12 +327,23 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       try {
         const [membersRes, coursesRes, eventsRes] = await Promise.all([
           usersAPI.getAll({ skip: 0, take: 100 }).catch(() => ({ data: [] })),
-          coursesAPI.list({ skip: 0, take: 6 }).catch(() => ({ data: [] })),
+          coursesAPI.list({ skip: 0, take: 8 }).catch(() => ({ data: [] })),
           eventsAPI.list({ skip: 0, take: 6 }).catch(() => ({ data: [] })),
         ]);
         if (!isMounted) return;
+        const normalizedCourses = (Array.isArray(coursesRes?.data) ? coursesRes.data : []).map((course) => ({
+          id: course.id,
+          category: course.category || course.cat || 'General',
+          title: course.title || 'Untitled course',
+          description: course.description || course.desc || course.subtitle || 'Continue your learning with this course.',
+          duration: course.duration || course.dur || 'Self-paced',
+          lessons: course.lessons || course.lessonCount || 0,
+          difficulty: course.difficulty || course.level || 'Beginner',
+          videoId: course.videoId || 'wMQDsjS9WC4',
+          thumbnail: course.thumbnail || 'https://img.youtube.com/vi/wMQDsjS9WC4/hqdefault.jpg',
+        }));
         setMemberCount(Array.isArray(membersRes?.data) ? membersRes.data.length : 0);
-        setDashboardCourses(Array.isArray(coursesRes?.data) ? coursesRes.data : []);
+        setDashboardCourses(normalizedCourses);
         setDashboardEvents(Array.isArray(eventsRes?.data) ? eventsRes.data : []);
       } catch (error) {
         if (isMounted) {
@@ -355,6 +380,59 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    if (!isNotificationsOpen) return;
+
+    let isMounted = true;
+    const loadNotifications = async () => {
+      try {
+        setNotificationsLoading(true);
+        const response = await notificationsAPI.list().catch(() => ({ data: [] }));
+        if (!isMounted) return;
+
+        const apiNotifications = Array.isArray(response?.data) ? response.data : [];
+        if (apiNotifications.length > 0) {
+          setNotifications(apiNotifications.map((item) => ({
+            id: item.id,
+            title: item.title || item.type || 'Notification',
+            detail: item.message || item.body || item.description || 'You have a new update',
+            time: item.createdAt ? new Date(item.createdAt).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+            read: Boolean(item.read),
+          })));
+        } else {
+          setNotifications(dashboardEvents.slice(0, 3).map((event) => ({
+            id: event.id,
+            title: event.title,
+            detail: event.description || 'New session available',
+            time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+            read: false,
+          })));
+        }
+      } catch {
+        if (isMounted) {
+          setNotifications(dashboardEvents.slice(0, 3).map((event) => ({
+            id: event.id,
+            title: event.title,
+            detail: event.description || 'New session available',
+            time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+            read: false,
+          })));
+        }
+      } finally {
+        if (isMounted) setNotificationsLoading(false);
+      }
+    };
+
+    void loadNotifications();
+    return () => { isMounted = false; };
+  }, [isNotificationsOpen, dashboardEvents]);
+
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
   }, [isSearchOpen]);
 
   /* Section refs */
@@ -437,7 +515,18 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     `${memberCount || 0} community ${memberCount === 1 ? 'member' : 'members'}`,
   ];
 
-  const demoVideos = [
+  const courseVideos = dashboardCourses
+    .filter((course) => course.videoId)
+    .slice(0, 3)
+    .map((course) => ({
+      title: course.title,
+      duration: course.duration || 'Self-paced',
+      tag: course.category || 'Course video',
+      videoId: course.videoId,
+      thumbnail: course.thumbnail,
+    }));
+
+  const demoVideos = courseVideos.length > 0 ? courseVideos : [
     { title: 'How Clean Energy Is Transforming Schools & Communities in Africa', duration: '1 min', tag: 'Demo lesson', videoId: 'wMQDsjS9WC4' },
     { title: 'Hospitals Are Going Dark in Africa — Tribes Capital is Fixing It', duration: '31 sec', tag: 'Live recap', videoId: 'Jdmt9BaYHnw' },
     { title: 'How Clean Energy Powers Africa', duration: '45 sec', tag: 'Quick watch', videoId: 'DnjMO5L5QgI' },
@@ -452,7 +541,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     { label: 'Latest updates', value: Math.max(1, dashboardCourses.length + dashboardEvents.length), badge: 'Ready' },
   ];
 
-  const latestCourses = dashboardCourses.slice(0, 2);
+  const latestCourses = dashboardCourses.slice(0, 3);
   const upcomingEvents = dashboardEvents.slice(0, 3);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -483,12 +572,12 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   /* ── RENDER ── */
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', minHeight:0, background:'radial-gradient(circle at top left, rgba(124,58,237,0.10), transparent 28%), linear-gradient(135deg, #f8f7ff 0%, #f5f7ff 42%, #f9fbff 100%)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100dvh', minHeight:'100dvh', background:'radial-gradient(circle at top left, rgba(124,58,237,0.10), transparent 28%), linear-gradient(135deg, #f8f7ff 0%, #f5f7ff 42%, #f9fbff 100%)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
 
       {/* ══ TOPBAR ══ */}
       <div style={{
-        height:54, background:'rgba(255,255,255,0.58)', backdropFilter:'blur(18px) saturate(180%)', WebkitBackdropFilter:'blur(18px) saturate(180%)',
-        borderBottom:`1px solid rgba(255,255,255,0.65)`, display:'flex', alignItems:'center', padding:`0 ${isMobile?14:24}px`, gap:12,
+        minHeight:54, height:'auto', background:'rgba(255,255,255,0.58)', backdropFilter:'blur(18px) saturate(180%)', WebkitBackdropFilter:'blur(18px) saturate(180%)',
+        borderBottom:`1px solid rgba(255,255,255,0.65)`, display:'flex', alignItems:'center', padding:isMobile ? '10px 14px' : `0 ${24}px`, gap:12,
         flexShrink:0, justifyContent:'space-between', boxShadow:'0 10px 30px rgba(15,23,42,0.06)', position:'relative', zIndex:60,
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 }}>
@@ -500,64 +589,114 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </svg>
             </button>
           )}
-          {/* Search — full on desktop, icon-only on mobile */}
-          {!isMobile ? (
-            <div ref={searchRef} style={{ flex:1, maxWidth:480, position:'relative' }}>
-              <div style={{ background: searchFocused ? '#FCFBFF' : '#F9FAFB', border: searchFocused ? `1px solid rgba(91,33,182,0.25)` : `1px solid ${BD}`, borderRadius:10,
-                height:38, display:'flex', alignItems:'center', gap:8, padding:'0 12px', boxShadow: searchFocused ? '0 0 0 3px rgba(91,33,182,0.12)' : '0 1px 3px rgba(17,24,39,0.04)', transition:'all .2s ease' }}>
-                <Icon name="search" size={14} color={searchFocused ? P : T3}/>
-                <label htmlFor="homepage-search" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
-                  Search the platform
-                </label>
-                <input
-                  id="homepage-search"
-                  name="search"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setIsSearchOpen(true);
-                  }}
-                  onFocus={() => { setIsSearchOpen(true); setSearchFocused(true); }}
-                  onBlur={() => setSearchFocused(false)}
-                  placeholder="Search topics, documents, people, events…"
-                  style={{ flex:1, border:'none', outline:'none', background:'transparent', fontSize:13, color:T1, padding:0 }}
-                />
+          <div ref={searchRef} style={{ flex:1, maxWidth: !isMobile ? 480 : '100%', minWidth:0, position:'relative' }}>
+            {!isMobile ? (
+              <>
+                <div style={{ background: searchFocused ? '#FCFBFF' : '#F9FAFB', border: searchFocused ? `1px solid rgba(91,33,182,0.25)` : `1px solid ${BD}`, borderRadius:10,
+                  height:38, display:'flex', alignItems:'center', gap:8, padding:'0 12px', boxShadow: searchFocused ? '0 0 0 3px rgba(91,33,182,0.12)' : '0 1px 3px rgba(17,24,39,0.04)', transition:'all .2s ease' }}>
+                  <Icon name="search" size={14} color={searchFocused ? P : T3}/>
+                  <label htmlFor="homepage-search" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
+                    Search the platform
+                  </label>
+                  <input
+                    ref={searchInputRef}
+                    id="homepage-search"
+                    name="search"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setIsSearchOpen(true);
+                    }}
+                    onFocus={() => { setIsSearchOpen(true); setSearchFocused(true); }}
+                    onBlur={() => setSearchFocused(false)}
+                    placeholder="Search topics, documents, people, events…"
+                    style={{ flex:1, border:'none', outline:'none', background:'transparent', fontSize:13, color:T1, padding:0 }}
+                  />
+                </div>
+                {isSearchOpen && normalizedSearch && searchResults.length > 0 && (
+                  <div style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', overflow:'hidden', zIndex:40 }}>
+                    {searchResults.map((result) => (
+                      <button
+                        key={`${result.type}-${result.key}`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          if (result.type === 'page') {
+                            onNavigate(result.key);
+                          }
+                          setSearchQuery('');
+                          setIsSearchOpen(false);
+                        }}
+                        style={{ width:'100%', textAlign:'left', border:'none', background:'transparent', padding:'10px 12px', cursor:'pointer', display:'flex', flexDirection:'column', gap:2, borderBottom: result.key === searchResults[searchResults.length - 1].key ? 'none' : `1px solid ${BD}` }}
+                      >
+                        <span style={{ fontSize:12, fontWeight:600, color:T1 }}>{result.label}</span>
+                        <span style={{ fontSize:11, color:T3 }}>{result.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {isSearchOpen && normalizedSearch && searchResults.length === 0 && (
+                  <div style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', padding:'12px 14px', zIndex:40, fontSize:13, color:T2 }}>
+                    No matches found for “{searchQuery}”.
+                  </div>
+                )}
+              </>
+            ) : isSearchOpen ? (
+              <>
+                <div style={{ background: searchFocused ? '#FCFBFF' : '#F9FAFB', border: searchFocused ? `1px solid rgba(91,33,182,0.25)` : `1px solid ${BD}`, borderRadius:10,
+                  height:38, display:'flex', alignItems:'center', gap:8, padding:'0 12px', boxShadow: searchFocused ? '0 0 0 3px rgba(91,33,182,0.12)' : '0 1px 3px rgba(17,24,39,0.04)', transition:'all .2s ease', width:'100%' }}>
+                  <Icon name="search" size={14} color={searchFocused ? P : T3}/>
+                  <input
+                    ref={searchInputRef}
+                    id="homepage-search-mobile"
+                    name="search"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setIsSearchOpen(true);
+                    }}
+                    onFocus={() => { setIsSearchOpen(true); setSearchFocused(true); }}
+                    onBlur={() => setSearchFocused(false)}
+                    placeholder="Search the platform"
+                    style={{ flex:1, border:'none', outline:'none', background:'transparent', fontSize:13, color:T1, padding:0 }}
+                  />
+                </div>
+                {isSearchOpen && normalizedSearch && searchResults.length > 0 && (
+                  <div style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', overflow:'hidden', zIndex:40 }}>
+                    {searchResults.map((result) => (
+                      <button
+                        key={`${result.type}-${result.key}`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          if (result.type === 'page') {
+                            onNavigate(result.key);
+                          }
+                          setSearchQuery('');
+                          setIsSearchOpen(false);
+                        }}
+                        style={{ width:'100%', textAlign:'left', border:'none', background:'transparent', padding:'10px 12px', cursor:'pointer', display:'flex', flexDirection:'column', gap:2, borderBottom: result.key === searchResults[searchResults.length - 1].key ? 'none' : `1px solid ${BD}` }}
+                      >
+                        <span style={{ fontSize:12, fontWeight:600, color:T1 }}>{result.label}</span>
+                        <span style={{ fontSize:11, color:T3 }}>{result.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {isSearchOpen && normalizedSearch && searchResults.length === 0 && (
+                  <div style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', padding:'12px 14px', zIndex:40, fontSize:13, color:T2 }}>
+                    No matches found for “{searchQuery}”.
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ display:'flex', alignItems:'baseline', minWidth:0 }}>
+                <span style={{ fontSize:14, fontWeight:800, color:P, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', letterSpacing:'0.6px', fontFamily:'"Segoe UI", "Inter", "Arial", sans-serif' }}>TribesCapital</span>
               </div>
-              {isSearchOpen && normalizedSearch && searchResults.length > 0 && (
-                <div style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', overflow:'hidden', zIndex:40 }}>
-                  {searchResults.map((result) => (
-                    <button
-                      key={`${result.type}-${result.key}`}
-                      onClick={() => {
-                        if (result.type === 'page') {
-                          onNavigate(result.key);
-                        }
-                        setSearchQuery('');
-                        setIsSearchOpen(false);
-                      }}
-                      style={{ width:'100%', textAlign:'left', border:'none', background:'transparent', padding:'10px 12px', cursor:'pointer', display:'flex', flexDirection:'column', gap:2, borderBottom: result.key === searchResults[searchResults.length - 1].key ? 'none' : `1px solid ${BD}` }}
-                    >
-                      <span style={{ fontSize:12, fontWeight:600, color:T1 }}>{result.label}</span>
-                      <span style={{ fontSize:11, color:T3 }}>{result.description}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {isSearchOpen && normalizedSearch && searchResults.length === 0 && (
-                <div style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', padding:'12px 14px', zIndex:40, fontSize:13, color:T2 }}>
-                  No matches found for “{searchQuery}”.
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{ display:'flex', alignItems:'baseline', minWidth:0 }}>
-              <span style={{ fontSize:14, fontWeight:800, color:P, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', letterSpacing:'0.6px', fontFamily:'"Segoe UI", "Inter", "Arial", sans-serif' }}>TribesCapital</span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:isMobile?8:12, flexShrink:0 }}>
           {isMobile && (
-            <button className="topbar-action" style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex' }}>
+            <button className="topbar-action" onClick={() => { setIsSearchOpen((prev) => !prev); setSearchFocused(true); }} style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex' }} aria-label="Open search">
               <Icon name="search" size={18} color={T2}/>
             </button>
           )}
@@ -579,18 +718,22 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 <div style={{ padding:'12px 14px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <div>
                     <div style={{ fontSize:12, fontWeight:700, color:T1 }}>Notifications</div>
-                    <div style={{ fontSize:11, color:T3 }}>3 new updates</div>
+                    <div style={{ fontSize:11, color:T3 }}>{notificationsLoading ? 'Loading…' : `${notifications.filter((item) => !item.read).length} unread`}</div>
                   </div>
                   <span style={{ fontSize:11, color:P, fontWeight:600 }}>View all</span>
                 </div>
                 <div>
-                  {notifications.map((item) => (
-                    <div key={item.title} style={{ padding:'10px 14px', borderBottom:`1px solid ${BD}`, background:'#FCFCFD' }}>
+                  {notificationsLoading ? (
+                    <div style={{ padding:'12px 14px', color:T2, fontSize:13 }}>Loading notifications…</div>
+                  ) : notifications.length > 0 ? notifications.map((item) => (
+                    <div key={item.id || item.title} style={{ padding:'10px 14px', borderBottom:`1px solid ${BD}`, background:item.read ? '#FCFCFD' : '#F7F3FF' }}>
                       <div style={{ fontSize:13, fontWeight:600, color:T1, marginBottom:2 }}>{item.title}</div>
                       <div style={{ fontSize:12, color:T2, marginBottom:4 }}>{item.detail}</div>
                       <div style={{ fontSize:11, color:T3 }}>{item.time}</div>
                     </div>
-                  ))}
+                  )) : (
+                    <div style={{ padding:'12px 14px', color:T2, fontSize:13 }}>No notifications yet.</div>
+                  )}
                 </div>
               </div>
             )}
@@ -617,7 +760,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       </div>
 
       {/* SCROLLABLE CONTENT */}
-      <div style={{ flex:1, minHeight:0, overflowY:'auto', padding:isMobile?'16px 14px 60px':'24px 28px 60px' }}>
+      <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:isMobile?'16px 14px 60px':'24px 28px 60px' }}>
 
           {/* ── HOME PAGE ── */}
           {currentPage === 'home' && (
@@ -627,12 +770,12 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             borderRadius:18, padding:isMobile?'18px 16px':'26px 32px', marginBottom:22,
             display:'flex', flexDirection:isMobile?'column':'row',
             justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?14:24,
-            boxShadow:'0 24px 60px rgba(76,29,149,0.28), inset 0 1px 0 rgba(255,255,255,0.24)', position:'relative', overflow:'hidden',
+            boxShadow:'0 30px 70px rgba(76,29,149,0.32), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -12px 26px rgba(15,23,42,0.16)', position:'relative', overflow:'hidden',
           }}>
             <div style={{ minWidth:0, width:'100%' }}>
-              <p style={{ color:'rgba(255,255,255,.76)', fontSize:10, fontWeight:700, letterSpacing:1.3,
-                textTransform:'uppercase', margin:'0 0 8px' }}>WELCOME</p>
-              <h1 style={{ color:W, fontSize:isMobile?18:26, fontWeight:700, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', lineHeight:1.2 }}>
+              <p style={{ color:'rgba(255,255,255,.9)', fontSize:10, fontWeight:800, letterSpacing:1.35,
+                textTransform:'uppercase', margin:'0 0 8px', textShadow:'0 2px 8px rgba(0,0,0,0.22)' }}>WELCOME</p>
+              <h1 style={{ color:W, fontSize:isMobile?18:26, fontWeight:800, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', lineHeight:1.2, textShadow:'0 3px 10px rgba(0,0,0,0.2)' }}>
                 <span>{greeting}, {displayName}</span>
                 <svg width="22" height="22" viewBox="0 0 128 128" fill="none" aria-hidden="true" style={{ flexShrink:0, animation:'wave 1.2s ease-in-out infinite', transformOrigin:'70% 60%' }} xmlns="http://www.w3.org/2000/svg">
                   <path d="M59.53 107.44c-3.95-3.17-40.63-38.84-41.04-39.23-1.62-1.62-2.64-3.3-2.92-4.84-.29-1.6.2-3 1.5-4.3 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59l16.63 15.98c.29.28.67.42 1.04.42a1.494 1.494 0 0 0 1.07-2.54L19.13 46.25c-2.66-2.66-3.91-6.73-.75-9.89 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59l27.16 26.48c.29.28.67.43 1.05.43s.77-.15 1.06-.44c.58-.58.59-1.52.01-2.11L24.91 28.02c-1.51-1.51-2.42-3.32-2.58-5.08-.15-1.79.48-3.45 1.83-4.8 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.58L67.3 51.31c.29.28.67.43 1.05.43s.77-.15 1.06-.44c.58-.58.59-1.52.01-2.11L45.26 24.36c-1.52-1.52-2.43-3.32-2.58-5.08-.15-1.79.48-3.45 1.83-4.8 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59 8.86 8.7 31.99 31.45 32.77 32.29 2.97 2.05 3.57-1.05 3.72-3.06.17-2.34-2.51-10.51-.95-17.86 2.62-9.77 10.17-8.17 10.34-8.09 4.14 1.94 3.35 4.84 1.88 10.67l-.15 1.15c-1.54 7.62 9.04 30.2 9.82 31.89 4.15 9.08 8.93 27.49-6.9 43.32-17.35 17.35-38.83 8.46-45.38 1.91z" fill="#ffb300"/>
@@ -642,7 +785,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <path d="M64 13.98c1.67-1.06 3.76-1.28 5.73-.93 1.99.35 3.89 1.34 5.39 2.71 1.49 1.39 2.55 3.14 3.21 4.96.32.91.48 1.87.63 2.8.05.96.05 1.92-.1 2.88-.69-.73-1.23-1.46-1.74-2.17-.59-.67-1.05-1.38-1.58-2.03-1.04-1.29-2.05-2.46-3.14-3.5-1.12-1.01-2.3-1.9-3.67-2.67-1.36-.79-2.89-1.45-4.73-2.05z" fill="#90a4ae"/>
                 </svg>
               </h1>
-              <p style={{ color:'rgba(255,255,255,.86)', fontSize:isMobile?12:13, margin:'0 0 16px', maxWidth:430, lineHeight:isMobile?1.5:1.65 }}>
+              <p style={{ color:'rgba(255,255,255,.9)', fontSize:isMobile?12:13, margin:'0 0 16px', maxWidth:430, lineHeight:isMobile?1.5:1.65, textShadow:'0 1px 6px rgba(0,0,0,0.18)' }}>
                 Welcome to Tribes Capital, your home for clean energy learning, live sessions, and the momentum behind every next move.
               </p>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -654,7 +797,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 ))}
               </div>
             </div>
-            <div style={{ position:'relative', flexShrink:0, width:isMobile?'100%':'240px', minHeight:isMobile?'170px':'170px', display:'flex', alignItems:'center', justifyContent:isMobile?'center':'flex-end', marginTop:isMobile?6:0 }}>
+            <div style={{ position:'relative', flexShrink:0, width:isMobile?'100%':'240px', maxWidth:isMobile?320:240, minHeight:isMobile?'150px':'170px', display:'flex', alignItems:'center', justifyContent:'center', marginTop:isMobile?6:0, alignSelf:isMobile?'stretch':'auto' }}>
               {achievementImages.map((src, index) => {
                 const offset = (index - activeMetricIndex + 4) % 4;
                 const translateX = offset === 0 ? 0 : offset === 1 ? 16 : offset === 2 ? 32 : 48;
@@ -676,7 +819,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     overflow:'hidden',
                     backdropFilter:'blur(16px)',
                     WebkitBackdropFilter:'blur(16px)',
-                    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.24), 0 8px 24px rgba(15,23,42,0.08)',
+                    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -8px 18px rgba(15,23,42,0.16), 0 10px 28px rgba(15,23,42,0.12)',
                     transform:`translateX(${translateX}px) translateY(${translateY}px) rotate(${rotate}deg) scale(${scale})`,
                     opacity,
                     zIndex,
@@ -726,16 +869,27 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             <div>
               {/* Learning section */}
               <div ref={learningRef}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, gap:8, flexWrap:'wrap' }}>
-                  <h2 style={{ fontSize:16, fontWeight:600, color:T1, margin:0 }}>Learning</h2>
-                  <button onClick={() => onNavigate('learning')} style={{ fontSize:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?10:14, gap:8, flexWrap:'wrap' }}>
+                  <h2 style={{ fontSize:isMobile?14:16, fontWeight:600, color:T1, margin:0 }}>Learning</h2>
+                  <button onClick={() => onNavigate('learning')} style={{ fontSize:isMobile?12:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
                     Go to Learning Hub <Icon name="arrow" size={13} color={P}/>
                   </button>
                 </div>
                 {dashboardLoading ? (
-                  <div style={{ background:'rgba(255,255,255,0.72)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, padding:'16px', color:T2, backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>Loading courses…</div>
+                  <div style={{ background:'rgba(255,255,255,0.72)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, padding:isMobile?'12px':'16px', color:T2, backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>Loading courses…</div>
                 ) : latestCourses.length > 0 ? latestCourses.map((course) => (
-                  <CourseCard key={course.id} cat={course.category || 'COURSE'} title={course.title} meta={course.description || 'Live from the platform'} pct={null} btn="Open course"/>
+                  <CourseCard
+                    key={course.id}
+                    cat={course.category || 'COURSE'}
+                    title={course.title}
+                    meta={course.description || 'Live from the platform'}
+                    pct={null}
+                    btn={course.videoId ? 'Watch video' : 'Open course'}
+                    isMobile={isMobile}
+                    thumbnail={course.thumbnail}
+                    videoId={course.videoId}
+                    onPlay={() => setActiveVideo({ title: course.title, duration: course.duration || 'Self-paced', tag: course.category || 'Course video', videoId: course.videoId, thumbnail: course.thumbnail })}
+                  />
                 )) : (
                   <div style={{ background:'rgba(255,255,255,0.72)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, padding:'16px', color:T2, backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>No courses are available right now.</div>
                 )}
@@ -743,11 +897,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
               {/* Events section */}
               <div ref={eventsRef} style={{ marginTop:8 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, gap:8, flexWrap:'wrap' }}>
-                  <h2 style={{ fontSize:16, fontWeight:600, color:T1, margin:0 }}>
-                    Upcoming events <span style={{ fontSize:13, color:T3, fontWeight:400 }}>(8)</span>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?10:14, gap:8, flexWrap:'wrap' }}>
+                  <h2 style={{ fontSize:isMobile?14:16, fontWeight:600, color:T1, margin:0 }}>
+                    Upcoming events <span style={{ fontSize:isMobile?12:13, color:T3, fontWeight:400 }}>(8)</span>
                   </h2>
-                  <button onClick={() => onNavigate('events')} style={{ fontSize:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
+                  <button onClick={() => onNavigate('events')} style={{ fontSize:isMobile?12:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
                     View all <Icon name="arrow" size={13} color={P}/>
                   </button>
                 </div>
@@ -762,19 +916,19 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     const type = event.eventType || 'EVENT';
                     const meta = `${start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })} · ${event.meetingPlatform || 'Live session'} · ${event.capacity ? `${event.capacity} spots` : 'Open'}`;
                     return (
-                      <div key={event.id} style={{ display:'flex', alignItems:isMobile?'flex-start':'center', gap:14, padding:isMobile?'12px 14px':'14px 18px',
-                        borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
-                        <div style={{ width:isMobile?42:46, minWidth:isMobile?42:46, background:PF, borderRadius:8, textAlign:'center', padding:'7px 4px' }}>
-                          <div style={{ fontSize:9, fontWeight:700, color:P, letterSpacing:.5, textTransform:'uppercase' }}>{month}</div>
-                          <div style={{ fontSize:20, fontWeight:700, color:P, lineHeight:1.1 }}>{day}</div>
-                          <div style={{ fontSize:9, color:P, fontWeight:500 }}>{weekday}</div>
+                      <div key={event.id} style={{ display:'flex', alignItems:isMobile?'flex-start':'center', gap:isMobile?8:14, padding:isMobile?'10px 10px':'14px 18px',
+                        borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap', width:'100%' }}>
+                        <div style={{ width:isMobile?40:46, minWidth:isMobile?40:46, background:PF, borderRadius:8, textAlign:'center', padding:'7px 4px' }}>
+                          <div style={{ fontSize:isMobile?7.5:9, fontWeight:700, color:P, letterSpacing:.5, textTransform:'uppercase' }}>{month}</div>
+                          <div style={{ fontSize:isMobile?15:20, fontWeight:700, color:P, lineHeight:1.1 }}>{day}</div>
+                          <div style={{ fontSize:isMobile?7.5:9, color:P, fontWeight:500 }}>{weekday}</div>
                         </div>
                         <div style={{ flex:1, minWidth:0 }}>
                           <span style={{ background:PF, color:P, fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:4, textTransform:'uppercase', letterSpacing:.4 }}>
                             {type}
                           </span>
-                          <p style={{ fontSize:13, fontWeight:600, color:T1, margin:'4px 0 3px', lineHeight:1.3 }}>{event.title}</p>
-                          <p style={{ fontSize:11, color:T2, margin:0 }}>{meta}</p>
+                          <p style={{ fontSize:isMobile?11:12, fontWeight:600, color:T1, margin:'3px 0 2px', lineHeight:1.25 }}>{event.title}</p>
+                          <p style={{ fontSize:isMobile?9.5:11, color:T2, margin:0, lineHeight:1.3 }}>{meta}</p>
                         </div>
                         <button onClick={() => onNavigate('events')} style={{
                           ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 12),
@@ -793,22 +947,22 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             </div>
 
             {/* RIGHT COLUMN */}
-            <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:isMobile?10:20 }}>
 
               {/* Recently added */}
               <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, gap:8, flexWrap:'wrap' }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Recently added</h3>
-                  <button onClick={() => onNavigate('vault')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Open vault</button>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?8:12, gap:8, flexWrap:'wrap' }}>
+                  <h3 style={{ fontSize:isMobile?12.5:14, fontWeight:600, color:T1, margin:0 }}>Recently added</h3>
+                  <button onClick={() => onNavigate('vault')} style={{ fontSize:isMobile?11:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Open vault</button>
                 </div>
                 <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {latestCourses.length > 0 ? latestCourses.map((course, index, arr) => (
-                    <div key={course.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px',
-                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none' }}>
-                      <div style={{ width:32, height:32, background:PF, borderRadius:7, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>📘</div>
+                    <div key={course.id} style={{ display:'flex', alignItems:'center', gap:isMobile?7:10, padding:isMobile?'8px 10px':'11px 14px',
+                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', width:'100%' }}>
+                      <div style={{ width:isMobile?28:32, height:isMobile?28:32, background:PF, borderRadius:7, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:isMobile?12:14 }}>📘</div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:12, fontWeight:500, color:T1, margin:'0 0 2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{course.title}</p>
-                        <p style={{ fontSize:10, color:T3, margin:0 }}>{course.description || 'Published course'}</p>
+                        <p style={{ fontSize:isMobile?10.5:12, fontWeight:500, color:T1, margin:'0 0 1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{course.title}</p>
+                        <p style={{ fontSize:isMobile?9:10, color:T3, margin:0, lineHeight:1.3 }}>{course.description || 'Published course'}</p>
                       </div>
                     </div>
                   )) : (
@@ -819,31 +973,39 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
               {/* Demo videos */}
               <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, gap:8, flexWrap:'wrap' }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Videos</h3>
-                  <button onClick={() => onNavigate('learning')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Watch more</button>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?8:12, gap:8, flexWrap:'wrap' }}>
+                  <h3 style={{ fontSize:isMobile?12.5:14, fontWeight:600, color:T1, margin:0 }}>Videos</h3>
+                  <button onClick={() => onNavigate('learning')} style={{ fontSize:isMobile?11:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Watch more</button>
                 </div>
                 <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
-                  {demoVideos.map((video, index, arr) => (
-                    <div key={video.title} style={{ display:'flex', alignItems:'center', gap:10, padding:isMobile?'10px 12px':'12px 14px', borderBottom:index < arr.length - 1 ? `1px solid ${BD}` : 'none', flexWrap:isMobile?'wrap':'nowrap' }}>
-                      <div style={{ width:36, height:36, borderRadius:10, background:PF, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>▶</div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:12, fontWeight:600, color:T1, margin:'0 0 2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{video.title}</p>
-                        <p style={{ fontSize:11, color:T3, margin:0 }}>{video.tag} · {video.duration}</p>
+                  <div style={{ display:isMobile ? 'grid' : 'block', gridTemplateColumns:isMobile ? 'repeat(2, minmax(0, 1fr))' : undefined, gap:isMobile ? 8 : 0, padding:isMobile ? 8 : 0 }}>
+                    {demoVideos.map((video, index) => (
+                      <div key={`${video.title}-${index}`} style={{ display:'flex', flexDirection:'column', gap:8, padding:isMobile?'10px':'12px 14px', borderBottom:isMobile? 'none' : index < demoVideos.length - 1 ? `1px solid ${BD}` : 'none', width:'100%', background:isMobile ? 'rgba(255,255,255,0.7)' : 'transparent', borderRadius:isMobile ? 10 : 0 }}>
+                        <div style={{ width:'100%', aspectRatio:'16 / 9', borderRadius:10, background:PF, display:'flex', alignItems:'center', justifyContent:'center', fontSize:isMobile?13:16, flexShrink:0, overflow:'hidden', position:'relative' }}>
+                          {video.thumbnail ? (
+                            <img src={video.thumbnail} alt={video.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                          ) : (
+                            <span>▶</span>
+                          )}
+                        </div>
+                        <div style={{ minWidth:0 }}>
+                          <p style={{ fontSize:isMobile?10.5:12, fontWeight:600, color:T1, margin:'0 0 1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{video.title}</p>
+                          <p style={{ fontSize:isMobile?9:11, color:T3, margin:'0 0 8px', lineHeight:1.3 }}>{video.tag} · {video.duration}</p>
+                          <button
+                            type="button"
+                            onClick={() => setActiveVideo(video)}
+                            style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:'100%', boxShadow:'0 8px 16px rgba(91, 33, 182, 0.16)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
+                            Play
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveVideo(video)}
-                        style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:isMobile?'100%':'auto', marginTop:isMobile?4:0, boxShadow:'0 8px 16px rgba(91, 33, 182, 0.16)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
-                        Play
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
 
               {/* Announcements */}
-              <div style={{ marginTop:20 }}>
+              <div style={{ marginTop:isMobile?12:20 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, gap:8, flexWrap:'wrap' }}>
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Announcements</h3>
                   <button onClick={() => onNavigate('announcements')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>View all</button>
@@ -870,16 +1032,16 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 12px' }}>Recent activity</h3>
                 <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
                   {dashboardEvents.length > 0 ? dashboardEvents.slice(0,3).map((event, index, arr) => (
-                    <div key={event.id} style={{ display:'flex', alignItems:'center', gap:10, padding:isMobile?'10px 12px':'11px 14px',
+                    <div key={event.id} style={{ display:'flex', alignItems:'center', gap:isMobile?8:10, padding:isMobile?'8px 10px':'11px 14px',
                       borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
-                      <div style={{ width:30, height:30, borderRadius:'50%', background:PF, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <div style={{ width:9, height:9, borderRadius:'50%', background:P }}/>
+                      <div style={{ width:isMobile?26:30, height:isMobile?26:30, borderRadius:'50%', background:PF, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <div style={{ width:isMobile?7:9, height:isMobile?7:9, borderRadius:'50%', background:P }}/>
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:12, fontWeight:500, color:T1, margin:'0 0 2px' }}>{event.title}</p>
-                        <p style={{ fontSize:11, color:T3, margin:0 }}>{event.meetingPlatform || 'Live session'}</p>
+                        <p style={{ fontSize:isMobile?11.5:12, fontWeight:500, color:T1, margin:'0 0 2px' }}>{event.title}</p>
+                        <p style={{ fontSize:isMobile?10.5:11, color:T3, margin:0 }}>{event.meetingPlatform || 'Live session'}</p>
                       </div>
-                      <span style={{ fontSize:12, color:P, fontWeight:500, flexShrink:0, marginTop:isMobile?4:0 }}>{new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
+                      <span style={{ fontSize:isMobile?11:12, color:P, fontWeight:500, flexShrink:0, marginTop:isMobile?4:0 }}>{new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
                     </div>
                   )) : (
                     <div style={{ padding:'12px 14px', color:T2 }}>No recent activity yet.</div>
