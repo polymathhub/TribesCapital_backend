@@ -7,7 +7,7 @@ export default defineConfig({
   base: './',
   build: {
     outDir: '../dist/frontend',
-    emptyOutDir: true,
+    emptyOutDir: false,
   },
   resolve: {
     alias: {
