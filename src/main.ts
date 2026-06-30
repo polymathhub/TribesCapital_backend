@@ -7,11 +7,12 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ValidationPipe } from './common/pipes/validation.pipe';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import express from 'express';
 import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 
 async function bootstrap() {
-  // Load database config early to ensure DATABASE_URL is set for Prisma
+  
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = process.env.DB_PORT || '5432';
   const dbUsername = process.env.DB_USERNAME || 'postgres';
@@ -65,9 +66,15 @@ async function bootstrap() {
   ];
 
   const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(candidate)) || resolve(process.cwd(), 'dist', 'frontend');
+  const frontendAssetsPath = join(frontendDistPath, 'assets');
 
   const httpAdapter = app.getHttpAdapter();
   const expressInstance = httpAdapter.getInstance();
+
+  expressInstance.use(express.static(frontendDistPath, { index: false }));
+  if (existsSync(frontendAssetsPath)) {
+    expressInstance.use('/assets', express.static(frontendAssetsPath));
+  }
 
   expressInstance.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
     if (req.method !== 'GET') {
