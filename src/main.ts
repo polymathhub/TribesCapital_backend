@@ -7,6 +7,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ValidationPipe } from './common/pipes/validation.pipe';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import { existsSync } from 'fs';
+import { join, resolve } from 'path';
 
 async function bootstrap() {
   // Load database config early to ensure DATABASE_URL is set for Prisma
@@ -52,6 +54,26 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api');
+
+  const frontendDistPath = [
+    resolve(process.cwd(), 'dist', 'frontend'),
+    resolve(__dirname, '..', 'dist', 'frontend'),
+  ].find((candidate) => existsSync(candidate)) || resolve(process.cwd(), 'dist', 'frontend');
+
+  const httpAdapter = app.getHttpAdapter();
+  const expressInstance = httpAdapter.getInstance();
+
+  expressInstance.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
+    if (req.method !== 'GET') {
+      return next();
+    }
+
+    if (req.path.includes('.')) {
+      return next();
+    }
+
+    return res.sendFile(join(frontendDistPath, 'index.html'));
+  });
 
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(
