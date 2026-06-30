@@ -55,10 +55,16 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  const frontendDistPath = [
+  const frontendDistCandidates = [
     resolve(process.cwd(), 'dist', 'frontend'),
+    resolve(process.cwd(), 'frontend', 'dist'),
     resolve(__dirname, '..', 'dist', 'frontend'),
-  ].find((candidate) => existsSync(candidate)) || resolve(process.cwd(), 'dist', 'frontend');
+    resolve(__dirname, '..', 'frontend', 'dist'),
+    resolve(__dirname, '..', '..', 'dist', 'frontend'),
+    resolve(__dirname, '..', '..', 'frontend', 'dist'),
+  ];
+
+  const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(candidate)) || resolve(process.cwd(), 'dist', 'frontend');
 
   const httpAdapter = app.getHttpAdapter();
   const expressInstance = httpAdapter.getInstance();
