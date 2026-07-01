@@ -4,10 +4,10 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/',
+  base: './',
   build: {
     outDir: '../dist/frontend',
-    emptyOutDir: true,
+    emptyOutDir: false,
   },
   resolve: {
     alias: {

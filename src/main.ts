@@ -7,9 +7,12 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ValidationPipe } from './common/pipes/validation.pipe';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import express from 'express';
+import { existsSync } from 'fs';
+import { join, resolve } from 'path';
 
 async function bootstrap() {
-  // Load database config early to ensure DATABASE_URL is set for Prisma
+  
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = process.env.DB_PORT || '5432';
   const dbUsername = process.env.DB_USERNAME || 'postgres';
@@ -23,7 +26,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
-  const port = configService.get<number>('app.port') || 3000;
+  const port = Number(process.env.PORT || configService.get<number>('app.port') || 3000);
   const environment = configService.get<string>('app.environment') || 'development';
   let corsOrigin: string | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void) = 'http://localhost:3000';
 
@@ -52,6 +55,38 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api');
+
+  const frontendDistCandidates = [
+    resolve(process.cwd(), 'dist', 'frontend'),
+    resolve(process.cwd(), 'frontend', 'dist'),
+    resolve(__dirname, '..', 'dist', 'frontend'),
+    resolve(__dirname, '..', 'frontend', 'dist'),
+    resolve(__dirname, '..', '..', 'dist', 'frontend'),
+    resolve(__dirname, '..', '..', 'frontend', 'dist'),
+  ];
+
+  const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(candidate)) || resolve(process.cwd(), 'dist', 'frontend');
+  const frontendAssetsPath = join(frontendDistPath, 'assets');
+
+  const httpAdapter = app.getHttpAdapter();
+  const expressInstance = httpAdapter.getInstance();
+
+  expressInstance.use(express.static(frontendDistPath, { index: false }));
+  if (existsSync(frontendAssetsPath)) {
+    expressInstance.use('/assets', express.static(frontendAssetsPath));
+  }
+
+  expressInstance.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
+    if (req.method !== 'GET') {
+      return next();
+    }
+
+    if (req.path.includes('.')) {
+      return next();
+    }
+
+    return res.sendFile(join(frontendDistPath, 'index.html'));
+  });
 
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(

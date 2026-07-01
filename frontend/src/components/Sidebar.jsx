@@ -161,7 +161,7 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
         })}
       </div>
 
-      <div style={{ marginTop: 'auto', padding: '10px 12px 14px', borderTop: `1px solid ${COLORS.BD}` }}>
+      <div style={{ marginTop: 'auto', padding: '10px 12px 14px', borderTop: `1px solid ${COLORS.BD}`, position: 'sticky', bottom: 0, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
         <button
           type="button"
           onClick={() => {
@@ -174,13 +174,14 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
             alignItems: 'center',
             gap: 10,
             padding: '10px 12px',
-            border: `1px solid ${COLORS.BD}`,
+            border: `1px solid rgba(185, 28, 28, 0.16)`,
             borderRadius: 10,
-            background: '#FFF7F7',
+            background: 'linear-gradient(135deg, #fff7f7 0%, #fef2f2 100%)',
             color: '#B91C1C',
             cursor: 'pointer',
             fontSize: 13,
-            fontWeight: 600,
+            fontWeight: 700,
+            boxShadow: '0 8px 18px rgba(185, 28, 28, 0.08)',
           }}
         >
           <Icon name="logout" size={16} color="#B91C1C" />

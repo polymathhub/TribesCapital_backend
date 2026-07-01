@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 import configurations from './config';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -28,6 +29,17 @@ import { HealthModule } from './modules/health/health.module';
 // import { ProjectsModule } from './modules/projects/projects.module';
 // import { DocumentsModule } from './modules/documents/documents.module';
 
+const frontendDistCandidates = [
+  resolve(process.cwd(), 'dist', 'frontend'),
+  resolve(process.cwd(), 'frontend', 'dist'),
+  resolve(__dirname, '..', 'dist', 'frontend'),
+  resolve(__dirname, '..', 'frontend', 'dist'),
+  resolve(__dirname, '..', '..', 'dist', 'frontend'),
+  resolve(__dirname, '..', '..', 'frontend', 'dist'),
+];
+
+const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(candidate)) || resolve(process.cwd(), 'dist', 'frontend');
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -36,7 +48,7 @@ import { HealthModule } from './modules/health/health.module';
       envFilePath: ['.env', '.env.local'],
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'dist', 'frontend'),
+      rootPath: frontendDistPath,
       serveRoot: '/',
       exclude: ['/api*'],
     }),
