@@ -201,16 +201,36 @@ const circleBtn = {
 function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false, thumbnail = null, videoId = null, onPlay = null }) {
   const showProgress = pct !== undefined && pct !== null;
   const hasVideo = Boolean(videoId || thumbnail);
+  const videoRef = React.useRef(null);
+  const [isPreviewPlaying, setIsPreviewPlaying] = React.useState(false);
+
+  const handleMouseEnter = () => {
+    if (videoRef.current && !isMobile) {
+      // attempt to play preview silently
+      videoRef.current.play().then(() => setIsPreviewPlaying(true)).catch(() => {});
+    }
+  };
+  const handleMouseLeave = () => {
+    if (videoRef.current && !isMobile) {
+      try { videoRef.current.pause(); videoRef.current.currentTime = 0; } catch (e) {}
+      setIsPreviewPlaying(false);
+    }
+  };
 
   return (
     <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, marginBottom:12, overflow:'hidden', boxShadow:'0 8px 24px rgba(17,24,39,0.04)', transition:'transform .2s ease, box-shadow .2s ease' }}>
       <div style={{ height:3, background:'#F3F4F6' }}>
-        <div style={{ height:3, width:`${showProgress ? pct : 100}%`, background:catColor === GR ? GR : P, borderRadius:'0 3px 3px 0' }}/>
+        <div style={{ height:3, width:`${showProgress ? pct : 100}%`, background:catColor === GR ? GR : P, borderRadius:'0 3px 3px 0' }} />
       </div>
       <div style={{ padding:'14px 18px 16px', display:'flex', flexDirection:isMobile ? 'column' : 'row', gap:14 }}>
         {hasVideo ? (
-          <div style={{ width:isMobile ? '100%' : 96, minWidth:isMobile ? 0 : 96, aspectRatio:'16 / 9', borderRadius:10, overflow:'hidden', background:PF, position:'relative', flexShrink:0 }}>
-            {thumbnail ? (
+          <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ width:isMobile ? '100%' : 96, minWidth:isMobile ? 0 : 96, aspectRatio:'16 / 9', borderRadius:10, overflow:'hidden', background:PF, position:'relative', flexShrink:0 }}>
+            {videoId ? (
+              <video ref={videoRef} muted loop playsInline preload="metadata" poster={thumbnail} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}>
+                <source src={`https://r.jina.ai/http://img.youtube.com/vi/${videoId}/hqdefault.jpg`} type="video/mp4" />
+                {/* fallback to thumbnail if video preview not available */}
+              </video>
+            ) : thumbnail ? (
               <img src={thumbnail} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
             ) : (
               <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:P, fontSize:20 }}>
@@ -225,7 +245,7 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false
           </div>
         ) : (
           <div style={{ width:36, height:44, background:PF, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:P, fontSize:16 }}>
-            <Icon name="doc" size={18} color={P}/>
+            <Icon name="doc" size={18} color={P} />
           </div>
         )}
         <div style={{ flex:1, minWidth:0 }}>
