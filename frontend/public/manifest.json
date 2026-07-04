@@ -1,0 +1,16 @@
+{
+  "name": "TribesCapital",
+  "short_name": "TribesCapital",
+  "description": "Clean Energy Investment Platform",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5B21B6",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ]
+}
