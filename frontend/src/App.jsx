@@ -3,17 +3,22 @@ import AuthPage from './pages/AuthPage';
 import HomePage from './pages/HomePage';
 import LoadingScreen from './components/LoadingScreen';
 import Sidebar from './components/Sidebar';
-import { usersAPI } from './api/endpoints';
+import { authAPI, usersAPI } from './api/endpoints';
 import { persistDemoSession, clearAuthSession } from './utils/authSession';
 import './App.css';
 
+const DEMO_EMAIL = 'demo@tribes.capital';
+const DEMO_PASSWORD = 'DemoPass123!';
+
 function App() {
+  const isDemoAutoLoginEnabled = import.meta.env.DEV || import.meta.env.PROD;
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window === 'undefined') return false;
 
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
-    return Boolean(token || userEmail || import.meta.env.DEV);
+    return Boolean(token || userEmail || isDemoAutoLoginEnabled);
   });
   const [user, setUser] = useState(() => {
     if (typeof window === 'undefined') return null;
@@ -42,16 +47,6 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
-
-    if (import.meta.env.DEV && !token && !userEmail) {
-      const demoSession = persistDemoSession();
-      setUser(demoSession.user);
-      setIsAuthenticated(true);
-      setCurrentPage('home');
-      setIsLoading(false);
-      setHasBootstrapped(true);
-      return;
-    }
 
     const finishBootstrap = () => {
       setIsLoading(false);
@@ -82,11 +77,38 @@ function App() {
         } else if (userEmail) {
           setUser({ email: userEmail, name: userEmail.split('@')[0] });
           setIsAuthenticated(true);
+        } else if (isDemoAutoLoginEnabled) {
+          try {
+            const response = await authAPI.login({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+            const demoUser = response.data?.user || { email: DEMO_EMAIL, firstName: 'Demo', lastName: 'User' };
+
+            if (response.data?.accessToken) {
+              localStorage.setItem('accessToken', response.data.accessToken);
+            }
+            if (response.data?.refreshToken) {
+              localStorage.setItem('refreshToken', response.data.refreshToken);
+            }
+            localStorage.setItem('userEmail', demoUser.email);
+            localStorage.setItem('userName', demoUser.firstName || demoUser.email.split('@')[0]);
+            localStorage.setItem('user', JSON.stringify(demoUser));
+
+            setUser(demoUser);
+            setIsAuthenticated(true);
+          } catch (loginError) {
+            console.warn('Demo auto-login failed; falling back to demo session', loginError);
+            const demoSession = persistDemoSession();
+            setUser(demoSession.user);
+            setIsAuthenticated(true);
+          }
         }
       } catch (error) {
         console.warn('Session bootstrap failed:', error);
         if (userEmail) {
           setUser({ email: userEmail, name: userEmail.split('@')[0] });
+          setIsAuthenticated(true);
+        } else if (isDemoAutoLoginEnabled) {
+          const demoSession = persistDemoSession();
+          setUser(demoSession.user);
           setIsAuthenticated(true);
         }
       } finally {
