@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const DEFAULT_API_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || DEFAULT_API_BASE;
+
+if (!import.meta.env.VITE_API_URL) {
+  console.warn(`VITE_API_URL is not configured. Falling back to ${DEFAULT_API_BASE}`);
+}
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

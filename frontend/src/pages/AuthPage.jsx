@@ -60,7 +60,10 @@ class GoogleOAuthService {
       try {
         const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
         if (!clientId) {
-          throw new Error('Google Client ID not configured');
+          console.warn('Google Client ID not configured. Google OAuth will be disabled.');
+          this.isInitialized = true;
+          this.isReady = false;
+          return;
         }
 
         const isReady = await this.waitForSDK();
@@ -91,6 +94,10 @@ class GoogleOAuthService {
       await this.initialize();
     }
 
+    if (!this.isReady) {
+      throw new Error('Google OAuth is not configured or available');
+    }
+
     return new Promise((resolve, reject) => {
       const handleCredentialResponse = async (response) => {
         try {
@@ -100,7 +107,7 @@ class GoogleOAuthService {
           }
 
           const authResult = await authAPI.googleAuth({ idToken: response.credential });
-          
+
           if (!authResult?.data?.accessToken) {
             reject(new Error('No authentication token in response'));
             return;
@@ -219,7 +226,7 @@ function getPasswordStrength(password) {
   return strengths[score];
 }
 
-/* ─── ICON COMPONENTS ──────────────────────────────── */
+/* ─── ICON COMPONENTS For the Auth page */
 function EyeIcon({ open = false }) {
   return (
     <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">

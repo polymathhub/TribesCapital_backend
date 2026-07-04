@@ -610,8 +610,8 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   const quizAllAnswered = QUICK_QUIZ.every((question) => quizAnswers[question.id] !== undefined);
   const quizScore = QUICK_QUIZ.reduce((total, question) => total + (quizAnswers[question.id] === question.correct ? 1 : 0), 0);
   const quizPercent = Math.round((quizScore / QUICK_QUIZ.length) * 100);
-  const quizPassed = quizSubmitted && quizPercent >= 70;
-  const quizFailed = quizSubmitted && quizPercent < 70;
+  const quizPassed = quizSubmitted && quizPercent >= 80;
+  const quizFailed = quizSubmitted && quizPercent < 80;
 
   function handleBookmark() {
     const next = !bookmarked;
@@ -639,7 +639,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   function handleQuizSubmit() {
     if (!quizAllAnswered) return;
     setQuizSubmitted(true);
-    if (quizPercent >= 70) {
+    if (quizPercent >= 80) {
       return;
     }
     setQuizRetakeRequired(true);
@@ -1003,7 +1003,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap',marginBottom:18}}>
                   <div>
                     <div style={{fontSize:14,fontWeight:600,color:T1}}>5 questions about the course</div>
-                    <div style={{fontSize:12,color:T2,marginTop:4}}>Answer all questions to reach at least 70%.</div>
+                    <div style={{fontSize:12,color:T2,marginTop:4}}>Answer all questions to reach at least 80%.</div>
                   </div>
                   <div style={{fontSize:12,fontWeight:600,color:quizFailed ? AM : PU}}>
                     {quizSubmitted ? `${quizPercent}% score` : `${Object.keys(quizAnswers).length}/${QUICK_QUIZ.length} answered`}
