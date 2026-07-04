@@ -859,16 +859,6 @@ function SignupPage({ onNavigate, onSuccess }) {
     setAttempt(prev => prev + 1);
 
     try {
-      // Step 1: Check if email exists
-      console.log(' Checking email availability...');
-      const emailCheck = await authAPI.checkEmail(formData.email.trim().toLowerCase());
-      
-      if (emailCheck.data?.exists) {
-        setError('This email is already registered. Please sign in or use a different email.');
-        setLoading(false);
-        return;
-      }
-
       // Parse name
       const nameParts = formData.fullName.trim().split(/\s+/);
       const firstName = nameParts[0];
