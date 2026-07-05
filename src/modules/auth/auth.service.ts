@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   ConflictException,
   InternalServerErrorException,
+  ServiceUnavailableException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -92,6 +93,12 @@ export class AuthService {
       this.logger.error('Register failed', error);
       if (error?.code === 'P2002') {
         throw new ConflictException('Email already registered');
+      }
+      if (error?.code === 'P1001') {
+        throw new ServiceUnavailableException('Database connection failed. Please try again later.');
+      }
+      if (error?.code === 'P2021' || error?.message?.includes('does not exist')) {
+        throw new ServiceUnavailableException('Database schema is not initialized. Please run database migrations.');
       }
       throw new InternalServerErrorException('Unable to create your account right now. Please try again later.');
     }
