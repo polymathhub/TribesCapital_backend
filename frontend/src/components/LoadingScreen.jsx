@@ -19,7 +19,7 @@ function LoadingScreen({ isVisible = true, onLoadComplete = () => {} }) {
       window.setTimeout(() => {
         onLoadComplete();
       }, 500);
-    }, 2000);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [isVisible, onLoadComplete]);
@@ -42,69 +42,50 @@ function LoadingScreen({ isVisible = true, onLoadComplete = () => {} }) {
         padding: 24,
       }}
     >
-      <div
-        style={{
-          background: 'rgba(255,255,255,0.8)',
-          border: '1px solid rgba(91, 33, 182, 0.14)',
-          borderRadius: 20,
-          padding: '28px 24px',
-          boxShadow: '0 20px 50px rgba(17,24,39,0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 16,
-          maxWidth: 360,
-          width: '100%',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          animation: 'softRise 0.7s ease-out',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <LogoMark size={64} animate={false} />
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+        <LogoMark size={72} animate={false} />
+      </div>
 
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <p
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              color: '#111827',
-              margin: 0,
-              letterSpacing: '-0.3px',
-            }}
-          >
-            Unlocking clean energy opportunities
-          </p>
-          <p
-            style={{
-              fontSize: 12,
-              color: '#6B7280',
-              margin: 0,
-              letterSpacing: '0.6px',
-              textTransform: 'uppercase',
-              fontWeight: 600,
-            }}
-          >
-            Welcome to Tribes Capital
-          </p>
-        </div>
+      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 420, width: '100%' }}>
+        <p
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: '#111827',
+            margin: 0,
+            letterSpacing: '-0.3px',
+          }}
+        >
+          Unlocking clean energy opportunities
+        </p>
+        <p
+          style={{
+            fontSize: 13,
+            color: '#6B7280',
+            margin: 0,
+            letterSpacing: '0.6px',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+          }}
+        >
+          Welcome to Tribes Capital
+        </p>
+      </div>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'rgba(91, 33, 182, 0.72)',
-                animation: `pulse 1s ease-in-out infinite`,
-                animationDelay: `${i * 0.16}s`,
-              }}
-            />
-          ))}
-        </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 30 }}>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: 'rgba(91, 33, 182, 0.72)',
+              animation: `pulse 1s ease-in-out infinite`,
+              animationDelay: `${i * 0.16}s`,
+            }}
+          />
+        ))}
       </div>
 
       <style>{`

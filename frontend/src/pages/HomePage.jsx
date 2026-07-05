@@ -202,17 +202,48 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false
   const showProgress = pct !== undefined && pct !== null;
   const hasVideo = Boolean(videoId || thumbnail);
   const videoRef = React.useRef(null);
+  const wrapperRef = React.useRef(null);
   const [isPreviewPlaying, setIsPreviewPlaying] = React.useState(false);
+  const [isVisible, setIsVisible] = React.useState(false);
+
+  // Lazy-load only when card is visible (desktop) or when user taps (mobile)
+  React.useEffect(() => {
+    if (!wrapperRef.current || typeof IntersectionObserver === 'undefined') return undefined;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          try { obs.unobserve(entry.target); } catch (e) {}
+        }
+      });
+    }, { threshold: 0.25 });
+    obs.observe(wrapperRef.current);
+    return () => { try { obs.disconnect(); } catch (e) {} };
+  }, []);
 
   const handleMouseEnter = () => {
     if (videoRef.current && !isMobile) {
-      // attempt to play preview silently
       videoRef.current.play().then(() => setIsPreviewPlaying(true)).catch(() => {});
     }
   };
   const handleMouseLeave = () => {
     if (videoRef.current && !isMobile) {
       try { videoRef.current.pause(); videoRef.current.currentTime = 0; } catch (e) {}
+      setIsPreviewPlaying(false);
+    }
+  };
+
+  // Touch / click toggle for mobile: tap to preview, tap again to stop
+  const handleTouchToggle = (e) => {
+    if (!isMobile || !hasVideo) return;
+    // Prevent the outer click handlers
+    e.stopPropagation();
+    if (!isPreviewPlaying) {
+      setIsPreviewPlaying(true);
+      // allow element to mount then play
+      setTimeout(() => { try { videoRef.current?.play(); } catch (err) {} }, 50);
+    } else {
+      try { videoRef.current?.pause(); videoRef.current.currentTime = 0; } catch (err) {}
       setIsPreviewPlaying(false);
     }
   };
@@ -224,12 +255,23 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false
       </div>
       <div style={{ padding:'14px 18px 16px', display:'flex', flexDirection:isMobile ? 'column' : 'row', gap:14 }}>
         {hasVideo ? (
-          <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} style={{ width:isMobile ? '100%' : 96, minWidth:isMobile ? 0 : 96, aspectRatio:'16 / 9', borderRadius:10, overflow:'hidden', background:PF, position:'relative', flexShrink:0 }}>
+          <div ref={wrapperRef} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onClick={handleTouchToggle} style={{ width:isMobile ? '100%' : 96, minWidth:isMobile ? 0 : 96, aspectRatio:'16 / 9', borderRadius:10, overflow:'hidden', background:PF, position:'relative', flexShrink:0 }}>
             {videoId ? (
-              <video ref={videoRef} muted loop playsInline preload="metadata" poster={thumbnail} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}>
-                <source src={`https://r.jina.ai/http://img.youtube.com/vi/${videoId}/hqdefault.jpg`} type="video/mp4" />
-                {/* fallback to thumbnail if video preview not available */}
-              </video>
+              // render video element only when visible on desktop or when preview requested on mobile
+              (isPreviewPlaying || (isVisible && !isMobile)) ? (
+                <video ref={videoRef} muted loop playsInline preload="metadata" poster={thumbnail} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}>
+                  <source src={`https://r.jina.ai/http://img.youtube.com/vi/${videoId}/hqdefault.jpg`} type="video/mp4" />
+                </video>
+              ) : (
+                // still render poster img when available to avoid loading video
+                thumbnail ? (
+                  <img src={thumbnail} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                ) : (
+                  <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:P, fontSize:20 }}>
+                    ▶
+                  </div>
+                )
+              )
             ) : thumbnail ? (
               <img src={thumbnail} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
             ) : (

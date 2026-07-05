@@ -1,14 +1,14 @@
 import apiClient from './client';
 
 export const authAPI = {
-  login: (credentials) => apiClient.post('/auth/login', credentials),
-  register: (data) => apiClient.post('/auth/register', data),
-  googleAuth: (googleData) => apiClient.post('/auth/google', googleData),
-  refreshToken: () => apiClient.post('/auth/refresh', { refreshToken: localStorage.getItem('refreshToken') }),
-  forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
-  verifyCode: (email, code) => apiClient.post('/auth/verify-code', { email, code }),
-  resetPassword: (email, code, password) => apiClient.post('/auth/reset-password', { email, code, password }),
-  logout: () => apiClient.post('/auth/logout'),
+  login: (credentials, config = {}) => apiClient.post('/auth/login', credentials, config),
+  register: (data, config = {}) => apiClient.post('/auth/register', data, config),
+  googleAuth: (googleData, config = {}) => apiClient.post('/auth/google', googleData, config),
+  refreshToken: (config = {}) => apiClient.post('/auth/refresh', { refreshToken: localStorage.getItem('refreshToken') }, config),
+  forgotPassword: (email, config = {}) => apiClient.post('/auth/forgot-password', { email }, config),
+  verifyCode: (email, code, config = {}) => apiClient.post('/auth/verify-code', { email, code }, config),
+  resetPassword: (email, code, password, config = {}) => apiClient.post('/auth/reset-password', { email, code, password }, config),
+  logout: (config = {}) => apiClient.post('/auth/logout', {}, config),
 };
 
 export const usersAPI = {
