@@ -212,6 +212,24 @@ function validatePassword(password) {
   };
 }
 
+function persistAuthSession({ accessToken, refreshToken, user, email }) {
+  if (accessToken) {
+    localStorage.setItem('accessToken', accessToken);
+  }
+  if (refreshToken) {
+    localStorage.setItem('refreshToken', refreshToken);
+  }
+  if (email) {
+    localStorage.setItem('userEmail', email);
+  }
+  if (user?.firstName) {
+    localStorage.setItem('userName', user.firstName);
+  }
+  if (user) {
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+}
+
 function getPasswordStrength(password) {
   const validation = validatePassword(password);
   const score = Object.values(validation).filter(Boolean).length;
@@ -328,7 +346,7 @@ function FormField({ label, required = false, error = null, children }) {
   );
 }
 
-function TextInput({ type = 'text', placeholder, value, onChange, disabled = false, icon: IconComponent = null, onIconClick = null }) {
+function TextInput({ type = 'text', placeholder, value, onChange, disabled = false, icon: IconComponent = null, onIconClick = null, onKeyPress = null }) {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -340,6 +358,7 @@ function TextInput({ type = 'text', placeholder, value, onChange, disabled = fal
         disabled={disabled}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
+        onKeyPress={onKeyPress}
         style={{
           width: '100%',
           height: 46,
@@ -620,7 +639,7 @@ function LoginPage({ onNavigate, onSuccess }) {
 
   const handleLogin = async () => {
     setError('');
-    
+
     if (!validateEmail(email)) {
       setError('Please enter a valid email address');
       return;
@@ -632,41 +651,34 @@ function LoginPage({ onNavigate, onSuccess }) {
 
     setLoading(true);
     try {
-      console.log('🔐 Attempting login for:', email);
-      const response = await authAPI.login({ email, password });
-      
-      if (response.data?.accessToken) {
-        // Build user data with fallbacks
-        const userData = {
-          email: email,
-          firstName: response.data.user?.firstName || email.split('@')[0],
-          lastName: response.data.user?.lastName || '',
-          ...response.data.user
-        };
-        
-        // Persist session
-        localStorage.setItem('accessToken', response.data.accessToken);
-        if (response.data.refreshToken) {
-          localStorage.setItem('refreshToken', response.data.refreshToken);
-        }
-        localStorage.setItem('userEmail', userData.email);
-        localStorage.setItem('userName', userData.firstName);
-        
-        if (rememberMe) {
-          localStorage.setItem('rememberEmail', email);
-        }
-        
-        console.log('✅ Login successful for:', userData.email);
-        // Call success handler with user data to update app state immediately
-        onSuccess(userData);
-      } else {
-        throw new Error('No access token in response');
-      }
-    } catch (err) {
-      console.error('Login error:', err?.response?.status, err?.response?.data || err.message);
+      const response = await authAPI.login({ email: email.trim().toLowerCase(), password });
 
-      let userMessage = 'Something went wrong. Please try again.';
+      if (!response.data?.accessToken) {
+        throw new Error('No access token returned from the server');
+      }
+
+      const userData = {
+        email: email.trim().toLowerCase(),
+        firstName: response.data.user?.firstName || email.split('@')[0],
+        lastName: response.data.user?.lastName || '',
+        ...response.data.user,
+      };
+
+      persistAuthSession({
+        accessToken: response.data.accessToken,
+        refreshToken: response.data.refreshToken,
+        user: userData,
+        email: userData.email,
+      });
+
+      if (rememberMe) {
+        localStorage.setItem('rememberEmail', userData.email);
+      }
+
+      onSuccess(userData);
+    } catch (err) {
       const serverMessage = err.response?.data?.message;
+      let userMessage = 'We could not sign you in right now. Please try again.';
 
       if (err.name === 'AbortError') {
         userMessage = 'This is taking longer than expected. Please check your internet connection and try again.';
@@ -806,24 +818,23 @@ function SignupPage({ onNavigate, onSuccess }) {
     setError
   );
 
-  // Validation with better messaging
   const validateForm = () => {
     const errors = {};
-    
+
     if (!formData.fullName?.trim()) {
       errors.fullName = 'Full name is required';
     } else if (formData.fullName.trim().split(' ').length < 2) {
       errors.fullName = 'Please enter your first and last name';
     }
-    
+
     if (!validateEmail(formData.email)) {
       errors.email = 'Please enter a valid email address';
     }
-    
+
     if (!formData.role) {
       errors.role = 'Please select an account type';
     }
-    
+
     const pwValidation = validatePassword(formData.password);
     if (!formData.password) {
       errors.password = 'Password is required';
@@ -838,34 +849,26 @@ function SignupPage({ onNavigate, onSuccess }) {
     } else if (!pwValidation.hasSymbol) {
       errors.password = 'Password must contain at least one symbol (!@#$%^&*)';
     }
-    
+
     if (!formData.agreedToTerms) {
       errors.agreedToTerms = 'You must agree to the terms and conditions';
     }
-    
+
     return errors;
   };
 
-  // Enterprise-grade signup handler
   const handleSignup = async () => {
-    // Reset error state
     setError('');
     setFieldErrors({});
-    
-    // Validate form
+
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      // Set the first error to display
-      const firstError = Object.values(errors)[0];
-      setError(firstError);
-      console.warn('Validation failed:', errors);
+      setError(Object.values(errors)[0]);
       return;
     }
 
-    // Prevent duplicate submissions
     if (loading) {
-      console.warn('Signup already in progress');
       return;
     }
 
@@ -873,12 +876,10 @@ function SignupPage({ onNavigate, onSuccess }) {
     setAttempt(prev => prev + 1);
 
     try {
-      // Parse name
       const nameParts = formData.fullName.trim().split(/\s+/);
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || 'User';
 
-      // Prepare payload
       const payload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -888,73 +889,39 @@ function SignupPage({ onNavigate, onSuccess }) {
         role: formData.role,
       };
 
-      console.log('📝 Signup attempt #' + attempt, { 
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        email: payload.email,
-        role: payload.role,
-      });
+      const response = await authAPI.register(payload);
 
-      // Step 2: Register user (this sends verification email automatically)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-      let response;
-      try {
-        response = await authAPI.register(payload, { signal: controller.signal });
-      } finally {
-        clearTimeout(timeoutId);
-      }
-
-      console.log(' Signup response received:', {
-        status: response.status,
-        hasData: !!response.data,
-        hasAccessToken: !!response.data?.accessToken,
-        email: response.data?.user?.email,
-      });
-
-      // Validate response
       if (!response.data) {
         throw new Error('No data in response from server');
       }
 
-      // Step 3: Store verification email for verification page
       localStorage.setItem('verificationEmail', formData.email.trim().toLowerCase());
 
-      // Step 4: Check what to do next
       if (response.data?.accessToken) {
-        // Production flow: Backend sent tokens (email verified automatically in dev)
-        try {
-          localStorage.setItem('accessToken', response.data.accessToken);
-          if (response.data.refreshToken) {
-            localStorage.setItem('refreshToken', response.data.refreshToken);
-          }
-          if (response.data.user?.email) {
-            localStorage.setItem('userEmail', response.data.user.email);
-          }
-          if (response.data.user?.firstName) {
-            localStorage.setItem('userName', response.data.user.firstName);
-          }
-        } catch (storageErr) {
-          console.warn('Failed to persist session to localStorage', storageErr);
-        }
+        const userData = {
+          email: payload.email,
+          firstName: response.data.user?.firstName || firstName,
+          lastName: response.data.user?.lastName || lastName,
+          ...response.data.user,
+        };
 
-        // Auto-login user and navigate to home
-        console.log('Account created successfully! Logging you in...');
-        onSuccess(response.data.user);
+        persistAuthSession({
+          accessToken: response.data.accessToken,
+          refreshToken: response.data.refreshToken,
+          user: userData,
+          email: payload.email,
+        });
+
+        onSuccess(userData);
         return;
       }
-      // Otherwise, navigate to verification step (required in production with email enabled)
-      console.log(' Verification email sent! Please check your inbox.');
+
       setTimeout(() => {
         onNavigate('verify');
       }, 300);
-
     } catch (err) {
-      console.error('Signup error:', err?.response?.status, err?.response?.data || err.message);
-
-      let userMessage = 'Something went wrong. Please try again.';
       const serverMessage = err.response?.data?.message;
+      let userMessage = 'Something went wrong. Please try again.';
 
       if (err.name === 'AbortError') {
         userMessage = 'This is taking longer than expected. Please check your internet connection and try again.';
@@ -973,7 +940,6 @@ function SignupPage({ onNavigate, onSuccess }) {
       }
 
       setError(userMessage);
-      
     } finally {
       setLoading(false);
     }

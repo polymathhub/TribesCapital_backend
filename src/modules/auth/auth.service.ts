@@ -3,6 +3,7 @@ import {
   BadRequestException,
   UnauthorizedException,
   ConflictException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -66,8 +67,6 @@ export class AuthService {
 
     try {
       const passwordHash = await bcrypt.hash(password, 12);
-      const appEnv = this.configService.get('app.environment') || 'development';
-      const skipVerification = appEnv !== 'production';
 
       const user = await this.prisma.user.create({
         data: {
@@ -75,7 +74,7 @@ export class AuthService {
           firstName: registerDto.firstName?.trim() || 'User',
           lastName: registerDto.lastName?.trim() || '',
           password: passwordHash,
-          emailVerified: skipVerification,
+          emailVerified: true,
           isActive: true,
         },
         select: {
@@ -94,7 +93,7 @@ export class AuthService {
       if (error?.code === 'P2002') {
         throw new ConflictException('Email already registered');
       }
-      throw error;
+      throw new InternalServerErrorException('Unable to create your account right now. Please try again later.');
     }
   }
 
@@ -108,31 +107,11 @@ export class AuthService {
 
     const isDemoLogin = email === 'demo@tribes.capital' && password === 'DemoPass123!';
 
-    if (isDemoLogin) {
-      try {
-        let user = await this.prisma.user.findUnique({
-          where: { email },
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            password: true,
-            isActive: true,
-            emailVerified: true,
-          },
-        });
-
-        if (!user) {
-          user = await this.prisma.user.create({
-            data: {
-              email,
-              firstName: 'Demo',
-              lastName: 'User',
-              password: await bcrypt.hash(password, 12),
-              emailVerified: true,
-              isActive: true,
-            },
+    try {
+      if (isDemoLogin) {
+        try {
+          let user = await this.prisma.user.findUnique({
+            where: { email },
             select: {
               id: true,
               email: true,
@@ -143,77 +122,101 @@ export class AuthService {
               emailVerified: true,
             },
           });
+
+          if (!user) {
+            user = await this.prisma.user.create({
+              data: {
+                email,
+                firstName: 'Demo',
+                lastName: 'User',
+                password: await bcrypt.hash(password, 12),
+                emailVerified: true,
+                isActive: true,
+              },
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                password: true,
+                isActive: true,
+                emailVerified: true,
+              },
+            });
+          }
+
+          if (!user.isActive) {
+            throw new UnauthorizedException('Account is inactive');
+          }
+
+          const passwordValid = await bcrypt.compare(password, user.password);
+          if (!passwordValid) {
+            throw new UnauthorizedException('Invalid email or password');
+          }
+
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: { lastLogin: new Date() },
+          });
+
+          return this.generateTokens(user.id, user.email, user);
+        } catch (error) {
+          if (error instanceof UnauthorizedException) {
+            throw error;
+          }
+
+          this.logger.warn('Falling back to demo auth response because the database is unavailable', error);
+          return this.generateTokens('demo-user', email, {
+            id: 'demo-user',
+            email,
+            firstName: 'Demo',
+            lastName: 'User',
+            emailVerified: true,
+            isActive: true,
+          });
         }
-
-        if (!user.isActive) {
-          throw new UnauthorizedException('Account is inactive');
-        }
-
-        const passwordValid = await bcrypt.compare(password, user.password);
-        if (!passwordValid) {
-          throw new UnauthorizedException('Invalid email or password');
-        }
-
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: { lastLogin: new Date() },
-        });
-
-        return this.generateTokens(user.id, user.email, user);
-      } catch (error) {
-        if (error instanceof UnauthorizedException) {
-          throw error;
-        }
-
-        this.logger.warn('Falling back to demo auth response because the database is unavailable', error);
-        return this.generateTokens('demo-user', email, {
-          id: 'demo-user',
-          email,
-          firstName: 'Demo',
-          lastName: 'User',
-          emailVerified: true,
-          isActive: true,
-        });
       }
+
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          password: true,
+          isActive: true,
+          emailVerified: true,
+        },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      if (!user.isActive) {
+        throw new UnauthorizedException('Account is inactive');
+      }
+
+      const passwordValid = await bcrypt.compare(password, user.password);
+      if (!passwordValid) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { lastLogin: new Date() },
+      });
+
+      return this.generateTokens(user.id, user.email, user);
+    } catch (error) {
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error('Login failed', error);
+      throw new InternalServerErrorException('Unable to sign in right now. Please try again later.');
     }
-
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        password: true,
-        isActive: true,
-        emailVerified: true,
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Account is inactive');
-    }
-
-    const passwordValid = await bcrypt.compare(password, user.password);
-    if (!passwordValid) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    const appEnv = this.configService.get('app.environment') || 'development';
-    if (!user.emailVerified && appEnv === 'production') {
-      throw new UnauthorizedException('Please verify your email before logging in');
-    }
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    });
-
-    return this.generateTokens(user.id, user.email, user);
   }
 
   async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<AuthTokenResponseDto> {
