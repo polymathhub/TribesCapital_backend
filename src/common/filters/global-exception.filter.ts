@@ -27,7 +27,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     } else if (exception instanceof Error) {
       error = exception.name;
-      message = 'Internal server error';
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      message = isDevelopment ? exception.message : 'Internal server error';
+      details = isDevelopment ? exception.stack : undefined;
     }
 
     const payload = {
