@@ -6,6 +6,9 @@ import { DatabaseModule } from '@database/database.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { JwtTokenService } from './jwt-token.service';
+import { AuthResilienceService } from './auth-resilience.service';
+import { resolveJwtConfig } from '@config/jwt.config';
 
 @Module({
   imports: [
@@ -14,16 +17,22 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const jwtConfig = configService.get('jwt');
+        const jwtConfig = resolveJwtConfig(configService.get('jwt'));
         return {
           secret: jwtConfig.secret,
-          signOptions: { expiresIn: jwtConfig.accessTokenExpiry },
+          signOptions: { expiresIn: jwtConfig.accessTokenExpiry, algorithm: jwtConfig.algorithm },
+          verifyOptions: {
+            algorithms: [jwtConfig.algorithm],
+            ...(jwtConfig.issuer ? { issuer: jwtConfig.issuer } : {}),
+            ...(jwtConfig.audience ? { audience: jwtConfig.audience } : {}),
+            ...(jwtConfig.clockTolerance ? { clockTolerance: Number(jwtConfig.clockTolerance) } : {}),
+          },
         };
       },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule, PassportModule],
+  providers: [AuthService, JwtStrategy, JwtTokenService, AuthResilienceService],
+  exports: [AuthService, JwtModule, PassportModule, JwtTokenService, AuthResilienceService],
 })
 export class AuthModule {}

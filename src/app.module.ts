@@ -5,6 +5,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
 import configurations from './config';
+import { resolveJwtConfig } from './config/jwt.config';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -46,6 +47,10 @@ const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(c
       isGlobal: true,
       load: configurations,
       envFilePath: ['.env', '.env.local'],
+      validate: (config) => ({
+        ...config,
+        jwt: resolveJwtConfig(config.jwt as Record<string, unknown>),
+      }),
     }),
     ServeStaticModule.forRoot({
       rootPath: frontendDistPath,

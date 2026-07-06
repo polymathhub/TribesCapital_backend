@@ -7,9 +7,7 @@ import {
   ServiceUnavailableException,
   Logger,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma.service';
-import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import {
   RegisterDto,
@@ -24,15 +22,17 @@ import {
   UserResponseDto,
   MessageResponseDto,
 } from './dto/auth.dto';
+import { JwtTokenService } from './jwt-token.service';
+import { AuthResilienceService } from './auth-resilience.service';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
-    private configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly jwtTokenService: JwtTokenService,
+    private readonly resilience: AuthResilienceService,
   ) {}
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
@@ -40,6 +40,8 @@ export class AuthService {
     if (!email) {
       return { exists: false };
     }
+
+    this.logger.log(`Check email requested for ${email}`);
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
@@ -66,31 +68,43 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
+    this.logger.log(`Register request received for ${email}`);
+
     try {
-      const passwordHash = await bcrypt.hash(password, 12);
+      return await this.resilience.execute(
+        'register-user-creation',
+        async () =>
+          this.prisma.$transaction(async (tx) => {
+            const passwordHash = await bcrypt.hash(password, 12);
 
-      const user = await this.prisma.user.create({
-        data: {
-          email,
-          firstName: registerDto.firstName?.trim() || 'User',
-          lastName: registerDto.lastName?.trim() || '',
-          password: passwordHash,
-          emailVerified: true,
-          isActive: true,
-        },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          isActive: true,
-          emailVerified: true,
-        },
-      });
+            const user = await tx.user.create({
+          data: {
+            email,
+            firstName: registerDto.firstName?.trim() || 'User',
+            lastName: registerDto.lastName?.trim() || '',
+            password: passwordHash,
+            emailVerified: true,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            isActive: true,
+            emailVerified: true,
+          },
+        });
 
-      return this.generateTokens(user.id, user.email, user);
+            this.logger.log(`User created successfully for ${user.email}`);
+            return this.generateAuthResponse(user.id, user.email, user);
+          }),
+        {
+          context: { email },
+        },
+      );
     } catch (error: any) {
-      this.logger.error('Register failed', error);
+      this.logger.error(`Register failed for ${email}`, error);
       if (error?.code === 'P2002') {
         throw new ConflictException('Email already registered');
       }
@@ -99,6 +113,9 @@ export class AuthService {
       }
       if (error?.code === 'P2021' || error?.message?.includes('does not exist')) {
         throw new ServiceUnavailableException('Database schema is not initialized. Please run database migrations.');
+      }
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
       }
       throw new InternalServerErrorException('Unable to create your account right now. Please try again later.');
     }
@@ -112,78 +129,9 @@ export class AuthService {
       throw new BadRequestException('Email and password are required');
     }
 
-    const isDemoLogin = email === 'demo@tribes.capital' && password === 'DemoPass123!';
+    this.logger.log(`Login request received for ${email}`);
 
     try {
-      if (isDemoLogin) {
-        try {
-          let user = await this.prisma.user.findUnique({
-            where: { email },
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-              password: true,
-              isActive: true,
-              emailVerified: true,
-            },
-          });
-
-          if (!user) {
-            user = await this.prisma.user.create({
-              data: {
-                email,
-                firstName: 'Demo',
-                lastName: 'User',
-                password: await bcrypt.hash(password, 12),
-                emailVerified: true,
-                isActive: true,
-              },
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                password: true,
-                isActive: true,
-                emailVerified: true,
-              },
-            });
-          }
-
-          if (!user.isActive) {
-            throw new UnauthorizedException('Account is inactive');
-          }
-
-          const passwordValid = await bcrypt.compare(password, user.password);
-          if (!passwordValid) {
-            throw new UnauthorizedException('Invalid email or password');
-          }
-
-          await this.prisma.user.update({
-            where: { id: user.id },
-            data: { lastLogin: new Date() },
-          });
-
-          return this.generateTokens(user.id, user.email, user);
-        } catch (error) {
-          if (error instanceof UnauthorizedException) {
-            throw error;
-          }
-
-          this.logger.warn('Falling back to demo auth response because the database is unavailable', error);
-          return this.generateTokens('demo-user', email, {
-            id: 'demo-user',
-            email,
-            firstName: 'Demo',
-            lastName: 'User',
-            emailVerified: true,
-            isActive: true,
-          });
-        }
-      }
-
       const user = await this.prisma.user.findUnique({
         where: { email },
         select: {
@@ -201,27 +149,47 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
+      this.logger.log(`User lookup succeeded for ${email}`);
+
       if (!user.isActive) {
         throw new UnauthorizedException('Account is inactive');
       }
 
-      const passwordValid = await bcrypt.compare(password, user.password);
+      this.logger.log(`Password verification started for ${email}`);
+      const passwordValid = await this.resilience.execute(
+        'password-compare',
+        async () => bcrypt.compare(password, user.password),
+        {
+          fallbackError: new UnauthorizedException('Invalid email or password'),
+          context: { email },
+          logLevel: 'warn',
+        },
+      );
       if (!passwordValid) {
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { lastLogin: new Date() },
-      });
+      await this.resilience.execute(
+        'update-last-login',
+        async () =>
+          this.prisma.user.update({
+            where: { id: user.id },
+            data: { lastLogin: new Date() },
+          }),
+        {
+          context: { email },
+          logLevel: 'warn',
+        },
+      );
 
-      return this.generateTokens(user.id, user.email, user);
+      this.logger.log(`Login successful for ${email}`);
+      return this.generateAuthResponse(user.id, user.email, user);
     } catch (error) {
       if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
         throw error;
       }
 
-      this.logger.error('Login failed', error);
+      this.logger.error(`Login failed for ${email}`, error);
       throw new InternalServerErrorException('Unable to sign in right now. Please try again later.');
     }
   }
@@ -287,7 +255,8 @@ export class AuthService {
       data: { lastLogin: new Date() },
     });
 
-    return this.generateTokens(user.id, user.email, user);
+    this.logger.log(`Google authentication successful for ${user.email}`);
+    return this.generateAuthResponse(user.id, user.email, user);
   }
 
   async validateUser(userId: string): Promise<UserResponseDto | null> {
@@ -312,12 +281,15 @@ export class AuthService {
 
   async refreshTokens(refreshTokenDto: RefreshTokenDto): Promise<AuthTokenResponseDto> {
     try {
-      const decoded = this.jwtService.verify(refreshTokenDto.refreshToken, {
-        secret: this.configService.get<string>('jwt.refreshSecret') || this.configService.get<string>('jwt.secret'),
-      });
+      const decoded = await this.jwtTokenService.verifyRefreshToken(refreshTokenDto.refreshToken);
+      const sub = (decoded as { sub?: string }).sub;
+
+      if (!sub) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
 
       const user = await this.prisma.user.findUnique({
-        where: { id: decoded.sub },
+        where: { id: sub },
         select: {
           id: true,
           email: true,
@@ -332,41 +304,52 @@ export class AuthService {
         throw new UnauthorizedException('User not found or inactive');
       }
 
-      return this.generateTokens(user.id, user.email, user);
-    } catch {
+      return this.generateAuthResponse(user.id, user.email, user);
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      this.logger.warn('Refresh token verification failed');
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
-  private async generateTokens(
+  private async generateAuthResponse(
     userId: string,
     email: string,
     user?: Partial<UserResponseDto> & { isActive?: boolean; emailVerified?: boolean },
   ): Promise<AuthTokenResponseDto> {
     const payload = { sub: userId, email };
-    const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('jwt.secret') || 'your-secret-key-change-in-production',
-      expiresIn: this.configService.get<string>('jwt.accessTokenExpiry') || '24h',
-    });
 
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('jwt.refreshSecret') || this.configService.get<string>('jwt.secret') || 'your-secret-key-change-in-production',
-      expiresIn: this.configService.get<string>('jwt.refreshTokenExpiry') || '7d',
-    });
+    try {
+      const { accessToken, refreshToken, expiresIn } = await this.resilience.execute(
+        'token-issuance',
+        async () => this.jwtTokenService.issueTokenPair(payload),
+        {
+          context: { email, userId },
+          logLevel: 'error',
+        },
+      );
+      this.logger.log(`Tokens generated for ${email}`);
 
-    return {
-      accessToken,
-      refreshToken,
-      expiresIn: 24 * 60 * 60,
-      user: {
-        id: user?.id ?? userId,
-        email,
-        firstName: user?.firstName ?? '',
-        lastName: user?.lastName ?? '',
-        emailVerified: user?.emailVerified ?? false,
-        isActive: user?.isActive ?? true,
-      },
-    };
+      return {
+        accessToken,
+        refreshToken,
+        expiresIn,
+        user: {
+          id: user?.id ?? userId,
+          email,
+          firstName: user?.firstName ?? '',
+          lastName: user?.lastName ?? '',
+          emailVerified: user?.emailVerified ?? false,
+          isActive: user?.isActive ?? true,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Token generation failed for ${email}`, error);
+      throw new ServiceUnavailableException('Authentication is currently unavailable. Please try again later.');
+    }
   }
 
   async verifyEmailToken(token: string): Promise<MessageResponseDto> {
