@@ -17,21 +17,33 @@ export class JwtTokenService {
   }
 
   async issueTokenPair(payload: Record<string, unknown>) {
+    this.logger.log('[JWT] Entering issueTokenPair()');
+    this.logger.log(`[JWT] Payload keys: ${Object.keys(payload).join(',')}`);
+
     try {
       const tokenId = randomUUID();
       const basePayload = { ...payload, jti: tokenId };
 
-      const [accessToken, refreshToken] = await Promise.all([
-        this.jwtService.signAsync(basePayload, this.getSignOptions('access')),
-        this.jwtService.signAsync({ ...basePayload, tokenType: 'refresh' }, this.getSignOptions('refresh')),
-      ]);
+      this.logger.log('[JWT] Before signAsync(access)');
+      const accessToken = await this.jwtService.signAsync(basePayload, this.getSignOptions('access'));
+      this.logger.log('[JWT] After signAsync(access)');
+
+      this.logger.log('[JWT] Before signAsync(refresh)');
+      const refreshToken = await this.jwtService.signAsync({ ...basePayload, tokenType: 'refresh' }, this.getSignOptions('refresh'));
+      this.logger.log('[JWT] After signAsync(refresh)');
+
+      const expiresIn = this.toSeconds(this.jwtConfig.accessTokenExpiry);
+      this.logger.log(`[JWT] expiresIn calculated: ${expiresIn}`);
 
       return {
         accessToken,
         refreshToken,
-        expiresIn: this.toSeconds(this.jwtConfig.accessTokenExpiry),
+        expiresIn,
       };
     } catch (error) {
+      // ensure error details are printed to console for debugging
+      // eslint-disable-next-line no-console
+      console.error(error);
       const detail = error instanceof Error ? error.message : String(error);
       this.logger.error(`JWT token generation failed: ${detail}`);
       throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');

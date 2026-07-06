@@ -26,10 +26,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         error = (body.error as string) || error;
       }
     } else if (exception instanceof Error) {
-      error = exception.name;
       const isDevelopment = process.env.NODE_ENV !== 'production';
-      message = isDevelopment ? exception.message : 'Internal server error';
-      details = isDevelopment ? exception.stack : undefined;
+      if (isDevelopment) {
+        // Print full exception for debugging in non-production environments
+        // eslint-disable-next-line no-console
+        console.error(exception);
+        error = exception.name;
+        message = exception.message;
+        details = exception.stack;
+      } else {
+        // Preserve safe production behavior
+        error = exception.name;
+        message = 'Internal server error';
+        details = undefined;
+      }
     }
 
     const payload = {

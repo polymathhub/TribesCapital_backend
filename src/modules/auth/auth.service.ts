@@ -46,26 +46,34 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
+    this.logger.log('[REGISTER] Entering register()');
     const email = this.normalizeEmail(registerDto.email);
     const password = registerDto.password;
 
+    this.logger.log(`[REGISTER] Normalized email: ${email ?? '<none>'}`);
+
     if (!email || !password) {
+      this.logger.warn('[REGISTER] Missing email or password');
       throw new BadRequestException('Email and password are required');
     }
 
     if (password !== (registerDto.passwordConfirmation ?? password)) {
+      this.logger.warn('[REGISTER] Password confirmation mismatch');
       throw new BadRequestException('Passwords do not match');
     }
 
-    this.logger.log(`Registration requested for ${email}`);
-
+    this.logger.log(`[REGISTER] Looking up existing user for ${email}`);
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    this.logger.log(`[REGISTER] existingUser lookup completed: ${existingUser ? 'found' : 'not found'}`);
     if (existingUser) {
       throw new ConflictException('Email already registered');
     }
 
+    this.logger.log('[REGISTER] Hashing password');
     const passwordHash = await bcrypt.hash(password, 12);
+    this.logger.log('[REGISTER] Password hash completed');
 
+    this.logger.log('[REGISTER] Creating user record');
     const user = await this.prisma.user.create({
       data: {
         email,
@@ -84,21 +92,27 @@ export class AuthService {
         emailVerified: true,
       },
     });
+    this.logger.log(`[REGISTER] User created successfully: ${user.id}`);
 
-    this.logger.log(`Registration successful for ${email}`);
-    return this.buildAuthResponse(user);
+    this.logger.log(`[REGISTER] Entering buildAuthResponse for ${email}`);
+    const response = await this.buildAuthResponse(user);
+    this.logger.log(`[REGISTER] Response about to return for ${email}`);
+    return response;
   }
 
   async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {
+    this.logger.log('[LOGIN] Entering login()');
     const email = this.normalizeEmail(loginDto.email);
     const password = loginDto.password;
 
+    this.logger.log(`[LOGIN] Normalized email: ${email ?? '<none>'}`);
+
     if (!email || !password) {
+      this.logger.warn('[LOGIN] Missing email or password');
       throw new BadRequestException('Email and password are required');
     }
 
-    this.logger.log(`Login requested for ${email}`);
-
+    this.logger.log(`[LOGIN] Looking up user for ${email}`);
     const user = await this.prisma.user.findUnique({
       where: { email },
       select: {
@@ -111,19 +125,22 @@ export class AuthService {
         emailVerified: true,
       },
     });
+    this.logger.log(`[LOGIN] User lookup completed: ${user ? `found(${user.id})` : 'not found'}`);
 
     if (!user) {
+      this.logger.warn('[LOGIN] Invalid credentials - user not found');
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    this.logger.log(`Password verification started for ${email}`);
-
+    this.logger.log(`[LOGIN] Password verification started for ${email}`);
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    this.logger.log(`[LOGIN] Password verification completed for ${email}: ${isPasswordValid ? 'valid' : 'invalid'}`);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
     if (!user.isActive) {
+      this.logger.warn('[LOGIN] Account suspended for user id ' + user.id);
       throw new UnauthorizedException('Account suspended');
     }
 
@@ -131,9 +148,12 @@ export class AuthService {
       where: { id: user.id },
       data: { lastLogin: new Date() },
     });
+    this.logger.log(`[LOGIN] Last login timestamp updated for ${user.id}`);
 
-    this.logger.log(`Login successful for ${email}`);
-    return this.buildAuthResponse(user);
+    this.logger.log(`[LOGIN] Entering buildAuthResponse for ${email}`);
+    const resp = await this.buildAuthResponse(user);
+    this.logger.log(`[LOGIN] Response about to return for ${email}`);
+    return resp;
   }
 
   async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<AuthTokenResponseDto> {
@@ -358,9 +378,21 @@ export class AuthService {
     isActive?: boolean | null;
     emailVerified?: boolean | null;
   }): Promise<AuthTokenResponseDto> {
+    this.logger.log(`[AUTH] Entering buildAuthResponse for ${user.email}`);
     const payload = { sub: user.id, email: user.email, role: 'user' };
-    const tokens = await this.jwtTokenService.issueTokenPair(payload);
+
+    let tokens;
+    try {
+      this.logger.log(`[JWT] issueTokenPair starting for ${user.email} (payload keys: ${Object.keys(payload).join(',')})`);
+      tokens = await this.jwtTokenService.issueTokenPair(payload);
+      this.logger.log(`[JWT] issueTokenPair completed for ${user.email}`);
+    } catch (e) {
+      this.logger.error('[AUTH] Failed at issueTokenPair', e instanceof Error ? e.stack : String(e));
+      throw e;
+    }
+
     this.logger.log(`JWT creation completed for ${user.email}`);
+    this.logger.log(`[AUTH] Response about to return for ${user.email}`);
 
     return {
       success: true,
