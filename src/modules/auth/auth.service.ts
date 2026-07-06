@@ -46,14 +46,16 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
-    this.logger.log('[REGISTER] Entering register()');
+    const ctx = '[REGISTER]';
+    const startRegister = Date.now();
+    this.logger.log(`${new Date().toISOString()} ${ctx}[1] Entering register()`);
     const email = this.normalizeEmail(registerDto.email);
     const password = registerDto.password;
 
-    this.logger.log(`[REGISTER] Normalized email: ${email ?? '<none>'}`);
+    this.logger.log(`${new Date().toISOString()} ${ctx}[3] Normalized email: ${email ?? '<none>'}`);
 
     if (!email || !password) {
-      this.logger.warn('[REGISTER] Missing email or password');
+      this.logger.warn(`${new Date().toISOString()} ${ctx}[ERR] Missing email or password`);
       throw new BadRequestException('Email and password are required');
     }
 
@@ -62,19 +64,36 @@ export class AuthService {
       throw new BadRequestException('Passwords do not match');
     }
 
-    this.logger.log(`[REGISTER] Looking up existing user for ${email}`);
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
-    this.logger.log(`[REGISTER] existingUser lookup completed: ${existingUser ? 'found' : 'not found'}`);
+    this.logger.log(`${new Date().toISOString()} ${ctx}[4] Checking existing user for ${email}`);
+    const t0 = Date.now();
+    let existingUser;
+    try {
+      existingUser = await this.prisma.user.findUnique({ where: { email } });
+      this.logger.log(`${new Date().toISOString()} ${ctx}[5] existingUser lookup completed (duration=${Date.now()-t0}ms): ${existingUser ? 'found' : 'not found'}`);
+    } catch (e) {
+      this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] existingUser lookup failed`, e instanceof Error ? e.stack : String(e));
+      throw e;
+    }
     if (existingUser) {
       throw new ConflictException('Email already registered');
     }
 
-    this.logger.log('[REGISTER] Hashing password');
-    const passwordHash = await bcrypt.hash(password, 12);
-    this.logger.log('[REGISTER] Password hash completed');
+    this.logger.log(`${new Date().toISOString()} ${ctx}[6] Hashing password`);
+    const tHash = Date.now();
+    let passwordHash;
+    try {
+      passwordHash = await bcrypt.hash(password, 12);
+      this.logger.log(`${new Date().toISOString()} ${ctx}[7] Password hash completed (duration=${Date.now()-tHash}ms)`);
+    } catch (e) {
+      this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Password hashing failed`, e instanceof Error ? e.stack : String(e));
+      throw e;
+    }
 
-    this.logger.log('[REGISTER] Creating user record');
-    const user = await this.prisma.user.create({
+    this.logger.log(`${new Date().toISOString()} ${ctx}[8] Creating Prisma user record`);
+    const tCreate = Date.now();
+    let user;
+    try {
+      user = await this.prisma.user.create({
       data: {
         email,
         firstName: registerDto.firstName?.trim() || 'User',
@@ -91,12 +110,26 @@ export class AuthService {
         isActive: true,
         emailVerified: true,
       },
-    });
-    this.logger.log(`[REGISTER] User created successfully: ${user.id}`);
+      });
+      this.logger.log(`${new Date().toISOString()} ${ctx}[9] Prisma user created (id=${user.id}) (duration=${Date.now()-tCreate}ms)`);
+    } catch (e) {
+      this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Prisma user create failed`, e instanceof Error ? e.stack : String(e));
+      throw e;
+    }
 
-    this.logger.log(`[REGISTER] Entering buildAuthResponse for ${email}`);
-    const response = await this.buildAuthResponse(user);
-    this.logger.log(`[REGISTER] Response about to return for ${email}`);
+    this.logger.log(`${new Date().toISOString()} ${ctx}[10] Entering buildAuthResponse for ${email}`);
+    const tBuild = Date.now();
+    let response;
+    try {
+      response = await this.buildAuthResponse(user);
+      this.logger.log(`${new Date().toISOString()} ${ctx}[11] buildAuthResponse completed (duration=${Date.now()-tBuild}ms)`);
+    } catch (e) {
+      this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] buildAuthResponse failed`, e instanceof Error ? e.stack : String(e));
+      throw e;
+    }
+
+    const total = Date.now() - startRegister;
+    this.logger.log(`${new Date().toISOString()} ${ctx}[12] Returning response (totalDuration=${total}ms)`);
     return response;
   }
 

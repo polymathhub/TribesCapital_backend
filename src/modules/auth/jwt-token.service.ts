@@ -17,23 +17,30 @@ export class JwtTokenService {
   }
 
   async issueTokenPair(payload: Record<string, unknown>) {
-    this.logger.log('[JWT] Entering issueTokenPair()');
-    this.logger.log(`[JWT] Payload keys: ${Object.keys(payload).join(',')}`);
+    const ctx = '[JWT]';
+    const start = Date.now();
+    this.logger.log(`${new Date().toISOString()} ${ctx}[1] Entering issueTokenPair()`);
+    this.logger.log(`${new Date().toISOString()} ${ctx}[2] Payload keys: ${Object.keys(payload).join(',')}`);
 
     try {
       const tokenId = randomUUID();
       const basePayload = { ...payload, jti: tokenId };
 
-      this.logger.log('[JWT] Before signAsync(access)');
+      this.logger.log(`${new Date().toISOString()} ${ctx}[3] Before signAsync(access)`);
+      const tAccess = Date.now();
       const accessToken = await this.jwtService.signAsync(basePayload, this.getSignOptions('access'));
-      this.logger.log('[JWT] After signAsync(access)');
+      this.logger.log(`${new Date().toISOString()} ${ctx}[4] After signAsync(access) (duration=${Date.now()-tAccess}ms)`);
 
-      this.logger.log('[JWT] Before signAsync(refresh)');
+      this.logger.log(`${new Date().toISOString()} ${ctx}[5] Before signAsync(refresh)`);
+      const tRefresh = Date.now();
       const refreshToken = await this.jwtService.signAsync({ ...basePayload, tokenType: 'refresh' }, this.getSignOptions('refresh'));
-      this.logger.log('[JWT] After signAsync(refresh)');
+      this.logger.log(`${new Date().toISOString()} ${ctx}[6] After signAsync(refresh) (duration=${Date.now()-tRefresh}ms)`);
 
       const expiresIn = this.toSeconds(this.jwtConfig.accessTokenExpiry);
-      this.logger.log(`[JWT] expiresIn calculated: ${expiresIn}`);
+      this.logger.log(`${new Date().toISOString()} ${ctx}[7] expiresIn calculated: ${expiresIn}`);
+
+      const total = Date.now() - start;
+      this.logger.log(`${new Date().toISOString()} ${ctx}[8] issueTokenPair completed (totalDuration=${total}ms)`);
 
       return {
         accessToken,
@@ -45,7 +52,7 @@ export class JwtTokenService {
       // eslint-disable-next-line no-console
       console.error(error);
       const detail = error instanceof Error ? error.message : String(error);
-      this.logger.error(`JWT token generation failed: ${detail}`);
+      this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] JWT token generation failed: ${detail}`);
       throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
     }
   }
