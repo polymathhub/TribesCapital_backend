@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Logger } from '@nestjs/common';
 import { Public } from '@common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import {
@@ -16,12 +16,44 @@ import {
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
   constructor(private readonly authService: AuthService) {}
 
   @Public()
   @Post('register')
   async register(@Body() registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
-    return this.authService.register(registerDto);
+    const start = Date.now();
+    const ctx = '[REGISTER]';
+    this.logger.log(`${new Date().toISOString()} ${ctx}[1] Request received`);
+    try {
+      this.logger.log(`${new Date().toISOString()} ${ctx}[2] DTO validated: ${registerDto.email ?? '<no-email>'}`);
+      const resp = await this.authService.register(registerDto);
+      const duration = Date.now() - start;
+      this.logger.log(`${new Date().toISOString()} ${ctx}[11] Returning response (duration=${duration}ms)`);
+      return resp;
+    } catch (err) {
+      const duration = Date.now() - start;
+      // eslint-disable-next-line no-console
+      console.error('========================================');
+      // eslint-disable-next-line no-console
+      console.error('UNCAUGHT EXCEPTION');
+      // eslint-disable-next-line no-console
+      console.error(`Time: ${new Date().toISOString()}`);
+      // eslint-disable-next-line no-console
+      console.error(`Route: POST /api/auth/register`);
+      // eslint-disable-next-line no-console
+      console.error(`Method: AuthController.register`);
+      // eslint-disable-next-line no-console
+      console.error(`Error: ${err instanceof Error ? err.name : String(err)}`);
+      // eslint-disable-next-line no-console
+      console.error(`Message: ${err instanceof Error ? err.message : String(err)}`);
+      // eslint-disable-next-line no-console
+      console.error(err instanceof Error ? err.stack : String(err));
+      // eslint-disable-next-line no-console
+      console.error('========================================');
+      this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Failed (duration=${duration}ms)`, err instanceof Error ? err.stack : String(err));
+      throw err;
+    }
   }
 
   @Public()

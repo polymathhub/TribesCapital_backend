@@ -26,20 +26,33 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         error = (body.error as string) || error;
       }
     } else if (exception instanceof Error) {
+      // Always log uncaught exceptions to console for forensic debugging
+      // regardless of NODE_ENV. The JSON response still preserves safe
+      // production messaging but the console will contain full details.
+      // eslint-disable-next-line no-console
+      console.error('========================================');
+      // eslint-disable-next-line no-console
+      console.error('UNCAUGHT EXCEPTION');
+      // eslint-disable-next-line no-console
+      console.error(`Time: ${new Date().toISOString()}`);
+      // eslint-disable-next-line no-console
+      console.error(`Route: ${request?.url ?? '<unknown>'}`);
+      // eslint-disable-next-line no-console
+      console.error(`Method: ${request?.method ?? '<unknown>'}`);
+      // eslint-disable-next-line no-console
+      console.error(`Exception Type: ${exception.name}`);
+      // eslint-disable-next-line no-console
+      console.error(`Message: ${exception.message}`);
+      // eslint-disable-next-line no-console
+      console.error(`Stack: ${exception.stack}`);
+      // eslint-disable-next-line no-console
+      console.error('========================================');
+
+      // Maintain response behavior: reveal message only in non-production
       const isDevelopment = process.env.NODE_ENV !== 'production';
-      if (isDevelopment) {
-        // Print full exception for debugging in non-production environments
-        // eslint-disable-next-line no-console
-        console.error(exception);
-        error = exception.name;
-        message = exception.message;
-        details = exception.stack;
-      } else {
-        // Preserve safe production behavior
-        error = exception.name;
-        message = 'Internal server error';
-        details = undefined;
-      }
+      error = exception.name;
+      message = isDevelopment ? exception.message : 'Internal server error';
+      details = isDevelopment ? exception.stack : undefined;
     }
 
     const payload = {
