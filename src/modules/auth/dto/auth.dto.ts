@@ -85,6 +85,14 @@ export class UserResponseDto {
 }
 
 export class AuthTokenResponseDto {
+  success?: boolean;
+  message?: string;
+  data?: {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+    user?: UserResponseDto;
+  };
   accessToken!: string;
   refreshToken!: string;
   expiresIn!: number;

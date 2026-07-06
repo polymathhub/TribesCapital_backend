@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { DatabaseModule } from '@database/database.module';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { JwtTokenService } from './jwt-token.service';
-import { AuthResilienceService } from './auth-resilience.service';
 import { resolveJwtConfig } from '@config/jwt.config';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { JwtTokenService } from './jwt-token.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -32,7 +31,7 @@ import { resolveJwtConfig } from '@config/jwt.config';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtTokenService, AuthResilienceService],
-  exports: [AuthService, JwtModule, PassportModule, JwtTokenService, AuthResilienceService],
+  providers: [AuthService, JwtStrategy, JwtTokenService],
+  exports: [AuthService, JwtModule, PassportModule, JwtTokenService],
 })
 export class AuthModule {}

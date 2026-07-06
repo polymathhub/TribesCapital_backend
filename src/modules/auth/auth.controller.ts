@@ -1,22 +1,22 @@
-import { Controller, Post, Body, HttpCode } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Public } from '@common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import {
-  RegisterDto,
-  LoginDto,
   AuthTokenResponseDto,
-  RefreshTokenDto,
-  GoogleAuthDto,
-  ForgotPasswordDto,
-  VerifyCodeDto,
-  ResetPasswordDto,
   CheckEmailDto,
+  ForgotPasswordDto,
+  GoogleAuthDto,
+  LoginDto,
   MessageResponseDto,
+  RefreshTokenDto,
+  RegisterDto,
+  ResetPasswordDto,
+  VerifyCodeDto,
 } from './dto/auth.dto';
-import { Public } from '@common/decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Public()
   @Post('register')

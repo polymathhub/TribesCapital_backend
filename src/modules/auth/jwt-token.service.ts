@@ -16,40 +16,14 @@ export class JwtTokenService {
     this.jwtConfig = this.readJwtConfig();
   }
 
-  private readJwtConfig(): JwtConfig {
-    const configured = this.configService.get<Partial<JwtConfig> | undefined>('jwt');
-    return resolveJwtConfig(configured ?? {});
-  }
-
   async issueTokenPair(payload: Record<string, unknown>) {
     try {
       const tokenId = randomUUID();
-      const basePayload = {
-        ...payload,
-        jti: tokenId,
-      };
+      const basePayload = { ...payload, jti: tokenId };
 
       const [accessToken, refreshToken] = await Promise.all([
-        this.jwtService.signAsync(basePayload, {
-          secret: this.getSigningKey('access'),
-          expiresIn: this.jwtConfig.accessTokenExpiry,
-          algorithm: this.jwtConfig.algorithm,
-          ...(this.jwtConfig.issuer ? { issuer: this.jwtConfig.issuer } : {}),
-          ...(this.jwtConfig.audience ? { audience: this.jwtConfig.audience } : {}),
-        }),
-        this.jwtService.signAsync(
-          {
-            ...basePayload,
-            tokenType: 'refresh',
-          },
-          {
-            secret: this.getSigningKey('refresh'),
-            expiresIn: this.jwtConfig.refreshTokenExpiry,
-            algorithm: this.jwtConfig.algorithm,
-            ...(this.jwtConfig.issuer ? { issuer: this.jwtConfig.issuer } : {}),
-            ...(this.jwtConfig.audience ? { audience: this.jwtConfig.audience } : {}),
-          },
-        ),
+        this.jwtService.signAsync(basePayload, this.getSignOptions('access')),
+        this.jwtService.signAsync({ ...basePayload, tokenType: 'refresh' }, this.getSignOptions('refresh')),
       ]);
 
       return {
@@ -66,14 +40,8 @@ export class JwtTokenService {
 
   async verifyAccessToken(token: string): Promise<unknown> {
     try {
-      return await this.jwtService.verifyAsync(token, {
-        secret: this.getVerificationKey('access'),
-        algorithms: [this.jwtConfig.algorithm],
-        ...(this.jwtConfig.issuer ? { issuer: this.jwtConfig.issuer } : {}),
-        ...(this.jwtConfig.audience ? { audience: this.jwtConfig.audience } : {}),
-        ...(this.jwtConfig.clockTolerance ? { clockTolerance: Number(this.jwtConfig.clockTolerance) } : {}),
-      });
-    } catch (error) {
+      return await this.jwtService.verifyAsync(token, this.getVerifyOptions('access'));
+    } catch {
       this.logger.warn('Access token verification failed');
       throw new UnauthorizedException('Invalid or expired access token');
     }
@@ -81,14 +49,8 @@ export class JwtTokenService {
 
   async verifyRefreshToken(token: string): Promise<unknown> {
     try {
-      return await this.jwtService.verifyAsync(token, {
-        secret: this.getVerificationKey('refresh'),
-        algorithms: [this.jwtConfig.algorithm],
-        ...(this.jwtConfig.issuer ? { issuer: this.jwtConfig.issuer } : {}),
-        ...(this.jwtConfig.audience ? { audience: this.jwtConfig.audience } : {}),
-        ...(this.jwtConfig.clockTolerance ? { clockTolerance: Number(this.jwtConfig.clockTolerance) } : {}),
-      });
-    } catch (error) {
+      return await this.jwtService.verifyAsync(token, this.getVerifyOptions('refresh'));
+    } catch {
       this.logger.warn('Refresh token verification failed');
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
@@ -97,6 +59,31 @@ export class JwtTokenService {
   getPassportOptions() {
     return {
       secretOrKey: this.getVerificationKey('access'),
+      algorithms: [this.jwtConfig.algorithm],
+      ...(this.jwtConfig.issuer ? { issuer: this.jwtConfig.issuer } : {}),
+      ...(this.jwtConfig.audience ? { audience: this.jwtConfig.audience } : {}),
+      ...(this.jwtConfig.clockTolerance ? { clockTolerance: Number(this.jwtConfig.clockTolerance) } : {}),
+    };
+  }
+
+  private readJwtConfig(): JwtConfig {
+    const configured = this.configService.get<Partial<JwtConfig> | undefined>('jwt');
+    return resolveJwtConfig(configured ?? {});
+  }
+
+  private getSignOptions(kind: 'access' | 'refresh') {
+    return {
+      secret: this.getSigningKey(kind),
+      expiresIn: kind === 'access' ? this.jwtConfig.accessTokenExpiry : this.jwtConfig.refreshTokenExpiry,
+      algorithm: this.jwtConfig.algorithm,
+      ...(this.jwtConfig.issuer ? { issuer: this.jwtConfig.issuer } : {}),
+      ...(this.jwtConfig.audience ? { audience: this.jwtConfig.audience } : {}),
+    };
+  }
+
+  private getVerifyOptions(kind: 'access' | 'refresh') {
+    return {
+      secret: this.getVerificationKey(kind),
       algorithms: [this.jwtConfig.algorithm],
       ...(this.jwtConfig.issuer ? { issuer: this.jwtConfig.issuer } : {}),
       ...(this.jwtConfig.audience ? { audience: this.jwtConfig.audience } : {}),
