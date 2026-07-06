@@ -828,16 +828,20 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {currentPage === 'home' && (
           <>
           <div ref={bannerRef} className="soft-card" style={{
-            background:'linear-gradient(135deg, #2E1065 0%, #4C1D95 45%, #5B21B6 100%)',
-            borderRadius:18, padding:isMobile?'18px 16px':'26px 32px', marginBottom:22,
+            background:'linear-gradient(135deg, #140A2E 0%, #24105A 34%, #46208D 70%, #6D28D9 100%)',
+            borderRadius:20, padding:isMobile?'16px 16px':'22px 24px', marginBottom:20,
             display:'flex', flexDirection:isMobile?'column':'row',
-            justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?14:24,
-            boxShadow:'0 30px 70px rgba(76,29,149,0.32), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -12px 26px rgba(15,23,42,0.16)', position:'relative', overflow:'hidden',
+            justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?14:18,
+            boxShadow:'0 24px 60px rgba(76,29,149,0.28), inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -12px 24px rgba(15,23,42,0.16)',
+            position:'relative', overflow:'hidden', minHeight:isMobile?'260px':'290px',
           }}>
-            <div style={{ minWidth:0, width:'100%' }}>
+            <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 36%), radial-gradient(circle at bottom left, rgba(255,255,255,0.08), transparent 34%)', pointerEvents:'none' }} />
+            <div style={{ position:'absolute', top:'-36px', right:'-24px', width:180, height:180, borderRadius:'50%', background:'rgba(255,255,255,0.10)', filter:'blur(2px)', pointerEvents:'none' }} />
+            <div style={{ position:'absolute', bottom:'-48px', left:'-20px', width:150, height:150, borderRadius:'50%', background:'rgba(255,255,255,0.06)', filter:'blur(2px)', pointerEvents:'none' }} />
+            <div style={{ minWidth:0, width:'100%', position:'relative', zIndex:1, display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
               <p style={{ color:'rgba(255,255,255,.9)', fontSize:10, fontWeight:800, letterSpacing:1.35,
-                textTransform:'uppercase', margin:'0 0 8px', textShadow:'0 2px 8px rgba(0,0,0,0.22)' }}>WELCOME</p>
-              <h1 style={{ color:W, fontSize:isMobile?18:26, fontWeight:800, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', lineHeight:1.2, textShadow:'0 3px 10px rgba(0,0,0,0.2)' }}>
+                textTransform:'uppercase', margin:'0 0 6px', textShadow:'0 2px 8px rgba(0,0,0,0.22)' }}>WELCOME</p>
+              <h1 style={{ color:W, fontSize:isMobile?18:24, fontWeight:800, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', lineHeight:1.14, textShadow:'0 3px 10px rgba(0,0,0,0.2)' }}>
                 <span>{greeting}, {displayName}</span>
                 <svg width="22" height="22" viewBox="0 0 128 128" fill="none" aria-hidden="true" style={{ flexShrink:0, animation:'wave 1.2s ease-in-out infinite', transformOrigin:'70% 60%' }} xmlns="http://www.w3.org/2000/svg">
                   <path d="M59.53 107.44c-3.95-3.17-40.63-38.84-41.04-39.23-1.62-1.62-2.64-3.3-2.92-4.84-.29-1.6.2-3 1.5-4.3 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59l16.63 15.98c.29.28.67.42 1.04.42a1.494 1.494 0 0 0 1.07-2.54L19.13 46.25c-2.66-2.66-3.91-6.73-.75-9.89 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59l27.16 26.48c.29.28.67.43 1.05.43s.77-.15 1.06-.44c.58-.58.59-1.52.01-2.11L24.91 28.02c-1.51-1.51-2.42-3.32-2.58-5.08-.15-1.79.48-3.45 1.83-4.8 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.58L67.3 51.31c.29.28.67.43 1.05.43s.77-.15 1.06-.44c.58-.58.59-1.52.01-2.11L45.26 24.36c-1.52-1.52-2.43-3.32-2.58-5.08-.15-1.79.48-3.45 1.83-4.8 1.21-1.21 2.69-1.85 4.28-1.85 1.94 0 3.93.92 5.59 2.59 8.86 8.7 31.99 31.45 32.77 32.29 2.97 2.05 3.57-1.05 3.72-3.06.17-2.34-2.51-10.51-.95-17.86 2.62-9.77 10.17-8.17 10.34-8.09 4.14 1.94 3.35 4.84 1.88 10.67l-.15 1.15c-1.54 7.62 9.04 30.2 9.82 31.89 4.15 9.08 8.93 27.49-6.9 43.32-17.35 17.35-38.83 8.46-45.38 1.91z" fill="#ffb300"/>
@@ -847,19 +851,19 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <path d="M64 13.98c1.67-1.06 3.76-1.28 5.73-.93 1.99.35 3.89 1.34 5.39 2.71 1.49 1.39 2.55 3.14 3.21 4.96.32.91.48 1.87.63 2.8.05.96.05 1.92-.1 2.88-.69-.73-1.23-1.46-1.74-2.17-.59-.67-1.05-1.38-1.58-2.03-1.04-1.29-2.05-2.46-3.14-3.5-1.12-1.01-2.3-1.9-3.67-2.67-1.36-.79-2.89-1.45-4.73-2.05z" fill="#90a4ae"/>
                 </svg>
               </h1>
-              <p style={{ color:'rgba(255,255,255,.9)', fontSize:isMobile?12:13, margin:'0 0 16px', maxWidth:430, lineHeight:isMobile?1.5:1.65, textShadow:'0 1px 6px rgba(0,0,0,0.18)' }}>
+              <p style={{ color:'rgba(255,255,255,.9)', fontSize:isMobile?11:12.5, margin:'0 0 12px', maxWidth:470, lineHeight:isMobile?1.5:1.6, textShadow:'0 1px 6px rgba(0,0,0,0.18)' }}>
                 Welcome to Tribes Capital, your home for clean energy learning, live sessions, and the momentum behind every next move.
               </p>
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                 {heroChips.map((chip) => (
-                  <div key={chip} style={{ background:'rgba(255,255,255,.16)', border:'1px solid rgba(255,255,255,.25)',
-                    borderRadius:20, padding:'5px 13px', fontSize:12, fontWeight:500, color:W, whiteSpace:'nowrap' }}>
+                  <div key={chip} style={{ background:'rgba(255,255,255,.16)', border:'1px solid rgba(255,255,255,.24)',
+                    borderRadius:999, padding:'4px 10px', fontSize:11, fontWeight:600, color:W, whiteSpace:'nowrap' }}>
                     {chip}
                   </div>
                 ))}
               </div>
             </div>
-            <div style={{ position:'relative', flexShrink:0, width:isMobile?'100%':'240px', maxWidth:isMobile?320:240, minHeight:isMobile?'150px':'170px', display:'flex', alignItems:'center', justifyContent:'center', marginTop:isMobile?6:0, alignSelf:isMobile?'stretch':'auto' }}>
+            <div style={{ position:'relative', flexShrink:0, width:isMobile?'100%':'220px', maxWidth:isMobile?320:220, minHeight:isMobile?'140px':'180px', display:'flex', alignItems:'center', justifyContent:'center', marginTop:isMobile?6:0, alignSelf:isMobile?'stretch':'auto', padding:isMobile?'4px 0':'0' }}>
               {achievementImages.map((src, index) => {
                 const offset = (index - activeMetricIndex + 4) % 4;
                 const translateX = offset === 0 ? 0 : offset === 1 ? 16 : offset === 2 ? 32 : 48;
@@ -881,7 +885,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     overflow:'hidden',
                     backdropFilter:'blur(16px)',
                     WebkitBackdropFilter:'blur(16px)',
-                    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -8px 18px rgba(15,23,42,0.16), 0 10px 28px rgba(15,23,42,0.12)',
+                    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -8px 16px rgba(15,23,42,0.16), 0 10px 24px rgba(15,23,42,0.12)',
                     transform:`translateX(${translateX}px) translateY(${translateY}px) rotate(${rotate}deg) scale(${scale})`,
                     opacity,
                     zIndex,
