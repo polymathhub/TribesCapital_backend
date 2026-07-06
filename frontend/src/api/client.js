@@ -55,7 +55,10 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !isAuthRequest) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      window.location.href = '/';
+      localStorage.removeItem('user');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userName');
+      window.dispatchEvent(new CustomEvent('auth:logout', { detail: { reason: 'unauthorized' } }));
     }
     return Promise.reject(error);
   }

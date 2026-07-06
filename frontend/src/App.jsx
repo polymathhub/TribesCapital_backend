@@ -53,6 +53,20 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleAuthLogout = () => {
+      clearAuthSession();
+      setIsAuthenticated(false);
+      setUser(null);
+      setCurrentPage('login');
+      setIsLoading(false);
+      setHasBootstrapped(true);
+    };
+
+    window.addEventListener('auth:logout', handleAuthLogout);
+    return () => window.removeEventListener('auth:logout', handleAuthLogout);
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
 
