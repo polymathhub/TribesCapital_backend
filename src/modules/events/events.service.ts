@@ -19,7 +19,7 @@ export class EventsService {
       startDate: new Date(createEventDto.startDate),
       endDate: new Date(createEventDto.endDate),
       capacity: createEventDto.capacity || 100,
-      isPublished: false,
+      isPublished: createEventDto.isPublished ?? true,
       creatorId: organizerId,
     };
 
@@ -75,6 +75,8 @@ export class EventsService {
       throw new NotFoundException('Event not found');
     }
 
+    const guestCount = Math.max(1, Number(createRsvpDto?.guestCount ?? 1));
+
     // Check if already RSVP'd
     const existingRsvp = await this.prisma.rSVP.findUnique({
       where: {
@@ -91,9 +93,9 @@ export class EventsService {
 
     // Transaction-safe overbooking prevention
     if (event.capacity) {
-      const totalRsvps = event.rsvps.reduce((sum, r) => sum + r.guestCount, 0);
+      const totalRsvps = event.rsvps.reduce((sum, r) => sum + (r.guestCount || 1), 0);
 
-      if (totalRsvps + createRsvpDto.guestCount > event.capacity) {
+      if (totalRsvps + guestCount > event.capacity) {
         throw new BadRequestException('Event capacity exceeded');
       }
     }
@@ -102,7 +104,7 @@ export class EventsService {
       data: {
         userId,
         eventId,
-        guestCount: createRsvpDto.guestCount,
+        guestCount,
       },
     });
 
@@ -218,8 +220,8 @@ export class EventsService {
       meetingHandle: event.meetingHandle,
       meetingInstructions: event.meetingInstructions,
       capacity: event.capacity,
-      rsvpCount: event.rsvps?.reduce((sum: number, r: any) => sum + r.guestCount, 0) || 0,
-      organizerId: event.organizerId,
+      rsvpCount: event.rsvps?.reduce((sum: number, r: any) => sum + (r.guestCount || 1), 0) || 0,
+      organizerId: event.creatorId ?? event.organizerId,
       isPublished: event.isPublished,
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,

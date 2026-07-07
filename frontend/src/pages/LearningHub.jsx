@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
 import apiClient from '../api/client';
 
@@ -153,6 +153,26 @@ function buildYouTubeThumbnailUrl(videoId) {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 }
 
+function parseDurationToMinutes(duration) {
+  if (typeof duration !== 'string') return 0;
+  const hourMatch = duration.match(/(\d+)\s*h/i);
+  const minMatch = duration.match(/(\d+)\s*m/i);
+  const simpleMatch = duration.match(/(\d+)\s*(min|mins|minute|minutes)?/i);
+
+  let minutes = 0;
+  if (hourMatch) minutes += Number(hourMatch[1]) * 60;
+  if (minMatch) minutes += Number(minMatch[1]);
+  if (!hourMatch && !minMatch && simpleMatch) minutes += Number(simpleMatch[1]);
+  return minutes;
+}
+
+function formatLearningTime(totalMinutes) {
+  if (totalMinutes < 60) return `${totalMinutes} min`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
+}
+
 /* ═══════════════════════════════════════════════════════
    SIDEBAR
 ═══════════════════════════════════════════════════════ */
@@ -305,12 +325,13 @@ function QuickQuiz({ questions, title = 'Short 5-question quiz', subtitle = 'A q
   );
 }
 
-function CourseCard({ course, onAction, onOpenModal }) {
+function CourseCard({ course, onAction, onOpenModal, onToggleBookmark }) {
   const [progOpen, setProgOpen] = useState(false);
   const cs    = CAT[course.cat] || { c:T2, b:BG };
   const inProg = course.status === 'inProgress';
   const done   = course.status === 'completed';
   const notSt  = course.status === 'notStarted';
+  const bookmarked = Boolean(course.bookmarked);
   const btnLbl = done ? 'Review' : inProg ? 'Resume' : 'Start';
   const lessonsDone = done ? course.lessons : inProg ? Math.round(course.lessons * course.progress / 100) : 0;
 
@@ -325,6 +346,13 @@ function CourseCard({ course, onAction, onOpenModal }) {
       <div style={{height:175,backgroundImage:`url(${course.thumbnail || buildYouTubeThumbnailUrl(course.videoId || 'wMQDsjS9WC4')})`,backgroundSize:'cover',backgroundPosition:'center',position:'relative',flexShrink:0}}>
         <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg, rgba(17,24,39,0.08) 0%, rgba(17,24,39,0.28) 100%)'}}/>
         <div style={{position:'absolute',top:10,left:10,background:'rgba(17,24,39,0.72)',color:W,padding:'4px 8px',borderRadius:999,fontSize:11,fontWeight:600,letterSpacing:0.3}}>Video lesson</div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleBookmark(course.id); }}
+          style={{position:'absolute',top:10,right:10,width:30,height:30,borderRadius:'50%',border:'none',background:bookmarked ? 'rgba(255,255,255,0.9)' : 'rgba(17,24,39,0.56)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}
+          aria-label={bookmarked ? 'Remove bookmark' : 'Save for later'}
+        >
+          <Ico name="bookmark" size={14} color={bookmarked ? PU : W} sw={2}/>
+        </button>
       </div>
 
       <div style={{padding:'14px 16px 16px',display:'flex',flexDirection:'column',gap:0}}>
@@ -586,6 +614,10 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizRetakeRequired, setQuizRetakeRequired] = useState(false);
+  const [resumeNotice, setResumeNotice] = useState('');
+  const [hasRestoredResume, setHasRestoredResume] = useState(false);
+  const engagementTimerRef = useRef(null);
+  const autoAdvanceRef = useRef(false);
 
   const fallbackLessonCount = Math.max(1, Math.min(4, Number(course?.lessons) || 4));
   const fallbackLessons = Array.from({ length: fallbackLessonCount }, (_, index) => ({
@@ -612,6 +644,30 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   const quizPercent = Math.round((quizScore / QUICK_QUIZ.length) * 100);
   const quizPassed = quizSubmitted && quizPercent >= 80;
   const quizFailed = quizSubmitted && quizPercent < 80;
+
+  function parseLessonDurationMinutes(value) {
+    if (!value) return null;
+    const numeric = `${value}`.match(/(\d+)/);
+    return numeric ? Number(numeric[1]) : null;
+  }
+
+  function persistResumeState(index, lessonId) {
+    if (!course?.id || !Number.isInteger(index)) return;
+    try {
+      localStorage.setItem(`learning-resume-${course.id}`, JSON.stringify({ lessonIndex: index, lessonId, updatedAt: Date.now() }));
+    } catch (error) {
+      // ignore storage errors and keep the UX resilient
+    }
+  }
+
+  function clearResumeState() {
+    if (!course?.id) return;
+    try {
+      localStorage.removeItem(`learning-resume-${course.id}`);
+    } catch (error) {
+      // ignore storage errors and keep the UX resilient
+    }
+  }
 
   function handleBookmark() {
     const next = !bookmarked;
@@ -677,12 +733,17 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   function handleStartCourse() {
     setActiveLessonIndex(0);
     setIsVideoVisible(true);
+    setResumeNotice('Starting from the beginning.');
+    persistResumeState(0, lessonItems[0]?.id);
   }
 
   function handleContinue() {
     const nextIndex = lessonItems.findIndex((lesson, index) => index > activeLessonIndex && !completedLessonIds.includes(lesson.id));
-    setActiveLessonIndex(nextIndex >= 0 ? nextIndex : Math.min(activeLessonIndex + 1, lessonItems.length - 1));
+    const targetIndex = nextIndex >= 0 ? nextIndex : Math.min(activeLessonIndex + 1, lessonItems.length - 1);
+    setActiveLessonIndex(targetIndex);
     setIsVideoVisible(true);
+    setResumeNotice('Continuing to the next lesson.');
+    persistResumeState(targetIndex, lessonItems[targetIndex]?.id);
   }
 
   async function handleReview() {
@@ -695,7 +756,61 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
       }
     }
     setCompletedLessonIds(lessonItems.map((lesson) => lesson.id));
+    setResumeNotice('Review mode is ready.');
   }
+
+  useEffect(() => {
+    if (!course?.id || !lessonItems.length || hasRestoredResume) return;
+    try {
+      const saved = localStorage.getItem(`learning-resume-${course.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const savedIndex = Number(parsed.lessonIndex);
+        if (Number.isInteger(savedIndex) && savedIndex >= 0 && savedIndex < lessonItems.length) {
+          setActiveLessonIndex(savedIndex);
+          setIsVideoVisible(true);
+          setResumeNotice(`Resuming ${lessonItems[savedIndex]?.title || 'your last lesson'}`);
+        }
+      }
+    } catch (error) {
+      // ignore malformed storage state
+    }
+    setHasRestoredResume(true);
+  }, [course?.id, lessonItems.length, hasRestoredResume]);
+
+  useEffect(() => {
+    if (!course?.id || !lessonItems.length) return;
+    persistResumeState(activeLessonIndex, activeLesson?.id);
+  }, [activeLessonIndex, activeLesson?.id, course?.id, lessonItems.length]);
+
+  useEffect(() => {
+    if (!isVideoVisible || !activeLesson || completedLessonIds.includes(activeLesson.id)) return;
+    if (engagementTimerRef.current) clearTimeout(engagementTimerRef.current);
+    autoAdvanceRef.current = false;
+
+    const durationMinutes = parseLessonDurationMinutes(activeLesson.duration || activeLesson.dur);
+    const thresholdMs = Math.max(20000, (durationMinutes ? durationMinutes * 60 * 0.25 : 30) * 1000);
+
+    engagementTimerRef.current = setTimeout(() => {
+      if (!activeLesson || completedLessonIds.includes(activeLesson.id) || autoAdvanceRef.current) return;
+      if (activeLessonIndex < lessonItems.length - 1) {
+        autoAdvanceRef.current = true;
+        setResumeNotice('You have been engaged for a while — moving to the next lesson.');
+        window.setTimeout(() => {
+          const nextIndex = Math.min(activeLessonIndex + 1, lessonItems.length - 1);
+          setActiveLessonIndex(nextIndex);
+          setIsVideoVisible(true);
+          persistResumeState(nextIndex, lessonItems[nextIndex]?.id);
+        }, 700);
+      } else {
+        setResumeNotice('This lesson is ready for review.');
+      }
+    }, thresholdMs);
+
+    return () => {
+      if (engagementTimerRef.current) clearTimeout(engagementTimerRef.current);
+    };
+  }, [activeLesson?.id, activeLessonIndex, completedLessonIds, isVideoVisible, lessonItems.length]);
 
   useEffect(() => {
     let isMounted = true;
@@ -866,6 +981,11 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
 
         <div style={{display:'flex',flexDirection:isMobile||isTablet?'column':'row',gap:20,padding:isMobile?'0 14px 20px':'0 24px 20px',alignItems:'flex-start'}}>
           <div style={{flex:1,minWidth:0}}>
+            {resumeNotice && (
+              <div style={{marginBottom:12,padding:'10px 12px',borderRadius:10,border:`1px solid ${PUF}`,background:PUF,color:PU,fontSize:12,fontWeight:600}}>
+                {resumeNotice}
+              </div>
+            )}
             <div style={{borderRadius:14,overflow:'hidden',background:'#0f172a',position:'relative',aspectRatio:'16/9',width:'100%',maxWidth:'100%',border:'1px solid rgba(255,255,255,0.08)',boxShadow:'0 18px 40px rgba(0,0,0,.18)'}}>
               {!isVideoVisible ? (
                 <div onClick={() => setIsVideoVisible(true)} style={{ position:'absolute', inset:0, backgroundImage:`url(${videoPreviewUrl})`, backgroundSize:'cover', backgroundPosition:'center', cursor:'pointer' }}>
@@ -941,7 +1061,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
                   const done = completedLessonIds.includes(l.id);
                   const active = activeLessonIndex === index;
                   return (
-                    <div key={l.id} onClick={() => { setActiveLessonIndex(index); setIsVideoVisible(true); }} style={{padding:'10px 16px',borderTop:`1px solid ${BD}`,cursor:'pointer',background:active?PUF:'transparent'}}>
+                    <div key={l.id} onClick={() => { setActiveLessonIndex(index); setIsVideoVisible(true); setResumeNotice(`Opening ${l.title}`); persistResumeState(index, l.id); }} style={{padding:'10px 16px',borderTop:`1px solid ${BD}`,cursor:'pointer',background:active?PUF:'transparent'}}>
                       <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
                         {done ? (
                           <Ico name="check" size={14} color={PU} sw={2.5}/>
@@ -1073,6 +1193,22 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
 /* ═══════════════════════════════════════════════════════
    HUB VIEW — main Learning Hub page
 ═══════════════════════════════════════════════════════ */
+function LoadingPulse({ isMobile = false }) {
+  return (
+    <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, padding:isMobile ? '12px' : '16px', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)', overflow:'hidden' }}>
+      <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:12 }}>
+        <div style={{ width:48, height:48, borderRadius:12, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite' }} />
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ height:11, width:'56%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite', marginBottom:8 }} />
+          <div style={{ height:10, width:'82%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite' }} />
+        </div>
+      </div>
+      <div style={{ height:10, width:'100%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite', marginBottom:8 }} />
+      <div style={{ height:10, width:'70%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite' }} />
+    </div>
+  );
+}
+
 function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   const [courseView,   setCourseView]   = useState('grid'); // 'grid'|'table'
   const [activeTab,    setActiveTab]    = useState('all');
@@ -1083,6 +1219,23 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [isPathDetailsOpen, setIsPathDetailsOpen] = useState(false);
+  const [bookmarkedCourseIds, setBookmarkedCourseIds] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(window.localStorage.getItem('tribes-learning-bookmarks') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [milestoneNotice, setMilestoneNotice] = useState('');
+  const [seenMilestones, setSeenMilestones] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(window.localStorage.getItem('tribes-learning-milestones') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   const TABS    = [{id:'all',label:'All courses'},{id:'inProgress',label:'In progress'},{id:'completed',label:'Completed'},{id:'saved',label:'Saved'}];
   const FILTERS = [{id:'thisMonth',label:'This month'},{id:'energyFinance',label:'Energy Finance'},{id:'solarStorage',label:'Solar & Storage'},{id:'riskFX',label:'Risk & FX'},{id:'policyESG',label:'Policy & ESG'}];
@@ -1196,6 +1349,24 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   }));
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('tribes-learning-bookmarks', JSON.stringify(bookmarkedCourseIds));
+    }
+  }, [bookmarkedCourseIds]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('tribes-learning-milestones', JSON.stringify(seenMilestones));
+    }
+  }, [seenMilestones]);
+
+  useEffect(() => {
+    if (!milestoneNotice) return;
+    const timer = window.setTimeout(() => setMilestoneNotice(''), 2600);
+    return () => window.clearTimeout(timer);
+  }, [milestoneNotice]);
+
+  useEffect(() => {
     let isMounted = true;
     const loadCourses = async () => {
       try {
@@ -1245,16 +1416,50 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
     };
   }, []);
 
-  const filtered = courses.filter(c => {
+  const enrichedCourses = useMemo(() => courses.map((course) => ({
+    ...course,
+    bookmarked: bookmarkedCourseIds.includes(course.id),
+  })), [courses, bookmarkedCourseIds]);
+
+  const filtered = enrichedCourses.filter((c) => {
     if (activeTab === 'inProgress' && c.status !== 'inProgress') return false;
-    if (activeTab === 'completed'  && c.status !== 'completed')  return false;
-    if (activeTab === 'saved') return false;
+    if (activeTab === 'completed' && c.status !== 'completed') return false;
+    if (activeTab === 'saved' && !c.bookmarked) return false;
     const cat = FILTER_CAT[activeFilter];
     if (cat && c.cat !== cat) return false;
     return true;
   });
 
-  const resumeCourse = courses.find(c => c.status === 'inProgress');
+  const groupedCourses = useMemo(() => ({
+    inProgress: enrichedCourses.filter((course) => course.status === 'inProgress'),
+    completed: enrichedCourses.filter((course) => course.status === 'completed'),
+    saved: enrichedCourses.filter((course) => course.bookmarked),
+    enrolled: enrichedCourses.filter((course) => course.status === 'notStarted' && !course.bookmarked),
+  }), [enrichedCourses]);
+
+  const totalLearningMinutes = useMemo(() => enrichedCourses.reduce((sum, course) => {
+    const progress = Number(course.progress) || 0;
+    const durationMinutes = parseDurationToMinutes(course.dur);
+    return sum + Math.round((durationMinutes * progress) / 100);
+  }, 0), [enrichedCourses]);
+
+  useEffect(() => {
+    if (!totalLearningMinutes) return;
+    const thresholds = [10, 30, 60];
+    const extraHourThresholds = Array.from({ length: Math.floor(totalLearningMinutes / 60) }, (_, index) => 60 * (index + 1)).filter((threshold) => threshold > 60);
+    const milestoneThreshold = [...thresholds, ...extraHourThresholds].find((threshold) => totalLearningMinutes >= threshold && !seenMilestones.includes(threshold));
+    if (milestoneThreshold) {
+      const label = formatLearningTime(milestoneThreshold);
+      setMilestoneNotice(`Nice work — you’ve reached ${label} of learning.`);
+      setSeenMilestones((prev) => prev.includes(milestoneThreshold) ? prev : [...prev, milestoneThreshold]);
+    }
+  }, [totalLearningMinutes, seenMilestones]);
+
+  const resumeCourse = enrichedCourses.find((course) => course.status === 'inProgress');
+
+  const toggleBookmark = (courseId) => {
+    setBookmarkedCourseIds((prev) => (prev.includes(courseId) ? prev.filter((id) => id !== courseId) : [...prev, courseId]));
+  };
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
@@ -1277,8 +1482,8 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
 
         {/* ── RESUME BLOCK — matches exact design ── */}
         {loadingCourses ? (
-          <div style={{ background: 'rgba(255,255,255,0.74)', border: '1px solid rgba(91,33,182,0.16)', borderRadius: 14, padding: '16px 20px', marginBottom: 24, color: T2, backdropFilter: 'blur(16px)', boxShadow: '0 12px 30px rgba(15,23,42,0.04)' }}>
-            Loading your learning hub…
+          <div style={{ marginBottom: 24 }}>
+            <LoadingPulse isMobile={isMobile} />
           </div>
         ) : resumeCourse && (
           <div style={{
@@ -1330,12 +1535,18 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
 
         {/* Next best actions */}
         <h2 style={{fontSize:isMobile?14:16,fontWeight:600,color:T1,margin:'0 0 12px'}}>Next best actions</h2>
+        {milestoneNotice && (
+          <div style={{marginBottom:16,padding:'12px 14px',borderRadius:12,background:'rgba(22,163,74,0.12)',border:'1px solid rgba(22,163,74,0.2)',color:GR,fontSize:13,fontWeight:600}}>
+            {milestoneNotice}
+          </div>
+        )}
+
         <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?10:16,marginBottom:24}}>
           {[
-            {l:'Courses enrolled',v: courses.filter(c => c.status !== 'notStarted').length, badge:`${courses.filter(c => c.status === 'inProgress').length} in progress`, bc:PU, bb:PUF},
-            {l:'Completed',       v: courses.filter(c => c.status === 'completed').length, badge:'Well done', bc:GR, bb:GRB},
-            {l:'Hours learned',   v: `${courses.reduce((sum, c) => sum + (Number(c.dur?.split('h')[0]) || 0), 0)}h`, badge:'This month', bc:TL, bb:TLB},
-            {l:'Active lessons',  v: courses.reduce((sum, c) => sum + (c.lessons || 0), 0), badge:'Keep going!', bc:AM, bb:AMB},
+            {l:'Courses enrolled',v: enrichedCourses.length, badge:`${groupedCourses.inProgress.length} in progress`, bc:PU, bb:PUF},
+            {l:'Completed',       v: groupedCourses.completed.length, badge:'Well done', bc:GR, bb:GRB},
+            {l:'Hours learned',   v: formatLearningTime(totalLearningMinutes), badge:'This month', bc:TL, bb:TLB},
+            {l:'Saved for later', v: groupedCourses.saved.length, badge:'Bookmarked', bc:AM, bb:AMB},
           ].map(s => (
             <div key={s.l} style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:12,padding:'14px 18px',backdropFilter:'blur(16px)',boxShadow:'0 10px 24px rgba(15,23,42,0.04)'}}>
               <div style={{fontSize:12,color:T2,marginBottom:6}}>{s.l}</div>
@@ -1343,6 +1554,64 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
               <span style={{background:s.bb,color:s.bc,fontSize:11,fontWeight:500,padding:'2px 10px',borderRadius:20}}>{s.badge}</span>
             </div>
           ))}
+        </div>
+
+        <div style={{display:'grid',gap:16,marginBottom:24}}>
+          {groupedCourses.inProgress.length > 0 && (
+            <section>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                <h3 style={{fontSize:15,fontWeight:700,color:T1,margin:0}}>In progress</h3>
+                <span style={{fontSize:12,color:T2}}>{groupedCourses.inProgress.length} course{groupedCourses.inProgress.length === 1 ? '' : 's'}</span>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 1fr':'repeat(3, minmax(0, 1fr))',gap:14}}>
+                {groupedCourses.inProgress.map((course) => (
+                  <CourseCard key={course.id} course={course} onAction={() => onPlay(course)} onOpenModal={setModalCourse} onToggleBookmark={toggleBookmark} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {groupedCourses.completed.length > 0 && (
+            <section>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                <h3 style={{fontSize:15,fontWeight:700,color:T1,margin:0}}>Completed</h3>
+                <span style={{fontSize:12,color:T2}}>{groupedCourses.completed.length} course{groupedCourses.completed.length === 1 ? '' : 's'}</span>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 1fr':'repeat(3, minmax(0, 1fr))',gap:14}}>
+                {groupedCourses.completed.map((course) => (
+                  <CourseCard key={course.id} course={course} onAction={() => onPlay(course)} onOpenModal={setModalCourse} onToggleBookmark={toggleBookmark} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {groupedCourses.saved.length > 0 && (
+            <section>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                <h3 style={{fontSize:15,fontWeight:700,color:T1,margin:0}}>Saved for later</h3>
+                <span style={{fontSize:12,color:T2}}>{groupedCourses.saved.length} course{groupedCourses.saved.length === 1 ? '' : 's'}</span>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 1fr':'repeat(3, minmax(0, 1fr))',gap:14}}>
+                {groupedCourses.saved.map((course) => (
+                  <CourseCard key={course.id} course={course} onAction={() => onPlay(course)} onOpenModal={setModalCourse} onToggleBookmark={toggleBookmark} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {groupedCourses.enrolled.length > 0 && (
+            <section>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                <h3 style={{fontSize:15,fontWeight:700,color:T1,margin:0}}>Enrolled courses</h3>
+                <span style={{fontSize:12,color:T2}}>{groupedCourses.enrolled.length} course{groupedCourses.enrolled.length === 1 ? '' : 's'}</span>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 1fr':'repeat(3, minmax(0, 1fr))',gap:14}}>
+                {groupedCourses.enrolled.map((course) => (
+                  <CourseCard key={course.id} course={course} onAction={() => onPlay(course)} onOpenModal={setModalCourse} onToggleBookmark={toggleBookmark} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Learning path banner */}
@@ -1460,7 +1729,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
         ) : courseView === 'grid' ? (
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'repeat(2,1fr)':'repeat(3,1fr)',gap:isMobile?14:20}}>
             {filtered.map(c => (
-              <CourseCard key={c.id} course={c} onAction={onPlay} onOpenModal={setModalCourse}/>
+              <CourseCard key={c.id} course={c} onAction={onPlay} onOpenModal={setModalCourse} onToggleBookmark={toggleBookmark}/>
             ))}
           </div>
         ) : (

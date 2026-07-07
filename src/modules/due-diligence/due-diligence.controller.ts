@@ -34,17 +34,17 @@ export class DueDiligenceController {
 
   @Post()
   @HttpCode(201)
-  async create(@Body() dto: CreateDueDiligenceDto, @GetCurrentUser('sub') userId: string) {
+  async create(@Body() dto: CreateDueDiligenceDto, @GetCurrentUser('id') userId: string) {
     return this.service.create(dto, userId);
   }
 
   @Get()
-  async findAll(@Query() query: QueryDDDto, @GetCurrentUser('sub') userId: string) {
+  async findAll(@Query() query: QueryDDDto, @GetCurrentUser('id') userId: string) {
     return this.service.findAll(query, userId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
+  async findOne(@Param('id') id: string, @GetCurrentUser('id') userId: string) {
     return this.service.findOne(id, userId);
   }
 
@@ -52,14 +52,14 @@ export class DueDiligenceController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateDueDiligenceDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.update(id, dto, userId);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  async delete(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
+  async delete(@Param('id') id: string, @GetCurrentUser('id') userId: string) {
     return this.service.delete(id, userId);
   }
 
@@ -72,7 +72,7 @@ export class DueDiligenceController {
   async createItem(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDItemDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.createItem(dueDiligenceId, dto, userId);
   }
@@ -82,7 +82,7 @@ export class DueDiligenceController {
     @Param('id') dueDiligenceId: string,
     @Param('itemId') itemId: string,
     @Body() dto: UpdateDDItemDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.updateItem(dueDiligenceId, itemId, dto, userId);
   }
@@ -92,7 +92,7 @@ export class DueDiligenceController {
   async deleteItem(
     @Param('id') dueDiligenceId: string,
     @Param('itemId') itemId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.deleteItem(dueDiligenceId, itemId, userId);
   }
@@ -106,7 +106,7 @@ export class DueDiligenceController {
   async uploadDocument(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDDocumentDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.uploadDocument(dueDiligenceId, dto, userId);
   }
@@ -116,7 +116,7 @@ export class DueDiligenceController {
     @Param('id') dueDiligenceId: string,
     @Param('docId') docId: string,
     @Body() dto: ReviewDDDocumentDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.reviewDocument(dueDiligenceId, docId, dto, userId);
   }
@@ -130,7 +130,7 @@ export class DueDiligenceController {
   async addComment(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDCommentDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.addComment(dueDiligenceId, dto, userId);
   }
@@ -140,7 +140,7 @@ export class DueDiligenceController {
   async deleteComment(
     @Param('id') dueDiligenceId: string,
     @Param('commentId') commentId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.deleteComment(dueDiligenceId, commentId, userId);
   }
@@ -154,7 +154,7 @@ export class DueDiligenceController {
   async createApproval(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDApprovalDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.createApproval(dueDiligenceId, dto, userId);
   }
@@ -164,7 +164,7 @@ export class DueDiligenceController {
     @Param('id') dueDiligenceId: string,
     @Param('approvalId') approvalId: string,
     @Body() dto: ApproveDDDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.approveOrReject(dueDiligenceId, approvalId, dto, userId);
   }

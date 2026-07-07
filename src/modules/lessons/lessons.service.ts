@@ -154,7 +154,6 @@ export class LessonsService {
       throw new NotFoundException('Lesson not found');
     }
 
-    // Record completion in progress table
     await this.prisma.progress.upsert({
       where: {
         userId_lessonId: {
@@ -165,14 +164,50 @@ export class LessonsService {
       create: {
         userId,
         lessonId,
+        completionPercentage: 100,
         completedAt: new Date(),
+        lastAccessedAt: new Date(),
       },
       update: {
+        completionPercentage: 100,
         completedAt: new Date(),
+        lastAccessedAt: new Date(),
       },
     });
 
+    await this.prisma.enrollment.upsert({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId: lesson.courseId,
+        },
+      },
+      create: {
+        userId,
+        courseId: lesson.courseId,
+      },
+      update: {},
+    });
+
     return this.formatLesson(lesson);
+  }
+
+  async getCourseProgress(userId: string, courseId: string): Promise<{ totalLessons: number; completedLessons: number }> {
+    const [lessonCount, completedCount] = await Promise.all([
+      this.prisma.lesson.count({ where: { courseId } }),
+      this.prisma.progress.count({
+        where: {
+          userId,
+          lesson: { courseId },
+          completedAt: { not: null },
+        },
+      }),
+    ]);
+
+    return {
+      totalLessons: lessonCount,
+      completedLessons: completedCount,
+    };
   }
 
   private formatLesson(lesson: any): LessonResponseDto {

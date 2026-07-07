@@ -14,6 +14,7 @@ import {
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { LessonsService } from './lessons.service';
+import { VideoTrackingService } from './video-tracking.service';
 import {
   CreateLessonDto,
   UpdateLessonDto,
@@ -25,7 +26,10 @@ import { Public } from '@common/decorators/public.decorator';
 
 @Controller('lessons')
 export class LessonsController {
-  constructor(private lessonsService: LessonsService) {}
+  constructor(
+    private lessonsService: LessonsService,
+    private videoTrackingService: VideoTrackingService,
+  ) {}
 
   @Post('courses/:courseId')
   @UseGuards(JwtAuthGuard)
@@ -139,15 +143,27 @@ export class LessonsController {
       isCompleted: boolean;
     },
   ): Promise<any> {
-    // In production, use VideoTrackingService
-    console.log(`📹 Video Watch Tracked - User: ${userId}, Video: ${trackingData.videoId}, Progress: ${trackingData.percentageWatched}%`);
-    
+    const normalizedPercentage = Math.min(100, Math.max(0, Number(trackingData.percentageWatched || 0)));
+
+    await this.videoTrackingService.trackVideoWatch(userId, {
+      ...trackingData,
+      watchDuration: Math.max(0, Number(trackingData.watchDuration || 0)),
+      totalDuration: Math.max(0, Number(trackingData.totalDuration || 0)),
+      percentageWatched: normalizedPercentage,
+      isCompleted: Boolean(trackingData.isCompleted),
+    });
+
+    if (trackingData.lessonId) {
+      await this.lessonsService.markLessonComplete(trackingData.lessonId, userId);
+    }
+
     return {
       success: true,
       message: 'Video watch tracked successfully',
       data: {
         userId,
         ...trackingData,
+        percentageWatched: normalizedPercentage,
         timestamp: new Date(),
       },
     };
@@ -159,14 +175,25 @@ export class LessonsController {
     @GetCurrentUser('id') userId: string,
     @Param('courseId') courseId: string,
   ): Promise<any> {
+    const [progressItems, watchHistory] = await Promise.all([
+      this.lessonsService.getCourseProgress(userId, courseId),
+      this.videoTrackingService.getWatchHistory(userId, courseId),
+    ]);
+
+    const totalLessons = progressItems.totalLessons;
+    const completedLessons = progressItems.completedLessons;
+    const totalWatchTime = watchHistory.reduce((sum, event) => sum + (event.watchDuration || 0), 0);
+    const averageEngagement = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    const lastWatchedLesson = watchHistory[watchHistory.length - 1]?.lessonId || null;
+
     return {
       userId,
       courseId,
-      totalLessons: 7,
-      completedLessons: 0,
-      totalWatchTime: 0,
-      averageEngagement: 0,
-      lastWatchedLesson: null,
+      totalLessons,
+      completedLessons,
+      totalWatchTime,
+      averageEngagement,
+      lastWatchedLesson,
     };
   }
 }

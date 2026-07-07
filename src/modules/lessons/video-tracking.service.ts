@@ -36,16 +36,32 @@ export class VideoTrackingService {
       timestamp: new Date(),
     };
 
-    // In production, you would save this to a database
-    // For now, log the event
-    console.log('📹 Video Watch Event:', event);
+    const completionPercentage = this.calculateEngagementScore(data.percentageWatched, data.isCompleted);
 
-    // Calculate engagement metrics
-    const engagementScore = this.calculateEngagementScore(data.percentageWatched, data.isCompleted);
-    
+    await this.prisma.progress.upsert({
+      where: {
+        userId_lessonId: {
+          userId,
+          lessonId: data.lessonId,
+        },
+      },
+      create: {
+        userId,
+        lessonId: data.lessonId,
+        completionPercentage,
+        completedAt: data.isCompleted ? new Date() : null,
+        lastAccessedAt: new Date(),
+      },
+      update: {
+        completionPercentage,
+        completedAt: data.isCompleted ? new Date() : undefined,
+        lastAccessedAt: new Date(),
+      },
+    });
+
     return {
       ...event,
-      percentageWatched: engagementScore,
+      percentageWatched: completionPercentage,
     };
   }
 
@@ -53,9 +69,31 @@ export class VideoTrackingService {
    * Get video watch history for a user
    */
   async getWatchHistory(userId: string, courseId?: string): Promise<VideoWatchEvent[]> {
-    // In production, query the database
-    // For now, return empty array
-    return [];
+    const progressEntries = await this.prisma.progress.findMany({
+      where: {
+        userId,
+        ...(courseId ? { lesson: { courseId } } : {}),
+      },
+      select: {
+        lessonId: true,
+        completionPercentage: true,
+        completedAt: true,
+        lastAccessedAt: true,
+      },
+      orderBy: { lastAccessedAt: 'asc' },
+    });
+
+    return progressEntries.map(entry => ({
+      userId,
+      videoId: entry.lessonId,
+      courseId: courseId || '',
+      lessonId: entry.lessonId,
+      watchDuration: entry.completionPercentage ? Math.round((entry.completionPercentage / 100) * 1800) : 0,
+      totalDuration: 1800,
+      percentageWatched: entry.completionPercentage,
+      isCompleted: Boolean(entry.completedAt),
+      timestamp: entry.lastAccessedAt,
+    }));
   }
 
   /**
@@ -67,11 +105,20 @@ export class VideoTrackingService {
     averageCompletion: number;
     engagementTrend: number;
   }> {
+    const progressEntries = await this.prisma.progress.findMany({
+      where: { userId },
+      select: { completionPercentage: true, lastAccessedAt: true },
+    });
+
+    const totalVideosWatched = progressEntries.length;
+    const totalWatchTime = progressEntries.reduce((sum, entry) => sum + Math.round((entry.completionPercentage / 100) * 1800), 0);
+    const averageCompletion = totalVideosWatched > 0 ? Math.round(progressEntries.reduce((sum, entry) => sum + entry.completionPercentage, 0) / totalVideosWatched) : 0;
+
     return {
-      totalVideosWatched: 0,
-      totalWatchTime: 0,
-      averageCompletion: 0,
-      engagementTrend: 0,
+      totalVideosWatched,
+      totalWatchTime,
+      averageCompletion,
+      engagementTrend: averageCompletion,
     };
   }
 

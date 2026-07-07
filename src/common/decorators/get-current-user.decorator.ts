@@ -5,6 +5,12 @@ export const GetCurrentUser = createParamDecorator(
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    return data ? user?.[data] : user;
+    if (!data) return user;
+
+    if (user?.[data] !== undefined) return user[data];
+    if (data === 'id' && user?.sub !== undefined) return user.sub;
+    if (data === 'sub' && user?.id !== undefined) return user.id;
+
+    return undefined;
   },
 );

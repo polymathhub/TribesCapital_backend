@@ -29,8 +29,15 @@ const MEETING_PLATFORMS = [
 
 function inferMeetingPlatform(platform, link) {
   const normalized = `${platform || ''} ${link || ''}`.toLowerCase();
-  if (platform) return platform;
-  if (normalized.includes('meet.google.com') || normalized.includes('google meet')) return 'Google Meet';
+  const selectedPlatform = `${platform || ''}`.trim().toLowerCase();
+
+  if (selectedPlatform === 'google meet' || selectedPlatform === 'meet' || selectedPlatform === 'google') return 'Google Meet';
+  if (selectedPlatform === 'slack') return 'Slack';
+  if (selectedPlatform === 'zoom') return 'Zoom';
+  if (selectedPlatform === 'microsoft teams' || selectedPlatform === 'teams') return 'Microsoft Teams';
+  if (selectedPlatform === 'discord') return 'Discord';
+
+  if (normalized.includes('meet.google.com') || normalized.includes('google meet') || normalized.includes('join.google') || normalized.includes('meet.google')) return 'Google Meet';
   if (normalized.includes('slack')) return 'Slack';
   if (normalized.includes('zoom')) return 'Zoom';
   if (normalized.includes('teams.microsoft') || normalized.includes('microsoft teams')) return 'Microsoft Teams';
@@ -48,6 +55,27 @@ function buildMeetingHref(platform, link) {
   if (platform === 'Microsoft Teams') return `https://teams.microsoft.com/l/meetup-join/${encodeURIComponent(value)}`;
   if (platform === 'Discord') return `https://discord.gg/${encodeURIComponent(value)}`;
   return value;
+}
+
+function getMeetingPreviewMeta(platform, link) {
+  const resolvedPlatform = inferMeetingPlatform(platform, link);
+  const href = buildMeetingHref(resolvedPlatform, link);
+  const value = `${link || ''}`.trim();
+  const createSvg = (fill, icon) => {
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><rect width='96' height='96' rx='24' fill='${fill}'/><text x='48' y='56' text-anchor='middle' font-size='34' font-family='Arial, sans-serif' font-weight='700' fill='white'>${icon}</text></svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  };
+
+  const presets = {
+    'google meet': { label: 'Google Meet', color: '#1E8E3E', image: createSvg('#1E8E3E', 'G') },
+    slack: { label: 'Slack', color: '#4A154B', image: createSvg('#4A154B', 'S') },
+    zoom: { label: 'Zoom', color: '#2D8CFF', image: createSvg('#2D8CFF', 'Z') },
+    'microsoft teams': { label: 'Microsoft Teams', color: '#6264A7', image: createSvg('#6264A7', 'T') },
+    discord: { label: 'Discord', color: '#5865F2', image: createSvg('#5865F2', 'D') },
+  };
+
+  const preset = presets[(resolvedPlatform || '').toLowerCase()] || { label: resolvedPlatform || 'Meeting', color: C.pu, image: createSvg(C.pu, 'M') };
+  return { ...preset, href, link: value, platform: resolvedPlatform || 'Meeting' };
 }
 
 /* ─── BREAKPOINT HOOK ─── */
@@ -269,9 +297,9 @@ function CalWidget({ eventDays, onDayClick }) {
 /* ═══════════════════════════════════════════
    EVENT CARD — responsive
 ═══════════════════════════════════════════ */
-function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
+function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, onJoinMeeting, isMobile }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg,label:ev.type.toUpperCase()};
-  const joinHref = buildMeetingHref(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
+  const meetingPreview = getMeetingPreviewMeta(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
   return (
     <div style={{display:'flex',background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden',marginBottom:12}}>
       {/* Purple date block */}
@@ -318,8 +346,8 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}>
           <span style={{fontSize:12,color:C.pu,fontWeight:500}}>{ev.spotsLeft} spots left</span>
           <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-            {joinHref && (
-              <button onClick={(e)=>{e.stopPropagation(); window.open(joinHref, '_blank', 'noopener,noreferrer');}}
+            {meetingPreview.href && (
+              <button onClick={(e)=>{e.stopPropagation(); onJoinMeeting(ev);}}
                 style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.puf,color:C.pu,border:`1px solid ${C.pu}`}}>
                 <I k="monitor" s={11} c={C.pu}/>Join
               </button>
@@ -330,6 +358,14 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
             </button>
           </div>
         </div>
+        {meetingPreview.href && (
+          <div onClick={(e)=>{e.stopPropagation(); onJoinMeeting(ev);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:10,border:`1px solid ${C.bd}`,background:C.bg,marginTop:10,cursor:'pointer'}}>
+            <img src={meetingPreview.image} alt='' style={{width:40,height:40,borderRadius:10,objectFit:'cover',flexShrink:0}} />
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.t1}}>{meetingPreview.label}</div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -341,6 +377,7 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
 function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
   const blank = {title:'',speakers:'',type:'',duration:'',date:'',time:'',maxCap:'',avail:'',desc:'',agenda:[], meetingPlatform:'', meetingLink:'', meetingInstructions:''};
   const [f, setF] = useState(initial||blank);
+  const meetingPreview = getMeetingPreviewMeta(f.meetingPlatform, f.meetingLink);
   const [typeOpen, setTypeOpen] = useState(false);
   const set = k => e => setF(p=>({...p,[k]:e.target.value}));
   const setV = (k,v) => setF(p=>({...p,[k]:v}));
@@ -418,6 +455,15 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
             </div>
           </div>
           <div style={GP}><label htmlFor="event-meeting-instructions" style={LB}>Meeting instructions <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label><textarea id="event-meeting-instructions" name="meetingInstructions" value={f.meetingInstructions} onChange={set('meetingInstructions')} placeholder="Share access notes, passwords, or Slack channel details" rows={3} style={{...IN,resize:'vertical',lineHeight:1.6}}/></div>
+          {meetingPreview.href && (
+            <div style={{...GP,display:'flex',alignItems:'center',gap:12,padding:'12px 14px',border:`1px solid ${C.bd}`,borderRadius:12,background:C.bg}}>
+              <img src={meetingPreview.image} alt='' style={{width:46,height:46,borderRadius:12,objectFit:'cover',flexShrink:0}} />
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:700,color:C.t1,marginBottom:2}}>{meetingPreview.label} preview</div>
+                <div style={{fontSize:12,color:C.t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{meetingPreview.link || 'Meeting link preview will appear here'}</div>
+              </div>
+            </div>
+          )}
           <div style={GP}>
             <label style={LB}>Agenda items <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label>
             {f.agenda.map((a,i)=>(
@@ -446,8 +492,9 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
 /* ═══════════════════════════════════════════
    DETAIL MODAL — responsive width
 ═══════════════════════════════════════════ */
-function DetailModal({ ev, onClose, onRsvp, isMobile }) {
+function DetailModal({ ev, onClose, onRsvp, onJoinMeeting, isMobile }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg};
+  const meetingPreview = getMeetingPreviewMeta(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
   const modalW = isMobile ? '100%' : 380;
   return (
     <>
@@ -465,8 +512,15 @@ function DetailModal({ ev, onClose, onRsvp, isMobile }) {
               <div style={{fontSize:11,fontWeight:700,color:C.pu,marginBottom:4}}>Join session</div>
               <div style={{fontSize:13,fontWeight:600,color:C.t1,marginBottom:4}}>{ev.meetingPlatform || 'Meeting link'}</div>
               <div style={{fontSize:12,color:C.t2,marginBottom:10,wordBreak:'break-all'}}>{ev.meetingLink || ev.meetingHandle}</div>
-              <button onClick={() => window.open(buildMeetingHref(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle), '_blank', 'noopener,noreferrer')} style={{padding:'8px 12px',borderRadius:8,border:'none',background:C.pu,color:C.w,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
-                Open {ev.meetingPlatform || 'meeting'}
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:10,border:`1px solid ${C.bd}`,background:C.w,marginBottom:10}}>
+                <img src={meetingPreview.image} alt='' style={{width:40,height:40,borderRadius:10,objectFit:'cover',flexShrink:0}} />
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:C.t1,marginBottom:2}}>{meetingPreview.label} preview</div>
+                  <div style={{fontSize:12,color:C.t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{meetingPreview.link || 'Tap to open inside the portal'}</div>
+                </div>
+              </div>
+              <button onClick={() => onJoinMeeting(ev)} style={{padding:'8px 12px',borderRadius:8,border:'none',background:C.pu,color:C.w,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+                Open {ev.meetingPlatform || 'meeting'} in portal
               </button>
             </div>
           )}
@@ -510,8 +564,59 @@ function DetailModal({ ev, onClose, onRsvp, isMobile }) {
 }
 
 /* ═══════════════════════════════════════════
-   DELETE MODAL — responsive width
+   MEETING PREVIEW MODAL — portal-native preview
 ═══════════════════════════════════════════ */
+function MeetingPreviewModal({ meeting, onClose, isMobile }) {
+  const meta = getMeetingPreviewMeta(meeting?.meetingPlatform, meeting?.meetingLink || meeting?.meetingHandle);
+  const modalW = isMobile ? '100%' : 420;
+  const openExternal = () => {
+    if (meta.href) window.open(meta.href, '_blank', 'noopener,noreferrer');
+  };
+  const copyLink = async () => {
+    if (!meta.href) return;
+    try { await navigator.clipboard.writeText(meta.href); } catch (error) { /* noop */ }
+  };
+
+  return (
+    <>
+      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.28)',zIndex:120}} onClick={onClose}/>
+      <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:modalW,maxWidth:'92vw',maxHeight:'90vh',overflowY:'auto',background:C.w,borderRadius:16,zIndex:121,boxShadow:'0 24px 64px rgba(0,0,0,.2)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 18px',borderBottom:`1px solid ${C.bd}`}}>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.pu,letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>Meeting preview</div>
+            <h3 style={{fontSize:17,fontWeight:700,color:C.t1,margin:0}}>{meeting?.title || 'Live session'}</h3>
+          </div>
+          <button onClick={onClose} style={{width:28,height:28,borderRadius:'50%',border:`1px solid ${C.bd}`,background:C.w,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><I k="x" s={14} c={C.t2} sw={2}/></button>
+        </div>
+        <div style={{padding:'18px 18px 20px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:12,border:`1px solid ${C.bd}`,background:C.bg,marginBottom:14}}>
+            <img src={meta.image} alt='' style={{width:54,height:54,borderRadius:14,objectFit:'cover',flexShrink:0}} />
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.t1,marginBottom:2}}>{meta.label} preview</div>
+              <div style={{fontSize:12,color:C.t2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{meta.link || 'Meeting details will appear here'}</div>
+            </div>
+          </div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:12,lineHeight:1.7}}>{meeting?.meetingInstructions || 'Use this preview to review the meeting details before joining.'}</div>
+          <div style={{display:'grid',gap:8}}>
+            <div style={{padding:'10px 12px',background:C.bg,border:`1px solid ${C.bd}`,borderRadius:10}}>
+              <div style={{fontSize:11,color:C.t3,marginBottom:3,fontWeight:600}}>Platform</div>
+              <div style={{fontSize:13,fontWeight:600,color:C.t1}}>{meta.platform}</div>
+            </div>
+            <div style={{padding:'10px 12px',background:C.bg,border:`1px solid ${C.bd}`,borderRadius:10}}>
+              <div style={{fontSize:11,color:C.t3,marginBottom:3,fontWeight:600}}>Join link</div>
+              <div style={{fontSize:13,fontWeight:600,color:C.t1,wordBreak:'break-all'}}>{meta.link || 'No link provided yet'}</div>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:10,marginTop:16,flexWrap:'wrap'}}>
+            <button onClick={copyLink} style={{flex:1,padding:'10px 12px',borderRadius:10,border:`1px solid ${C.bd}`,background:C.w,color:C.t1,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>Copy link</button>
+            <button onClick={openExternal} style={{flex:1,padding:'10px 12px',borderRadius:10,border:'none',background:C.pu,color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>Open link</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function DeleteModal({ ev, onClose, onConfirm, isMobile }) {
   return (
     <>
@@ -537,7 +642,7 @@ function DeleteModal({ ev, onClose, onConfirm, isMobile }) {
 /* ═══════════════════════════════════════════
    VIEW ALL MODAL — responsive width
 ═══════════════════════════════════════════ */
-function ViewAllModal({ events, onClose, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
+function ViewAllModal({ events, onClose, onOpen, onEdit, onDelete, onRsvp, onJoinMeeting, isMobile }) {
   const modalW = isMobile ? '100%' : 480;
   return (
     <>
@@ -551,7 +656,7 @@ function ViewAllModal({ events, onClose, onOpen, onEdit, onDelete, onRsvp, isMob
           {events.map(ev=>(
             <EventCard key={ev.id} ev={ev} isMobile={isMobile}
               onOpen={e=>{onClose();onOpen(e);}} onEdit={e=>{onClose();onEdit(e);}}
-              onDelete={e=>{onClose();onDelete(e);}} onRsvp={onRsvp}/>
+              onDelete={e=>{onClose();onDelete(e);}} onRsvp={onRsvp} onJoinMeeting={onJoinMeeting}/>
           ))}
         </div>
       </div>
@@ -633,6 +738,7 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   const [deleteEv,    setDel]         = useState(null);
   const [detailEv,    setDetail]      = useState(null);
   const [viewAll,     setViewAll]     = useState(false);
+  const [activeMeeting, setActiveMeeting] = useState(null);
   const [toast,       setToast]       = useState(null);
   const [calEvDays,   setCalEvDays]   = useState([]);
 
@@ -868,7 +974,7 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
                 <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:'16px',color:C.t2}}>{eventsError || 'No sessions match the current filter.'}</div>
               ) : displayEvents.map(ev=>(
                 <EventCard key={ev.id} ev={ev} isMobile={isMobile}
-                  onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>
+                  onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp} onJoinMeeting={setActiveMeeting}/>
               ))}
             </div>
 
@@ -916,8 +1022,9 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
       {showCreate && <EventFormModal title="Create event" onClose={()=>setCreate(false)} onSave={handleSave} isMobile={isMobile}/>}
       {editEv     && <EventFormModal title="Edit event" initial={editEv} onClose={()=>setEdit(null)} onSave={handleSave} isMobile={isMobile}/>}
       {deleteEv   && <DeleteModal ev={deleteEv} isMobile={isMobile} onClose={()=>setDel(null)} onConfirm={()=>{setEvents(p=>p.filter(e=>e.id!==deleteEv.id));setDel(null);showToast('Event deleted successfully');}}/>}
-      {detailEv   && <DetailModal ev={detailEv} isMobile={isMobile} onClose={()=>setDetail(null)} onRsvp={handleRsvp}/>}
-      {viewAll    && <ViewAllModal events={displayEvents} isMobile={isMobile} onClose={()=>setViewAll(false)} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>}
+{detailEv   && <DetailModal ev={detailEv} isMobile={isMobile} onClose={()=>setDetail(null)} onRsvp={handleRsvp} onJoinMeeting={setActiveMeeting}/>} 
+      {viewAll    && <ViewAllModal events={displayEvents} isMobile={isMobile} onClose={()=>setViewAll(false)} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp} onJoinMeeting={setActiveMeeting}/>} 
+      {activeMeeting && <MeetingPreviewModal meeting={activeMeeting} isMobile={isMobile} onClose={()=>setActiveMeeting(null)} />} 
       {toast      && <Toast msg={toast} onDone={()=>setToast(null)}/>}
 
       <style>{`

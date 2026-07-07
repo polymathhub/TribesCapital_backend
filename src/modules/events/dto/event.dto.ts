@@ -26,6 +26,10 @@ export class CreateEventDto {
   isVirtual?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  isPublished?: boolean;
+
+  @IsOptional()
   @IsNumber()
   capacity?: number;
 
