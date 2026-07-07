@@ -8,7 +8,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtTokenService } from './jwt-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { MailService } from './mail.service';
+// MailService removed to disable SMTP/email delivery in this build
 
 @Module({
   imports: [
@@ -32,7 +32,7 @@ import { MailService } from './mail.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtTokenService, MailService],
-  exports: [AuthService, JwtModule, PassportModule, JwtTokenService, MailService],
+  providers: [AuthService, JwtStrategy, JwtTokenService],
+  exports: [AuthService, JwtModule, PassportModule, JwtTokenService],
 })
 export class AuthModule {}

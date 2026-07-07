@@ -23,7 +23,6 @@ import {
   MessageResponseDto,
 } from './dto/auth.dto';
 import { JwtTokenService } from './jwt-token.service';
-import { MailService } from './mail.service';
 
 @Injectable()
 export class AuthService {
@@ -32,7 +31,6 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtTokenService: JwtTokenService,
-    private readonly mailService: MailService,
   ) {}
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
@@ -333,11 +331,8 @@ export class AuthService {
       },
     });
 
-    try {
-      await this.mailService.sendPasswordResetEmail(email, resetCode);
-    } catch (error) {
-      this.logger.warn(`Password reset email could not be delivered to ${email}`, error instanceof Error ? error.stack : String(error));
-    }
+    // Email delivery has been disabled in this build; skipping send
+    this.logger.warn('Password reset email delivery is disabled (SMTP removed)');
 
     return { message: 'If the email exists, a reset code has been sent' };
   }
