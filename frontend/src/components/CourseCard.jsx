@@ -19,7 +19,7 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = COLORS.P }) {
           <p style={{ fontSize: 12, color: COLORS.T2, margin: '0 0 14px' }}>{meta}</p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 160, height: 4, background: '#F3F4F6', borderRadius: 4 }}>
+              <div style={{ width: 160, height: 4, background: '#e6e9f0', borderRadius: 4 }}>
                 <div style={{ width: `${pct}%`, height: 4, background: catColor, borderRadius: 4 }}/>
               </div>
               <span style={{ fontSize: 12, color: COLORS.T2 }}>{pct}% complete</span>

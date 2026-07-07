@@ -47,7 +47,7 @@ export class CoursesService {
       where: { id },
       include: {
         lessons: { orderBy: { order: 'asc' } },
-        enrollments: true,
+        enrollments: false,
       },
     });
 

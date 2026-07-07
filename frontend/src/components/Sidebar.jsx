@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { label: 'Learning Hub' },
   { label: 'Due Diligence Vault' },
   { label: 'Office Hours & Events' },
+  { label: 'Project Pipeline' },
   null,
   { label: 'Announcements & Feedback' },
   { label: 'Help' },
