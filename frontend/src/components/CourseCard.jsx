@@ -9,7 +9,18 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = COLORS.P, isMobile 
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(16px) saturate(180%)', WebkitBackdropFilter: 'blur(16px) saturate(180%)', border: `1px solid rgba(255,255,255,0.75)`, borderRadius: 12, marginBottom: isMobile ? 10 : 12, overflow: 'hidden', boxShadow: isHovered ? '0 18px 36px rgba(17,24,39,0.08)' : '0 10px 22px rgba(17,24,39,0.05)', transform: isHovered ? 'translateY(-2px)' : 'translateY(0)', transition: 'all 0.2s ease' }}
+      style={{
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.86) 0%, rgba(248,250,252,0.74) 100%)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,0.76)',
+        borderRadius: 14,
+        marginBottom: isMobile ? 10 : 12,
+        overflow: 'hidden',
+        boxShadow: isHovered ? '0 24px 50px rgba(17,24,39,0.10), inset 0 1px 0 rgba(255,255,255,0.8)' : '0 16px 36px rgba(17,24,39,0.06), inset 0 1px 0 rgba(255,255,255,0.72)',
+        transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+        transition: 'all 0.2s ease',
+      }}
     >
       <div style={{ height: 3, background: '#F3F4F6' }}>
         <div style={{ height: 3, width: `${pct}%`, background: catColor, borderRadius: '0 3px 3px 0' }}/>

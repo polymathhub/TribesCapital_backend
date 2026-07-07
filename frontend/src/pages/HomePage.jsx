@@ -26,6 +26,16 @@ const BD  = '#E5E7EB';
 const BG  = '#F9FAFB';
 const W   = '#FFFFFF';
 
+const glassCardStyle = (radius = 16, padding = '16px 18px') => ({
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.84) 0%, rgba(248,250,252,0.72) 100%)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.72)',
+  borderRadius: radius,
+  boxShadow: '0 18px 42px rgba(15,23,42,0.07), inset 0 1px 0 rgba(255,255,255,0.74)',
+  padding,
+});
+
 /* ─── TUTORIAL STEPS ──────*/
 const STEPS = [
   { id:'welcome',  target:null,       pos:'center', icon:'👋', title:'Welcome to Tribes Capital',
@@ -197,90 +207,85 @@ const circleBtn = {
   fontFamily:'inherit', padding:0,
 };
 
+const getVisualThumbnail = (videoId, thumbnail) => {
+  if (thumbnail) return thumbnail;
+  if (videoId) return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  return null;
+};
+
+const getCategoryPalette = (category = '') => {
+  const normalized = String(category).toLowerCase();
+  if (normalized.includes('energy') || normalized.includes('clean')) return { start:'#4F46E5', end:'#0EA5E9' };
+  if (normalized.includes('invest') || normalized.includes('deal')) return { start:'#7C3AED', end:'#DB2777' };
+  if (normalized.includes('market') || normalized.includes('policy')) return { start:'#0F766E', end:'#14B8A6' };
+  return { start:'#5B21B6', end:'#8B5CF6' };
+};
+
 /* ─── COURSE CARD ────────────────────────────────────── */
+function LoadingCard({ isMobile = false, compact = false }) {
+  return (
+    <div style={{ ...glassCardStyle(14, isMobile ? '12px' : '16px'), overflow:'hidden' }}>
+      <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:12 }}>
+        <div style={{ width:compact ? 56 : 72, height:compact ? 56 : 72, borderRadius:12, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite' }} />
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ height:10, width:'45%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite', marginBottom:8 }} />
+          <div style={{ height:12, width:'82%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite', marginBottom:8 }} />
+          <div style={{ height:10, width:'60%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite' }} />
+        </div>
+      </div>
+      {!compact && (
+        <div style={{ display:'grid', gap:8 }}>
+          <div style={{ height:10, width:'100%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite' }} />
+          <div style={{ height:10, width:'70%', borderRadius:999, background:'linear-gradient(90deg, #F3E8FF 0%, #EDE9FE 50%, #F3E8FF 100%)', backgroundSize:'200% 100%', animation:'shine 1.2s linear infinite' }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false, thumbnail = null, videoId = null, onPlay = null }) {
   const showProgress = pct !== undefined && pct !== null;
-  const hasVideo = Boolean(videoId || thumbnail);
-  const videoRef = React.useRef(null);
-  const wrapperRef = React.useRef(null);
-  const [isPreviewPlaying, setIsPreviewPlaying] = React.useState(false);
-  const [isVisible, setIsVisible] = React.useState(false);
+  const resolvedThumbnail = React.useMemo(() => getVisualThumbnail(videoId, thumbnail), [videoId, thumbnail]);
+  const categoryPalette = React.useMemo(() => getCategoryPalette(cat), [cat]);
+  const [mediaError, setMediaError] = React.useState(false);
+  const showMedia = Boolean(resolvedThumbnail || videoId);
 
-  // Lazy-load only when card is visible (desktop) or when user taps (mobile)
   React.useEffect(() => {
-    if (!wrapperRef.current || typeof IntersectionObserver === 'undefined') return undefined;
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          try { obs.unobserve(entry.target); } catch (e) {}
-        }
-      });
-    }, { threshold: 0.25 });
-    obs.observe(wrapperRef.current);
-    return () => { try { obs.disconnect(); } catch (e) {} };
-  }, []);
+    setMediaError(false);
+  }, [resolvedThumbnail]);
 
-  const handleMouseEnter = () => {
-    if (videoRef.current && !isMobile) {
-      videoRef.current.play().then(() => setIsPreviewPlaying(true)).catch(() => {});
-    }
-  };
-  const handleMouseLeave = () => {
-    if (videoRef.current && !isMobile) {
-      try { videoRef.current.pause(); videoRef.current.currentTime = 0; } catch (e) {}
-      setIsPreviewPlaying(false);
-    }
-  };
-
-  // Touch / click toggle for mobile: tap to preview, tap again to stop
-  const handleTouchToggle = (e) => {
-    if (!isMobile || !hasVideo) return;
-    // Prevent the outer click handlers
-    e.stopPropagation();
-    if (!isPreviewPlaying) {
-      setIsPreviewPlaying(true);
-      // allow element to mount then play
-      setTimeout(() => { try { videoRef.current?.play(); } catch (err) {} }, 50);
-    } else {
-      try { videoRef.current?.pause(); videoRef.current.currentTime = 0; } catch (err) {}
-      setIsPreviewPlaying(false);
-    }
-  };
+  const fallbackLabel = typeof title === 'string' ? title.split(' ').slice(0, 2).join(' ').trim() : 'Course';
 
   return (
     <div style={{ background:W, border:`1px solid ${BD}`, borderRadius:12, marginBottom:12, overflow:'hidden', boxShadow:'0 8px 24px rgba(17,24,39,0.04)', transition:'transform .2s ease, box-shadow .2s ease' }}>
       <div style={{ height:3, background:'#F3F4F6' }}>
         <div style={{ height:3, width:`${showProgress ? pct : 100}%`, background:catColor === GR ? GR : P, borderRadius:'0 3px 3px 0' }} />
       </div>
+      <style>{`
+        @keyframes shine {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
       <div style={{ padding:'14px 18px 16px', display:'flex', flexDirection:isMobile ? 'column' : 'row', gap:14 }}>
-        {hasVideo ? (
-          <div ref={wrapperRef} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onClick={handleTouchToggle} style={{ width:isMobile ? '100%' : 96, minWidth:isMobile ? 0 : 96, aspectRatio:'16 / 9', borderRadius:10, overflow:'hidden', background:PF, position:'relative', flexShrink:0 }}>
-            {videoId ? (
-              // render video element only when visible on desktop or when preview requested on mobile
-              (isPreviewPlaying || (isVisible && !isMobile)) ? (
-                <video ref={videoRef} muted loop playsInline preload="metadata" poster={thumbnail} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}>
-                  <source src={`https://r.jina.ai/http://img.youtube.com/vi/${videoId}/hqdefault.jpg`} type="video/mp4" />
-                </video>
-              ) : (
-                // still render poster img when available to avoid loading video
-                thumbnail ? (
-                  <img src={thumbnail} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-                ) : (
-                  <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:P, fontSize:20 }}>
-                    ▶
-                  </div>
-                )
-              )
-            ) : thumbnail ? (
-              <img src={thumbnail} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+        {showMedia ? (
+          <div style={{ width:isMobile ? '100%' : 96, minWidth:isMobile ? 0 : 96, aspectRatio:'16 / 9', borderRadius:10, overflow:'hidden', background:PF, position:'relative', flexShrink:0, boxShadow:'inset 0 1px 0 rgba(255,255,255,0.35)' }}>
+            {resolvedThumbnail && !mediaError ? (
+              <img src={resolvedThumbnail} alt={title} onError={() => setMediaError(true)} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
             ) : (
-              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:P, fontSize:20 }}>
-                ▶
+              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:`linear-gradient(135deg, ${categoryPalette.start} 0%, ${categoryPalette.end} 100%)`, color:W, padding:12 }}>
+                <div style={{ width:'100%', height:'100%', borderRadius:8, border:'1px solid rgba(255,255,255,0.22)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:12, background:'rgba(255,255,255,0.12)' }}>
+                  <span style={{ fontSize:10, fontWeight:700, letterSpacing:1.1, textTransform:'uppercase', opacity:0.9 }}>Featured</span>
+                  <div>
+                    <div style={{ fontSize:22, fontWeight:700, lineHeight:1.2, marginBottom:4 }}>{fallbackLabel}</div>
+                    <div style={{ fontSize:11, opacity:0.9 }}>Curated learning asset</div>
+                  </div>
+                </div>
               </div>
             )}
+            <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(17,24,39,0.08) 0%, rgba(17,24,39,0.24) 100%)', pointerEvents:'none' }} />
             {onPlay && (
-              <button type="button" onClick={(event) => { event.stopPropagation(); onPlay(); }} style={{ position:'absolute', inset:0, border:'none', background:'rgba(17,24,39,0.25)', color:W, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>
+              <button type="button" onClick={(event) => { event.stopPropagation(); onPlay(); }} style={{ position:'absolute', inset:0, border:'none', background:'transparent', color:W, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>
                 ▶
               </button>
             )}
@@ -335,6 +340,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [watchedVideos, setWatchedVideos] = useState([]);
   const [activeMetricIndex, setActiveMetricIndex] = useState(0);
   const notifRef = useRef(null);
   const searchRef = useRef(null);
@@ -384,6 +390,82 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   }, []);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedVideos = JSON.parse(window.localStorage.getItem('tribes-home-watched-videos') || '[]');
+        setWatchedVideos(Array.isArray(storedVideos) ? storedVideos : []);
+      } catch {
+        setWatchedVideos([]);
+      }
+    }
+  }, []);
+
+  const recordWatchedVideo = useCallback((video) => {
+    if (!video?.title || !video?.videoId) return;
+    const watchedItem = {
+      id: `${video.videoId}-${Date.now()}`,
+      type: 'video',
+      title: video.title,
+      detail: `${video.tag || 'Video'} · ${video.duration || 'Recently watched'}`,
+      time: 'Just now',
+      timestamp: Date.now(),
+      videoId: video.videoId,
+      thumbnail: video.thumbnail,
+    };
+
+    setWatchedVideos((prev) => {
+      const deduped = [watchedItem, ...prev.filter((item) => item.videoId !== video.videoId)].slice(0, 6);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('tribes-home-watched-videos', JSON.stringify(deduped));
+      }
+      return deduped;
+    });
+    setActiveVideo(video);
+  }, []);
+
+  const updatesFeed = useMemo(() => {
+    const eventItems = (dashboardEvents || []).slice(0, 2).map((event) => ({
+      id: `event-${event.id}`,
+      kind: 'event',
+      title: event.title,
+      detail: `${event.meetingPlatform || 'Live session'} · ${new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
+      time: 'Upcoming',
+      timestamp: new Date(event.startDate).getTime(),
+    }));
+
+    const courseItems = (dashboardCourses || []).slice(0, 2).map((course) => ({
+      id: `course-${course.id}`,
+      kind: 'course',
+      title: course.title,
+      detail: course.description || 'Recently added on the platform',
+      time: 'New',
+      timestamp: Date.now() - 1000,
+    }));
+
+    const announcementItems = (notifications || []).slice(0, 2).map((item) => ({
+      id: `announcement-${item.id || item.title}`,
+      kind: 'announcement',
+      title: item.title,
+      detail: item.detail || item.message || 'Fresh update from the community',
+      time: item.time || 'Today',
+      timestamp: Date.now() - 2000,
+    }));
+
+    const videoItems = (watchedVideos || []).slice(0, 2).map((video) => ({
+      id: `video-${video.id}`,
+      kind: 'video',
+      title: video.title,
+      detail: video.detail || 'You watched this lesson video',
+      time: video.time || 'Recent',
+      timestamp: video.timestamp || Date.now(),
+    }));
+
+    return [...eventItems, ...courseItems, ...announcementItems, ...videoItems]
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      .slice(0, 6);
+  }, [dashboardCourses, dashboardEvents, notifications, watchedVideos]);
+
+  useEffect(() => {
     let isMounted = true;
     const loadDashboardData = async () => {
       try {
@@ -402,7 +484,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           lessons: course.lessons || course.lessonCount || 0,
           difficulty: course.difficulty || course.level || 'Beginner',
           videoId: course.videoId || 'wMQDsjS9WC4',
-          thumbnail: course.thumbnail || 'https://img.youtube.com/vi/wMQDsjS9WC4/hqdefault.jpg',
+          thumbnail: getVisualThumbnail(course.videoId || 'wMQDsjS9WC4', course.thumbnail),
         }));
         setMemberCount(Array.isArray(membersRes?.data) ? membersRes.data.length : 0);
         setDashboardCourses(normalizedCourses);
@@ -589,9 +671,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     }));
 
   const demoVideos = courseVideos.length > 0 ? courseVideos : [
-    { title: 'How Clean Energy Is Transforming Schools & Communities in Africa', duration: '1 min', tag: 'Demo lesson', videoId: 'wMQDsjS9WC4' },
-    { title: 'Hospitals Are Going Dark in Africa — Tribes Capital is Fixing It', duration: '31 sec', tag: 'Live recap', videoId: 'Jdmt9BaYHnw' },
-    { title: 'How Clean Energy Powers Africa', duration: '45 sec', tag: 'Quick watch', videoId: 'DnjMO5L5QgI' },
+    { title: 'How Clean Energy Is Transforming Schools & Communities in Africa', duration: '1 min', tag: 'Demo lesson', videoId: 'wMQDsjS9WC4', thumbnail: getVisualThumbnail('wMQDsjS9WC4', null) },
+    { title: 'Hospitals Are Going Dark in Africa — Tribes Capital is Fixing It', duration: '31 sec', tag: 'Live recap', videoId: 'Jdmt9BaYHnw', thumbnail: getVisualThumbnail('Jdmt9BaYHnw', null) },
+    { title: 'How Clean Energy Powers Africa', duration: '45 sec', tag: 'Quick watch', videoId: 'DnjMO5L5QgI', thumbnail: getVisualThumbnail('DnjMO5L5QgI', null) },
   ];
 
   const buildYouTubeEmbedUrl = (videoId) => `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&modestbranding=1&controls=1&rel=0&fs=1`;
@@ -605,6 +687,35 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const latestCourses = dashboardCourses.slice(0, 3);
   const upcomingEvents = dashboardEvents.slice(0, 3);
+  const recommendedNextStep = useMemo(() => {
+    if (dashboardEvents.length > 0) {
+      const event = dashboardEvents[0];
+      return {
+        type: 'event',
+        title: event.title || 'Upcoming session',
+        subtitle: event.description || 'Join the next live session and stay close to the community.',
+        actionLabel: 'Join event',
+        actionTarget: 'events',
+      };
+    }
+    if (dashboardCourses.length > 0) {
+      const course = dashboardCourses[0];
+      return {
+        type: 'course',
+        title: course.title || 'Continue learning',
+        subtitle: course.description || 'Pick up the next lesson and keep momentum going.',
+        actionLabel: 'Open learning',
+        actionTarget: 'learning',
+      };
+    }
+    return {
+      type: 'general',
+      title: 'Explore the platform',
+      subtitle: 'Browse courses, events, and announcements to build momentum.',
+      actionLabel: 'Open hub',
+      actionTarget: 'learning',
+    };
+  }, [dashboardCourses, dashboardEvents]);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
@@ -904,11 +1015,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
           {/* ── RESUME CARD ── */}
           <div ref={resumeRef} className="soft-card" style={{
-            background:'rgba(255,255,255,0.68)', backdropFilter:'blur(16px) saturate(180%)', WebkitBackdropFilter:'blur(16px) saturate(180%)',
-            border:`1px solid rgba(255,255,255,0.7)`, borderRadius:14, padding:'18px 20px',
+            ...glassCardStyle(14, '18px 20px'),
             marginBottom:24, display:'flex', flexDirection:isMobile?'column':'row',
             alignItems:isMobile?'flex-start':'center', gap:isMobile?10:16,
-            boxShadow:'0 16px 36px rgba(17,24,39,0.06)',
           }}>
             <div style={{ width:44, minWidth:44, height:52, background:PF, borderRadius:8,
               display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -933,6 +1042,44 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
             {/* LEFT COLUMN */}
             <div>
+              <div style={{ ...glassCardStyle(14, isMobile ? '12px' : '16px'), marginBottom: 16 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, gap:8, flexWrap:'wrap' }}>
+                  <h2 style={{ fontSize:isMobile?14:16, fontWeight:600, color:T1, margin:0 }}>Updates</h2>
+                  <button onClick={() => onNavigate('events')} style={{ fontSize:isMobile?12:13, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>See what’s next</button>
+                </div>
+                {updatesFeed.length > 0 ? updatesFeed.map((item, index, arr) => {
+                  const icon = item.kind === 'event' ? '📅' : item.kind === 'announcement' ? '📣' : item.kind === 'video' ? '▶' : '✨';
+                  return (
+                    <div key={item.id} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 0', borderBottom:index < arr.length - 1 ? `1px solid ${BD}` : 'none' }}>
+                      <div style={{ width:34, height:34, borderRadius:10, background:PF, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>{icon}</div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:600, color:T1, marginBottom:2 }}>{item.title}</div>
+                        <div style={{ fontSize:11, color:T2, lineHeight:1.4 }}>{item.detail}</div>
+                      </div>
+                      <span style={{ fontSize:11, color:P, fontWeight:600, flexShrink:0, marginTop:2 }}>{item.time}</span>
+                    </div>
+                  );
+                }) : (
+                  <div style={{ fontSize:13, color:T2, padding:'4px 0' }}>No updates yet. New events, announcements, and watched videos will appear here.</div>
+                )}
+              </div>
+
+              <div style={{ ...glassCardStyle(16, isMobile ? '14px' : '16px 18px'), marginBottom:16 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:10 }}>
+                  <div>
+                    <div style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.1, textTransform:'uppercase', marginBottom:4 }}>Recommended next step</div>
+                    <div style={{ fontSize:15, fontWeight:700, color:T1 }}>{recommendedNextStep.title}</div>
+                  </div>
+                  <button onClick={() => onNavigate(recommendedNextStep.actionTarget)} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', fontWeight:600, whiteSpace:'nowrap' }}>{recommendedNextStep.actionLabel}</button>
+                </div>
+                <div style={{ fontSize:13, color:T2, lineHeight:1.5, marginBottom:12 }}>{recommendedNextStep.subtitle}</div>
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                  <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>Continue learning</button>
+                  <button onClick={() => onNavigate('events')} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>View events</button>
+                  <button onClick={() => onNavigate('announcements')} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>See updates</button>
+                </div>
+              </div>
+
               {/* Learning section */}
               <div ref={learningRef}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?10:14, gap:8, flexWrap:'wrap' }}>
@@ -942,7 +1089,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   </button>
                 </div>
                 {dashboardLoading ? (
-                  <div style={{ background:'rgba(255,255,255,0.72)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, padding:isMobile?'12px':'16px', color:T2, backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>Loading courses…</div>
+                  <div style={{ display:'grid', gap:12 }}>
+                    <LoadingCard isMobile={isMobile} />
+                    <LoadingCard isMobile={isMobile} compact />
+                  </div>
                 ) : latestCourses.length > 0 ? latestCourses.map((course) => (
                   <CourseCard
                     key={course.id}
@@ -954,10 +1104,23 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     isMobile={isMobile}
                     thumbnail={course.thumbnail}
                     videoId={course.videoId}
-                    onPlay={() => setActiveVideo({ title: course.title, duration: course.duration || 'Self-paced', tag: course.category || 'Course video', videoId: course.videoId, thumbnail: course.thumbnail })}
+                    onPlay={() => recordWatchedVideo({ title: course.title, duration: course.duration || 'Self-paced', tag: course.category || 'Course video', videoId: course.videoId, thumbnail: course.thumbnail })}
                   />
                 )) : (
-                  <div style={{ background:'rgba(255,255,255,0.72)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, padding:'16px', color:T2, backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>No courses are available right now.</div>
+                  <div style={{ ...glassCardStyle(14, '16px'), color:T2 }}>
+                    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.1, textTransform:'uppercase', marginBottom:6 }}>Next up</div>
+                        <div style={{ fontSize:15, fontWeight:700, color:T1, marginBottom:6 }}>Your learning hub is ready for deeper insight</div>
+                        <p style={{ margin:0, fontSize:13, color:T2, lineHeight:1.55 }}>Explore curated deal briefings, live member sessions, and practical toolkits designed for modern clean-energy operators.</p>
+                      </div>
+                    </div>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginTop:12 }}>
+                      {['Investment briefings','Live office hours','Practical toolkits'].map((chip) => (
+                        <span key={chip} style={{ background:'#F8FAFC', border:'1px solid #E5E7EB', borderRadius:999, padding:'6px 10px', fontSize:11, fontWeight:600, color:T2 }}>{chip}</span>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -965,15 +1128,18 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <div ref={eventsRef} style={{ marginTop:8 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?10:14, gap:8, flexWrap:'wrap' }}>
                   <h2 style={{ fontSize:isMobile?14:16, fontWeight:600, color:T1, margin:0 }}>
-                    Upcoming events <span style={{ fontSize:isMobile?12:13, color:T3, fontWeight:400 }}>(8)</span>
+                    Upcoming events <span style={{ fontSize:isMobile?12:13, color:T3, fontWeight:400 }}>({dashboardEvents.length})</span>
                   </h2>
                   <button onClick={() => onNavigate('events')} style={{ fontSize:isMobile?12:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
                     View all <Icon name="arrow" size={13} color={P}/>
                   </button>
                 </div>
-                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
+                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
                   {dashboardLoading ? (
-                    <div style={{ padding:'16px', color:T2 }}>Loading sessions…</div>
+                    <div style={{ padding:'12px 14px', display:'grid', gap:10 }}>
+                      <LoadingCard isMobile={isMobile} compact />
+                      <LoadingCard isMobile={isMobile} compact />
+                    </div>
                   ) : upcomingEvents.length > 0 ? upcomingEvents.map((event, index, arr) => {
                     const start = new Date(event.startDate);
                     const month = start.toLocaleDateString('en', { month: 'short' }).toUpperCase();
@@ -1006,7 +1172,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       </div>
                     );
                   }) : (
-                    <div style={{ padding:'16px', color:T2 }}>No upcoming sessions yet.</div>
+                    <div style={{ padding:'16px', color:T2, lineHeight:1.6 }}>No upcoming sessions yet. New office hours and community sessions will appear here as soon as they’re published.</div>
                   )}
                 </div>
               </div>
@@ -1021,7 +1187,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <h3 style={{ fontSize:isMobile?12.5:14, fontWeight:600, color:T1, margin:0 }}>Recently added</h3>
                   <button onClick={() => onNavigate('vault')} style={{ fontSize:isMobile?11:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Open vault</button>
                 </div>
-                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
+                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
                   {latestCourses.length > 0 ? latestCourses.map((course, index, arr) => (
                     <div key={course.id} style={{ display:'flex', alignItems:'center', gap:isMobile?7:10, padding:isMobile?'8px 10px':'11px 14px',
                       borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', width:'100%' }}>
@@ -1032,7 +1198,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       </div>
                     </div>
                   )) : (
-                    <div style={{ padding:'12px 14px', color:T2 }}>No recent content yet.</div>
+                    <div style={{ padding:'12px 14px', color:T2, lineHeight:1.55 }}>No recent content yet. Fresh courses and lessons will show up here as soon as they are added.</div>
                   )}
                 </div>
               </div>
@@ -1043,7 +1209,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <h3 style={{ fontSize:isMobile?12.5:14, fontWeight:600, color:T1, margin:0 }}>Videos</h3>
                   <button onClick={() => onNavigate('learning')} style={{ fontSize:isMobile?11:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Watch more</button>
                 </div>
-                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
+                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
                   <div style={{ display:isMobile ? 'grid' : 'block', gridTemplateColumns:isMobile ? 'repeat(2, minmax(0, 1fr))' : undefined, gap:isMobile ? 8 : 0, padding:isMobile ? 8 : 0 }}>
                     {demoVideos.map((video, index) => (
                       <div key={`${video.title}-${index}`} style={{ display:'flex', flexDirection:'column', gap:8, padding:isMobile?'10px':'12px 14px', borderBottom:isMobile? 'none' : index < demoVideos.length - 1 ? `1px solid ${BD}` : 'none', width:'100%', background:isMobile ? 'rgba(255,255,255,0.7)' : 'transparent', borderRadius:isMobile ? 10 : 0 }}>
@@ -1059,7 +1225,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                           <p style={{ fontSize:isMobile?9:11, color:T3, margin:'0 0 8px', lineHeight:1.3 }}>{video.tag} · {video.duration}</p>
                           <button
                             type="button"
-                            onClick={() => setActiveVideo(video)}
+                            onClick={() => recordWatchedVideo(video)}
                             style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:'100%', boxShadow:'0 8px 16px rgba(91, 33, 182, 0.16)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
                             Play
                           </button>
@@ -1076,7 +1242,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Announcements</h3>
                   <button onClick={() => onNavigate('announcements')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>View all</button>
                 </div>
-                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
+                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
                   {notifications.length > 0 ? notifications.map((item, index, arr) => (
                     <div key={`${item.title}-${index}`} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:isMobile?'10px 12px':'11px 14px',
                       borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
@@ -1088,7 +1254,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       <span style={{ background:PF, color:P, fontSize:11, fontWeight:500, padding:'2px 9px', borderRadius:6, flexShrink:0, marginTop:isMobile?4:0 }}>{item.time}</span>
                     </div>
                   )) : (
-                    <div style={{ padding:'12px 14px', color:T2 }}>No new updates yet.</div>
+                    <div style={{ padding:'12px 14px', color:T2, lineHeight:1.55 }}>No new updates yet. Join a session or watch a lesson to start building your activity stream.</div>
                   )}
                 </div>
               </div>
@@ -1096,7 +1262,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               {/* Recent activity */}
               <div>
                 <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 12px' }}>Recent activity</h3>
-                <div style={{ background:'rgba(255,255,255,0.74)', border:'1px solid rgba(91,33,182,0.16)', borderRadius:14, overflow:'hidden', backdropFilter:'blur(16px)', boxShadow:'0 12px 30px rgba(15,23,42,0.04)' }}>
+                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
                   {dashboardEvents.length > 0 ? dashboardEvents.slice(0,3).map((event, index, arr) => (
                     <div key={event.id} style={{ display:'flex', alignItems:'center', gap:isMobile?8:10, padding:isMobile?'8px 10px':'11px 14px',
                       borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
@@ -1110,7 +1276,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       <span style={{ fontSize:isMobile?11:12, color:P, fontWeight:500, flexShrink:0, marginTop:isMobile?4:0 }}>{new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
                     </div>
                   )) : (
-                    <div style={{ padding:'12px 14px', color:T2 }}>No recent activity yet.</div>
+                    <div style={{ padding:'12px 14px', color:T2, lineHeight:1.55 }}>No recent activity yet. Your most recent events and lesson activity will appear here.</div>
                   )}
                 </div>
               </div>
