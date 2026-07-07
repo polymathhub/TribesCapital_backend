@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
 import apiClient from '../api/client';
 

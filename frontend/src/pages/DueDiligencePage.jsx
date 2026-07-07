@@ -134,7 +134,6 @@ const DueDiligencePage = ({ onBack, onToggleSidebar, isMobile, isTablet }) => {
       const createdItem = normalizeDueDiligence(response?.data || response || data);
       setFeedback(`Created “${createdItem.title}” successfully.`);
       setShowCreateDialog(false);
-      setPagination((prev) => ({ ...prev, page: 1 }));
       await loadDueDiligences();
     } catch (err) {
       console.error('Error creating due diligence:', err);

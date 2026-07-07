@@ -61,46 +61,20 @@ function getMeetingPreviewMeta(platform, link) {
   const resolvedPlatform = inferMeetingPlatform(platform, link);
   const href = buildMeetingHref(resolvedPlatform, link);
   const value = `${link || ''}`.trim();
-
-  const createIconSvg = (fill, innerSvg) => {
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><rect width='96' height='96' rx='24' fill='${fill}'/>${innerSvg}</svg>`;
+  const createSvg = (fill, icon) => {
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><rect width='96' height='96' rx='24' fill='${fill}'/><text x='48' y='56' text-anchor='middle' font-size='34' font-family='Arial, sans-serif' font-weight='700' fill='white'>${icon}</text></svg>`;
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   };
 
   const presets = {
-    'google meet': {
-      label: 'Google Meet',
-      color: '#1E8E3E',
-      image: createIconSvg('#1E8E3E', `<path d='M30 28h36a7 7 0 017 7v26a7 7 0 01-7 7H30a7 7 0 01-7-7V35a7 7 0 017-7zm36 6.5L62 40v16l4-5.5V47h2v-6h-2v-2.5z' fill='white'/>`),
-    },
-    slack: {
-      label: 'Slack',
-      color: '#4A154B',
-      image: createIconSvg('#4A154B', `<path d='M35 24a11 11 0 0111 11v9h-11a11 11 0 010-22zm12 0a11 11 0 0111 11v9h-11a11 11 0 010-22z' fill='white' opacity='0.9'/><path d='M24 35a11 11 0 0111-11h9v11a11 11 0 01-22 0zm44 12a11 11 0 01-11 11h-9v-11a11 11 0 0122 0z' fill='white' opacity='0.9'/>`),
-    },
-    zoom: {
-      label: 'Zoom',
-      color: '#2D8CFF',
-      image: createIconSvg('#2D8CFF', `<path d='M32 30h32a4 4 0 014 4v28a4 4 0 01-4 4H32a4 4 0 01-4-4V34a4 4 0 014-4zm32 6.5l12-7v36l-12-7V36.5z' fill='white'/>`),
-    },
-    'microsoft teams': {
-      label: 'Microsoft Teams',
-      color: '#6264A7',
-      image: createIconSvg('#6264A7', `<path d='M30 38h20v20H30z' fill='white'/><path d='M52 30h10a6 6 0 016 6v26a6 6 0 01-6 6H52v-8h8V36h-8v-6zm-16 0h12v8H36z' fill='white'/>`),
-    },
-    discord: {
-      label: 'Discord',
-      color: '#5865F2',
-      image: createIconSvg('#5865F2', `<path d='M32 32c6-6 28-6 34 0v28c-6 6-28 6-34 0V32zm16 20a6 6 0 100-12 6 6 0 000 12zm-18-6a4 4 0 118 0 4 4 0 01-8 0zm30 0a4 4 0 118 0 4 4 0 01-8 0z' fill='white'/>`),
-    },
+    'google meet': { label: 'Google Meet', color: '#1E8E3E', image: createSvg('#1E8E3E', 'G') },
+    slack: { label: 'Slack', color: '#4A154B', image: createSvg('#4A154B', 'S') },
+    zoom: { label: 'Zoom', color: '#2D8CFF', image: createSvg('#2D8CFF', 'Z') },
+    'microsoft teams': { label: 'Microsoft Teams', color: '#6264A7', image: createSvg('#6264A7', 'T') },
+    discord: { label: 'Discord', color: '#5865F2', image: createSvg('#5865F2', 'D') },
   };
 
-  const preset = presets[(resolvedPlatform || '').toLowerCase()] || {
-    label: resolvedPlatform || 'Meeting',
-    color: C.pu,
-    image: createIconSvg(C.pu, `<text x='48' y='56' text-anchor='middle' font-size='34' font-family='Arial, sans-serif' font-weight='700' fill='white'>M</text>`),
-  };
-
+  const preset = presets[(resolvedPlatform || '').toLowerCase()] || { label: resolvedPlatform || 'Meeting', color: C.pu, image: createSvg(C.pu, 'M') };
   return { ...preset, href, link: value, platform: resolvedPlatform || 'Meeting' };
 }
 
