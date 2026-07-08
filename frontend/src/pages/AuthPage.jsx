@@ -304,12 +304,19 @@ function Spinner({ size = 16 }) {
 
 /* ─── UI COMPONENTS ────────────────────────────────── */
 function Alert({ type = 'error', message }) {
+  if (type === 'error') {
+    return (
+      <p style={{ color: COLORS.error, fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
+        {message}
+      </p>
+    );
+  }
+
   const colors = {
-    error: { bg: COLORS.errorLight, border: '#FCA5A5', text: COLORS.error, icon: <AlertIcon /> },
     success: { bg: COLORS.successLight, border: '#86EFAC', text: COLORS.success, icon: <CheckIcon /> },
     warning: { bg: COLORS.warningLight, border: '#FDE68A', text: COLORS.warning, icon: <AlertIcon /> },
   };
-  const color = colors[type] || colors.error;
+  const color = colors[type] || colors.warning;
   return (
     <div
       style={{

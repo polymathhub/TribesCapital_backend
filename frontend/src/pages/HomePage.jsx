@@ -5,6 +5,8 @@ import OfficeHoursEvents from './OfficeHoursEvents';
 import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
 import { usersAPI, coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
+import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
+import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
 
 /* ─── DESIGN TOKENS ─── */
 const P   = '#5B21B6';
@@ -1028,7 +1030,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 {dashboardCourses[0]?.title || 'Your next course is ready'}
               </p>
               <p style={{ fontSize:13, color:T2, margin:0 }}>
-                {dashboardCourses[0]?.description || 'Open the learning hub to explore the latest content from the backend.'}
+                {dashboardCourses[0]?.description || 'Open the learning hub to explore the latest contents.'}
               </p>
             </div>
             <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 13), padding:'10px 20px', borderRadius:8, fontWeight:600,
@@ -1172,7 +1174,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       </div>
                     );
                   }) : (
-                    <div style={{ padding:'16px', color:T2, lineHeight:1.6 }}>No upcoming sessions yet. New office hours and community sessions will appear here as soon as they’re published.</div>
+                    <div style={{ padding:'20px 16px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, textAlign:'center', color:T2 }}>
+                      <img src={eventsIllustration} alt="Illustration for the home page events empty state" style={{ width:'min(100%, 170px)', maxWidth:170, height:'auto', display:'block' }} />
+                      <div style={{ maxWidth:320 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:T1, marginBottom:6 }}>No upcoming sessions yet</div>
+                        <p style={{ margin:0, fontSize:12.5, color:T2, lineHeight:1.55 }}>New community sessions and office hours will appear here as they’re published.</p>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1187,20 +1195,23 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <h3 style={{ fontSize:isMobile?12.5:14, fontWeight:600, color:T1, margin:0 }}>Recently added</h3>
                   <button onClick={() => onNavigate('vault')} style={{ fontSize:isMobile?11:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Open vault</button>
                 </div>
-                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
-                  {latestCourses.length > 0 ? latestCourses.map((course, index, arr) => (
-                    <div key={course.id} style={{ display:'flex', alignItems:'center', gap:isMobile?7:10, padding:isMobile?'8px 10px':'11px 14px',
-                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', width:'100%' }}>
-                      <div style={{ width:isMobile?28:32, height:isMobile?28:32, background:PF, borderRadius:7, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:isMobile?12:14 }}>📘</div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:isMobile?10.5:12, fontWeight:500, color:T1, margin:'0 0 1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{course.title}</p>
-                        <p style={{ fontSize:isMobile?9:10, color:T3, margin:0, lineHeight:1.3 }}>{course.description || 'Published course'}</p>
-                      </div>
-                    </div>
-                  )) : (
-                    <div style={{ padding:'12px 14px', color:T2, lineHeight:1.55 }}>No recent content yet. Fresh courses and lessons will show up here as soon as they are added.</div>
-                  )}
+                <div style={{ marginBottom:12, display:'flex', justifyContent:'center', width:'100%' }}>
+                  <img src={newYorkIllustration} alt="Recently added illustration" style={{ width:'100%', maxWidth:320, height:'auto', display:'block' }} />
                 </div>
+                {latestCourses.length > 0 ? (
+                  <div>
+                    {latestCourses.map((course, index, arr) => (
+                      <div key={course.id} style={{ display:'flex', alignItems:'center', gap:isMobile?7:10, padding:isMobile?'8px 10px':'11px 14px',
+                        borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', width:'100%' }}>
+                        <div style={{ width:isMobile?28:32, height:isMobile?28:32, background:PF, borderRadius:7, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:isMobile?12:14 }}>📘</div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <p style={{ fontSize:isMobile?10.5:12, fontWeight:500, color:T1, margin:'0 0 1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{course.title}</p>
+                          <p style={{ fontSize:isMobile?9:10, color:T3, margin:0, lineHeight:1.3 }}>{course.description || 'Published course'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               {/* Demo videos */}

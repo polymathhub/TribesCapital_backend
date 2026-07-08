@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import CorporateMemphisIllustration from '../CorporateMemphisIllustration';
 import '../../styles/due-diligence.css';
 
 const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange, pagination }) => {
@@ -142,8 +143,14 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>Loading...</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
-          No due diligences found. Create one to get started.
+        <div style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '16px' }}>
+          <CorporateMemphisIllustration variant="data" size={220} />
+          <div style={{ maxWidth: '420px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>No due diligences yet</div>
+            <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: '#6B7280' }}>
+              Create a diligence entry to track an investment, company, or fund with structure and momentum.
+            </p>
+          </div>
         </div>
       ) : (
         <>

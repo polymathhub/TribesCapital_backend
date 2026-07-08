@@ -1,5 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
+import { existsSync, unlinkSync } from 'fs';
+import { join } from 'path';
 import {
   CreateDueDiligenceDto,
   UpdateDueDiligenceDto,
@@ -14,6 +16,21 @@ import {
   DDStatus,
   ItemStatus,
 } from './dto/due-diligence.dto';
+
+function inferDocumentType(originalname: string, mimetype: string) {
+  const ext = originalname.split('.').pop()?.toLowerCase();
+  if (ext) {
+    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'avi', 'zip', 'rar'].includes(ext)) {
+      return ext;
+    }
+  }
+  if (mimetype.includes('pdf')) return 'pdf';
+  if (mimetype.includes('word')) return 'word';
+  if (mimetype.includes('excel') || mimetype.includes('spreadsheet')) return 'excel';
+  if (mimetype.startsWith('image/')) return 'image';
+  if (mimetype.startsWith('video/')) return 'video';
+  return 'other';
+}
 
 @Injectable()
 export class DueDiligenceService {
@@ -247,15 +264,25 @@ export class DueDiligenceService {
   async uploadDocument(dueDiligenceId: string, dto: CreateDDDocumentDto, userId: string) {
     const dd = await this.findOne(dueDiligenceId, userId);
 
+    const fileName = dto.fileName || dto.fileUrl?.split('/').pop()?.split('?')[0] || 'document';
+    const fileType = dto.fileType || inferDocumentType(fileName, dto.fileUrl || '');
+    const fileUrl = dto.fileUrl || '';
+    const fileSize = dto.fileSize ?? 0;
+    const tags = Array.isArray(dto.tags)
+      ? dto.tags
+      : typeof dto.tags === 'string'
+      ? dto.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+      : [];
+
     const doc = await this.prisma.dueDiligenceDocument.create({
       data: {
-        fileName: dto.fileName,
-        fileUrl: dto.fileUrl,
-        fileType: dto.fileType,
-        fileSize: dto.fileSize,
+        fileName,
+        fileUrl,
+        fileType,
+        fileSize,
         category: dto.category,
         description: dto.description,
-        tags: dto.tags || [],
+        tags,
         uploadedById: userId,
         dueDiligenceId,
       },
@@ -268,6 +295,22 @@ export class DueDiligenceService {
 
     await this.logAudit(dueDiligenceId, userId, 'UPLOAD_DOCUMENT', 'DueDiligenceDocument', doc.id, null, doc);
     return doc;
+  }
+
+  async deleteDocument(dueDiligenceId: string, docId: string, userId: string) {
+    const dd = await this.findOne(dueDiligenceId, userId);
+    const doc = await this.prisma.dueDiligenceDocument.findUnique({ where: { id: docId } });
+    if (!doc || doc.dueDiligenceId !== dueDiligenceId) throw new NotFoundException('Document not found');
+
+    if (doc.fileUrl && doc.fileUrl.startsWith('/uploads/')) {
+      const filePath = join(process.cwd(), doc.fileUrl.replace(/^[\\/]/, ''));
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
+      }
+    }
+
+    await this.logAudit(dueDiligenceId, userId, 'DELETE_DOCUMENT', 'DueDiligenceDocument', doc.id, doc, null);
+    await this.prisma.dueDiligenceDocument.delete({ where: { id: docId } });
   }
 
   async reviewDocument(dueDiligenceId: string, docId: string, dto: ReviewDDDocumentDto, userId: string) {
@@ -298,7 +341,8 @@ export class DueDiligenceService {
   /* ═══════════════════════════════════════════════════════════ */
 
   async addComment(dueDiligenceId: string, dto: CreateDDCommentDto, userId: string) {
-    const dd = await this.findOne(dueDiligenceId, userId);
+    const dd = await this.prisma.dueDiligence.findUnique({ where: { id: dueDiligenceId } });
+    if (!dd) throw new NotFoundException('Due diligence not found');
 
     const comment = await this.prisma.dueDiligenceComment.create({
       data: {
@@ -324,7 +368,9 @@ export class DueDiligenceService {
     const dd = await this.findOne(dueDiligenceId, userId);
     const comment = await this.prisma.dueDiligenceComment.findUnique({ where: { id: commentId } });
     if (!comment || comment.dueDiligenceId !== dueDiligenceId) throw new NotFoundException('Comment not found');
-    if (comment.authorId !== userId) throw new ForbiddenException('Cannot delete others comments');
+    if (comment.authorId !== userId && dd.creatorId !== userId) {
+      throw new ForbiddenException('Only the comment author or diligence owner can delete this comment');
+    }
 
     await this.logAudit(dueDiligenceId, userId, 'DELETE_COMMENT', 'DueDiligenceComment', commentId, comment, null);
     return this.prisma.dueDiligenceComment.delete({ where: { id: commentId } });

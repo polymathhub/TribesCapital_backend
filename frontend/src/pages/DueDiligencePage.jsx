@@ -77,15 +77,15 @@ const DueDiligencePage = ({ onBack, onToggleSidebar, isMobile, isTablet }) => {
     total: 0,
   });
 
-  const loadDueDiligences = async () => {
+  const loadDueDiligences = async ({ page = pagination.page, limit = pagination.limit } = {}) => {
     try {
       setLoading(true);
       setIsRefreshing(true);
       setError('');
       setFeedback('');
       const params = {
-        page: pagination.page,
-        limit: pagination.limit,
+        page,
+        limit,
         ...(filters.search && { search: filters.search }),
         ...(filters.status !== 'all' && { status: filters.status }),
         ...(filters.priority !== 'all' && { priority: filters.priority }),
@@ -93,13 +93,19 @@ const DueDiligencePage = ({ onBack, onToggleSidebar, isMobile, isTablet }) => {
       };
       const response = await dueDiligenceAPI.list(params);
       const payload = response?.data;
-      const rawItems = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+      const rawItems = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.items)
+            ? payload.items
+            : [];
       const normalized = rawItems.map(normalizeDueDiligence);
       const filtered = applyFilters(normalized, filters);
-      const start = (pagination.page - 1) * pagination.limit;
-      const pageItems = filtered.slice(start, start + pagination.limit);
+      const start = (page - 1) * limit;
+      const pageItems = filtered.slice(start, start + limit);
       setDueDiligences(pageItems);
-      setPagination(prev => ({ ...prev, total: filtered.length }));
+      setPagination(prev => ({ ...prev, page, limit, total: filtered.length }));
     } catch (err) {
       console.error('Error loading due diligences:', err);
       setDueDiligences([]);
@@ -134,7 +140,7 @@ const DueDiligencePage = ({ onBack, onToggleSidebar, isMobile, isTablet }) => {
       const createdItem = normalizeDueDiligence(response?.data || response || data);
       setFeedback(`Created “${createdItem.title}” successfully.`);
       setShowCreateDialog(false);
-      await loadDueDiligences();
+      await loadDueDiligences({ page: 1 });
     } catch (err) {
       console.error('Error creating due diligence:', err);
       setError('We could not create this diligence case right now. Please review the details and try again.');

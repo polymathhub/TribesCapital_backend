@@ -10,29 +10,9 @@ import { persistDemoSession, shouldUseDemoFallback } from '../utils/authSession'
 export function ErrorAlert({ message, onDismiss }) {
   if (!message) return null;
   return (
-    <div
-      style={{
-        backgroundColor: '#FEE2E2',
-        color: '#DC2626',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '16px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '14px',
-      }}
-    >
-      <span>⚠️ {message}</span>
-      {onDismiss && (
-        <button
-          onClick={onDismiss}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
-        >
-          ✕
-        </button>
-      )}
-    </div>
+    <p style={{ color: '#DC2626', marginBottom: '16px', fontSize: '14px', lineHeight: 1.5 }}>
+      {message}
+    </p>
   );
 }
 

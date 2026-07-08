@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
 import apiClient from '../api/client';
+import learningIllustration from '../assets/illustrations/Learning-cuate.svg';
 
 /* ═══════════════════════════════════════════════════════
    BREAKPOINT HOOK — tracks viewport width live
@@ -674,14 +675,28 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
     }
   }
 
+  function getNextLessonIndex(startIndex = -1, allowCurrent = false) {
+    if (!lessonItems.length) return 0;
+    const nextIndex = lessonItems.findIndex(
+      (lesson, index) => index > startIndex && !completedLessonIds.includes(lesson.id),
+    );
+    if (nextIndex >= 0) return nextIndex;
+    if (allowCurrent && startIndex >= 0 && !completedLessonIds.includes(lessonItems[startIndex]?.id)) {
+      return startIndex;
+    }
+    const firstIncomplete = lessonItems.findIndex((lesson) => !completedLessonIds.includes(lesson.id));
+    return firstIncomplete >= 0 ? firstIncomplete : Math.min(startIndex + 1, lessonItems.length - 1);
+  }
+
   function handleStartCourse() {
-    setActiveLessonIndex(0);
+    setActiveLessonIndex(getNextLessonIndex(-1));
+    setVideoReady(false);
     setIsVideoVisible(true);
   }
 
   function handleContinue() {
-    const nextIndex = lessonItems.findIndex((lesson, index) => index > activeLessonIndex && !completedLessonIds.includes(lesson.id));
-    setActiveLessonIndex(nextIndex >= 0 ? nextIndex : Math.min(activeLessonIndex + 1, lessonItems.length - 1));
+    setActiveLessonIndex((prevIndex) => getNextLessonIndex(prevIndex, true));
+    setVideoReady(false);
     setIsVideoVisible(true);
   }
 
@@ -734,6 +749,14 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
       isMounted = false;
     };
   }, [course?.id, course?.thumbnail, selectedVideoId, activeLesson?.id]);
+
+  useEffect(() => {
+    setActiveLessonIndex(0);
+    setCompletedLessonIds([]);
+    setVideoReady(false);
+    setIsVideoVisible(false);
+    setLessons([]);
+  }, [course?.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1449,7 +1472,13 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
         {/* Course content */}
         {filtered.length === 0 ? (
           <div style={{textAlign:'center',padding:'60px 20px',background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}>
-            <div style={{fontSize:36,marginBottom:12}}>📚</div>
+            <div style={{display:'flex',justifyContent:'center',marginBottom:14}}>
+              <img
+                src={learningIllustration}
+                alt="Illustration of a learner exploring educational content"
+                style={{width:'min(100%, 220px)',maxWidth:220,height:'auto',display:'block'}}
+              />
+            </div>
             <h3 style={{fontSize:15,fontWeight:600,color:T1,margin:'0 0 6px'}}>No courses found</h3>
             <p style={{fontSize:13,color:T2,margin:'0 0 20px'}}>No courses match the selected filter.</p>
             <button onClick={()=>{setActiveTab('all');setActiveFilter('thisMonth');}}

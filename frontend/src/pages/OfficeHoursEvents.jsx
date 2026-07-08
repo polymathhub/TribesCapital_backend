@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { eventsAPI } from '../api/endpoints';
+import CorporateMemphisIllustration from '../components/CorporateMemphisIllustration';
+import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
 
 /* ─── DESIGN TOKENS ─── */
 const C = {
@@ -27,14 +29,23 @@ const MEETING_PLATFORMS = [
   { value: 'Other', label: 'Other', placeholder: 'Paste a direct join link or handle' },
 ];
 
+const PLATFORM_ICONS = {
+  'Google Meet': 'monitor',
+  Slack: 'users',
+  Zoom: 'clock',
+  'Microsoft Teams': 'globe',
+  Discord: 'bell',
+};
+
 function inferMeetingPlatform(platform, link) {
+  const normalizedPlatform = String(platform || '').trim();
   const normalized = `${platform || ''} ${link || ''}`.toLowerCase();
-  if (platform) return platform;
+  if (normalizedPlatform) return normalizedPlatform;
   if (normalized.includes('meet.google.com') || normalized.includes('google meet')) return 'Google Meet';
-  if (normalized.includes('slack')) return 'Slack';
-  if (normalized.includes('zoom')) return 'Zoom';
-  if (normalized.includes('teams.microsoft') || normalized.includes('microsoft teams')) return 'Microsoft Teams';
-  if (normalized.includes('discord')) return 'Discord';
+  if (normalized.includes('slack.com') || normalized.includes('slack')) return 'Slack';
+  if (normalized.includes('zoom.us') || normalized.includes('zoom')) return 'Zoom';
+  if (normalized.includes('teams.microsoft.com') || normalized.includes('microsoft teams') || normalized.includes('teams')) return 'Microsoft Teams';
+  if (normalized.includes('discord.gg') || normalized.includes('discord')) return 'Discord';
   return '';
 }
 
@@ -42,11 +53,12 @@ function buildMeetingHref(platform, link) {
   const value = `${link || ''}`.trim();
   if (!value) return null;
   if (/^https?:\/\//i.test(value)) return value;
-  if (platform === 'Google Meet') return `https://meet.google.com/${value.replace(/^\//, '')}`;
-  if (platform === 'Slack') return `https://slack.com/app_redirect?channel=${encodeURIComponent(value.replace(/^#/, ''))}`;
-  if (platform === 'Zoom') return `https://zoom.us/j/${encodeURIComponent(value)}`;
-  if (platform === 'Microsoft Teams') return `https://teams.microsoft.com/l/meetup-join/${encodeURIComponent(value)}`;
-  if (platform === 'Discord') return `https://discord.gg/${encodeURIComponent(value)}`;
+  const detectedPlatform = platform || inferMeetingPlatform(platform, link);
+  if (detectedPlatform === 'Google Meet') return `https://meet.google.com/${value.replace(/^\//, '')}`;
+  if (detectedPlatform === 'Slack') return `https://slack.com/app_redirect?channel=${encodeURIComponent(value.replace(/^#/, ''))}`;
+  if (detectedPlatform === 'Zoom') return `https://zoom.us/j/${encodeURIComponent(value)}`;
+  if (detectedPlatform === 'Microsoft Teams') return `https://teams.microsoft.com/l/meetup-join/${encodeURIComponent(value)}`;
+  if (detectedPlatform === 'Discord') return `https://discord.gg/${encodeURIComponent(value)}`;
   return value;
 }
 
@@ -271,7 +283,9 @@ function CalWidget({ eventDays, onDayClick }) {
 ═══════════════════════════════════════════ */
 function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg,label:ev.type.toUpperCase()};
+  const meetingPlatform = inferMeetingPlatform(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
   const joinHref = buildMeetingHref(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
+  const platformIcon = PLATFORM_ICONS[meetingPlatform] || 'monitor';
   return (
     <div style={{display:'flex',background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden',marginBottom:12}}>
       {/* Purple date block */}
@@ -296,6 +310,12 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
         </div>
         {/* Title */}
         <div onClick={()=>onOpen(ev)} style={{fontSize:isMobile?13:14,fontWeight:700,color:C.t1,marginBottom:4,lineHeight:1.35,cursor:'pointer'}}>{ev.title}</div>
+        {meetingPlatform ? (
+          <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',borderRadius:999,background:'#F3F4F6',color:C.t2,fontSize:11,fontWeight:600,marginBottom:8}}>
+            <I k={platformIcon} s={12} c={C.t2}/>
+            {meetingPlatform}
+          </div>
+        ) : null}
         {/* Desc */}
         <p style={{fontSize:12,color:C.t2,margin:'0 0 8px',lineHeight:1.6,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{ev.desc}</p>
         {/* Meta + avatars */}
@@ -448,6 +468,7 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
 ═══════════════════════════════════════════ */
 function DetailModal({ ev, onClose, onRsvp, isMobile }) {
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg};
+  const meetingPlatform = inferMeetingPlatform(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
   const modalW = isMobile ? '100%' : 380;
   return (
     <>
@@ -463,10 +484,10 @@ function DetailModal({ ev, onClose, onRsvp, isMobile }) {
           {(ev.meetingPlatform || ev.meetingLink) && (
             <div style={{background:C.puf,border:`1px solid ${C.pu}`,borderRadius:10,padding:'12px 14px',marginBottom:14}}>
               <div style={{fontSize:11,fontWeight:700,color:C.pu,marginBottom:4}}>Join session</div>
-              <div style={{fontSize:13,fontWeight:600,color:C.t1,marginBottom:4}}>{ev.meetingPlatform || 'Meeting link'}</div>
+              <div style={{fontSize:13,fontWeight:600,color:C.t1,marginBottom:4}}>{meetingPlatform || ev.meetingPlatform || 'Meeting link'}</div>
               <div style={{fontSize:12,color:C.t2,marginBottom:10,wordBreak:'break-all'}}>{ev.meetingLink || ev.meetingHandle}</div>
               <button onClick={() => window.open(buildMeetingHref(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle), '_blank', 'noopener,noreferrer')} style={{padding:'8px 12px',borderRadius:8,border:'none',background:C.pu,color:C.w,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
-                Open {ev.meetingPlatform || 'meeting'}
+                Open {meetingPlatform || ev.meetingPlatform || 'meeting'}
               </button>
             </div>
           )}
@@ -809,7 +830,14 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
                 <p style={{fontSize:12,color:'rgba(255,255,255,.6)',margin:'10px 0 0'}}>{events[0].spotsLeft} spots remaining out of {events[0].totalSpots || '∞'}</p>
               </>
             ) : (
-              <div style={{color:C.w,fontSize:13}}>{eventsError || 'No sessions are available right now.'}</div>
+              <div style={{display:'flex',flexDirection:isMobile ? 'column' : 'row',alignItems:'center',justifyContent:'space-between',gap:18,padding:isMobile ? '18px 16px' : '22px 24px',background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',borderRadius:16,backdropFilter:'blur(8px)'}}>
+                <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'flex-start',textAlign:'left',maxWidth:420}}>
+                  <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:999,background:'rgba(255,255,255,0.16)',color:'rgba(255,255,255,0.95)',fontSize:11,fontWeight:700,letterSpacing:0.7,textTransform:'uppercase',marginBottom:8}}>Community calendar</div>
+                  <h3 style={{fontSize:16,fontWeight:700,color:C.w,margin:'0 0 6px'}}>No sessions are available right now</h3>
+                  <p style={{fontSize:13,color:'rgba(255,255,255,0.82)',margin:0,lineHeight:1.6}}>{eventsError || 'Check back soon for live office hours, workshops, and member circles.'}</p>
+                </div>
+                <img src={eventsIllustration} alt="Illustration for an empty community calendar" style={{width:'min(100%, 160px)',maxWidth:160,height:'auto',display:'block',flexShrink:0,opacity:0.96}} />
+              </div>
             )}
           </div>
 
@@ -865,7 +893,14 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
               {loadingEvents ? (
                 <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:'16px',color:C.t2}}>Loading sessions…</div>
               ) : displayEvents.length === 0 ? (
-                <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:'16px',color:C.t2}}>{eventsError || 'No sessions match the current filter.'}</div>
+                <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:isMobile ? '20px 16px' : '24px 20px',display:'flex',flexDirection:isMobile ? 'column' : 'row',alignItems:'center',justifyContent:'space-between',gap:16,boxShadow:'0 8px 24px rgba(15, 23, 42, 0.04)'}}>
+                  <div style={{flex:1,maxWidth:360}}>
+                    <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:999,background:C.puf,color:C.pu,fontSize:11,fontWeight:700,letterSpacing:0.7,textTransform:'uppercase',marginBottom:8}}>No matches</div>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:6}}>{eventsError || 'No sessions match the current filter.'}</div>
+                    <p style={{margin:0,fontSize:13,lineHeight:1.55,color:C.t2}}>Try a broader filter or come back soon for new community sessions and office hours.</p>
+                  </div>
+                  <img src={eventsIllustration} alt="Illustration for an empty event list" style={{width:'min(100%, 150px)',maxWidth:150,height:'auto',display:'block',flexShrink:0}} />
+                </div>
               ) : displayEvents.map(ev=>(
                 <EventCard key={ev.id} ev={ev} isMobile={isMobile}
                   onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>

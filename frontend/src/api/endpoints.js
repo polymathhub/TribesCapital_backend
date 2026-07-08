@@ -114,16 +114,16 @@ export const dueDiligenceAPI = {
     apiClient.delete(`/due-diligence/${dueDiligenceId}/items/${itemId}`),
 
   // Documents
-  uploadDocument: (dueDiligenceId, data) =>
-    apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  uploadDocument: (dueDiligenceId, data, config) =>
+    apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, config),
+  deleteDocument: (dueDiligenceId, docId) =>
+    apiClient.delete(`/due-diligence/${dueDiligenceId}/documents/${docId}`),
   reviewDocument: (dueDiligenceId, docId, data) =>
     apiClient.put(`/due-diligence/${dueDiligenceId}/documents/${docId}/review`, data),
 
   // Comments
-  addComment: (dueDiligenceId, data) =>
-    apiClient.post(`/due-diligence/${dueDiligenceId}/comments`, data),
+  addComment: (dueDiligenceId, data, config) =>
+    apiClient.post(`/due-diligence/${dueDiligenceId}/comments`, data, config),
   deleteComment: (dueDiligenceId, commentId) =>
     apiClient.delete(`/due-diligence/${dueDiligenceId}/comments/${commentId}`),
 

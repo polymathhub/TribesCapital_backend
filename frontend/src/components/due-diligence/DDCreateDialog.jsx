@@ -40,7 +40,11 @@ const DDCreateDialog = ({ onClose, onCreate }) => {
     try {
       setIsSubmitting(true);
       setSubmitError('');
-      await onCreate(formData);
+      const payload = {
+        ...formData,
+        targetDeadline: formData.targetDeadline ? formData.targetDeadline : undefined,
+      };
+      await onCreate(payload);
       onClose();
     } catch (error) {
       console.error('Create due diligence failed:', error);

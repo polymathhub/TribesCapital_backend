@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
 
+const MAX_ATTACHMENTS = 5;
+
 const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
   const [newComment, setNewComment] = useState('');
+  const [attachments, setAttachments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const currentUserEmail = typeof window !== 'undefined' ? localStorage.getItem('userEmail') : '';
+  const canPost = newComment.trim().length > 0 || attachments.length > 0;
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -21,14 +26,28 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const getInitials = (comment) => {
+    const first = comment.author?.firstName?.[0] || '';
+    const last = comment.author?.lastName?.[0] || '';
+    if (first || last) return `${first}${last}`.toUpperCase();
+    return comment.author?.email?.[0]?.toUpperCase() || 'A';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!canPost) return;
 
     try {
       setSubmitting(true);
-      await dueDiligenceAPI.addComment(dueDiligenceId, { content: newComment });
+      const formData = new FormData();
+      formData.append('content', newComment.trim());
+      attachments.forEach((file) => formData.append('attachments', file));
+
+      await dueDiligenceAPI.addComment(dueDiligenceId, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setNewComment('');
+      setAttachments([]);
       onRefresh();
     } catch (error) {
       console.error('Error posting comment:', error);
@@ -36,6 +55,19 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleAttach = (event) => {
+    const files = Array.from(event.target.files || []);
+    setAttachments((prev) => {
+      const nextFiles = [...prev, ...files].slice(0, MAX_ATTACHMENTS);
+      return nextFiles;
+    });
+    event.target.value = '';
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const handleDelete = async (commentId) => {
@@ -49,92 +81,129 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
     }
   };
 
+  const renderAttachment = (attachment, index) => {
+    const isImage = typeof attachment === 'string' && attachment.match(/\.(jpeg|jpg|png|gif|webp)$/i);
+    if (isImage) {
+      return (
+        <div key={`${attachment}-${index}`} className="dd-comment-attachment-card">
+          <img className="dd-attachment-image" src={attachment} alt={`Attachment ${index + 1}`} />
+        </div>
+      );
+    }
+
+    return (
+      <a
+        key={`${attachment}-${index}`}
+        href={attachment}
+        target="_blank"
+        rel="noreferrer"
+        className="dd-attachment-file-link"
+      >
+        <span>{`Attachment ${index + 1}`}</span>
+        <span className="dd-attachment-file-meta">Open file</span>
+      </a>
+    );
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes >= 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
+    if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${bytes} B`;
+  };
+
   return (
-    <div>
-      <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
-        <label htmlFor="dd-comment-input" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Comment</label>
+    <div className="dd-comments-panel">
+      <form onSubmit={handleSubmit} className="dd-comment-form">
+        <div className="dd-comment-form-header">
+          <div>
+            <h3 className="dd-comment-form-title">Team discussion</h3>
+            <p className="dd-comment-form-subtitle">Share progress, ask questions, and attach files instantly.</p>
+          </div>
+          <div className="dd-comment-form-counter">
+            {attachments.length}/{MAX_ATTACHMENTS} files
+          </div>
+        </div>
+
         <textarea
           id="dd-comment-input"
           name="comment"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Add a comment..."
-          rows="3"
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: '1px solid #E5E7EB',
-            borderRadius: '6px',
-            fontSize: '14px',
-            marginBottom: '12px',
-            boxSizing: 'border-box',
-            fontFamily: 'inherit',
-          }}
+          placeholder="Write something helpful..."
+          className="dd-comment-input"
+          rows="4"
         />
-        <button
-          type="submit"
-          disabled={submitting || !newComment.trim()}
-          style={{
-            padding: '8px 16px',
-            background: newComment.trim() ? '#5B21B6' : '#D1D5DB',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: newComment.trim() ? 'pointer' : 'not-allowed',
-            fontWeight: 600,
-            opacity: submitting ? 0.7 : 1,
-          }}
-        >
-          {submitting ? 'Posting...' : 'Post Comment'}
-        </button>
+
+        <div className="dd-comment-actions">
+          <label htmlFor="dd-comment-attachment" className="dd-file-picker-button">
+            + Add images or files
+          </label>
+          <input
+            id="dd-comment-attachment"
+            type="file"
+            multiple
+            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={handleAttach}
+            className="dd-file-input"
+          />
+          <button type="submit" className="dd-send-button" disabled={submitting || !canPost}>
+            {submitting ? 'Sending...' : 'Post'}
+          </button>
+        </div>
+
+        {attachments.length > 0 && (
+          <div className="dd-file-chip-group">
+            {attachments.map((file, index) => (
+              <div key={`${file.name}-${index}`} className="dd-file-chip">
+                <div>
+                  <div className="dd-file-chip-name">{file.name}</div>
+                  <div className="dd-file-chip-size">{formatFileSize(file.size)}</div>
+                </div>
+                <button type="button" onClick={() => removeAttachment(index)} className="dd-file-chip-remove">
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </form>
 
       {comments && comments.length > 0 ? (
-        <div style={{ display: 'grid', gap: '12px' }}>
-          {comments.map(comment => (
-            <div
-              key={comment.id}
-              style={{
-                padding: '16px',
-                border: '1px solid #E5E7EB',
-                borderRadius: '6px',
-                background: '#F9FAFB',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                <div>
-                  <h5 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: 600 }}>
-                    {comment.author?.firstName || 'Anonymous'} {comment.author?.lastName || ''}
-                  </h5>
-                  <p style={{ margin: '0', fontSize: '12px', color: '#9CA3AF' }}>
-                    {formatDate(comment.createdAt)}
-                  </p>
+        <div className="dd-comments-list">
+          {comments.map((comment) => {
+            const isMine = comment.author?.email === currentUserEmail;
+            return (
+              <div key={comment.id} className="dd-comment-card">
+                <div className="dd-comment-header">
+                  <div className="dd-comment-author-info">
+                    <div className="dd-comment-avatar">{getInitials(comment)}</div>
+                    <div>
+                      <div className="dd-comment-author">{comment.author?.firstName || comment.author?.email || 'Anonymous'}</div>
+                      <div className="dd-comment-time">{formatDate(comment.createdAt)}</div>
+                    </div>
+                  </div>
+                  {isMine && (
+                    <button type="button" onClick={() => handleDelete(comment.id)} className="dd-comment-delete-button">
+                      Delete
+                    </button>
+                  )}
                 </div>
-                <button
-                  onClick={() => handleDelete(comment.id)}
-                  style={{
-                    padding: '4px 8px',
-                    background: '#FEE2E2',
-                    color: '#991B1B',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                  }}
-                >
-                  Delete
-                </button>
+
+                <div className="dd-comment-content">{comment.content || 'Shared an update.'}</div>
+
+                {comment.attachments && comment.attachments.length > 0 && (
+                  <div className="dd-comment-attachments">
+                    {comment.attachments.map(renderAttachment)}
+                  </div>
+                )}
               </div>
-              <p style={{ margin: '0', fontSize: '14px', color: '#111827', lineHeight: '1.5' }}>
-                {comment.content}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>
-          💬 No comments yet. Be the first to comment.
+        <div className="dd-empty-state">
+          <div className="dd-empty-emoji">💬</div>
+          <div className="dd-empty-text">No comments yet. Kick off the conversation with an update.</div>
         </div>
       )}
     </div>

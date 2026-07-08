@@ -149,7 +149,7 @@ const DDDetailView = ({ item, onBack, onRefresh }) => {
       {/* Content */}
       <div style={{ padding: '24px' }}>
         {activeTab === 'items' && <DDItemsPanel dueDiligenceId={data.id} items={data.items} onRefresh={onRefresh} />}
-        {activeTab === 'documents' && <DDDocumentsPanel dueDiligenceId={data.id} documents={data.documents} onRefresh={onRefresh} />}
+        {activeTab === 'documents' && <DDDocumentsPanel dueDiligenceId={data.id} documents={data.documents} comments={data.comments} onRefresh={onRefresh} />}
         {activeTab === 'comments' && <DDCommentsPanel dueDiligenceId={data.id} comments={data.comments} onRefresh={onRefresh} />}
         {activeTab === 'approvals' && <DDApprovalsPanel dueDiligenceId={data.id} approvals={data.approvals} onRefresh={onRefresh} />}
       </div>

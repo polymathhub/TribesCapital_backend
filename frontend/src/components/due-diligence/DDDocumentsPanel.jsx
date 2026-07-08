@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
+import DDCommentsPanel from './DDCommentsPanel';
 
-const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
+const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [formData, setFormData] = useState({
     fileName: '',
     fileUrl: '',
     fileType: 'pdf',
-    fileSize: '',
     category: 'financial',
     description: '',
     tags: '',
@@ -27,19 +28,47 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+    if (file) {
+      setFormData(prev => ({
+        ...prev,
+        fileName: file.name,
+        fileType: file.type.split('/')[1] || prev.fileType,
+        fileUrl: '',
+      }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedFile && !formData.fileUrl.trim()) {
+      alert('Please upload a file or provide a file URL.');
+      return;
+    }
+
     try {
-      const data = {
-        ...formData,
-        tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
-      };
-      await dueDiligenceAPI.uploadDocument(dueDiligenceId, data);
+      const data = new FormData();
+      if (selectedFile) {
+        data.append('file', selectedFile);
+      }
+      data.append('category', formData.category);
+      if (formData.description) data.append('description', formData.description);
+      if (formData.tags) data.append('tags', formData.tags);
+      if (formData.fileName) data.append('fileName', formData.fileName);
+      if (formData.fileType) data.append('fileType', formData.fileType);
+      if (formData.fileUrl) data.append('fileUrl', formData.fileUrl);
+
+      await dueDiligenceAPI.uploadDocument(dueDiligenceId, data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setSelectedFile(null);
       setFormData({
         fileName: '',
         fileUrl: '',
         fileType: 'pdf',
-        fileSize: '',
         category: 'financial',
         description: '',
         tags: '',
@@ -55,7 +84,7 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
   const handleDelete = async (docId) => {
     if (!window.confirm('Delete this document?')) return;
     try {
-      // Implementation would delete the document
+      await dueDiligenceAPI.deleteDocument(dueDiligenceId, docId);
       onRefresh();
     } catch (error) {
       console.error('Error deleting document:', error);
@@ -68,40 +97,39 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
       {showForm ? (
         <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '12px' }}>
               <div>
-                <label htmlFor="dd-doc-name" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File name</label>
+                <label htmlFor="dd-doc-file" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File upload</label>
                 <input
-                  id="dd-doc-name"
-                  type="text"
-                  name="fileName"
-                  value={formData.fileName}
-                  onChange={handleChange}
-                  placeholder="File name"
-                  required
+                  id="dd-doc-file"
+                  type="file"
+                  onChange={handleFileChange}
                   style={{
+                    width: '100%',
                     padding: '8px',
                     border: '1px solid #E5E7EB',
                     borderRadius: '4px',
                     fontSize: '14px',
+                    boxSizing: 'border-box',
                   }}
                 />
               </div>
               <div>
-                <label htmlFor="dd-doc-url" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File URL</label>
+                <label htmlFor="dd-doc-url" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Or file URL</label>
                 <input
                   id="dd-doc-url"
                   type="text"
                   name="fileUrl"
                   value={formData.fileUrl}
                   onChange={handleChange}
-                  placeholder="File URL or path"
-                  required
+                  placeholder="Optional if you upload a file"
                   style={{
+                    width: '100%',
                     padding: '8px',
                     border: '1px solid #E5E7EB',
                     borderRadius: '4px',
                     fontSize: '14px',
+                    boxSizing: 'border-box',
                   }}
                 />
               </div>
@@ -128,7 +156,7 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div>
                 <label htmlFor="dd-doc-type" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File type</label>
                 <select
@@ -137,6 +165,7 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
                   value={formData.fileType}
                   onChange={handleChange}
                   style={{
+                    width: '100%',
                     padding: '8px',
                     border: '1px solid #E5E7EB',
                     borderRadius: '4px',
@@ -159,6 +188,7 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
                   value={formData.category}
                   onChange={handleChange}
                   style={{
+                    width: '100%',
                     padding: '8px',
                     border: '1px solid #E5E7EB',
                     borderRadius: '4px',
@@ -171,23 +201,6 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
                   <option value="compliance">Compliance</option>
                   <option value="other">Other</option>
                 </select>
-              </div>
-              <div>
-                <label htmlFor="dd-doc-size" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File size</label>
-                <input
-                  id="dd-doc-size"
-                  type="text"
-                  name="fileSize"
-                  value={formData.fileSize}
-                  onChange={handleChange}
-                  placeholder="File size (e.g., 2.5MB)"
-                  style={{
-                    padding: '8px',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                  }}
-                />
               </div>
             </div>
 
@@ -275,8 +288,26 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
                 borderRadius: '6px',
                 background: '#F9FAFB',
                 textAlign: 'center',
+                position: 'relative',
               }}
             >
+              <button
+                type="button"
+                onClick={() => handleDelete(doc.id)}
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#EF4444',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                }}
+              >
+                ×
+              </button>
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>
                 {fileIcons[doc.fileType] || fileIcons.other}
               </div>
@@ -284,8 +315,24 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], onRefresh }) => {
                 {doc.fileName}
               </h4>
               <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6B7280' }}>
-                {doc.fileSize}
+                {doc.fileSize || 'Unknown size'}
               </p>
+              {doc.fileUrl && (
+                <a
+                  href={doc.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-block',
+                    marginBottom: '8px',
+                    color: '#4338CA',
+                    fontSize: '12px',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  View document
+                </a>
+              )}
               {doc.description && (
                 <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6B7280' }}>
                   {doc.description}

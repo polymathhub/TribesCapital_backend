@@ -45,6 +45,7 @@ export class AuthService {
     return { exists: Boolean(existingUser) };
   }
 
+   
   async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
     const ctx = '[REGISTER]';
     const startRegister = Date.now();

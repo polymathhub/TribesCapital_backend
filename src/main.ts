@@ -8,7 +8,7 @@ import { ValidationPipe } from './common/pipes/validation.pipe';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import express from 'express';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
 
 async function bootstrap() {
@@ -75,6 +75,12 @@ async function bootstrap() {
   if (existsSync(frontendAssetsPath)) {
     expressInstance.use('/assets', express.static(frontendAssetsPath));
   }
+
+  const uploadsPath = join(process.cwd(), 'uploads');
+  if (!existsSync(uploadsPath)) {
+    mkdirSync(uploadsPath, { recursive: true });
+  }
+  expressInstance.use('/uploads', express.static(uploadsPath));
 
   expressInstance.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
     if (req.method !== 'GET') {

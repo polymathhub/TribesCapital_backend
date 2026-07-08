@@ -209,17 +209,21 @@ export class UpdateDDItemDto {
 
 /* ─── Document Management ─── */
 export class CreateDDDocumentDto {
+  @IsOptional()
   @IsString()
-  fileName!: string;
+  fileName?: string;
 
+  @IsOptional()
   @IsString()
-  fileUrl!: string;
+  fileUrl?: string;
 
+  @IsOptional()
   @IsString()
-  fileType!: string;
+  fileType?: string;
 
+  @IsOptional()
   @IsNumber()
-  fileSize!: number;
+  fileSize?: number;
 
   @IsString()
   category!: string;
@@ -229,9 +233,7 @@ export class CreateDDDocumentDto {
   description?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
+  tags?: string[] | string;
 }
 
 export class ReviewDDDocumentDto {
