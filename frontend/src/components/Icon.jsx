@@ -18,6 +18,13 @@ function Icon({ name, size = 15, color = COLORS.T3 }) {
     doc: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={color} strokeWidth="1.5" fill="none"/><polyline points="14,2 14,8 20,8" stroke={color} strokeWidth="1.5" fill="none"/><line x1="8" y1="13" x2="16" y2="13" stroke={color} strokeWidth="1.5"/><line x1="8" y1="17" x2="12" y2="17" stroke={color} strokeWidth="1.5"/></>,
     time: <><circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.5" fill="none"/><polyline points="12,6 12,12 16,14" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round"/></>,
     logout: <><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 17l5-5-5-5" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12H9" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round"/></>,
+    check: <><path d="M20 6L9 17l-5-5" stroke={color} strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,
+    plus: <><line x1="12" y1="5" x2="12" y2="19" stroke={color} strokeWidth="1.8" strokeLinecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></>,
+    close: <><path d="M18 6L6 18" stroke={color} strokeWidth="1.8" strokeLinecap="round"/><path d="M6 6l12 12" stroke={color} strokeWidth="1.8" strokeLinecap="round"/></>,
+    eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.5" fill="none"/></>,
+    eyeOff: <><path d="M3 3l18 18" stroke={color} strokeWidth="1.5" strokeLinecap="round"/><path d="M10.6 10.6A3 3 0 0 0 13.4 13.4" stroke={color} strokeWidth="1.5" strokeLinecap="round"/><path d="M9.88 5.08A10.87 10.87 0 0 1 12 5c6.5 0 10 7 10 7a18.46 18.46 0 0 1-4.06 5.06" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round"/><path d="M6.61 6.61A18.8 18.8 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 4.39-1.01" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round"/></>,
+    message: <><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 3V7a2 2 0 0 1 2-2Z" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,
+    spark: <><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3Z" stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,
   };
 
   const NAV_ICONS = {

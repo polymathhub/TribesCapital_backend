@@ -2,6 +2,7 @@ import React from 'react';
 import { COLORS } from '../constants/colors';
 import Icon from './Icon';
 import logoPng from '../assets/image.png';
+import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
 
 const NAV_ITEMS = [
   { label: 'Home', page: 'home', icon: 'home' },
@@ -13,8 +14,10 @@ const NAV_ITEMS = [
   { label: 'Help', page: 'help', icon: 'help' },
 ];
 
-function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {} }) {
+function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user }) {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
+  const displayName = user?.name || user?.email?.split('@')[0] || 'Member';
+  const avatarSrc = user?.avatar || profilePlaceholderImage;
 
   return (
     <div ref={sidebarRef} style={{
@@ -106,6 +109,13 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
         >
           ×
         </button>
+      </div>
+      <div style={{ padding: '14px 12px 14px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(245,246,252,0.86)' }}>
+        <img src={avatarSrc} alt={`${displayName} profile`} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.8)' }} />
+        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.T1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+          <div style={{ fontSize: 11, color: COLORS.T2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email || 'Community member'}</div>
+        </div>
       </div>
 
       <div style={{ flex: 1, padding: '8px 0' }}>

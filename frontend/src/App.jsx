@@ -177,7 +177,7 @@ function App() {
       <LoadingScreen isVisible={isLoading && !hasBootstrapped} />
       <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out', display: 'flex', width: '100%', minHeight: '100dvh', height: '100dvh', overflow: 'hidden', background: '#f9fafb' }}>
         {isDesktop && isSidebarOpen && (
-          <Sidebar activePage={currentPage} onNavigate={handleNavigate} onClose={handleToggleSidebar} onLogout={handleLogout} />
+          <Sidebar user={user} activePage={currentPage} onNavigate={handleNavigate} onClose={handleToggleSidebar} onLogout={handleLogout} />
         )}
         {(isMobile || isTablet) && (
           <MobileNav

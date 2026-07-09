@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
+import Icon from '../Icon';
 
 const MAX_ATTACHMENTS = 5;
 
@@ -135,8 +136,9 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
         />
 
         <div className="dd-comment-actions">
-          <label htmlFor="dd-comment-attachment" className="dd-file-picker-button">
-            + Add images or files
+          <label htmlFor="dd-comment-attachment" className="dd-file-picker-button interactive-button" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <Icon name="plus" size={14} color="#fff" />
+            Add images or files
           </label>
           <input
             id="dd-comment-attachment"
@@ -146,7 +148,7 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
             onChange={handleAttach}
             className="dd-file-input"
           />
-          <button type="submit" className="dd-send-button" disabled={submitting || !canPost}>
+          <button type="submit" className="dd-send-button interactive-button" disabled={submitting || !canPost}>
             {submitting ? 'Sending...' : 'Post'}
           </button>
         </div>
@@ -202,7 +204,9 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
         </div>
       ) : (
         <div className="dd-empty-state">
-          <div className="dd-empty-emoji">💬</div>
+          <div className="dd-empty-emoji" style={{ background: '#EEF2FF', borderRadius: '999px', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="message" size={20} color="#5B21B6" />
+          </div>
           <div className="dd-empty-text">No comments yet. Kick off the conversation with an update.</div>
         </div>
       )}

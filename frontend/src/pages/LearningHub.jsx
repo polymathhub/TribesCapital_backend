@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
 import apiClient from '../api/client';
 import learningIllustration from '../assets/illustrations/Learning-cuate.svg';
@@ -96,6 +96,19 @@ const PATH_STEPS = [
   {n:1,label:'Energy Basics'},{n:2,label:'Project Finance'},
   {n:3,label:'Due Diligence'},{n:4,label:'Deal Structuring'},
 ];
+
+function parseDuration(durationText) {
+  if (!durationText || typeof durationText !== 'string') return 60;
+  const minutesMatch = durationText.match(/(\d+)\s*min/i);
+  if (minutesMatch) {
+    return Number(minutesMatch[1]) * 60;
+  }
+  const hoursMatch = durationText.match(/(\d+)\s*h/i);
+  if (hoursMatch) {
+    return Number(hoursMatch[1]) * 3600;
+  }
+  return 60;
+}
 
 const QUICK_QUIZ = [
   {
@@ -306,7 +319,7 @@ function QuickQuiz({ questions, title = 'Short 5-question quiz', subtitle = 'A q
   );
 }
 
-function CourseCard({ course, onAction, onOpenModal }) {
+function CourseCard({ course, onAction, onOpenModal, saved, onBookmark }) {
   const [progOpen, setProgOpen] = useState(false);
   const cs    = CAT[course.cat] || { c:T2, b:BG };
   const inProg = course.status === 'inProgress';
@@ -320,12 +333,20 @@ function CourseCard({ course, onAction, onOpenModal }) {
       onClick={() => onOpenModal(course)}
       style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,overflow:'hidden',display:'flex',flexDirection:'column',cursor:'pointer',transition:'box-shadow .15s',backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}
       onMouseEnter={e=>e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}
-      onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}
+      onMouseLeave={e=>e.currentTarget.style.boxShadow='0 12px 30px rgba(15,23,42,0.04)'}
     >
       {/* Video thumbnail */}
       <div style={{height:175,backgroundImage:`url(${course.thumbnail || buildYouTubeThumbnailUrl(course.videoId || 'wMQDsjS9WC4')})`,backgroundSize:'cover',backgroundPosition:'center',position:'relative',flexShrink:0}}>
         <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg, rgba(17,24,39,0.08) 0%, rgba(17,24,39,0.28) 100%)'}}/>
         <div style={{position:'absolute',top:10,left:10,background:'rgba(17,24,39,0.72)',color:W,padding:'4px 8px',borderRadius:999,fontSize:11,fontWeight:600,letterSpacing:0.3}}>Video lesson</div>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onBookmark?.(course.id); }}
+          aria-label={saved ? 'Remove saved course' : 'Save course'}
+          style={{position:'absolute',top:10,right:10,width:34,height:34,borderRadius:'50%',border:'1px solid rgba(255,255,255,0.7)',background:saved ? '#5B21B6' : 'rgba(255,255,255,0.88)',color:saved ? '#FFFFFF' : '#6B7280',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',boxShadow:'0 10px 24px rgba(0,0,0,.15)'}}
+        >
+          <Ico name="bookmark" size={16} color={saved ? '#FFFFFF' : '#6B7280'} fill={saved ? '#FFFFFF' : 'none'} sw={1.5} />
+        </button>
       </div>
 
       <div style={{padding:'14px 16px 16px',display:'flex',flexDirection:'column',gap:0}}>
@@ -569,8 +590,8 @@ function CourseModal({ course, onClose, onContinue, isMobile }) {
 /* ═══════════════════════════════════════════════════════
    LESSON PLAYER — real lesson-driven course flow
 ═══════════════════════════════════════════════════════ */
-function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
-  const [bookmarked, setBookmarked] = useState(false);
+function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved, onToggleSaved }) {
+  const [bookmarked, setBookmarked] = useState(Boolean(saved));
   const [bkMsg, setBkMsg] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -583,6 +604,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState(course?.thumbnail || '');
   const [videoReady, setVideoReady] = useState(false);
   const [isVideoVisible, setIsVideoVisible] = useState(false);
+  const [lessonWatchStart, setLessonWatchStart] = useState(null);
   const [quizOpen, setQuizOpen] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
@@ -617,7 +639,10 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
   function handleBookmark() {
     const next = !bookmarked;
     setBookmarked(next);
-    setBkMsg(next ? 'Bookmarked' : 'Unbookmarked');
+    if (onToggleSaved && course?.id) {
+      onToggleSaved(course.id);
+    }
+    setBkMsg(next ? 'Saved to bookmarks' : 'Removed from bookmarks');
     setTimeout(() => setBkMsg(null), 2000);
   }
 
@@ -656,11 +681,35 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
     setIsVideoVisible(true);
   }
 
+  async function flushLessonWatch(isCompleted = false, forceLesson = null) {
+    if (!lessonWatchStart) return;
+    const targetLesson = forceLesson || activeLesson;
+    if (!targetLesson) {
+      setLessonWatchStart(null);
+      return;
+    }
+    const watchSeconds = Math.max(0, Math.round((Date.now() - lessonWatchStart) / 1000));
+    const totalSeconds = parseDuration(targetLesson.duration);
+    const percentageWatched = isCompleted ? 100 : Math.min(100, Math.round((watchSeconds / Math.max(totalSeconds, 15)) * 100));
+    setLessonWatchStart(null);
+
+    await lessonsAPI.trackWatch({
+      videoId: targetLesson.videoId || course?.videoId || 'unknown',
+      courseId: String(course?.id || 'unknown'),
+      lessonId: String(targetLesson.id || 'unknown'),
+      watchDuration: watchSeconds,
+      totalDuration: totalSeconds,
+      percentageWatched,
+      isCompleted,
+    }).catch(() => undefined);
+  }
+
   async function handleCompleteLesson(lesson) {
     if (!lesson || completedLessonIds.includes(lesson.id)) return;
     const isLastLesson = activeLessonIndex >= lessonItems.length - 1;
     try {
       await lessonsAPI.markComplete(lesson.id);
+      await flushLessonWatch(true, lesson);
       setCompletedLessonIds((prev) => [...prev, lesson.id]);
       if (isLastLesson) {
         openQuiz();
@@ -846,7 +895,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
             <div style={{position:'relative',flex:isMobile?1:0}}>
               <button onClick={handleBookmark} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:`1px solid ${BD}`,borderRadius:8,background:W,color:T2,fontSize:13,cursor:'pointer',width:isMobile?'100%':'auto',whiteSpace:'nowrap'}}>
                 <Ico name="bookmark" size={15} color={bookmarked?PU:T2} fill={bookmarked?PU:'none'} sw={1.5}/>
-                {bookmarked ? 'Bookmarked' : 'Bookmark'}
+                {bookmarked ? 'Saved' : 'Save'}
               </button>
               {bkMsg && (
                 <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,background:T1,color:W,fontSize:12,fontWeight:500,padding:'7px 13px',borderRadius:8,whiteSpace:'nowrap',zIndex:20,boxShadow:'0 4px 14px rgba(0,0,0,.18)'}}>
@@ -1096,7 +1145,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle }) {
 /* ═══════════════════════════════════════════════════════
    HUB VIEW — main Learning Hub page
 ═══════════════════════════════════════════════════════ */
-function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
+function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}, onToggleSaved }) {
   const [courseView,   setCourseView]   = useState('grid'); // 'grid'|'table'
   const [activeTab,    setActiveTab]    = useState('all');
   const [activeFilter, setActiveFilter] = useState('thisMonth');
@@ -1105,9 +1154,10 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   const [modalCourse,  setModalCourse]  = useState(null);
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const savedCount = Object.keys(savedCourseIds || {}).length;
   const [isPathDetailsOpen, setIsPathDetailsOpen] = useState(false);
 
-  const TABS    = [{id:'all',label:'All courses'},{id:'inProgress',label:'In progress'},{id:'completed',label:'Completed'},{id:'saved',label:'Saved'}];
+  const TABS    = [{id:'all',label:'All courses'},{id:'inProgress',label:'In progress'},{id:'completed',label:'Completed'},{id:'saved',label:`Saved (${savedCount})`}];
   const FILTERS = [{id:'thisMonth',label:'This month'},{id:'energyFinance',label:'Energy Finance'},{id:'solarStorage',label:'Solar & Storage'},{id:'riskFX',label:'Risk & FX'},{id:'policyESG',label:'Policy & ESG'}];
   const SORTS   = [{id:'progress',label:'Progress'},{id:'newest',label:'Newest'},{id:'az',label:'A–Z'}];
   const FILTER_CAT = { energyFinance:'Energy Finance', solarStorage:'Solar & Storage', riskFX:'Risk & FX', policyESG:'Policy & ESG' };
@@ -1271,7 +1321,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
   const filtered = courses.filter(c => {
     if (activeTab === 'inProgress' && c.status !== 'inProgress') return false;
     if (activeTab === 'completed'  && c.status !== 'completed')  return false;
-    if (activeTab === 'saved') return false;
+    if (activeTab === 'saved' && !savedCourseIds[String(c.id)]) return false;
     const cat = FILTER_CAT[activeFilter];
     if (cat && c.cat !== cat) return false;
     return true;
@@ -1489,7 +1539,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
         ) : courseView === 'grid' ? (
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'repeat(2,1fr)':'repeat(3,1fr)',gap:isMobile?14:20}}>
             {filtered.map(c => (
-              <CourseCard key={c.id} course={c} onAction={onPlay} onOpenModal={setModalCourse}/>
+              <CourseCard key={c.id} course={c} onAction={onPlay} onOpenModal={setModalCourse} saved={Boolean(savedCourseIds[String(c.id)])} onBookmark={onToggleSaved}/>
             ))}
           </div>
         ) : (
@@ -1519,6 +1569,41 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle }) {
 export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
   const [screen,       setScreen]       = useState('hub');
   const [playerCourse, setPlayerCourse] = useState(null);
+  const [savedCourseIds, setSavedCourseIds] = useState(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(window.localStorage.getItem('tribes-saved-courses') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem('tribes-saved-courses');
+      if (stored) {
+        setSavedCourseIds(JSON.parse(stored) || {});
+      }
+    } catch {
+      setSavedCourseIds({});
+    }
+  }, []);
+
+  const toggleSavedCourse = useCallback((courseId) => {
+    setSavedCourseIds((prev) => {
+      const next = { ...prev };
+      if (next[String(courseId)]) {
+        delete next[String(courseId)];
+      } else {
+        next[String(courseId)] = true;
+      }
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('tribes-saved-courses', JSON.stringify(next));
+      }
+      return next;
+    });
+  }, []);
 
   function handlePlay(course) {
     setPlayerCourse(course);
@@ -1533,6 +1618,8 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
             isMobile={isMobile}
             isTablet={isTablet}
             onMenuToggle={onToggleSidebar}
+            savedCourseIds={savedCourseIds}
+            onToggleSaved={toggleSavedCourse}
           />
         : <LessonPlayer
             course={playerCourse}
@@ -1540,6 +1627,10 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
             isMobile={isMobile}
             isTablet={isTablet}
             onMenuToggle={onToggleSidebar}
+            saved={Boolean(playerCourse && savedCourseIds[String(playerCourse.id)])}
+            onToggleSaved={toggleSavedCourse}
+            saved={Boolean(playerCourse && savedCourseIds[String(playerCourse.id)])}
+            onToggleSaved={toggleSavedCourse}
           />
       }
       <style>{`

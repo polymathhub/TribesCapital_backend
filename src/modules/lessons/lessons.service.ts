@@ -172,6 +172,28 @@ export class LessonsService {
       },
     });
 
+    const completedLessons = await this.prisma.progress.count({
+      where: {
+        userId,
+        completedAt: { not: null },
+        lesson: { courseId: lesson.courseId },
+      },
+    });
+    const totalLessons = await this.prisma.lesson.count({
+      where: { courseId: lesson.courseId },
+    });
+    const newProgress = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+    await this.prisma.enrollment.updateMany({
+      where: {
+        userId,
+        courseId: lesson.courseId,
+      },
+      data: {
+        progress: newProgress,
+      },
+    });
+
     return this.formatLesson(lesson);
   }
 

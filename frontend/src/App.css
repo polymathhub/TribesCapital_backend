@@ -59,6 +59,40 @@ body {
   overflow: hidden;
 }
 
+.interactive-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.interactive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.interactive-card:active {
+  transform: translateY(0);
+}
+
+.interactive-button {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.interactive-button:hover {
+  transform: translateY(-1px);
+}
+
+.interactive-button:active {
+  transform: translateY(0);
+}
+
+.icon-bubble {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.interactive-card:hover .icon-bubble,
+.interactive-button:hover .icon-bubble {
+  transform: scale(1.04);
+}
+
 /* ─────────────────────────────────────────────────────── */
 /* GLASSMORPHISM EFFECT                                   */
 /* ─────────────────────────────────────────────────────── */

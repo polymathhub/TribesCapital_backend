@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
+import Icon from '../Icon';
 
 const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
@@ -124,6 +125,7 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
       ) : (
         <button
           onClick={() => setShowForm(true)}
+          className="interactive-button"
           style={{
             marginBottom: '16px',
             padding: '8px 16px',
@@ -133,9 +135,13 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
             borderRadius: '4px',
             cursor: 'pointer',
             fontWeight: 600,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
-          + Request Approval
+          <Icon name="plus" size={14} color="#fff" />
+          Request Approval
         </button>
       )}
 
@@ -183,6 +189,7 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
                   <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                     <button
                       onClick={() => handleApproveOrReject(approval.id, 'approved', '')}
+                      className="interactive-button"
                       style={{
                         padding: '6px 12px',
                         background: '#DCFCE7',
@@ -192,12 +199,17 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
                         cursor: 'pointer',
                         fontWeight: 600,
                         fontSize: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
                       }}
                     >
-                      ✓ Approve
+                      <Icon name="check" size={12} color="#15803D" />
+                      Approve
                     </button>
                     <button
                       onClick={() => handleApproveOrReject(approval.id, 'rejected', '')}
+                      className="interactive-button"
                       style={{
                         padding: '6px 12px',
                         background: '#FEE2E2',
@@ -207,9 +219,13 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
                         cursor: 'pointer',
                         fontWeight: 600,
                         fontSize: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
                       }}
                     >
-                      ✗ Reject
+                      <Icon name="close" size={12} color="#991B1B" />
+                      Reject
                     </button>
                   </div>
                 )}
@@ -219,7 +235,10 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
         </div>
       ) : (
         <div style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>
-          ✅ No approval requests yet.
+          <div style={{ display: 'inline-flex', width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: '999px', background: '#F3F4F6', marginBottom: 12 }}>
+            <Icon name="check" size={20} color="#6B7280" />
+          </div>
+          <div>No approval requests yet.</div>
         </div>
       )}
     </div>

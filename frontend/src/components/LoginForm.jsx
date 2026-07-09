@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { authAPI } from '../api/endpoints';
 import { useAuthForm, useEmailValidation, validateAuthForm } from '../hooks/useAuthForm';
-import { COLORS } from '../constants/theme';
+import { COLORS } from '../constants/colors';
 import { persistDemoSession, shouldUseDemoFallback } from '../utils/authSession';
+import Icon from './Icon';
 
 /**
  * Reusable error alert component
@@ -24,15 +25,19 @@ export function SuccessAlert({ message }) {
   return (
     <div
       style={{
-        backgroundColor: COLORS.successFaint,
-        color: COLORS.success,
+        backgroundColor: COLORS.GRB,
+        color: COLORS.GR,
         padding: '12px 16px',
         borderRadius: '8px',
         marginBottom: '16px',
         fontSize: '14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
       }}
     >
-      ✓ {message}
+      <Icon name="check" size={16} color={COLORS.GR} />
+      {message}
     </div>
   );
 }
@@ -113,11 +118,11 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
           style={{
             width: '100%',
             padding: '12px',
-            border: `1px solid ${emailError ? '#DC2626' : COLORS.border}`,
+            border: `1px solid ${emailError ? '#DC2626' : COLORS.BD}`,
             borderRadius: '8px',
             fontSize: '14px',
             boxSizing: 'border-box',
-            backgroundColor: COLORS.white,
+            backgroundColor: COLORS.W,
           }}
         />
         {emailError && (
@@ -143,17 +148,18 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
             style={{
               width: '100%',
               padding: '12px 40px 12px 12px',
-              border: `1px solid ${COLORS.border}`,
+              border: `1px solid ${COLORS.BD}`,
               borderRadius: '8px',
               fontSize: '14px',
               boxSizing: 'border-box',
-              backgroundColor: COLORS.white,
+              backgroundColor: COLORS.W,
             }}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             disabled={loading}
+            className="interactive-button"
             style={{
               position: 'absolute',
               right: '12px',
@@ -163,9 +169,13 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
               border: 'none',
               cursor: 'pointer',
               fontSize: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
             }}
           >
-            {showPassword ? '🙈' : '👁️'}
+            <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} color={COLORS.T2} />
           </button>
         </div>
       </div>
@@ -173,11 +183,12 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
       <button
         type="submit"
         disabled={loading}
+        className="interactive-button"
         style={{
           width: '100%',
           padding: '12px',
-          backgroundColor: loading ? COLORS.textTertiary : COLORS.primary,
-          color: COLORS.white,
+          backgroundColor: loading ? COLORS.T3 : COLORS.P,
+          color: COLORS.W,
           border: 'none',
           borderRadius: '8px',
           fontSize: '16px',
@@ -185,6 +196,7 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
           cursor: loading ? 'not-allowed' : 'pointer',
           marginBottom: '12px',
           transition: 'background 0.2s',
+          boxShadow: loading ? 'none' : '0 8px 18px rgba(91, 33, 182, 0.16)',
         }}
       >
         {loading ? 'Signing in...' : 'Sign In'}
@@ -195,20 +207,26 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
         <button
           type="button"
           onClick={handleDemoLogin}
+          className="interactive-button"
           style={{
             width: '100%',
             padding: '12px',
             backgroundColor: 'transparent',
-            color: COLORS.primary,
-            border: `2px solid ${COLORS.primary}`,
+            color: COLORS.P,
+            border: `2px solid ${COLORS.P}`,
             borderRadius: '8px',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
             marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
           }}
         >
-          🎭 Demo Login
+          <Icon name="spark" size={16} color={COLORS.P} />
+          Demo Login
         </button>
       )}
 
@@ -216,11 +234,12 @@ export function LoginForm({ onSuccess, onNavigate, isDemoMode = false }) {
         type="button"
         onClick={() => onNavigate('forgot')}
         disabled={loading}
+        className="interactive-button"
         style={{
           width: '100%',
           padding: '8px',
           backgroundColor: 'transparent',
-          color: COLORS.primary,
+          color: COLORS.P,
           border: 'none',
           fontSize: '13px',
           cursor: loading ? 'not-allowed' : 'pointer',

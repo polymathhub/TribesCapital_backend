@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Icon from './Icon';
 import logoPng from '../assets/image.png';
+import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
 
 const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout }) => {
   const NAV_ITEMS = [
@@ -122,25 +123,18 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
                 backdropFilter: 'blur(4px)',
               }}
             >
-              <div
+              <img
+                src={user?.avatar || profilePlaceholderImage}
+                alt={user?.name || user?.email?.split('@')[0] || 'Profile'}
                 style={{
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: 'rgba(124, 58, 237, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#5B21B6',
-                  fontWeight: 'bold',
-                  fontSize: '12px',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                  border: '1px solid rgba(124, 58, 237, 0.16)',
                 }}
-              >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-                  <circle cx="12" cy="8" r="4" stroke="#5B21B6" strokeWidth="1.6" />
-                  <path d="M5 19a7 7 0 0114 0" stroke="#5B21B6" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </div>
+              />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{

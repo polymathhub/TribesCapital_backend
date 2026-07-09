@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
+import Icon from '../Icon';
 
 const DDItemsPanel = ({ dueDiligenceId, items = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
@@ -12,15 +13,15 @@ const DDItemsPanel = ({ dueDiligenceId, items = [], onRefresh }) => {
     dueDate: '',
   });
 
-  const categoryEmojis = {
-    financial: '💰',
-    legal: '⚖️',
-    technical: '⚙️',
-    compliance: '✅',
-    operational: '📋',
-    market: '📊',
-    team: '👥',
-    other: '📌',
+  const categoryIcons = {
+    financial: 'chart',
+    legal: 'folder',
+    technical: 'file',
+    compliance: 'check',
+    operational: 'doc',
+    market: 'chart',
+    team: 'users',
+    other: 'file',
   };
 
   const handleChange = (e) => {
@@ -226,6 +227,7 @@ const DDItemsPanel = ({ dueDiligenceId, items = [], onRefresh }) => {
       ) : (
         <button
           onClick={() => setShowForm(true)}
+          className="interactive-button"
           style={{
             marginBottom: '16px',
             padding: '8px 16px',
@@ -235,9 +237,13 @@ const DDItemsPanel = ({ dueDiligenceId, items = [], onRefresh }) => {
             borderRadius: '4px',
             cursor: 'pointer',
             fontWeight: 600,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
-          + Add Item
+          <Icon name="plus" size={14} color="#fff" />
+          Add Item
         </button>
       )}
 
@@ -255,8 +261,11 @@ const DDItemsPanel = ({ dueDiligenceId, items = [], onRefresh }) => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 600 }}>
-                    {categoryEmojis[item.category]} {item.title}
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'inline-flex', width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 6, background: '#EDE9FE' }}>
+                      <Icon name={categoryIcons[item.category] || categoryIcons.other} size={13} color="#5B21B6" />
+                    </span>
+                    {item.title}
                   </h4>
                   {item.description && (
                     <p style={{ margin: '0', fontSize: '13px', color: '#6B7280' }}>{item.description}</p>
@@ -288,7 +297,10 @@ const DDItemsPanel = ({ dueDiligenceId, items = [], onRefresh }) => {
         </div>
       ) : (
         <div style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>
-          📝 No items yet. Add one to get started.
+          <div style={{ display: 'inline-flex', width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: '999px', background: '#F3F4F6', marginBottom: 12 }}>
+            <Icon name="doc" size={20} color="#6B7280" />
+          </div>
+          <div>No items yet. Add one to get started.</div>
         </div>
       )}
     </div>

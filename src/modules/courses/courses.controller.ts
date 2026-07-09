@@ -24,6 +24,21 @@ export class CoursesController {
     return this.coursesService.findById(id);
   }
 
+  @Get(':id/progress')
+  @UseGuards(JwtAuthGuard)
+  async getProgress(
+    @Param('id') courseId: string,
+    @GetCurrentUser('id') userId: string,
+  ): Promise<{ progress: number; status: string; completedLessons: number; totalLessons: number }> {
+    return this.coursesService.getProgress(courseId, userId);
+  }
+
+  @Get('enrolled')
+  @UseGuards(JwtAuthGuard)
+  async getEnrolled(@GetCurrentUser('id') userId: string): Promise<EnrollmentResponseDto[]> {
+    return this.coursesService.getEnrollments(userId);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(

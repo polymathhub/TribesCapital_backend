@@ -100,20 +100,48 @@ export class CoursesService {
     };
   }
 
-  async getEnrollments(userId: string): Promise<CourseResponseDto[]> {
+  async getEnrollments(userId: string): Promise<EnrollmentResponseDto[]> {
     const enrollments = await this.prisma.enrollment.findMany({
       where: { userId },
       include: {
         course: {
           include: {
             lessons: true,
-            enrollments: true,
           },
         },
       },
     });
 
-    return enrollments.map(e => this.formatCourseResponse(e.course));
+    return enrollments.map((e) => {
+      const progress = Number(e.progress ?? 0);
+      return {
+        id: e.id,
+        userId: e.userId,
+        courseId: e.courseId,
+        status: progress >= 100 ? 'completed' : 'inProgress',
+        progress,
+        startDate: e.enrolledAt,
+        createdAt: e.createdAt,
+      };
+    });
+  }
+
+  async getProgress(courseId: string, userId: string): Promise<{ progress: number; status: string; completedLessons: number; totalLessons: number }> {
+    const totalLessons = await this.prisma.lesson.count({ where: { courseId } });
+    const completedLessons = await this.prisma.progress.count({
+      where: {
+        userId,
+        completedAt: { not: null },
+        lesson: { courseId },
+      },
+    });
+    const progress = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    return {
+      progress,
+      status: progress >= 100 ? 'completed' : 'inProgress',
+      completedLessons,
+      totalLessons,
+    };
   }
 
   private formatCourseResponse(course: any): CourseResponseDto {

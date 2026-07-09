@@ -1,22 +1,23 @@
 import React from 'react';
 import { COLORS } from '../constants/colors';
+import Icon from './Icon';
 
 const STEPS = [
-  { id: 'welcome', target: null, pos: 'center', icon: '👋', title: 'Welcome to Tribes Capital',
+  { id: 'welcome', target: null, pos: 'center', icon: 'spark', title: 'Welcome to Tribes Capital',
     desc: "You're now part of a community of 240+ clean energy investors and professionals across Africa. Let us show you around in 8 quick steps." },
-  { id: 'sidebar', target: 'sidebar', pos: 'right', icon: '🧭', title: 'Your main navigation',
+  { id: 'sidebar', target: 'sidebar', pos: 'right', icon: 'home', title: 'Your main navigation',
     desc: 'Use this sidebar to jump between Learning Hub, Due Diligence Vault, Project Pipeline, Office Hours & Events, and every other community section.' },
-  { id: 'banner', target: 'banner', pos: 'bottom', icon: '🏠', title: 'Your personal home base',
+  { id: 'banner', target: 'banner', pos: 'bottom', icon: 'book', title: 'Your personal home base',
     desc: "This banner shows your community at a glance — active deals, upcoming events, course progress, and live pipeline value." },
-  { id: 'stats', target: 'stats', pos: 'bottom', icon: '📊', title: 'Track your progress',
+  { id: 'stats', target: 'stats', pos: 'bottom', icon: 'chart', title: 'Track your progress',
     desc: 'Four cards tracking community members, active projects, vault documents, and events this week — all updated in real time.' },
-  { id: 'resume', target: 'resume', pos: 'bottom', icon: '📚', title: 'Pick up where you left off',
+  { id: 'resume', target: 'resume', pos: 'bottom', icon: 'doc', title: 'Pick up where you left off',
     desc: 'This card shows your most recent course. Click Continue to jump straight back into your learning right where you stopped.' },
-  { id: 'learning', target: 'learning', pos: 'right', icon: '🎓', title: 'Continue your courses',
+  { id: 'learning', target: 'learning', pos: 'right', icon: 'book', title: 'Continue your courses',
     desc: 'All your enrolled courses live here. Track progress, access lessons, and earn certificates as you complete each module.' },
-  { id: 'events', target: 'events', pos: 'top', icon: '📅', title: 'Join live sessions',
+  { id: 'events', target: 'events', pos: 'top', icon: 'calendar', title: 'Join live sessions',
     desc: 'Office Hours, workshops, and Member Circles run weekly. RSVP directly here so you never miss a live community session.' },
-  { id: 'done', target: null, pos: 'center', icon: '🎉', title: "You're all set!",
+  { id: 'done', target: null, pos: 'center', icon: 'check', title: "You're all set!",
     desc: "Dive into Learning Hub to continue your course, join an upcoming Office Hours, or explore the Project Pipeline. Welcome aboard!", isLast: true },
 ];
 
@@ -54,11 +55,16 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
             Step {step + 1} of {total}
           </span>
           <button onClick={onSkip}
-            style={{ width: 24, height: 24, borderRadius: '50%', background: '#F3F4F6', border: 'none', color: COLORS.T2, fontSize: 16, cursor: 'pointer' }}>×</button>
+            className="interactive-button"
+            style={{ width: 24, height: 24, borderRadius: '50%', background: '#F3F4F6', border: 'none', color: COLORS.T2, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="close" size={12} color={COLORS.T2} />
+          </button>
         </div>
 
         <div style={{ padding: '2px 18px 18px' }}>
-          <div style={{ fontSize: 30, marginBottom: 12, lineHeight: 1 }}>{cur.icon}</div>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: COLORS.PF, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+            <Icon name={cur.icon} size={20} color={COLORS.P} />
+          </div>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.T1, margin: '0 0 8px', letterSpacing: -.3 }}>{cur.title}</h3>
           <p style={{ fontSize: 13, color: COLORS.T2, lineHeight: 1.65, margin: 0 }}>{cur.desc}</p>
         </div>

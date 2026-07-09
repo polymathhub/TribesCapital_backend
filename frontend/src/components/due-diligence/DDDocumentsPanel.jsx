@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
 import DDCommentsPanel from './DDCommentsPanel';
+import Icon from '../Icon';
 
 const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
@@ -15,12 +16,12 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
   });
 
   const fileIcons = {
-    pdf: '📄',
-    excel: '📊',
-    word: '📝',
-    image: '🖼️',
-    video: '🎥',
-    other: '📦',
+    pdf: 'file',
+    excel: 'chart',
+    word: 'doc',
+    image: 'file',
+    video: 'calendar',
+    other: 'folder',
   };
 
   const handleChange = (e) => {
@@ -262,6 +263,7 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
       ) : (
         <button
           onClick={() => setShowForm(true)}
+          className="interactive-button"
           style={{
             marginBottom: '16px',
             padding: '8px 16px',
@@ -271,9 +273,13 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
             borderRadius: '4px',
             cursor: 'pointer',
             fontWeight: 600,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
-          + Upload Document
+          <Icon name="plus" size={14} color="#fff" />
+          Upload Document
         </button>
       )}
 
@@ -308,8 +314,8 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
               >
                 ×
               </button>
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>
-                {fileIcons[doc.fileType] || fileIcons.other}
+              <div style={{ width: 40, height: 40, margin: '0 auto 8px', borderRadius: 10, background: '#EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name={fileIcons[doc.fileType] || fileIcons.other} size={18} color="#5B21B6" />
               </div>
               <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 600, wordBreak: 'break-word' }}>
                 {doc.fileName}
@@ -358,7 +364,10 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
         </div>
       ) : (
         <div style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>
-          📂 No documents yet. Upload one to get started.
+          <div style={{ display: 'inline-flex', width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: '999px', background: '#F3F4F6', marginBottom: 12 }}>
+            <Icon name="folder" size={20} color="#6B7280" />
+          </div>
+          <div>No documents yet. Upload one to get started.</div>
         </div>
       )}
     </div>
