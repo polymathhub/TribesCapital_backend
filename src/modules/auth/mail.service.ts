@@ -78,7 +78,13 @@ export class MailService {
 
   private createTransporter(): Transporter | null {
     const skipTransport = this.getBooleanConfig('MAIL_SKIP_TRANSPORT') || this.getBooleanConfig('SMTP_SKIP_TRANSPORT');
+    const environment = this.getStringConfig('NODE_ENV') || process.env.NODE_ENV || 'development';
+    const isProduction = environment === 'production';
+
     if (skipTransport) {
+      if (isProduction) {
+        throw new Error('SMTP transport is disabled in production via MAIL_SKIP_TRANSPORT or SMTP_SKIP_TRANSPORT. Configure SMTP credentials or remove the skip flag.');
+      }
       return null;
     }
 
@@ -89,7 +95,11 @@ export class MailService {
     const pass = this.getStringConfig('MAIL_PASS') || this.getStringConfig('SMTP_PASSWORD');
 
     if (!host || !user || !pass) {
-      this.logger.warn('SMTP credentials are missing. Email delivery will be skipped.');
+      const message = 'SMTP credentials are missing. Email delivery will be skipped.';
+      if (isProduction) {
+        throw new Error('Production SMTP settings are required. Set MAIL_HOST/SMTP_HOST, MAIL_USER/SMTP_USER, and MAIL_PASS/SMTP_PASSWORD.');
+      }
+      this.logger.warn(message);
       return null;
     }
 

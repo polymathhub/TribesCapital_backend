@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_ENV_URL = import.meta.env.VITE_API_URL?.trim();
 const DEFAULT_API_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api';
 const API_BASE_URL = API_ENV_URL || DEFAULT_API_BASE;
-const NORMALIZED_API_BASE_URL = API_BASE_URL.replace(/\/+$|\/+$/, '');
+const NORMALIZED_API_BASE_URL = API_BASE_URL.replace(/\/+$/|\/+$/, '');
 
 if (!API_ENV_URL) {
   console.warn(`VITE_API_URL is not configured. Falling back to ${DEFAULT_API_BASE}`);

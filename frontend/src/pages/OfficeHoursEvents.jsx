@@ -701,6 +701,11 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
       setEvents(p => p.map(e => e.id === id ? { ...e, rsvped: !e.rsvped } : e));
       if (detailEv?.id === id) setDetail(p => ({ ...p, rsvped: !p.rsvped }));
+      try {
+        window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'events-updated', id } }));
+      } catch (e) {
+        // ignore
+      }
       showToast(event.rsvped ? 'RSVP cancelled.' : 'RSVP confirmed.');
     } catch (error) {
       showToast('Unable to update your RSVP right now.');
@@ -950,7 +955,7 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
       {/* ── MODALS ── */}
       {showCreate && <EventFormModal title="Create event" onClose={()=>setCreate(false)} onSave={handleSave} isMobile={isMobile}/>}
       {editEv     && <EventFormModal title="Edit event" initial={editEv} onClose={()=>setEdit(null)} onSave={handleSave} isMobile={isMobile}/>}
-      {deleteEv   && <DeleteModal ev={deleteEv} isMobile={isMobile} onClose={()=>setDel(null)} onConfirm={()=>{setEvents(p=>p.filter(e=>e.id!==deleteEv.id));setDel(null);showToast('Event deleted successfully');}}/>}
+      {deleteEv   && <DeleteModal ev={deleteEv} isMobile={isMobile} onClose={()=>setDel(null)} onConfirm={()=>{setEvents(p=>p.filter(e=>e.id!==deleteEv.id));try{window.dispatchEvent(new CustomEvent('tribes:data-update',{detail:{type:'events-updated', id:deleteEv.id}}));}catch(e){} setDel(null);showToast('Event deleted successfully');}}/>}
       {detailEv   && <DetailModal ev={detailEv} isMobile={isMobile} onClose={()=>setDetail(null)} onRsvp={handleRsvp}/>}
       {viewAll    && <ViewAllModal events={displayEvents} isMobile={isMobile} onClose={()=>setViewAll(false)} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>}
       {toast      && <Toast msg={toast} onDone={()=>setToast(null)}/>}

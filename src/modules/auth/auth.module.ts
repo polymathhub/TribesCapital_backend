@@ -6,6 +6,7 @@ import { DatabaseModule } from '@database/database.module';
 import { resolveJwtConfig } from '@config/jwt.config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { MailService } from './mail.service';
 import { JwtTokenService } from './jwt-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
@@ -31,7 +32,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtTokenService],
-  exports: [AuthService, JwtModule, PassportModule, JwtTokenService],
+  providers: [AuthService, JwtStrategy, JwtTokenService, MailService],
+  exports: [AuthService, JwtModule, PassportModule, JwtTokenService, MailService],
 })
 export class AuthModule {}

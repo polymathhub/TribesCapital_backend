@@ -473,44 +473,72 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       .slice(0, 6);
   }, [dashboardCourses, dashboardEvents, notifications, watchedVideos]);
 
+  const isMountedRef = React.useRef(true);
+
+  const loadDashboardData = React.useCallback(async () => {
+    try {
+      const [membersRes, coursesRes, eventsRes] = await Promise.all([
+        usersAPI.getAll({ skip: 0, take: 100 }).catch(() => ({ data: [] })),
+        coursesAPI.list({ skip: 0, take: 8 }).catch(() => ({ data: [] })),
+        eventsAPI.list({ skip: 0, take: 6 }).catch(() => ({ data: [] })),
+      ]);
+
+      if (!isMountedRef.current) return;
+
+      const normalizedCourses = (Array.isArray(coursesRes?.data) ? coursesRes.data : []).map((course) => ({
+        id: course.id,
+        category: course.category || course.cat || 'General',
+        title: course.title || 'Untitled course',
+        description: course.description || course.desc || course.subtitle || 'Continue your learning with this course.',
+        duration: course.duration || course.dur || 'Self-paced',
+        lessons: course.lessons || course.lessonCount || 0,
+        difficulty: course.difficulty || course.level || 'Beginner',
+        videoId: course.videoId || 'wMQDsjS9WC4',
+        thumbnail: getVisualThumbnail(course.videoId || 'wMQDsjS9WC4', course.thumbnail),
+      }));
+
+      setMemberCount(Array.isArray(membersRes?.data) ? membersRes.data.length : 0);
+      setDashboardCourses(normalizedCourses);
+      setDashboardEvents(Array.isArray(eventsRes?.data) ? eventsRes.data : []);
+    } catch (error) {
+      if (isMountedRef.current) {
+        setMemberCount(0);
+        setDashboardCourses([]);
+        setDashboardEvents([]);
+      }
+    } finally {
+      if (isMountedRef.current) setDashboardLoading(false);
+    }
+  }, [user?.id, user?.email]);
+
   useEffect(() => {
-    let isMounted = true;
-    const loadDashboardData = async () => {
-      try {
-        const [membersRes, coursesRes, eventsRes] = await Promise.all([
-          usersAPI.getAll({ skip: 0, take: 100 }).catch(() => ({ data: [] })),
-          coursesAPI.list({ skip: 0, take: 8 }).catch(() => ({ data: [] })),
-          eventsAPI.list({ skip: 0, take: 6 }).catch(() => ({ data: [] })),
-        ]);
-        if (!isMounted) return;
-        const normalizedCourses = (Array.isArray(coursesRes?.data) ? coursesRes.data : []).map((course) => ({
-          id: course.id,
-          category: course.category || course.cat || 'General',
-          title: course.title || 'Untitled course',
-          description: course.description || course.desc || course.subtitle || 'Continue your learning with this course.',
-          duration: course.duration || course.dur || 'Self-paced',
-          lessons: course.lessons || course.lessonCount || 0,
-          difficulty: course.difficulty || course.level || 'Beginner',
-          videoId: course.videoId || 'wMQDsjS9WC4',
-          thumbnail: getVisualThumbnail(course.videoId || 'wMQDsjS9WC4', course.thumbnail),
-        }));
-        setMemberCount(Array.isArray(membersRes?.data) ? membersRes.data.length : 0);
-        setDashboardCourses(normalizedCourses);
-        setDashboardEvents(Array.isArray(eventsRes?.data) ? eventsRes.data : []);
-      } catch (error) {
-        if (isMounted) {
-          setMemberCount(0);
-          setDashboardCourses([]);
-          setDashboardEvents([]);
-        }
-      } finally {
-        if (isMounted) setDashboardLoading(false);
+    isMountedRef.current = true;
+    // initial load
+    void loadDashboardData();
+
+    // react to cross-component custom events
+    const onDataUpdate = () => {
+      void loadDashboardData();
+    };
+
+    // respond to other tabs updating localStorage
+    const onStorage = (e) => {
+      if (!e || !e.key) return;
+      const interesting = ['tribes-saved-courses', 'tribes-home-watched-videos', TOUR_VISITS_KEY];
+      if (interesting.includes(e.key)) {
+        void loadDashboardData();
       }
     };
 
-    loadDashboardData();
-    return () => { isMounted = false; };
-  }, [user?.id, user?.email]);
+    window.addEventListener('tribes:data-update', onDataUpdate);
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      isMountedRef.current = false;
+      window.removeEventListener('tribes:data-update', onDataUpdate);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [loadDashboardData]);
 
   useEffect(() => {
     if (!isNotificationsOpen) return;

@@ -150,6 +150,12 @@ export function GoogleSignIn({
       localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(user));
 
+      try {
+        window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'user-updated', userId: user.id } }));
+      } catch (e) {
+        // ignore
+      }
+
       console.log('Google Sign-In successful:', user);
 
       if (onSuccess) onSuccess(user);

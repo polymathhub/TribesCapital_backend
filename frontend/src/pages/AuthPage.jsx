@@ -227,6 +227,11 @@ function persistAuthSession({ accessToken, refreshToken, user, email }) {
   }
   if (user) {
     localStorage.setItem('user', JSON.stringify(user));
+    try {
+      window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'user-updated', userId: user.id } }));
+    } catch (e) {
+      // ignore
+    }
   }
 }
 

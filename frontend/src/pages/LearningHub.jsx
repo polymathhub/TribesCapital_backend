@@ -1600,6 +1600,11 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
       }
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('tribes-saved-courses', JSON.stringify(next));
+        try {
+          window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'saved-courses', id: courseId } }));
+        } catch (e) {
+          // ignore if CustomEvent not supported
+        }
       }
       return next;
     });
@@ -1627,8 +1632,6 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
             isMobile={isMobile}
             isTablet={isTablet}
             onMenuToggle={onToggleSidebar}
-            saved={Boolean(playerCourse && savedCourseIds[String(playerCourse.id)])}
-            onToggleSaved={toggleSavedCourse}
             saved={Boolean(playerCourse && savedCourseIds[String(playerCourse.id)])}
             onToggleSaved={toggleSavedCourse}
           />

@@ -69,7 +69,7 @@ export class CoursesController {
 
   @Get(':userId/enrollments')
   @UseGuards(JwtAuthGuard)
-  async getEnrollments(@Param('userId') userId: string): Promise<CourseResponseDto[]> {
+  async getEnrollments(@Param('userId') userId: string): Promise<EnrollmentResponseDto[]> {
     return this.coursesService.getEnrollments(userId);
   }
 }

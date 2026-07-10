@@ -23,6 +23,7 @@ import {
   MessageResponseDto,
 } from './dto/auth.dto';
 import { JwtTokenService } from './jwt-token.service';
+import { MailService } from './mail.service';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +32,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtTokenService: JwtTokenService,
+    private readonly mailService: MailService,
   ) {}
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
@@ -76,7 +78,7 @@ export class AuthService {
       throw e;
     }
     if (existingUser) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException('Email already registered;calm down and use a new one ');
     }
 
     this.logger.log(`${new Date().toISOString()} ${ctx}[6] Hashing password`);
@@ -131,6 +133,14 @@ export class AuthService {
 
     const total = Date.now() - startRegister;
     this.logger.log(`${new Date().toISOString()} ${ctx}[12] Returning response (totalDuration=${total}ms)`);
+
+    // Send a welcome email if mail service is available. Do not block or fail registration on email errors.
+    if (this.mailService) {
+      this.mailService
+        .sendWelcomeEmail(user.email, user.firstName ?? 'there')
+        .catch(() => this.logger.warn('[REGISTER] sendWelcomeEmail failed (non-blocking)'));
+    }
+
     return response;
   }
 
@@ -331,6 +341,15 @@ export class AuthService {
         passwordResetExpires: resetExpires,
       },
     });
+
+    // Attempt to send reset email but do not fail the request if sending fails
+    try {
+      if (this.mailService) {
+        await this.mailService.sendPasswordResetEmail(email, resetCode);
+      }
+    } catch (e) {
+      this.logger.warn('[FORGOT] Failed to send password reset email; continuing without failing the request');
+    }
 
     return { message: 'If the email exists, a reset code has been sent' };
   }

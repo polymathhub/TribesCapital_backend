@@ -202,7 +202,7 @@ export class DueDiligenceController {
     FilesInterceptor('attachments', 5, {
       storage: diskStorage({
         destination: () => getDueDiligenceUploadsDir(),
-        filename: (_req, file, cb) => {
+        filename: (_req: any, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
           const timestamp = Date.now();
           const sanitized = file.originalname.replace(/[^a-zA-Z0-9.-_]/g, '-');
           cb(null, `${timestamp}-${sanitized}`);
