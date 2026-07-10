@@ -902,11 +902,6 @@ function SignupPage({ onNavigate, onSuccess }) {
       };
 
       const response = await authAPI.register(payload);
-
-      if (!response.data) {
-        throw new Error('No data in response from server');
-      }
-
       localStorage.setItem('verificationEmail', formData.email.trim().toLowerCase());
 
       if (response.data?.accessToken) {
@@ -928,9 +923,8 @@ function SignupPage({ onNavigate, onSuccess }) {
         return;
       }
 
-      setTimeout(() => {
-        onNavigate('verify');
-      }, 300);
+      // Verification is required and the server returned a message-only response.
+      onNavigate('verify');
     } catch (err) {
       const serverMessage = err.response?.data?.message;
       let userMessage = 'Something went wrong. Please try again.';
