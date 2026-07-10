@@ -21,7 +21,7 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  async register(@Body() registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
+  async register(@Body() registerDto: RegisterDto): Promise<AuthTokenResponseDto | MessageResponseDto> {
     const start = Date.now();
     const ctx = '[REGISTER]';
     this.logger.log(`${new Date().toISOString()} ${ctx}[1] Request received`);
@@ -89,6 +89,13 @@ export class AuthController {
   @HttpCode(200)
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<MessageResponseDto> {
     return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Public()
+  @Post('resend-verification')
+  @HttpCode(200)
+  async resendVerification(@Body('email') email: string): Promise<MessageResponseDto> {
+    return this.authService.resendVerificationEmail(email);
   }
 
   @Public()

@@ -8,7 +8,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
+import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
 import {
   RegisterDto,
   LoginDto,
@@ -33,7 +35,32 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtTokenService: JwtTokenService,
     private readonly mailService: MailService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private isEmailVerificationRequired(): boolean {
+    const value =
+      this.configService.get<string>('REQUIRE_EMAIL_VERIFICATION') ??
+      process.env.REQUIRE_EMAIL_VERIFICATION;
+
+    if (!value) {
+      return false;
+    }
+
+    return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+  }
+
+  private getFrontendUrl(): string {
+    return (
+      this.configService.get<string>('FRONTEND_URL') ??
+      process.env.FRONTEND_URL ??
+      'http://localhost:5173'
+    ).replace(/\/+$|^\s+|\s+$/g, '');
+  }
+
+  private buildVerificationUrl(token: string): string {
+    return `${this.getFrontendUrl()}/verify-email?token=${encodeURIComponent(token)}`;
+  }
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
     const email = this.normalizeEmail(checkEmailDto.email);
@@ -48,7 +75,7 @@ export class AuthService {
   }
 
    
-  async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
+  async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto | MessageResponseDto> {
     const ctx = '[REGISTER]';
     const startRegister = Date.now();
     this.logger.log(`${new Date().toISOString()} ${ctx}[1] Entering register()`);
@@ -92,6 +119,9 @@ export class AuthService {
       throw e;
     }
 
+    const requireEmailVerification = this.isEmailVerificationRequired();
+    const emailVerificationToken = requireEmailVerification ? randomBytes(32).toString('hex') : null;
+
     this.logger.log(`${new Date().toISOString()} ${ctx}[8] Creating Prisma user record`);
     const tCreate = Date.now();
     let user;
@@ -102,7 +132,8 @@ export class AuthService {
         firstName: registerDto.firstName?.trim() || 'User',
         lastName: registerDto.lastName?.trim() || '',
         password: passwordHash,
-        emailVerified: true,
+        emailVerified: !requireEmailVerification,
+        emailVerificationToken,
         isActive: true,
       },
       select: {
@@ -112,12 +143,27 @@ export class AuthService {
         lastName: true,
         isActive: true,
         emailVerified: true,
+        emailVerificationToken: true,
       },
       });
       this.logger.log(`${new Date().toISOString()} ${ctx}[9] Prisma user created (id=${user.id}) (duration=${Date.now()-tCreate}ms)`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Prisma user create failed`, e instanceof Error ? e.stack : String(e));
       throw e;
+    }
+
+    const total = Date.now() - startRegister;
+    this.logger.log(`${new Date().toISOString()} ${ctx}[12] Returning response (totalDuration=${total}ms)`);
+
+    if (requireEmailVerification) {
+      const verificationUrl = this.buildVerificationUrl(emailVerificationToken!);
+      if (this.mailService) {
+        this.mailService
+          .sendVerificationEmail(user.email, verificationUrl)
+          .catch(() => this.logger.warn('[REGISTER] sendVerificationEmail failed (non-blocking)'));
+      }
+
+      return { success: true, message: 'Registration successful. Please verify your email address.' };
     }
 
     this.logger.log(`${new Date().toISOString()} ${ctx}[10] Entering buildAuthResponse for ${email}`);
@@ -130,9 +176,6 @@ export class AuthService {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] buildAuthResponse failed`, e instanceof Error ? e.stack : String(e));
       throw e;
     }
-
-    const total = Date.now() - startRegister;
-    this.logger.log(`${new Date().toISOString()} ${ctx}[12] Returning response (totalDuration=${total}ms)`);
 
     // Send a welcome email if mail service is available. Do not block or fail registration on email errors.
     if (this.mailService) {
@@ -186,6 +229,11 @@ export class AuthService {
     if (!user.isActive) {
       this.logger.warn('[LOGIN] Account suspended for user id ' + user.id);
       throw new UnauthorizedException('Account suspended');
+    }
+
+    if (!user.emailVerified && this.isEmailVerificationRequired()) {
+      this.logger.warn('[LOGIN] Attempt to sign in with unverified email: ' + email);
+      throw new UnauthorizedException('Email is not verified. Please check your inbox.');
     }
 
     await this.prisma.user.update({
@@ -318,6 +366,46 @@ export class AuthService {
     });
 
     return { message: 'Email verified successfully' };
+  }
+
+  async resendVerificationEmail(email: string): Promise<MessageResponseDto> {
+    const normalizedEmail = this.normalizeEmail(email);
+    if (!normalizedEmail) {
+      throw new BadRequestException('Email is required');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        emailVerified: true,
+        emailVerificationToken: true,
+        firstName: true,
+      },
+    });
+
+    if (!user) {
+      return { message: 'If the email exists, a verification email has been sent.' };
+    }
+
+    if (user.emailVerified) {
+      return { message: 'Email address is already verified.' };
+    }
+
+    const verificationToken = user.emailVerificationToken ?? randomBytes(32).toString('hex');
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerificationToken: verificationToken },
+    });
+
+    const verificationUrl = this.buildVerificationUrl(verificationToken);
+    if (this.mailService) {
+      this.mailService
+        .sendVerificationEmail(normalizedEmail, verificationUrl)
+        .catch(() => this.logger.warn('[RESEND] sendVerificationEmail failed (non-blocking)'));
+    }
+
+    return { message: 'Verification email sent. Check your inbox.' };
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<MessageResponseDto> {
