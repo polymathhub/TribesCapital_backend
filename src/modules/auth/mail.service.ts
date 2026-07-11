@@ -1,15 +1,15 @@
+import { BrevoClient } from '@getbrevo/brevo';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import { Transporter } from 'nodemailer';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly transporter: Transporter | null;
+  private readonly client: BrevoClient;
 
   constructor(private readonly configService: ConfigService) {
-    this.transporter = this.createTransporter();
+    const apiKey = this.getStringConfig('BREVO_API_KEY') || this.getStringConfig('SENDINBLUE_API_KEY') || this.getStringConfig('BREVO_KEY');
+    this.client = new BrevoClient({ apiKey: apiKey ?? '' });
   }
 
   async sendPasswordResetEmail(to: string, code: string): Promise<boolean> {
@@ -50,26 +50,57 @@ export class MailService {
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
           <h2>Welcome, ${firstName}!</h2>
-          <p>Your Tribes Capital account is ready. Sign in and continue your learning journey.</p>
+          <p>Look who just joined the tribe!
+
+Welcome to Tribes Capital where ideas grow, communities thrive, and opportunities have a funny habit of finding the right people.
+
+We'd love to tell you this email comes with free money... but our lawyers strongly suggested we don't.
+
+What you do get is access to a community built for builders, investors, founders, creators, and curious minds who believe the future is better when we build it together.
+
+Here's what you can do next
+Complete your profile.
+Connect with other members.
+Join conversations that matter.
+Explore resources and opportunities.
+Start making an impact.
+
+If you ever get lost, don't panic. We have buttons, menus, and a support team that's much friendlier than a "404 Not Found" page.
+
+We're genuinely excited to have you here, and we can't wait to see what you'll build, share, and achieve with the community.
+
+Welcome aboard!
+
+The Tribes Capital Team
+
+P.S. If you suddenly become wildly successful after joining, we'd like to think we had something to do with it.
+          </p>
         </div>
       `,
     });
   }
 
   private async sendMail(options: { to: string; subject: string; html: string }): Promise<boolean> {
-    if (!this.transporter) {
-      this.logger.warn('Email delivery is disabled because SMTP is not configured. Set MAIL_HOST/MAIL_USER/MAIL_PASS or SMTP_* to enable mail sending.');
+    const apiKey = this.getStringConfig('BREVO_API_KEY') || this.getStringConfig('SENDINBLUE_API_KEY') || this.getStringConfig('BREVO_KEY');
+    const fromAddress = this.getFromAddress();
+
+    if (!apiKey) {
+      this.logger.warn('Brevo API key is not configured. Email delivery will be skipped.');
       return false;
     }
 
     try {
-      await this.transporter.sendMail({
-        from: this.getFromAddress(),
-        to: options.to,
+      await this.client.transactionalEmails.sendTransacEmail({
+        sender: {
+          name: this.getSenderName(fromAddress),
+          email: this.getSenderEmail(fromAddress),
+        },
+        to: [{ email: options.to }],
         subject: options.subject,
-        html: options.html,
+        htmlContent: options.html,
       });
-      this.logger.log(`Email sent successfully to ${options.to} via SMTP.`);
+
+      this.logger.log(`Email sent successfully to ${options.to} via Brevo API.`);
       return true;
     } catch (error) {
       this.logger.error(`Failed to send email to ${options.to}`, error instanceof Error ? error.stack : String(error));
@@ -77,49 +108,28 @@ export class MailService {
     }
   }
 
-  private createTransporter(): Transporter | null {
-    const skipTransport = this.getBooleanConfig('MAIL_SKIP_TRANSPORT') || this.getBooleanConfig('SMTP_SKIP_TRANSPORT');
-    const environment = this.getStringConfig('NODE_ENV') || process.env.NODE_ENV || 'development';
-    const isProduction = environment === 'production';
-
-    if (skipTransport) {
-      if (isProduction) {
-        throw new Error('SMTP transport is disabled in production via MAIL_SKIP_TRANSPORT or SMTP_SKIP_TRANSPORT. Configure SMTP credentials or remove the skip flag.');
-      }
-      return null;
-    }
-
-    const host = this.getStringConfig('BREVO_SMTP_HOST') || this.getStringConfig('MAIL_HOST') || this.getStringConfig('SMTP_HOST');
-    const configuredPort = Number(this.getStringConfig('BREVO_SMTP_PORT') || this.getStringConfig('MAIL_PORT') || this.getStringConfig('SMTP_PORT') || '587');
-    const port = Number.isFinite(configuredPort) && configuredPort > 0 ? configuredPort : 587;
-    const secure = this.getBooleanConfig('BREVO_SMTP_SECURE', this.getBooleanConfig('MAIL_SECURE', this.getBooleanConfig('SMTP_SECURE', false)));
-    const user = this.getStringConfig('BREVO_SMTP_USER') || this.getStringConfig('MAIL_USER') || this.getStringConfig('SMTP_USER');
-    const pass = this.getStringConfig('BREVO_SMTP_PASSWORD') || this.getStringConfig('MAIL_PASS') || this.getStringConfig('SMTP_PASSWORD') || this.getStringConfig('SMTP_PASS');
-
-    if (!host || !user || !pass) {
-      const message = 'SMTP credentials are missing. Email delivery will be skipped.';
-      if (isProduction) {
-        throw new Error('Production SMTP settings are required. Set MAIL_HOST/SMTP_HOST, MAIL_USER/SMTP_USER, and MAIL_PASS/SMTP_PASSWORD.');
-      }
-      this.logger.warn(message);
-      return null;
-    }
-
-    return nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: {
-        user,
-        pass,
-      },
-      requireTLS: true,
-      connectionTimeout: 10000,
-    });
+  private getFromAddress(): string {
+    return this.getStringConfig('BREVO_FROM') || this.getStringConfig('MAIL_FROM') || this.getStringConfig('SMTP_FROM') || 'noreply@tribescapital.com';
   }
 
-  private getFromAddress(): string {
-    return this.getStringConfig('BREVO_SMTP_FROM') || this.getStringConfig('MAIL_FROM') || this.getStringConfig('SMTP_FROM') || this.getStringConfig('BREVO_SMTP_USER') || this.getStringConfig('MAIL_USER') || this.getStringConfig('SMTP_USER') || 'noreply@tribescapital.com';
+  private getSenderName(fromAddress: string): string {
+    const explicitName = this.getStringConfig('MAIL_FROM_NAME') || this.getStringConfig('BREVO_FROM_NAME');
+    if (explicitName) {
+      return explicitName;
+    }
+
+    const match = fromAddress.match(/^\s*"?([^"<]+)"?\s*<([^>]+)>\s*$/i);
+    return match?.[1]?.trim() || 'Tribes Capital';
+  }
+
+  private getSenderEmail(fromAddress: string): string {
+    const explicitEmail = this.getStringConfig('MAIL_FROM_EMAIL') || this.getStringConfig('BREVO_FROM_EMAIL');
+    if (explicitEmail) {
+      return explicitEmail;
+    }
+
+    const match = fromAddress.match(/^\s*"?([^"<]+)"?\s*<([^>]+)>\s*$/i);
+    return match?.[2]?.trim() || fromAddress;
   }
 
   private getStringConfig(key: string): string | undefined {
