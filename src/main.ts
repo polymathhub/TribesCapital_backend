@@ -19,7 +19,19 @@ async function bootstrap() {
   const dbPassword = process.env.DB_PASSWORD || 'postgres';
   const dbName = process.env.DB_NAME || 'tribes_capital';
 
-  if (!process.env.DATABASE_URL) {
+  const skipDatabase = ['1', 'true', 'yes', 'on'].includes(
+    (process.env.DB_SKIP || process.env.NO_DATABASE_MODE || process.env.DATABASE_SKIP || process.env.NO_DB || '')
+      .toString()
+      .toLowerCase(),
+  );
+  const environment = (process.env.NODE_ENV || 'development').toLowerCase();
+  const isProduction = environment === 'production';
+
+  if (skipDatabase && isProduction) {
+    throw new Error('Database skip is not allowed in production. Remove DB_SKIP/NO_DATABASE_MODE/DATABASE_SKIP/NO_DB before deploying.');
+  }
+
+  if (!process.env.DATABASE_URL && !skipDatabase) {
     process.env.DATABASE_URL = `postgresql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
   }
 
@@ -27,7 +39,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   const port = Number(process.env.PORT || configService.get<number>('app.port') || 3000);
-  const environment = configService.get<string>('app.environment') || 'development';
+  const host = process.env.APP_HOST || configService.get<string>('app.host') || '0.0.0.0';
   let corsOrigin: string | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void) = 'http://localhost:3000';
 
   const corsOriginConfig = configService.get<string>('app.corsOrigin') || 'http://localhost:3000,http://localhost:5173';
@@ -101,8 +113,8 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ValidationPipe());
 
-  await app.listen(port);
-  console.log(`🚀 Tribes Capital Backend running on port ${port} (${environment})`);
+  await app.listen(port, host);
+  console.log(`🚀 Tribes Capital Backend running on http://${host}:${port} (${environment})`);
 }
 
 bootstrap();

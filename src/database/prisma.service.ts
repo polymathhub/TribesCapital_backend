@@ -5,7 +5,26 @@ import { PrismaClient } from '@prisma/client';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
 
+  private isDatabaseDisabled(): boolean {
+    const value =
+      process.env.DB_SKIP ||
+      process.env.NO_DATABASE_MODE ||
+      process.env.DATABASE_SKIP ||
+      process.env.NO_DB;
+
+    if (!value) {
+      return false;
+    }
+
+    return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+  }
+
   async onModuleInit() {
+    if (this.isDatabaseDisabled()) {
+      this.logger.warn('Database connection skipped because DB_SKIP/NO_DATABASE_MODE is enabled.');
+      return;
+    }
+
     try {
       this.logger.log(`${new Date().toISOString()} [PRISMA][1] Connecting to database`);
       const t = Date.now();
@@ -34,6 +53,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleDestroy() {
+    if (this.isDatabaseDisabled()) {
+      this.logger.warn('Database disconnect skipped because DB_SKIP/NO_DATABASE_MODE is enabled.');
+      return;
+    }
+
     try {
       await this.$disconnect();
     } catch (error) {

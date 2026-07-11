@@ -58,7 +58,7 @@ export class MailService {
 
   private async sendMail(options: { to: string; subject: string; html: string }): Promise<boolean> {
     if (!this.transporter) {
-      this.logger.warn('Email delivery is disabled because SMTP is not configured.');
+      this.logger.warn('Email delivery is disabled because SMTP is not configured. Set MAIL_HOST/MAIL_USER/MAIL_PASS or SMTP_* to enable mail sending.');
       return false;
     }
 
@@ -69,9 +69,10 @@ export class MailService {
         subject: options.subject,
         html: options.html,
       });
+      this.logger.log(`Email sent successfully to ${options.to} via SMTP.`);
       return true;
     } catch (error) {
-      this.logger.error('Failed to send email', error instanceof Error ? error.stack : String(error));
+      this.logger.error(`Failed to send email to ${options.to}`, error instanceof Error ? error.stack : String(error));
       return false;
     }
   }
@@ -88,11 +89,12 @@ export class MailService {
       return null;
     }
 
-    const host = this.getStringConfig('MAIL_HOST') || this.getStringConfig('SMTP_HOST');
-    const port = Number(this.getStringConfig('MAIL_PORT') || this.getStringConfig('SMTP_PORT') || '465');
-    const secure = this.getBooleanConfig('MAIL_SECURE', this.getBooleanConfig('SMTP_SECURE', true));
-    const user = this.getStringConfig('MAIL_USER') || this.getStringConfig('SMTP_USER');
-    const pass = this.getStringConfig('MAIL_PASS') || this.getStringConfig('SMTP_PASSWORD');
+    const host = this.getStringConfig('BREVO_SMTP_HOST') || this.getStringConfig('MAIL_HOST') || this.getStringConfig('SMTP_HOST');
+    const configuredPort = Number(this.getStringConfig('BREVO_SMTP_PORT') || this.getStringConfig('MAIL_PORT') || this.getStringConfig('SMTP_PORT') || '587');
+    const port = Number.isFinite(configuredPort) && configuredPort > 0 ? configuredPort : 587;
+    const secure = this.getBooleanConfig('BREVO_SMTP_SECURE', this.getBooleanConfig('MAIL_SECURE', this.getBooleanConfig('SMTP_SECURE', false)));
+    const user = this.getStringConfig('BREVO_SMTP_USER') || this.getStringConfig('MAIL_USER') || this.getStringConfig('SMTP_USER');
+    const pass = this.getStringConfig('BREVO_SMTP_PASSWORD') || this.getStringConfig('MAIL_PASS') || this.getStringConfig('SMTP_PASSWORD') || this.getStringConfig('SMTP_PASS');
 
     if (!host || !user || !pass) {
       const message = 'SMTP credentials are missing. Email delivery will be skipped.';
@@ -117,7 +119,7 @@ export class MailService {
   }
 
   private getFromAddress(): string {
-    return this.getStringConfig('MAIL_FROM') || this.getStringConfig('SMTP_FROM') || this.getStringConfig('MAIL_USER') || this.getStringConfig('SMTP_USER') || 'noreply@tribes.capital';
+    return this.getStringConfig('BREVO_SMTP_FROM') || this.getStringConfig('MAIL_FROM') || this.getStringConfig('SMTP_FROM') || this.getStringConfig('BREVO_SMTP_USER') || this.getStringConfig('MAIL_USER') || this.getStringConfig('SMTP_USER') || 'noreply@tribescapital.com';
   }
 
   private getStringConfig(key: string): string | undefined {

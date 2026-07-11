@@ -155,11 +155,24 @@ export class AuthService {
     const total = Date.now() - startRegister;
     this.logger.log(`${new Date().toISOString()} ${ctx}[12] Returning response (totalDuration=${total}ms)`);
 
+    if (this.mailService) {
+      void this.mailService.sendWelcomeEmail(user.email, user.firstName ?? 'there').then((sent) => {
+        if (!sent) {
+          this.logger.warn('[REGISTER] Welcome email was not sent. Check SMTP configuration.');
+        }
+      }).catch(() => this.logger.warn('[REGISTER] sendWelcomeEmail failed (non-blocking)'));
+    }
+
     if (requireEmailVerification) {
       const verificationUrl = this.buildVerificationUrl(emailVerificationToken!);
       if (this.mailService) {
-        this.mailService
+        void this.mailService
           .sendVerificationEmail(user.email, verificationUrl)
+          .then((sent) => {
+            if (!sent) {
+              this.logger.warn('[REGISTER] Verification email was not sent. Check SMTP configuration.');
+            }
+          })
           .catch(() => this.logger.warn('[REGISTER] sendVerificationEmail failed (non-blocking)'));
       }
 
@@ -175,13 +188,6 @@ export class AuthService {
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] buildAuthResponse failed`, e instanceof Error ? e.stack : String(e));
       throw e;
-    }
-
-    // Send a welcome email if mail service is available. Do not block or fail registration on email errors.
-    if (this.mailService) {
-      this.mailService
-        .sendWelcomeEmail(user.email, user.firstName ?? 'there')
-        .catch(() => this.logger.warn('[REGISTER] sendWelcomeEmail failed (non-blocking)'));
     }
 
     return response;
@@ -430,10 +436,13 @@ export class AuthService {
       },
     });
 
-    // Attempt to send reset email but do not fail the request if sending fails
+    // Attempt to send reset email but do not fail the request if sending fails.
     try {
       if (this.mailService) {
-        await this.mailService.sendPasswordResetEmail(email, resetCode);
+        const sent = await this.mailService.sendPasswordResetEmail(email, resetCode);
+        if (!sent) {
+          this.logger.warn('[FORGOT] Password reset email was not sent. Check SMTP configuration.');
+        }
       }
     } catch (e) {
       this.logger.warn('[FORGOT] Failed to send password reset email; continuing without failing the request');
