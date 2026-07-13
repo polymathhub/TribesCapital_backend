@@ -44,13 +44,19 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
   };
 
   const statusBadge = (status) => {
+    const normalized = String(status || 'draft').toLowerCase();
     const colors = {
-      'pending': { bg: '#FEF3C7', color: '#92400E' },
-      'in_progress': { bg: '#DBEAFE', color: '#1E40AF' },
-      'completed': { bg: '#DCFCE7', color: '#15803D' },
-      'on_hold': { bg: '#FEE2E2', color: '#991B1B' },
+      draft: { bg: '#FEF3C7', color: '#92400E' },
+      pending: { bg: '#FEF3C7', color: '#92400E' },
+      in_progress: { bg: '#DBEAFE', color: '#1E40AF' },
+      review: { bg: '#FDE68A', color: '#92400E' },
+      approved: { bg: '#DCFCE7', color: '#15803D' },
+      rejected: { bg: '#FEE2E2', color: '#991B1B' },
+      completed: { bg: '#DCFCE7', color: '#15803D' },
+      on_hold: { bg: '#FEE2E2', color: '#991B1B' },
     };
-    const style = colors[status] || { bg: '#F3F4F6', color: '#374151' };
+    const style = colors[normalized] || { bg: '#F3F4F6', color: '#374151' };
+    const label = normalized === 'draft' ? 'Draft' : normalized.replace('_', ' ');
     return (
       <span
         style={{
@@ -63,7 +69,7 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
           textTransform: 'capitalize',
         }}
       >
-        {status.replace('_', ' ')}
+        {label}
       </span>
     );
   };
@@ -99,10 +105,12 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
           className="dd-filter-select"
         >
           <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
+          <option value="draft">Draft</option>
           <option value="in_progress">In Progress</option>
+          <option value="review">Review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
           <option value="completed">Completed</option>
-          <option value="on_hold">On Hold</option>
         </select>
         <label htmlFor="dd-priority-filter" className="sr-only">Filter by priority</label>
         <select

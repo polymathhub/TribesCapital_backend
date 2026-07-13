@@ -6,7 +6,7 @@ import DDCommentsPanel from './DDCommentsPanel';
 import DDApprovalsPanel from './DDApprovalsPanel';
 import '../../styles/due-diligence.css';
 
-const DDDetailView = ({ item, onBack, onRefresh }) => {
+const DDDetailView = ({ item, loading = false, onBack, onRefresh }) => {
   const [activeTab, setActiveTab] = useState('items');
   const [data, setData] = useState(item);
   const [updating, setUpdating] = useState(false);
@@ -16,10 +16,14 @@ const DDDetailView = ({ item, onBack, onRefresh }) => {
   }, [item]);
 
   const statusColors = {
-    'pending': '#FEF3C7',
-    'in_progress': '#DBEAFE',
-    'completed': '#DCFCE7',
-    'on_hold': '#FEE2E2',
+    draft: '#FEF3C7',
+    pending: '#FEF3C7',
+    in_progress: '#DBEAFE',
+    review: '#FDE68A',
+    approved: '#DCFCE7',
+    rejected: '#FEE2E2',
+    completed: '#DCFCE7',
+    on_hold: '#FEE2E2',
   };
 
   const priorityColors = {
@@ -43,7 +47,8 @@ const DDDetailView = ({ item, onBack, onRefresh }) => {
     }
   };
 
-  if (!data) return <div>Loading...</div>;
+  if (loading && !data) return <div style={{ padding: '24px', color: '#6B7280' }}>Loading full diligence record…</div>;
+  if (!data) return <div style={{ padding: '24px', color: '#6B7280' }}>Loading...</div>;
 
   const tabCounts = {
     items: data.items?.length || 0,
@@ -76,13 +81,15 @@ const DDDetailView = ({ item, onBack, onRefresh }) => {
               borderRadius: '6px',
               fontSize: '14px',
               fontWeight: 600,
-              background: statusColors[data.status],
+              background: statusColors[data.status] || statusColors.draft,
             }}
           >
-            <option value="pending">Pending</option>
+            <option value="draft">Draft</option>
             <option value="in_progress">In Progress</option>
+            <option value="review">Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
             <option value="completed">Completed</option>
-            <option value="on_hold">On Hold</option>
           </select>
         </div>
 

@@ -5,8 +5,8 @@ import Icon from '../Icon';
 const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    reviewerEmail: '',
-    notes: '',
+    approverRole: 'reviewer',
+    approvalNotes: '',
   });
 
   const statusColors = {
@@ -23,8 +23,11 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dueDiligenceAPI.createApproval(dueDiligenceId, formData);
-      setFormData({ reviewerEmail: '', notes: '' });
+      await dueDiligenceAPI.createApproval(dueDiligenceId, {
+        approverRole: formData.approverRole || 'reviewer',
+        approvalNotes: formData.approvalNotes,
+      });
+      setFormData({ approverRole: 'reviewer', approvalNotes: '' });
       setShowForm(false);
       onRefresh();
     } catch (error) {
@@ -35,7 +38,7 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
 
   const handleApproveOrReject = async (approvalId, decision, notes) => {
     try {
-      await dueDiligenceAPI.approveOrReject(dueDiligenceId, approvalId, { decision, notes });
+      await dueDiligenceAPI.approveOrReject(dueDiligenceId, approvalId, { status: decision, approvalNotes: notes });
       onRefresh();
     } catch (error) {
       console.error('Error updating approval:', error);
@@ -49,14 +52,14 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
         <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '12px' }}>
-              <label htmlFor="dd-approval-email" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Reviewer email</label>
+              <label htmlFor="dd-approval-role" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Approver role</label>
               <input
-                id="dd-approval-email"
-                type="email"
-                name="reviewerEmail"
-                value={formData.reviewerEmail}
+                id="dd-approval-role"
+                type="text"
+                name="approverRole"
+                value={formData.approverRole}
                 onChange={handleChange}
-                placeholder="Reviewer email"
+                placeholder="reviewer"
                 required
                 style={{
                   width: '100%',
@@ -71,8 +74,8 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
             <label htmlFor="dd-approval-notes" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>Approval notes</label>
             <textarea
               id="dd-approval-notes"
-              name="notes"
-              value={formData.notes}
+              name="approvalNotes"
+              value={formData.approvalNotes}
               onChange={handleChange}
               placeholder="Approval notes"
               rows="2"
@@ -163,7 +166,7 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
                   <div>
                     <h5 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 600 }}>
-                      {approval.reviewer?.email || 'Pending Reviewer'}
+                      {approval.approver?.email || approval.approverRole || 'Pending Reviewer'}
                     </h5>
                     <span
                       style={{
@@ -180,9 +183,9 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
                     </span>
                   </div>
                 </div>
-                {approval.notes && (
+                {approval.approvalNotes && (
                   <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: '#111827' }}>
-                    {approval.notes}
+                    {approval.approvalNotes}
                   </p>
                 )}
                 {status === 'pending' && (

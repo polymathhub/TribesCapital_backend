@@ -104,6 +104,7 @@ export class DueDiligenceService {
           assignedTo: {
             select: { id: true, email: true, firstName: true, lastName: true },
           },
+          documents: true,
           _count: {
             select: { items: true, documents: true, comments: true, approvals: true },
           },

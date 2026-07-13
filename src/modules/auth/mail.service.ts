@@ -50,30 +50,30 @@ export class MailService {
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
           <h2>Welcome, ${firstName}!</h2>
-          <p>Look who just joined the tribe!
+          <p> Look who just joined the tribe!
 
-Welcome to Tribes Capital where ideas grow, communities thrive, and opportunities have a funny habit of finding the right people.
+        Welcome to Tribes Capital where ideas grow, communities thrive, and opportunities have a funny habit of finding the right people.
 
-We'd love to tell you this email comes with free money... but our lawyers strongly suggested we don't.
+        We'd love to tell you this email comes with free money... but our lawyers strongly suggested we don't.
 
-What you do get is access to a community built for builders, investors, founders, creators, and curious minds who believe the future is better when we build it together.
+        What you do get is access to a community built for builders, investors, founders, creators, and curious minds who believe the future is better when we build it together.
 
-Here's what you can do next
-Complete your profile.
-Connect with other members.
-Join conversations that matter.
-Explore resources and opportunities.
-Start making an impact.
+        Here's what you can do next:
+        Complete your signup.go and log in 
+        Connect with other members and learn about energy on the learnighub.
+        Join conversations that matter on the office hour and events .
+        Explore resources and opportunities on due diligence.
+        Start making an impact!.
 
-If you ever get lost, don't panic. We have buttons, menus, and a support team that's much friendlier than a "404 Not Found" page.
+        If you ever get lost, don't panic. We have buttons, menus, and a support team that's much friendlier than a "404 Not Found" page.
 
-We're genuinely excited to have you here, and we can't wait to see what you'll build, share, and achieve with the community.
+       We're genuinely excited to have you here, and we can't wait to see what you'll build, share, and achieve with the community.
 
-Welcome aboard!
+      Welcome aboard!
 
-The Tribes Capital Team
+    The Tribes Capital Team
 
-P.S. If you suddenly become wildly successful after joining, we'd like to think we had something to do with it.
+    P.S. If you suddenly become wildly successful after joining, we'd like to think we had something to do with it.
           </p>
         </div>
       `,
@@ -119,7 +119,7 @@ P.S. If you suddenly become wildly successful after joining, we'd like to think 
     }
 
     const match = fromAddress.match(/^\s*"?([^"<]+)"?\s*<([^>]+)>\s*$/i);
-    return match?.[1]?.trim() || 'Tribes Capital';
+    return match?.[1]?.trim() || 'TribesCapital';
   }
 
   private getSenderEmail(fromAddress: string): string {
