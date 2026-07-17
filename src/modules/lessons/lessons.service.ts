@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '@database/prisma.service';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson.dto';
 import { VideoService } from './video.service';
+import { calculateProgressPercent } from './progress.utils';
 
 @Injectable()
 export class LessonsService {
@@ -154,7 +155,8 @@ export class LessonsService {
       throw new NotFoundException('Lesson not found');
     }
 
-    // Record completion in progress table
+    const now = new Date();
+
     await this.prisma.progress.upsert({
       where: {
         userId_lessonId: {
@@ -165,10 +167,14 @@ export class LessonsService {
       create: {
         userId,
         lessonId,
-        completedAt: new Date(),
+        completedAt: now,
+        completionPercentage: 100,
+        lastAccessedAt: now,
       },
       update: {
-        completedAt: new Date(),
+        completedAt: now,
+        completionPercentage: 100,
+        lastAccessedAt: now,
       },
     });
 
@@ -182,7 +188,7 @@ export class LessonsService {
     const totalLessons = await this.prisma.lesson.count({
       where: { courseId: lesson.courseId },
     });
-    const newProgress = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    const newProgress = calculateProgressPercent(completedLessons, totalLessons);
 
     await this.prisma.enrollment.updateMany({
       where: {
@@ -191,10 +197,82 @@ export class LessonsService {
       },
       data: {
         progress: newProgress,
+        completedAt: newProgress >= 100 ? now : undefined,
+        status: newProgress >= 100 ? 'completed' : 'active',
       },
     });
 
     return this.formatLesson(lesson);
+  }
+
+  async trackLessonWatch(
+    userId: string,
+    trackingData: {
+      videoId: string;
+      courseId: string;
+      lessonId: string;
+      watchDuration: number;
+      totalDuration: number;
+      percentageWatched: number;
+      isCompleted: boolean;
+    },
+  ): Promise<{ success: boolean }> {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: trackingData.lessonId },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    const now = new Date();
+    const percentage = Math.max(0, Math.min(100, trackingData.percentageWatched));
+
+    await this.prisma.progress.upsert({
+      where: {
+        userId_lessonId: {
+          userId,
+          lessonId: trackingData.lessonId,
+        },
+      },
+      create: {
+        userId,
+        lessonId: trackingData.lessonId,
+        lastAccessedAt: now,
+        completionPercentage: percentage,
+      },
+      update: {
+        lastAccessedAt: now,
+        completionPercentage: percentage,
+        completedAt: trackingData.isCompleted || percentage >= 100 ? now : undefined,
+      },
+    });
+
+    const completedLessons = await this.prisma.progress.count({
+      where: {
+        userId,
+        completedAt: { not: null },
+        lesson: { courseId: trackingData.courseId },
+      },
+    });
+    const totalLessons = await this.prisma.lesson.count({
+      where: { courseId: trackingData.courseId },
+    });
+    const newProgress = calculateProgressPercent(completedLessons, totalLessons);
+
+    await this.prisma.enrollment.updateMany({
+      where: {
+        userId,
+        courseId: trackingData.courseId,
+      },
+      data: {
+        progress: newProgress,
+        completedAt: newProgress >= 100 ? now : undefined,
+        status: newProgress >= 100 ? 'completed' : 'active',
+      },
+    });
+
+    return { success: true };
   }
 
   private formatLesson(lesson: any): LessonResponseDto {

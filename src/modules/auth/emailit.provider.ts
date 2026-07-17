@@ -6,12 +6,21 @@ import { EmailProvider, EmailSendOptions } from './email-provider.interface';
 export class EmailitProvider implements EmailProvider {
   readonly name = 'emailit';
   private readonly logger = new Logger(EmailitProvider.name);
+<<<<<<< HEAD
+=======
+  private readonly maxRetries = 3;
+  private readonly timeoutMs = 10000;
+>>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
 
   constructor(private readonly configService: ConfigService) {}
 
   async send(options: EmailSendOptions): Promise<boolean> {
     const apiKey = this.getStringConfig('EMAILIT_API_KEY');
+<<<<<<< HEAD
     const apiUrl = this.getStringConfig('EMAILIT_API_URL') || 'https://api.emailit.com/v1/send';
+=======
+    const apiUrl = this.getStringConfig('EMAILIT_API_URL') || 'https://api.emailit.com/v2/emails';
+>>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
     const fromAddress = this.getFromAddress();
 
     if (!apiKey) {
@@ -19,13 +28,56 @@ export class EmailitProvider implements EmailProvider {
       return false;
     }
 
+<<<<<<< HEAD
     try {
       const response = await fetch(apiUrl, {
+=======
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= this.maxRetries; attempt += 1) {
+      try {
+        const response = await this.request(apiUrl, {
+          from: fromAddress,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+          text: options.text ?? this.stripHtml(options.html),
+        }, apiKey);
+
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(`Emailit API returned ${response.status}: ${body}`);
+        }
+
+        this.logger.log(`Email sent successfully to ${options.to} via Emailit API on attempt ${attempt}.`);
+        return true;
+      } catch (error) {
+        lastError = error;
+        const isLastAttempt = attempt === this.maxRetries;
+        this.logger.warn(`Emailit attempt ${attempt}/${this.maxRetries} failed for ${options.to}: ${error instanceof Error ? error.message : String(error)}`);
+        if (isLastAttempt) {
+          break;
+        }
+        await this.delay(250 * attempt);
+      }
+    }
+
+    this.logger.error(`Failed to send email to ${options.to} via Emailit API`, lastError instanceof Error ? lastError.stack : String(lastError));
+    return false;
+  }
+
+  private async request(url: string, payload: Record<string, unknown>, apiKey: string) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      return await fetch(url, {
+>>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
+<<<<<<< HEAD
         body: JSON.stringify({
           from: fromAddress,
           to: options.to,
@@ -48,6 +100,24 @@ export class EmailitProvider implements EmailProvider {
     }
   }
 
+=======
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private stripHtml(html: string): string {
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+>>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
   private getFromAddress(): string {
     return this.getStringConfig('MAIL_FROM') || this.getStringConfig('EMAILIT_FROM') || 'noreply@tribescapital.com';
   }

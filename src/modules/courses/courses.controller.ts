@@ -29,7 +29,7 @@ export class CoursesController {
   async getProgress(
     @Param('id') courseId: string,
     @GetCurrentUser('id') userId: string,
-  ): Promise<{ progress: number; status: string; completedLessons: number; totalLessons: number }> {
+  ): Promise<{ progress: number; status: string; completedLessons: number; totalLessons: number; lastLessonId: string | null; lastAccessedAt: string | null }> {
     return this.coursesService.getProgress(courseId, userId);
   }
 

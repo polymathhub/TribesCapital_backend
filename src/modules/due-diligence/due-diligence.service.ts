@@ -349,8 +349,7 @@ export class DueDiligenceService {
   /* ═══════════════════════════════════════════════════════════ */
 
   async addComment(dueDiligenceId: string, dto: CreateDDCommentDto, userId: string) {
-    const dd = await this.prisma.dueDiligence.findUnique({ where: { id: dueDiligenceId } });
-    if (!dd) throw new NotFoundException('Due diligence not found');
+    const dd = await this.findOne(dueDiligenceId, userId);
 
     const comment = await this.prisma.dueDiligenceComment.create({
       data: {

@@ -139,9 +139,7 @@ export class LessonsController {
       isCompleted: boolean;
     },
   ): Promise<any> {
-    // In production, use VideoTrackingService
-    console.log(`📹 Video Watch Tracked - User: ${userId}, Video: ${trackingData.videoId}, Progress: ${trackingData.percentageWatched}%`);
-    
+    const result = await this.lessonsService.trackLessonWatch(userId, trackingData);
     return {
       success: true,
       message: 'Video watch tracked successfully',
@@ -149,6 +147,7 @@ export class LessonsController {
         userId,
         ...trackingData,
         timestamp: new Date(),
+        ...result,
       },
     };
   }

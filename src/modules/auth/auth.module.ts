@@ -9,6 +9,8 @@ import { AuthService } from './auth.service';
 import { MailService } from './mail.service';
 import { JwtTokenService } from './jwt-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { EmailitProvider } from './emailit.provider';
+import { EMAIL_PROVIDER } from './email-provider.interface';
 
 @Module({
   imports: [
@@ -32,7 +34,17 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtTokenService, MailService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    JwtTokenService,
+    MailService,
+    {
+      provide: EMAIL_PROVIDER,
+      useClass: EmailitProvider,
+    },
+    EmailitProvider,
+  ],
   exports: [AuthService, JwtModule, PassportModule, JwtTokenService, MailService],
 })
 export class AuthModule {}

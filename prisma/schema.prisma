@@ -189,6 +189,7 @@ model Progress {
 model Event {
   id              String      @id @default(cuid())
   title           String
+  slug            String?
   description     String?
   thumbnail       String?
   location        String?
@@ -212,6 +213,7 @@ model Event {
   rsvps           RSVP[]
 
   @@index([creatorId])
+  @@index([slug])
   @@index([startDate])
   @@index([isPublished])
 }

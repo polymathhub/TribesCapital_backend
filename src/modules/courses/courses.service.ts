@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, EnrollmentResponseDto } from './dto/course.dto';
+import { calculateProgressPercent } from '@modules/lessons/progress.utils';
 
 @Injectable()
 export class CoursesService {
@@ -114,11 +115,12 @@ export class CoursesService {
 
     return enrollments.map((e) => {
       const progress = Number(e.progress ?? 0);
+      const normalizedStatus = progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted';
       return {
         id: e.id,
         userId: e.userId,
         courseId: e.courseId,
-        status: progress >= 100 ? 'completed' : 'inProgress',
+        status: normalizedStatus,
         progress,
         startDate: e.enrolledAt,
         createdAt: e.createdAt,
@@ -126,7 +128,7 @@ export class CoursesService {
     });
   }
 
-  async getProgress(courseId: string, userId: string): Promise<{ progress: number; status: string; completedLessons: number; totalLessons: number }> {
+  async getProgress(courseId: string, userId: string): Promise<{ progress: number; status: string; completedLessons: number; totalLessons: number; lastLessonId: string | null; lastAccessedAt: string | null }> {
     const totalLessons = await this.prisma.lesson.count({ where: { courseId } });
     const completedLessons = await this.prisma.progress.count({
       where: {
@@ -135,12 +137,25 @@ export class CoursesService {
         lesson: { courseId },
       },
     });
-    const progress = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    const latestProgress = await this.prisma.progress.findFirst({
+      where: {
+        userId,
+        lesson: { courseId },
+      },
+      orderBy: { lastAccessedAt: 'desc' },
+      select: {
+        lessonId: true,
+        lastAccessedAt: true,
+      },
+    });
+    const progress = calculateProgressPercent(completedLessons, totalLessons);
     return {
       progress,
-      status: progress >= 100 ? 'completed' : 'inProgress',
+      status: progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted',
       completedLessons,
       totalLessons,
+      lastLessonId: latestProgress?.lessonId ?? null,
+      lastAccessedAt: latestProgress?.lastAccessedAt ? latestProgress.lastAccessedAt.toISOString() : null,
     };
   }
 

@@ -111,6 +111,16 @@ function parseDuration(durationText) {
   return 60;
 }
 
+function getPreferredLessonIndex(lessonItems, preferredLessonId, completedLessonIds = []) {
+  if (!lessonItems?.length) return 0;
+  if (preferredLessonId) {
+    const preferredIndex = lessonItems.findIndex((lesson) => String(lesson.id) === String(preferredLessonId));
+    if (preferredIndex >= 0) return preferredIndex;
+  }
+  const firstIncomplete = lessonItems.findIndex((lesson) => !completedLessonIds.includes(lesson.id));
+  return firstIncomplete >= 0 ? firstIncomplete : Math.max(0, lessonItems.length - 1);
+}
+
 const QUICK_QUIZ = [
   {
     id: 'q1',
@@ -612,6 +622,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizRetakeRequired, setQuizRetakeRequired] = useState(false);
+  const [hasInitializedLesson, setHasInitializedLesson] = useState(false);
 
   const fallbackLessonCount = Math.max(1, Math.min(4, Number(course?.lessons) || 4));
   const fallbackLessons = Array.from({ length: fallbackLessonCount }, (_, index) => ({
@@ -684,14 +695,14 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
     setIsVideoVisible(true);
   }
 
-  async function flushLessonWatch(isCompleted = false, forceLesson = null) {
-    if (!lessonWatchStart) return;
+  async function flushLessonWatch(isCompleted = false, forceLesson = null, startedAt = lessonWatchStart) {
+    if (!startedAt) return;
     const targetLesson = forceLesson || activeLesson;
     if (!targetLesson) {
       setLessonWatchStart(null);
       return;
     }
-    const watchSeconds = Math.max(0, Math.round((Date.now() - lessonWatchStart) / 1000));
+    const watchSeconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
     const totalSeconds = parseDuration(targetLesson.duration);
     const percentageWatched = isCompleted ? 100 : Math.min(100, Math.round((watchSeconds / Math.max(totalSeconds, 15)) * 100));
     setLessonWatchStart(null);
@@ -738,11 +749,16 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
     const nextCompletedLessonIds = [...completedLessonIds, lesson.id];
     try {
       await lessonsAPI.markComplete(lesson.id);
+<<<<<<< HEAD
       await flushLessonWatch(true, lesson);
       setCompletedLessonIds(nextCompletedLessonIds);
       setLastLessonId(lesson.id);
       setLastLessonIndex(activeLessonIndex);
       await refreshCourseProgress(nextCompletedLessonIds);
+=======
+      await flushLessonWatch(true, lesson, lessonWatchStart || Date.now());
+      setCompletedLessonIds((prev) => [...prev, lesson.id]);
+>>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
       if (isLastLesson) {
         openQuiz();
       } else if (activeLessonIndex < lessonItems.length - 1) {
@@ -855,6 +871,8 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
     setVideoReady(false);
     setIsVideoVisible(false);
     setLessons([]);
+    setHasInitializedLesson(false);
+    setLessonWatchStart(null);
   }, [course?.id]);
 
   useEffect(() => {
@@ -922,9 +940,26 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   }, [activeLessonIndex, lessonItems.length]);
 
   useEffect(() => {
+<<<<<<< HEAD
     if (!course?.id) return;
     persistCourseProgress(course.id, progress, completedLessonIds, lastLessonId, lastLessonIndex);
   }, [course?.id, progress, completedLessonIds, lastLessonId, lastLessonIndex]);
+=======
+    if (!lessonItems.length || loadingLessons || hasInitializedLesson) return;
+    const preferredIndex = getPreferredLessonIndex(lessonItems, course?.lastLessonId, completedLessonIds);
+    setActiveLessonIndex(preferredIndex);
+    setHasInitializedLesson(true);
+  }, [course?.lastLessonId, completedLessonIds, hasInitializedLesson, lessonItems, loadingLessons]);
+
+  useEffect(() => {
+    if (!activeLesson || !isVideoVisible) return;
+    const startedAt = Date.now();
+    setLessonWatchStart(startedAt);
+    return () => {
+      flushLessonWatch(false, activeLesson, startedAt).catch(() => undefined);
+    };
+  }, [activeLesson?.id, course?.id, isVideoVisible]);
+>>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
@@ -1327,17 +1362,26 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
     let isMounted = true;
     const loadCourses = async () => {
       try {
-        const [coursesResponse, profileResponse] = await Promise.all([
+        const [coursesResponse, enrolledResponse] = await Promise.all([
           coursesAPI.list({ take: 20 }),
-          usersAPI.getProfile(),
+          coursesAPI.getEnrolled(),
         ]);
-        const enrolledResponse = await apiClient.get(`/courses/${profileResponse.data.id}/enrollments`);
-        const enrolledMap = new Map((enrolledResponse.data || []).map((course) => [course.id, course]));
+        const enrolledMap = new Map((enrolledResponse.data || []).map((course) => [course.courseId, course]));
 
-        const transformed = (coursesResponse.data || []).map((course) => {
+        const transformed = await Promise.all((coursesResponse.data || []).map(async (course) => {
           const enrollment = enrolledMap.get(course.id);
+<<<<<<< HEAD
           const storedProgress = readStoredCourseProgress(course.id);
           const progress = Math.max(Number(enrollment?.progress ?? 0), Number(storedProgress.progress ?? 0));
+=======
+          let progressData = null;
+          try {
+            progressData = await coursesAPI.getProgress(course.id);
+          } catch (error) {
+            // fall back to the enrollment snapshot if progress is unavailable
+          }
+          const progress = progressData?.data?.progress ?? enrollment?.progress ?? 0;
+>>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
           const status = progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted';
           return {
             id: course.id,
@@ -1349,10 +1393,12 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
             level: course.difficulty || 'Beginner',
             progress,
             status,
+            lastLessonId: progressData?.data?.lastLessonId ?? null,
+            lastAccessedAt: progressData?.data?.lastAccessedAt ?? null,
             videoId: course.videoId || 'wMQDsjS9WC4',
             thumbnail: course.thumbnail || 'https://img.youtube.com/vi/wMQDsjS9WC4/hqdefault.jpg',
           };
-        });
+        }));
 
         if (isMounted) {
           setCourses([...channelCourseEntries, ...transformed]);
@@ -1437,7 +1483,10 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
                 {resumeCourse.title}
               </div>
               <div style={{ fontSize: 13, color: T2 }}>
-                Last viewed 2 days ago · Module {Math.round(resumeCourse.lessons * resumeCourse.progress / 100)} of {resumeCourse.lessons}: Legal Frameworks
+                {resumeCourse.lastAccessedAt
+                  ? `Resumed ${new Date(resumeCourse.lastAccessedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                  : 'Pick up from your last lesson'}
+                {resumeCourse.lessons ? ` · ${Math.max(1, Math.round((resumeCourse.progress / 100) * resumeCourse.lessons))} of ${resumeCourse.lessons} lessons in view` : ''}
               </div>
             </div>
 

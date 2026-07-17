@@ -67,20 +67,24 @@ export class DueDiligenceController {
 
   @Post()
   @HttpCode(201)
+<<<<<<< HEAD
   async create(@Body() dto: CreateDueDiligenceDto, @GetCurrentUser('sub') userId: string) {
     if (!userId) {
       throw new BadRequestException('Authenticated user is required to create a due diligence case.');
     }
+=======
+  async create(@Body() dto: CreateDueDiligenceDto, @GetCurrentUser('id') userId: string) {
+>>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
     return this.service.create(dto, userId);
   }
 
   @Get()
-  async findAll(@Query() query: QueryDDDto, @GetCurrentUser('sub') userId: string) {
+  async findAll(@Query() query: QueryDDDto, @GetCurrentUser('id') userId: string) {
     return this.service.findAll(query, userId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
+  async findOne(@Param('id') id: string, @GetCurrentUser('id') userId: string) {
     return this.service.findOne(id, userId);
   }
 
@@ -88,14 +92,14 @@ export class DueDiligenceController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateDueDiligenceDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.update(id, dto, userId);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  async delete(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
+  async delete(@Param('id') id: string, @GetCurrentUser('id') userId: string) {
     return this.service.delete(id, userId);
   }
 
@@ -108,7 +112,7 @@ export class DueDiligenceController {
   async createItem(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDItemDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.createItem(dueDiligenceId, dto, userId);
   }
@@ -118,7 +122,7 @@ export class DueDiligenceController {
     @Param('id') dueDiligenceId: string,
     @Param('itemId') itemId: string,
     @Body() dto: UpdateDDItemDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.updateItem(dueDiligenceId, itemId, dto, userId);
   }
@@ -128,7 +132,7 @@ export class DueDiligenceController {
   async deleteItem(
     @Param('id') dueDiligenceId: string,
     @Param('itemId') itemId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.deleteItem(dueDiligenceId, itemId, userId);
   }
@@ -154,7 +158,7 @@ export class DueDiligenceController {
   async uploadDocument(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDDocumentDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file && !dto.fileUrl) {
@@ -180,7 +184,7 @@ export class DueDiligenceController {
   async deleteDocument(
     @Param('id') dueDiligenceId: string,
     @Param('docId') docId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.deleteDocument(dueDiligenceId, docId, userId);
   }
@@ -190,7 +194,7 @@ export class DueDiligenceController {
     @Param('id') dueDiligenceId: string,
     @Param('docId') docId: string,
     @Body() dto: ReviewDDDocumentDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.reviewDocument(dueDiligenceId, docId, dto, userId);
   }
@@ -216,7 +220,7 @@ export class DueDiligenceController {
   async addComment(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDCommentDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
     @UploadedFiles() files?: Express.Multer.File[],
   ) {
     const attachments = Array.isArray(dto.attachments) ? [...dto.attachments] : [];
@@ -234,7 +238,7 @@ export class DueDiligenceController {
   async deleteComment(
     @Param('id') dueDiligenceId: string,
     @Param('commentId') commentId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.deleteComment(dueDiligenceId, commentId, userId);
   }
@@ -248,7 +252,7 @@ export class DueDiligenceController {
   async createApproval(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDApprovalDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.createApproval(dueDiligenceId, dto, userId);
   }
@@ -258,7 +262,7 @@ export class DueDiligenceController {
     @Param('id') dueDiligenceId: string,
     @Param('approvalId') approvalId: string,
     @Body() dto: ApproveDDDto,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('id') userId: string,
   ) {
     return this.service.approveOrReject(dueDiligenceId, approvalId, dto, userId);
   }
