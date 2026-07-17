@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { eventsAPI } from '../api/endpoints';
 import CorporateMemphisIllustration from '../components/CorporateMemphisIllustration';
 import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
@@ -60,75 +60,6 @@ function buildMeetingHref(platform, link) {
   if (detectedPlatform === 'Microsoft Teams') return `https://teams.microsoft.com/l/meetup-join/${encodeURIComponent(value)}`;
   if (detectedPlatform === 'Discord') return `https://discord.gg/${encodeURIComponent(value)}`;
   return value;
-}
-
-function formatDateForInput(date) {
-  const parsed = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(parsed.getTime())) return '';
-  const month = String(parsed.getMonth() + 1).padStart(2, '0');
-  const day = String(parsed.getDate()).padStart(2, '0');
-  return `${month}/${day}/${parsed.getFullYear()}`;
-}
-
-function formatTimeForInput(date) {
-  const parsed = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(parsed.getTime())) return '00:00';
-  return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
-}
-
-function parseDateInput(value, timeValue) {
-  const normalizedValue = `${value || ''}`.trim();
-  const normalizedTime = `${timeValue || '00:00'}`.trim();
-  const dateParts = normalizedValue.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  const slashParts = normalizedValue.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-  const parsedDate = dateParts
-    ? [Number(dateParts[2]), Number(dateParts[3]), Number(dateParts[1])]
-    : slashParts
-      ? [Number(slashParts[1]), Number(slashParts[2]), Number(slashParts[3])]
-      : [null, null, null];
-  const [month, day, year] = parsedDate;
-  if ([month, day, year].some(part => part === null || Number.isNaN(part))) return new Date();
-  const [hour = 0, minute = 0] = normalizedTime.split(':').map(part => Number(part));
-  return new Date(year, month - 1, day, Number.isNaN(hour) ? 0 : hour, Number.isNaN(minute) ? 0 : minute);
-}
-
-function buildEventFormState(initial) {
-  const blank = {
-    title: '',
-    speakers: '',
-    type: '',
-    duration: '',
-    date: '',
-    time: '',
-    maxCap: '',
-    avail: '',
-    desc: '',
-    agenda: [],
-    meetingPlatform: '',
-    meetingLink: '',
-    meetingInstructions: '',
-  };
-
-  if (!initial) return blank;
-
-  const startDate = initial.startDate ? new Date(initial.startDate) : new Date();
-  return {
-    title: initial.title || '',
-    speakers: Array.isArray(initial.speakers) ? initial.speakers.map(person => person.name).join(', ') : '',
-    type: initial.type || initial.eventType || '',
-    duration: initial.dur || '',
-    date: formatDateForInput(startDate),
-    time: formatTimeForInput(startDate),
-    maxCap: initial.totalSpots ? String(initial.totalSpots) : '',
-    avail: initial.spotsLeft ? String(initial.spotsLeft) : '',
-    desc: initial.desc || initial.description || '',
-    agenda: Array.isArray(initial.agenda) && initial.agenda.length > 0
-      ? initial.agenda.map(item => ({ t: item.t || '', d: item.d || item.description || '' }))
-      : [],
-    meetingPlatform: initial.meetingPlatform || '',
-    meetingLink: initial.meetingLink || initial.meetingHandle || '',
-    meetingInstructions: initial.meetingInstructions || '',
-  };
 }
 
 /* ─── BREAKPOINT HOOK ─── */
@@ -351,7 +282,7 @@ function CalWidget({ eventDays, onDayClick }) {
    EVENT CARD — responsive
 ═══════════════════════════════════════════ */
 function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
-  const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg,label:ev.type.toUpperCase()};
+  const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg,label:(ev.type||'EVENT').toUpperCase()};
   const meetingPlatform = inferMeetingPlatform(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
   const joinHref = buildMeetingHref(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
   const platformIcon = PLATFORM_ICONS[meetingPlatform] || 'monitor';
@@ -396,8 +327,8 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
             <span style={{display:'flex',alignItems:'center',gap:4,fontSize:isMobile?11:12,color:C.t2}}><I k="clock" s={11} c={C.t3}/>{ev.dur}</span>
           </div>
           <div style={{display:'flex',alignItems:'center'}}>
-            {ev.speakers.map((s,i)=>(
-              <div key={i} style={{width:22,height:22,borderRadius:'50%',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,fontWeight:700,color:s.color,border:`2px solid ${C.w}`,marginLeft:i>0?-5:0,zIndex:ev.speakers.length-i,flexShrink:0}}>{s.initials}</div>
+            {(ev.speakers?.length ? ev.speakers : [{ initial: 'T', bg: C.puf, color: C.pu }]).map((s,i)=>(
+              <div key={i} style={{width:22,height:22,borderRadius:'50%',background:s.bg || C.puf,display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,fontWeight:700,color:s.color || C.pu,border:`2px solid ${C.w}`,marginLeft:i>0?-5:0,zIndex:(ev.speakers?.length || 1)-i,flexShrink:0}}>{s.initials || s.initial || 'T'}</div>
             ))}
           </div>
         </div>
@@ -428,26 +359,9 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
    EVENT FORM MODAL — responsive width
 ═══════════════════════════════════════════ */
 function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
-  const blank = {
-    title:'',
-    speakers:'',
-    type:'',
-    duration:'',
-    date:'',
-    time:'',
-    maxCap:'',
-    avail:'',
-    desc:'',
-    agenda:[],
-    meetingPlatform:'',
-    meetingLink:'',
-    meetingInstructions:'',
-  };
-  const [f, setF] = useState(initial ? buildEventFormState(initial) : blank);
+  const blank = {title:'',speakers:'',type:'',duration:'',date:'',time:'',maxCap:'',avail:'',desc:'',agenda:[], location:'', isVirtual:false, registrationDeadline:'', meetingPlatform:'', meetingLink:'', meetingInstructions:''};
+  const [f, setF] = useState(initial||blank);
   const [typeOpen, setTypeOpen] = useState(false);
-  useEffect(() => {
-    setF(initial ? buildEventFormState(initial) : blank);
-  }, [initial]);
   const set = k => e => setF(p=>({...p,[k]:e.target.value}));
   const setV = (k,v) => setF(p=>({...p,[k]:v}));
   const addAg = () => setF(p=>({...p,agenda:[...p.agenda,{t:'',d:''}]}));
@@ -510,6 +424,20 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
             <div><label htmlFor="event-avail" style={LB}>Available spots</label><input id="event-avail" name="avail" type="number" value={f.avail} onChange={set('avail')} placeholder="0" style={IN}/></div>
           </div>
           <div style={GP}><label htmlFor="event-description" style={LB}>Description <span style={{color:'#EF4444'}}>*</span></label><textarea id="event-description" name="desc" value={f.desc} onChange={set('desc')} placeholder="write something here..." rows={4} style={{...IN,resize:'vertical',lineHeight:1.6}}/></div>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,...GP}}>
+            <div>
+              <label htmlFor="event-location" style={LB}>Location</label>
+              <input id="event-location" name="location" value={f.location} onChange={set('location')} placeholder="e.g. Virtual, NYC HQ, or a partner venue" style={IN}/>
+            </div>
+            <div>
+              <label htmlFor="event-registration-deadline" style={LB}>Registration deadline</label>
+              <input id="event-registration-deadline" name="registrationDeadline" type="date" value={f.registrationDeadline || ''} onChange={e=>setV('registrationDeadline', e.target.value)} style={IN}/>
+            </div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:10,...GP}}>
+            <input id="event-is-virtual" type="checkbox" checked={Boolean(f.isVirtual)} onChange={e=>setV('isVirtual', e.target.checked)} style={{width:15,height:15}}/>
+            <label htmlFor="event-is-virtual" style={{fontSize:13,color:C.t1,cursor:'pointer'}}>Mark this as a virtual session</label>
+          </div>
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:12,...GP}}>
             <div>
               <label htmlFor="event-meeting-platform" style={LB}>Meeting platform</label>
@@ -587,13 +515,13 @@ function DetailModal({ ev, onClose, onRsvp, isMobile }) {
               </div>
             ))}
           </div>
-          <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 12px'}}>Speakers</h3>
-          {ev.speakers.map((s,i)=>(
+          <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 12px'}}>Speaker notes</h3>
+          {ev.speakers?.length ? ev.speakers.map((s,i)=>(
             <div key={i} style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
               <div style={{width:34,height:34,borderRadius:'50%',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:s.color,flexShrink:0}}>{s.initials}</div>
               <div><div style={{fontSize:13,fontWeight:600,color:C.t1}}>{s.name}</div><div style={{fontSize:12,color:C.t3}}>{s.role}</div></div>
             </div>
-          ))}
+          )) : <div style={{fontSize:13,color:C.t2,marginBottom:14}}>The session host will share details and introductions before the event begins.</div>}
           {ev.agenda&&ev.agenda.length>0&&<>
             <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'14px 0 10px'}}>Agenda</h3>
             {ev.agenda.map((a,i)=>(
@@ -678,6 +606,18 @@ function Toast({ msg, onDone }) {
   );
 }
 
+function normalizeEventType(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return 'Office hours';
+  if (['office hours', 'office-hours', 'office_hours', 'officehour', 'office hour'].includes(raw)) return 'Office hours';
+  if (['member circle', 'member-circle', 'member_circle', 'membercircle'].includes(raw)) return 'Member circle';
+  if (['workshop', 'workshops'].includes(raw)) return 'Workshop';
+  if (['webinar', 'webinars'].includes(raw)) return 'Webinar';
+  if (['replay', 'replays'].includes(raw)) return 'Replay';
+  if (['podcast', 'podcasts'].includes(raw)) return 'Podcast';
+  return raw.split(/[_-]/).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+
 function formatEventForUi(event) {
   const start = event.startDate ? new Date(event.startDate) : new Date();
   const end = event.endDate ? new Date(event.endDate) : new Date(start.getTime() + 90 * 60000);
@@ -688,13 +628,10 @@ function formatEventForUi(event) {
   const time = start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true });
   const dateLabel = start.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const dateShort = start.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' }) + ` · ${time}`;
-  const type = event.eventType || 'Office hours';
+  const type = normalizeEventType(event.eventType);
   const meetingPlatform = inferMeetingPlatform(event.meetingPlatform, event.meetingLink || event.meetingHandle);
   const meetingLink = event.meetingLink || event.meetingHandle || '';
   const spotsLeft = Math.max(0, (event.capacity || 0) - (event.rsvpCount || 0));
-  const speakerPool = [SPK.KA, SPK.RA, SPK.NF];
-  const speakerSeed = (event.title || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const speakers = [speakerPool[speakerSeed % speakerPool.length], speakerPool[(speakerSeed + 1) % speakerPool.length]].filter(Boolean);
 
   return {
     id: event.id,
@@ -704,23 +641,26 @@ function formatEventForUi(event) {
     dateShort,
     time,
     dur: `${durationMinutes} min`,
-    format: meetingPlatform ? `Live ${meetingPlatform}` : (event.isVirtual ? 'Live Zoom · Recorded' : 'In person'),
+    format: meetingPlatform ? `Live ${meetingPlatform}` : (event.isVirtual ? 'Live virtual session' : 'In person'),
     month,
     day: String(day),
     weekday,
     calDay: start.getDate(),
     calMonth: start.getMonth(),
     calYear: start.getFullYear(),
+    sortTs: start.getTime(),
     spotsLeft,
     totalSpots: event.capacity || 0,
     rsvped: false,
     type,
-    speakers,
-    agenda: event.meetingInstructions ? [{ t: 'Notes', d: event.meetingInstructions }] : [],
+    speakers: [],
+    agenda: [],
     meetingPlatform,
     meetingLink,
     meetingInstructions: event.meetingInstructions || '',
-    startDate: event.startDate,
+    location: event.location || (event.isVirtual ? 'Virtual' : 'TBD'),
+    isVirtual: Boolean(event.isVirtual),
+    registrationDeadline: event.registrationDeadline || '',
   };
 }
 
@@ -732,20 +672,20 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   const isMobile = isMobileParam !== undefined ? isMobileParam : bp.isMobile;
   const isTablet = isTabletParam !== undefined ? isTabletParam : bp.isTablet;
   const isDesktop = bp.isDesktop;
-  const [events, setEvents] = useState([]);
+  const [events,      setEvents]      = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [eventsError, setEventsError] = useState(null);
-  const [activeTab, setTab] = useState('upcoming');
-  const [activeFilter, setFilter] = useState('all');
-  const [sortBy, setSort] = useState('soonest');
-  const [sortOpen, setSortOpen] = useState(false);
-  const [showCreate, setCreate] = useState(false);
-  const [editEv, setEdit] = useState(null);
-  const [deleteEv, setDel] = useState(null);
-  const [detailEv, setDetail] = useState(null);
-  const [viewAll, setViewAll] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [calEvDays, setCalEvDays] = useState([]);
+  const [activeTab,   setTab]         = useState('upcoming');
+  const [activeFilter,setFilter]      = useState('all');
+  const [sortBy,      setSort]        = useState('soonest');
+  const [sortOpen,    setSortOpen]    = useState(false);
+  const [showCreate,  setCreate]      = useState(false);
+  const [editEv,      setEdit]        = useState(null);
+  const [deleteEv,    setDel]         = useState(null);
+  const [detailEv,    setDetail]      = useState(null);
+  const [viewAll,     setViewAll]     = useState(false);
+  const [toast,       setToast]       = useState(null);
+  const [calEvDays,   setCalEvDays]   = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -784,14 +724,13 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
     try {
       if (!event.rsvped) {
-        await eventsAPI.rsvp(id, { guestCount: 1 });
+        await eventsAPI.rsvp(id);
       } else {
         await eventsAPI.cancelRSVP(id);
       }
 
-      const nextRsvped = !event.rsvped;
-      setEvents(p => p.map(e => e.id === id ? { ...e, rsvped: nextRsvped } : e));
-      if (detailEv?.id === id) setDetail(p => ({ ...p, rsvped: nextRsvped }));
+      setEvents(p => p.map(e => e.id === id ? { ...e, rsvped: !e.rsvped } : e));
+      if (detailEv?.id === id) setDetail(p => ({ ...p, rsvped: !p.rsvped }));
       try {
         window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'events-updated', id } }));
       } catch (e) {
@@ -804,22 +743,29 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   };
 
   const handleSave = async form => {
-    const startDate = parseDateInput(form.date, form.time);
+    const parts = form.date ? form.date.split('/') : [];
+    const startDate = parts[2] && parts[0] && parts[1]
+      ? new Date(`${parts[2]}-${parts[0]}-${parts[1]}T${form.time || '00:00'}`)
+      : new Date();
     const endDate = new Date(startDate.getTime() + 90 * 60000);
+    const registrationDeadline = form.registrationDeadline
+      ? new Date(`${form.registrationDeadline}T00:00:00`)
+      : null;
     const payload = {
       title: form.title,
       description: form.desc || '',
       slug: (form.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      location: form.meetingPlatform ? 'Virtual' : 'TBD',
-      isVirtual: Boolean(form.meetingPlatform || form.meetingLink),
+      location: form.location || (form.isVirtual ? 'Virtual' : 'TBD'),
+      isVirtual: Boolean(form.isVirtual || form.meetingPlatform || form.meetingLink),
       capacity: parseInt(form.maxCap, 10) || 100,
       eventType: form.type || 'Office hours',
       meetingPlatform: inferMeetingPlatform(form.meetingPlatform, form.meetingLink),
       meetingLink: form.meetingLink || '',
       meetingHandle: form.meetingLink || '',
       meetingInstructions: form.meetingInstructions || '',
+      registrationDeadline: registrationDeadline ? registrationDeadline.toISOString() : undefined,
     };
 
     try {
@@ -842,59 +788,43 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
     }
   };
 
-  const handleDelete = async eventToDelete => {
-    try {
-      await eventsAPI.delete(eventToDelete.id);
-      setEvents(p => p.filter(e => e.id !== eventToDelete.id));
-      setCalEvDays(p => p.filter(day => !(day.day === eventToDelete.calDay && day.month === eventToDelete.calMonth && day.year === eventToDelete.calYear)));
-      setDel(null);
-      showToast('Event deleted successfully');
-    } catch (error) {
-      showToast('Unable to delete this event right now.');
-    }
+  const addLiveToCalendar = () => {
+    if (!calEvDays.some(e=>e.day===8&&e.month===4&&e.year===2026)) setCalEvDays(p=>[...p,{day:8,month:4,year:2026}]);
+    showToast('Added to your calendar!');
   };
 
-  const handleCalDayClick = (day, month, year) => {
-    const found = events.find(e => e.calDay === day && e.calMonth === month && e.calYear === year);
+  const handleCalDayClick = (day,month,year) => {
+    const found = events.find(e=>e.calDay===day&&e.calMonth===month&&e.calYear===year);
     if (found) setDetail(found);
   };
 
-  const TABS = [
-    { id: 'upcoming', l: 'Upcoming', n: events.length },
-    { id: 'rsvps', l: 'My RSVPs', n: events.filter(e => e.rsvped).length },
-    { id: 'replays', l: 'Replays', n: events.filter(e => (e.type || '').toLowerCase() === 'replay').length },
-  ];
-  const FILTERS = [{ id: 'all', l: 'All types' }, { id: 'oh', l: 'Office Hours' }, { id: 'mc', l: 'Member Circles' }, { id: 'ws', l: 'Workshops' }, { id: 'wb', l: 'Webinars' }];
-  const SORTS = [{ id: 'soonest', l: 'Soonest first' }, { id: 'latest', l: 'Latest first' }, { id: 'popular', l: 'Most popular' }];
-  const hosts = [
-    { dot: C.gr, n: 'Fatai', r: 'Chief MO', s: '8 sessions' },
-    { dot: C.pu, n: 'David O', r: 'Lead Investment Analyst', s: '8 sessions' },
-    { dot: C.am, n: 'Olatunde', r: 'CTO', s: '8 sessions' },
-  ];
-  const filteredByTab = activeTab === 'rsvps'
-    ? events.filter(e => e.rsvped)
-    : activeTab === 'replays'
-      ? events.filter(e => (e.type || '').toLowerCase() === 'replay')
-      : events;
-  const displayEvents = [...filteredByTab]
-    .filter(event => {
+  const TABS    = [{id:'upcoming',l:'Upcoming',n:events.length},{id:'rsvps',l:'My RSVPs',n:events.filter(e=>e.rsvped).length},{id:'replays',l:'Replays',n:events.filter(e=>normalizeEventType(e.type)==='Replay').length}];
+  const FILTERS = [{id:'all',l:'All types'},{id:'oh',l:'Office Hours'},{id:'mc',l:'Member Circles'},{id:'ws',l:'Workshops'},{id:'wb',l:'Webinars'}];
+  const SORTS   = [{id:'soonest',l:'Soonest first'},{id:'latest',l:'Latest first'},{id:'popular',l:'Most popular'}];
+  const filteredEvents = useMemo(() => {
+    const base = [...events].filter(event => {
       if (activeFilter === 'all') return true;
-      const eventType = (event.type || '').toLowerCase();
-      if (activeFilter === 'oh') return eventType.includes('office');
-      if (activeFilter === 'mc') return eventType.includes('member');
-      if (activeFilter === 'ws') return eventType.includes('workshop');
-      if (activeFilter === 'wb') return eventType.includes('webinar');
+      if (activeFilter === 'oh') return normalizeEventType(event.type) === 'Office hours';
+      if (activeFilter === 'mc') return normalizeEventType(event.type) === 'Member circle';
+      if (activeFilter === 'ws') return normalizeEventType(event.type) === 'Workshop';
+      if (activeFilter === 'wb') return normalizeEventType(event.type) === 'Webinar';
       return true;
-    })
-    .sort((a, b) => {
-      const aDate = new Date(a.startDate || 0).getTime();
-      const bDate = new Date(b.startDate || 0).getTime();
-      if (sortBy === 'latest') return bDate - aDate;
-      if (sortBy === 'popular') return (b.spotsLeft || 0) - (a.spotsLeft || 0);
-      return aDate - bDate;
     });
-  const featuredEvent = displayEvents[0] || events[0] || null;
-  const rsvpEvents = events.filter(e => e.rsvped);
+
+    return base.sort((a, b) => {
+      if (sortBy === 'latest') return b.sortTs - a.sortTs;
+      if (sortBy === 'popular') return (b.spotsLeft === a.spotsLeft ? b.sortTs - a.sortTs : (a.spotsLeft - b.spotsLeft));
+      return a.sortTs - b.sortTs;
+    });
+  }, [events, activeFilter, sortBy]);
+  const displayEvents = activeTab === 'rsvps' ? filteredEvents.filter(e => e.rsvped) : filteredEvents;
+  const rsvpedEvents = useMemo(() => events.filter(e => e.rsvped).slice(0, 3), [events]);
+  const stats = [
+    { l: 'Upcoming events', v: String(events.length), badge: 'This month', bc: C.pu, bb: C.puf },
+    { l: "You're RSVPed to", v: String(events.filter(e => e.rsvped).length), badge: 'Confirmed', bc: C.gr, bb: C.grb },
+    { l: 'Replays available', v: String(events.filter(e => normalizeEventType(e.type) === 'Replay').length), badge: 'On demand', bc: C.tl, bb: C.tlb },
+    { l: 'Sessions attended', v: String(Math.max(0, events.filter(e => e.rsvped).length)), badge: 'Your record', bc: C.am, bb: C.amb },
+  ];
 
   /* Right-column width responsive */
   const rightColW = isDesktop ? 285 : isTablet ? 240 : '100%';
@@ -925,7 +855,7 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
           {/* ── Stats row — 2-col on mobile, 4-col on tablet/desktop ── */}
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?10:16,marginBottom:20}}>
-            {[{l:'Upcoming events',v:String(events.length),badge:'This month',bc:C.pu,bb:C.puf},{l:"You're RSVPed to",v:String(rsvpEvents.length),badge:'Confirmed',bc:C.gr,bb:C.grb},{l:'Replays available',v:String(events.filter(e=>(e.type||'').toLowerCase()==='replay').length),badge:'All time',bc:C.tl,bb:C.tlb},{l:'Sessions attended',v:'0',badge:'Your record',bc:C.am,bb:C.amb}].map(s=>(
+            {stats.map(s=>(
               <div key={s.l} style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:10,padding:isMobile?'12px 14px':'14px 18px'}}>
                 <div style={{fontSize:11,color:C.t2,marginBottom:4}}>{s.l}</div>
                 <div style={{fontSize:isMobile?22:26,fontWeight:700,color:C.t1,marginBottom:6,letterSpacing:-.8}}>{s.v}</div>
@@ -944,20 +874,20 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
                   <div style={{width:8,height:8,borderRadius:'50%',background:'#FCD34D'}}/>
                   <span style={{fontSize:11,fontWeight:700,color:C.w,letterSpacing:.7}}>UPCOMING SESSION</span>
                 </div>
-                <h2 style={{fontSize:isMobile?16:20,fontWeight:700,color:C.w,margin:'0 0 8px',lineHeight:1.3}}>{featuredEvent.title}</h2>
-                <p style={{fontSize:13,color:'rgba(255,255,255,.8)',margin:'0 0 14px',lineHeight:1.6,maxWidth:580}}>{featuredEvent.desc}</p>
+                <h2 style={{fontSize:isMobile?16:20,fontWeight:700,color:C.w,margin:'0 0 8px',lineHeight:1.3}}>{events[0].title}</h2>
+                <p style={{fontSize:13,color:'rgba(255,255,255,.8)',margin:'0 0 14px',lineHeight:1.6,maxWidth:580}}>{events[0].desc}</p>
                 <div style={{display:'flex',alignItems:'center',gap:isMobile?10:16,marginBottom:14,flexWrap:'wrap'}}>
-                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="cal" s={13} c='rgba(255,255,255,.65)'/>{featuredEvent.dateShort}</span>
-                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="users" s={13} c='rgba(255,255,255,.65)'/>{featuredEvent.type}</span>
-                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="clock" s={13} c='rgba(255,255,255,.65)'/>{featuredEvent.dur}</span>
+                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="cal" s={13} c='rgba(255,255,255,.65)'/>{events[0].dateShort}</span>
+                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="users" s={13} c='rgba(255,255,255,.65)'/>{events[0].type}</span>
+                  <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:'rgba(255,255,255,.85)'}}><I k="clock" s={13} c='rgba(255,255,255,.65)'/>{events[0].dur}</span>
                 </div>
                 <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                  <button onClick={() => setDetail(featuredEvent)} style={{padding:isMobile?'8px 14px':'8px 18px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.5)',background:'rgba(255,255,255,.15)',color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>View details</button>
-                  <button onClick={() => handleRsvp(featuredEvent.id)} style={{display:'flex',alignItems:'center',gap:6,padding:isMobile?'8px 12px':'8px 16px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.35)',background:'rgba(255,255,255,.08)',color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
-                    <I k="plus" s={13} c={C.w} sw={2}/>{featuredEvent.rsvped ? 'Cancel RSVP' : 'RSVP now'}
+                  <button onClick={() => setDetail(events[0])} style={{padding:isMobile?'8px 14px':'8px 18px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.5)',background:'rgba(255,255,255,.15)',color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>View details</button>
+                  <button onClick={() => handleRsvp(events[0].id)} style={{display:'flex',alignItems:'center',gap:6,padding:isMobile?'8px 12px':'8px 16px',borderRadius:8,border:'1.5px solid rgba(255,255,255,.35)',background:'rgba(255,255,255,.08)',color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
+                    <I k="plus" s={13} c={C.w} sw={2}/>{events[0].rsvped ? 'Cancel RSVP' : 'RSVP now'}
                   </button>
                 </div>
-                <p style={{fontSize:12,color:'rgba(255,255,255,.6)',margin:'10px 0 0'}}>{featuredEvent.spotsLeft} spots remaining out of {featuredEvent.totalSpots || '∞'}</p>
+                <p style={{fontSize:12,color:'rgba(255,255,255,.6)',margin:'10px 0 0'}}>{events[0].spotsLeft} spots remaining out of {events[0].totalSpots || '∞'}</p>
               </>
             ) : (
               <div style={{display:'flex',flexDirection:isMobile ? 'column' : 'row',alignItems:'center',justifyContent:'space-between',gap:18,padding:isMobile ? '18px 16px' : '22px 24px',background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',borderRadius:16,backdropFilter:'blur(8px)'}}>
@@ -1046,10 +976,8 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
                   <span style={{fontSize:13,fontWeight:600,color:C.t1}}>Your upcoming RSVPs</span>
                   <button onClick={()=>setViewAll(true)} style={{fontSize:12,color:C.pu,background:'none',border:'none',cursor:'pointer',fontFamily:'inherit'}}>View all</button>
                 </div>
-                {rsvpEvents.length === 0 ? (
-                  <div style={{padding:'12px 16px',fontSize:12,color:C.t2}}>You have not RSVP'd to any sessions yet.</div>
-                ) : rsvpEvents.map((event, i) => (
-                  <div key={event.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:i < rsvpEvents.length - 1 ? `1px solid ${C.bd}` : 'none'}}>
+                {rsvpedEvents.length > 0 ? rsvpedEvents.map((event,i)=>(
+                  <div key={event.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:i<rsvpedEvents.length-1?`1px solid ${C.bd}`:'none'}}>
                     <div style={{width:8,height:8,borderRadius:'50%',background:C.pu,flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:500,color:C.t1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{event.title}</div>
@@ -1057,23 +985,28 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
                     </div>
                     <span style={{background:C.puf,color:C.pu,fontSize:11,fontWeight:500,padding:'2px 8px',borderRadius:6,flexShrink:0}}>RSVPed</span>
                   </div>
-                ))}
+                )) : (
+                  <div style={{padding:'14px 14px 16px',fontSize:12,color:C.t2}}>You have not RSVP'd to any sessions yet. Pick one from the event list above to confirm your place.</div>
+                )}
               </div>
-              {/* Hosts */}
+              {/* Community notes */}
               <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden'}}>
-                <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:13,fontWeight:600,color:C.t1}}>Regular hosts</span></div>
-                {hosts.map((h,i)=>(
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:i<hosts.length-1?`1px solid ${C.bd}`:'none'}}>
-                    <div style={{width:30,height:30,borderRadius:'50%',background:h.dot===C.pu?C.puf:h.dot===C.gr?C.grb:C.amb,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                      <div style={{width:9,height:9,borderRadius:'50%',background:h.dot}}/>
+                <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:13,fontWeight:600,color:C.t1}}>What to expect</span></div>
+                <div style={{padding:'12px 16px',display:'grid',gap:10}}>
+                  {[
+                    { title: 'Live expert guidance', text: 'Join thoughtful sessions focused on deal strategy, community insights, and member support.', icon: C.pu },
+                    { title: 'Practical follow-up', text: 'Access event details, join links, and recordings so you can revisit the conversation later.', icon: C.gr },
+                    { title: 'Member-first community', text: 'Bring your questions and connect with the wider Tribes Capital network.', icon: C.am },
+                  ].map((item)=> (
+                    <div key={item.title} style={{display:'flex',gap:10,alignItems:'flex-start'}}>
+                      <div style={{width:8,height:8,borderRadius:'50%',background:item.icon,marginTop:6,flexShrink:0}}/>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:600,color:C.t1,marginBottom:2}}>{item.title}</div>
+                        <div style={{fontSize:11,color:C.t3,lineHeight:1.5}}>{item.text}</div>
+                      </div>
                     </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,color:C.t1}}>{h.n}</div>
-                      <div style={{fontSize:11,color:C.t3}}>{h.r}</div>
-                    </div>
-                    <span style={{fontSize:12,color:C.pu,fontWeight:500,flexShrink:0}}>{h.s}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1082,7 +1015,7 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
       {/* ── MODALS ── */}
       {showCreate && <EventFormModal title="Create event" onClose={()=>setCreate(false)} onSave={handleSave} isMobile={isMobile}/>}
       {editEv     && <EventFormModal title="Edit event" initial={editEv} onClose={()=>setEdit(null)} onSave={handleSave} isMobile={isMobile}/>}
-      {deleteEv   && <DeleteModal ev={deleteEv} isMobile={isMobile} onClose={()=>setDel(null)} onConfirm={() => handleDelete(deleteEv)}/>}
+      {deleteEv   && <DeleteModal ev={deleteEv} isMobile={isMobile} onClose={()=>setDel(null)} onConfirm={()=>{setEvents(p=>p.filter(e=>e.id!==deleteEv.id));try{window.dispatchEvent(new CustomEvent('tribes:data-update',{detail:{type:'events-updated', id:deleteEv.id}}));}catch(e){} setDel(null);showToast('Event deleted successfully');}}/>}
       {detailEv   && <DetailModal ev={detailEv} isMobile={isMobile} onClose={()=>setDetail(null)} onRsvp={handleRsvp}/>}
       {viewAll    && <ViewAllModal events={displayEvents} isMobile={isMobile} onClose={()=>setViewAll(false)} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>}
       {toast      && <Toast msg={toast} onDone={()=>setToast(null)}/>}

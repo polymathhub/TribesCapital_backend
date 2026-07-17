@@ -9,19 +9,23 @@ export class EventsService {
   async create(organizerId: string, createEventDto: CreateEventDto): Promise<EventResponseDto> {
     const eventData: any = {
       title: createEventDto.title,
-      description: createEventDto.description,
-      location: createEventDto.location,
-      isVirtual: createEventDto.isVirtual || false,
-      meetingPlatform: createEventDto.meetingPlatform,
-      meetingLink: createEventDto.meetingLink,
-      meetingHandle: createEventDto.meetingHandle,
-      meetingInstructions: createEventDto.meetingInstructions,
+      description: createEventDto.description || '',
+      location: createEventDto.location || (createEventDto.isVirtual ? 'Virtual' : 'TBD'),
+      isVirtual: Boolean(createEventDto.isVirtual || createEventDto.meetingPlatform || createEventDto.meetingLink),
+      meetingPlatform: createEventDto.meetingPlatform || null,
+      meetingLink: createEventDto.meetingLink || null,
+      meetingHandle: createEventDto.meetingHandle || createEventDto.meetingLink || null,
+      meetingInstructions: createEventDto.meetingInstructions || null,
       startDate: new Date(createEventDto.startDate),
       endDate: new Date(createEventDto.endDate),
       capacity: createEventDto.capacity || 100,
       isPublished: false,
       creatorId: organizerId,
     };
+
+    if (createEventDto.registrationDeadline) {
+      eventData.registrationDeadline = new Date(createEventDto.registrationDeadline);
+    }
 
     if (createEventDto.eventType) {
       eventData.eventType = createEventDto.eventType;
@@ -166,6 +170,7 @@ export class EventsService {
         meetingLink: updateEventDto.meetingLink,
         meetingHandle: updateEventDto.meetingHandle,
         meetingInstructions: updateEventDto.meetingInstructions,
+        registrationDeadline: updateEventDto.registrationDeadline ? new Date(updateEventDto.registrationDeadline) : null,
       } as any,
       include: {
         rsvps: true,
@@ -207,7 +212,7 @@ export class EventsService {
       id: event.id,
       title: event.title,
       description: event.description,
-      slug: event.slug,
+      slug: (event as any).slug || '',
       startDate: event.startDate,
       endDate: event.endDate,
       location: event.location,
@@ -217,6 +222,7 @@ export class EventsService {
       meetingLink: event.meetingLink,
       meetingHandle: event.meetingHandle,
       meetingInstructions: event.meetingInstructions,
+      registrationDeadline: event.registrationDeadline,
       capacity: event.capacity,
       rsvpCount: event.rsvps?.reduce((sum: number, r: any) => sum + r.guestCount, 0) || 0,
       organizerId: event.organizerId,

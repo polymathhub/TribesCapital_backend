@@ -62,6 +62,7 @@ const STEPS = [
 
 /* ─── SMALL ICON SVGs ────────────────────────────────── */
 const TOUR_VISITS_KEY = 'tribescapital_welcome_tour_visits';
+const COURSE_PROGRESS_STORAGE_PREFIX = 'tribes-course-progress';
 
 const getTourVisitCount = () => {
   if (typeof window === 'undefined') return 0;
@@ -69,6 +70,21 @@ const getTourVisitCount = () => {
   const parsedValue = Number(storedValue);
   return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 0;
 };
+
+function readStoredCourseProgress(courseId) {
+  if (typeof window === 'undefined' || !courseId) return { progress: 0, completedLessonIds: [] };
+  try {
+    const storedValue = window.localStorage.getItem(`${COURSE_PROGRESS_STORAGE_PREFIX}:${courseId}`);
+    if (!storedValue) return { progress: 0, completedLessonIds: [] };
+    const parsed = JSON.parse(storedValue);
+    return {
+      progress: Number(parsed?.progress || 0),
+      completedLessonIds: Array.isArray(parsed?.completedLessonIds) ? parsed.completedLessonIds : [],
+    };
+  } catch {
+    return { progress: 0, completedLessonIds: [] };
+  }
+}
 
 function Icon({ name, size=15, color=T3 }) {
   const s = { width:size, height:size, flexShrink:0 };
@@ -477,25 +493,34 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const loadDashboardData = React.useCallback(async () => {
     try {
-      const [membersRes, coursesRes, eventsRes] = await Promise.all([
+      const [membersRes, coursesRes, eventsRes, enrolledRes] = await Promise.all([
         usersAPI.getAll({ skip: 0, take: 100 }).catch(() => ({ data: [] })),
         coursesAPI.list({ skip: 0, take: 8 }).catch(() => ({ data: [] })),
         eventsAPI.list({ skip: 0, take: 6 }).catch(() => ({ data: [] })),
+        coursesAPI.getEnrolled().catch(() => ({ data: [] })),
       ]);
 
       if (!isMountedRef.current) return;
 
-      const normalizedCourses = (Array.isArray(coursesRes?.data) ? coursesRes.data : []).map((course) => ({
-        id: course.id,
-        category: course.category || course.cat || 'General',
-        title: course.title || 'Untitled course',
-        description: course.description || course.desc || course.subtitle || 'Continue your learning with this course.',
-        duration: course.duration || course.dur || 'Self-paced',
-        lessons: course.lessons || course.lessonCount || 0,
-        difficulty: course.difficulty || course.level || 'Beginner',
-        videoId: course.videoId || 'wMQDsjS9WC4',
-        thumbnail: getVisualThumbnail(course.videoId || 'wMQDsjS9WC4', course.thumbnail),
-      }));
+      const enrolledMap = new Map((Array.isArray(enrolledRes?.data) ? enrolledRes.data : []).map((enrollment) => [String(enrollment.courseId || enrollment.course?.id || ''), enrollment]));
+      const normalizedCourses = (Array.isArray(coursesRes?.data) ? coursesRes.data : []).map((course) => {
+        const enrollment = enrolledMap.get(String(course.id));
+        const storedProgress = readStoredCourseProgress(course.id);
+        const progress = Math.max(Number(enrollment?.progress ?? 0), Number(storedProgress.progress ?? 0));
+        return {
+          id: course.id,
+          category: course.category || course.cat || 'General',
+          title: course.title || 'Untitled course',
+          description: course.description || course.desc || course.subtitle || 'Continue your learning with this course.',
+          duration: course.duration || course.dur || 'Self-paced',
+          lessons: course.lessons || course.lessonCount || 0,
+          difficulty: course.difficulty || course.level || 'Beginner',
+          videoId: course.videoId || 'wMQDsjS9WC4',
+          thumbnail: getVisualThumbnail(course.videoId || 'wMQDsjS9WC4', course.thumbnail),
+          progress,
+          status: progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted',
+        };
+      });
 
       setMemberCount(Array.isArray(membersRes?.data) ? membersRes.data.length : 0);
       setDashboardCourses(normalizedCourses);
@@ -517,7 +542,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     void loadDashboardData();
 
     // react to cross-component custom events
-    const onDataUpdate = () => {
+    const onDataUpdate = (event) => {
+      if (event?.detail?.type && !['saved-courses', 'course-progress'].includes(event.detail.type)) {
+        return;
+      }
       void loadDashboardData();
     };
 
@@ -531,11 +559,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     };
 
     window.addEventListener('tribes:data-update', onDataUpdate);
+    window.addEventListener('tribes:course-progress-update', onDataUpdate);
     window.addEventListener('storage', onStorage);
 
     return () => {
       isMountedRef.current = false;
       window.removeEventListener('tribes:data-update', onDataUpdate);
+      window.removeEventListener('tribes:course-progress-update', onDataUpdate);
       window.removeEventListener('storage', onStorage);
     };
   }, [loadDashboardData]);
@@ -689,9 +719,12 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const greeting = getTimeGreeting();
 
+  const inProgressCourseCount = dashboardCourses.filter((course) => course.progress > 0 && course.progress < 100).length;
+  const completedCourseCount = dashboardCourses.filter((course) => course.progress >= 100).length;
+
   const heroChips = [
-    `${dashboardEvents.length} upcoming ${dashboardEvents.length === 1 ? 'session' : 'sessions'}`,
-    `${dashboardCourses.length} available ${dashboardCourses.length === 1 ? 'course' : 'courses'}`,
+    `${inProgressCourseCount} in-progress ${inProgressCourseCount === 1 ? 'course' : 'courses'}`,
+    `${completedCourseCount} completed ${completedCourseCount === 1 ? 'course' : 'courses'}`,
     `${memberCount || 0} community ${memberCount === 1 ? 'member' : 'members'}`,
   ];
 
@@ -716,9 +749,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const statCards = [
     { label: 'Community members', value: memberCount || 0, badge: 'Updated' },
-    { label: 'Available courses', value: dashboardCourses.length, badge: 'Fresh' },
+    { label: 'In progress', value: inProgressCourseCount, badge: 'Momentum' },
+    { label: 'Completed', value: completedCourseCount, badge: 'Done' },
     { label: 'Upcoming sessions', value: dashboardEvents.length, badge: 'This week' },
-    { label: 'Latest updates', value: Math.max(1, dashboardCourses.length + dashboardEvents.length), badge: 'Ready' },
   ];
 
   const latestCourses = dashboardCourses.slice(0, 3);

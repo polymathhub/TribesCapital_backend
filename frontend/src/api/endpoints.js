@@ -62,7 +62,7 @@ export const eventsAPI = {
   update: (id, data) => apiClient.put(`/events/${id}`, data),
   delete: (id) => apiClient.delete(`/events/${id}`),
   getRSVPStatus: (eventId) => apiClient.get(`/events/${eventId}/rsvp-status`),
-  rsvp: (eventId, data = { guestCount: 1 }) => apiClient.post(`/events/${eventId}/rsvp`, data),
+  rsvp: (eventId) => apiClient.post(`/events/${eventId}/rsvp`),
   cancelRSVP: (eventId) => apiClient.delete(`/events/${eventId}/rsvp`),
 };
 

@@ -29,7 +29,7 @@ export class EventsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('sub') userId: string,
     @Body() createEventDto: CreateEventDto,
   ): Promise<EventResponseDto> {
     return this.eventsService.create(userId, createEventDto);
@@ -40,7 +40,7 @@ export class EventsController {
   @HttpCode(201)
   async createRsvp(
     @Param('id') eventId: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('sub') userId: string,
     @Body() createRsvpDto: CreateRsvpDto,
   ): Promise<RsvpResponseDto> {
     return this.eventsService.createRsvp(eventId, userId, createRsvpDto);
@@ -50,7 +50,7 @@ export class EventsController {
   @UseGuards(JwtAuthGuard)
   async cancelRsvp(
     @Param('id') eventId: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('sub') userId: string,
   ): Promise<void> {
     await this.eventsService.cancelRsvp(eventId, userId);
   }
@@ -66,7 +66,7 @@ export class EventsController {
   @Roles('admin')
   async update(
     @Param('id') id: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('sub') userId: string,
     @Body() updateEventDto: CreateEventDto,
   ): Promise<EventResponseDto> {
     return this.eventsService.update(id, userId, updateEventDto);
@@ -78,7 +78,7 @@ export class EventsController {
   @HttpCode(204)
   async delete(
     @Param('id') id: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('sub') userId: string,
   ): Promise<void> {
     await this.eventsService.delete(id, userId);
   }

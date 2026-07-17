@@ -1208,6 +1208,7 @@ function VerifyPage({ onNavigate, onSuccess }) {
 function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
   const [step, setStep] = useState(resetToken ? 'password' : 'email');
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1224,8 +1225,7 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
     try {
       await authAPI.forgotPassword(email);
       setError('');
-      // Show success message
-      setStep('email-sent');
+      setStep('code-sent');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send reset email. Please try again.');
     } finally {
@@ -1236,6 +1236,11 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
   const handleResetPassword = async () => {
     setError('');
     
+    if (!code) {
+      setError('Please enter the reset code sent to your email');
+      return;
+    }
+
     if (!password) {
       setError('Please enter your new password');
       return;
@@ -1265,13 +1270,11 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
     
     setLoading(true);
     try {
-      // Use token from URL if available, otherwise should not reach here
-      if (!resetToken) {
-        setError('Invalid reset link. Please request a new password reset.');
-        return;
+      if (resetToken) {
+        await authAPI.resetPassword(email, resetToken, password);
+      } else {
+        await authAPI.resetPassword(email, code, password);
       }
-      
-      await authAPI.resetPassword({ token: resetToken, password, passwordConfirmation: password });
       setStep('success');
       setTimeout(() => onNavigate('login'), 2000);
     } catch (err) {
@@ -1283,32 +1286,80 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
     }
   };
 
-  if (step === 'email-sent') {
+  if (step === 'code-sent') {
     return (
       <FormContainer isMobile={isMobile}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 80, height: 80, background: COLORS.successLight, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
-            <div style={{ color: COLORS.success, fontSize: 32 }}>✓</div>
-          </div>
-          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 12px' }}>
-            Check your email!
-          </h1>
-          <p style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.6 }}>
-            We've sent a password reset link to <strong>{email}</strong>. Click the link in the email to reset your password.
-          </p>
-          <p style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 20 }}>
-            Didn't receive it? Check your spam folder or{' '}
-            <button
-              onClick={() => { setStep('email'); setEmail(''); }}
-              style={{ background: 'none', border: 'none', color: COLORS.primaryLight, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
-            >
-              try another email
-            </button>
-          </p>
-          <Button onClick={() => onNavigate('login')} style={{ marginTop: 24 }}>
-            Back to sign in
-          </Button>
-        </div>
+        <button
+          onClick={() => { setStep('email'); setCode(''); setPassword(''); }}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: 13,
+            color: COLORS.primaryLight,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            marginBottom: 20,
+          }}
+        >
+          ← Back to enter email
+        </button>
+        <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
+          Enter your reset code
+        </h1>
+        <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+          A reset code was sent to <strong>{email}</strong>. Paste it below and choose a new password.
+        </p>
+
+        {error && <Alert type="error" message={error} />}
+
+        <FormField label="Email address" required>
+          <TextInput
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+          />
+        </FormField>
+
+        <FormField label="Reset code" required>
+          <TextInput
+            type="text"
+            placeholder="Enter the 6-digit code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            disabled={loading}
+          />
+        </FormField>
+
+        <FormField label="New password" required>
+          <TextInput
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Create strong password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            icon={<EyeIcon open={showPassword} />}
+            onIconClick={() => setShowPassword(!showPassword)}
+          />
+          {password && <PasswordStrengthBar password={password} />}
+        </FormField>
+
+        <Button onClick={handleResetPassword} loading={loading} disabled={loading}>
+          Reset password
+        </Button>
+
+        <p style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 20 }}>
+          Didn't receive the code? Check your spam folder or{' '}
+          <button
+            onClick={handleSendCode}
+            style={{ background: 'none', border: 'none', color: COLORS.primaryLight, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+            disabled={loading}
+          >
+            resend code
+          </button>
+        </p>
       </FormContainer>
     );
   }
@@ -1401,7 +1452,7 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
           Forgot password?
         </h1>
         <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
-          Enter your email and we'll send you a link to reset your password
+          Enter your email and we'll send you a code to reset your password.
         </p>
 
         {error && <Alert type="error" message={error} />}
@@ -1417,7 +1468,7 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
         </FormField>
 
         <Button onClick={handleSendCode} loading={loading} disabled={loading}>
-          Send reset link
+          Send reset code
         </Button>
       </FormContainer>
     );

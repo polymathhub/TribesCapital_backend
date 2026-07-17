@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
 import apiClient from '../api/client';
 import learningIllustration from '../assets/illustrations/Learning-cuate.svg';
+import { readStoredCourseProgress, persistCourseProgress, getResumeLessonIndex, COURSE_PROGRESS_STORAGE_PREFIX } from '../utils/learningHubProgress';
 
 /* ═══════════════════════════════════════════════════════
    BREAKPOINT HOOK — tracks viewport width live
@@ -600,6 +601,8 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   const [loadingLessons, setLoadingLessons] = useState(true);
   const [activeLessonIndex, setActiveLessonIndex] = useState(0);
   const [completedLessonIds, setCompletedLessonIds] = useState([]);
+  const [lastLessonId, setLastLessonId] = useState(null);
+  const [lastLessonIndex, setLastLessonIndex] = useState(0);
   const [videoEmbedUrl, setVideoEmbedUrl] = useState('');
   const [videoPreviewUrl, setVideoPreviewUrl] = useState(course?.thumbnail || '');
   const [videoReady, setVideoReady] = useState(false);
@@ -704,20 +707,50 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
     }).catch(() => undefined);
   }
 
+  async function refreshCourseProgress(nextCompletedLessonIds = completedLessonIds) {
+    if (!course?.id) return null;
+    const fallbackProgress = lessonCount > 0 ? Math.round((nextCompletedLessonIds.length / lessonCount) * 100) : 0;
+    persistCourseProgress(course.id, fallbackProgress, nextCompletedLessonIds, lastLessonId, lastLessonIndex);
+
+    try {
+      const response = await coursesAPI.getProgress(course.id);
+      const serverProgress = Number(response?.data?.progress ?? fallbackProgress);
+      persistCourseProgress(course.id, serverProgress, nextCompletedLessonIds, lastLessonId, lastLessonIndex);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('tribes:course-progress-update', {
+          detail: { courseId: course.id, progress: serverProgress, status: response?.data?.status || 'inProgress' },
+        }));
+      }
+      return serverProgress;
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('tribes:course-progress-update', {
+          detail: { courseId: course.id, progress: fallbackProgress, status: fallbackProgress >= 100 ? 'completed' : 'inProgress' },
+        }));
+      }
+      return fallbackProgress;
+    }
+  }
+
   async function handleCompleteLesson(lesson) {
     if (!lesson || completedLessonIds.includes(lesson.id)) return;
     const isLastLesson = activeLessonIndex >= lessonItems.length - 1;
+    const nextCompletedLessonIds = [...completedLessonIds, lesson.id];
     try {
       await lessonsAPI.markComplete(lesson.id);
       await flushLessonWatch(true, lesson);
-      setCompletedLessonIds((prev) => [...prev, lesson.id]);
+      setCompletedLessonIds(nextCompletedLessonIds);
+      setLastLessonId(lesson.id);
+      setLastLessonIndex(activeLessonIndex);
+      await refreshCourseProgress(nextCompletedLessonIds);
       if (isLastLesson) {
         openQuiz();
       } else if (activeLessonIndex < lessonItems.length - 1) {
         setActiveLessonIndex((prev) => Math.min(prev + 1, lessonItems.length - 1));
       }
     } catch (error) {
-      setCompletedLessonIds((prev) => (prev.includes(lesson.id) ? prev : [...prev, lesson.id]));
+      setCompletedLessonIds(nextCompletedLessonIds);
+      await refreshCourseProgress(nextCompletedLessonIds);
       if (isLastLesson) {
         openQuiz();
       }
@@ -738,19 +771,26 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   }
 
   function handleStartCourse() {
-    setActiveLessonIndex(getNextLessonIndex(-1));
+    const resumeIndex = getResumeLessonIndex(lessonItems, completedLessonIds, lastLessonIndex, lastLessonId);
+    setActiveLessonIndex(resumeIndex);
+    setLastLessonIndex(resumeIndex);
+    setLastLessonId(lessonItems?.[resumeIndex]?.id || null);
     setVideoReady(false);
     setIsVideoVisible(true);
   }
 
   function handleContinue() {
-    setActiveLessonIndex((prevIndex) => getNextLessonIndex(prevIndex, true));
+    const nextIndex = getResumeLessonIndex(lessonItems, completedLessonIds, lastLessonIndex, lastLessonId);
+    setActiveLessonIndex(nextIndex);
+    setLastLessonIndex(nextIndex);
+    setLastLessonId(lessonItems?.[nextIndex]?.id || null);
     setVideoReady(false);
     setIsVideoVisible(true);
   }
 
   async function handleReview() {
     if (!lessonItems.length) return;
+    const allLessonIds = lessonItems.map((lesson) => lesson.id);
     for (const lesson of lessonItems) {
       try {
         await lessonsAPI.markComplete(lesson.id);
@@ -758,7 +798,8 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
         // ignore and keep UI consistent
       }
     }
-    setCompletedLessonIds(lessonItems.map((lesson) => lesson.id));
+    setCompletedLessonIds(allLessonIds);
+    await refreshCourseProgress(allLessonIds);
   }
 
   useEffect(() => {
@@ -800,8 +841,17 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   }, [course?.id, course?.thumbnail, selectedVideoId, activeLesson?.id]);
 
   useEffect(() => {
-    setActiveLessonIndex(0);
-    setCompletedLessonIds([]);
+    if (!course?.id) {
+      setCompletedLessonIds([]);
+      return;
+    }
+
+    const restoredProgress = readStoredCourseProgress(course.id);
+    const resumeIndex = getResumeLessonIndex(lessonItems, restoredProgress.completedLessonIds || [], restoredProgress.lastLessonIndex || 0, restoredProgress.lastLessonId);
+    setActiveLessonIndex(resumeIndex);
+    setCompletedLessonIds(restoredProgress.completedLessonIds || []);
+    setLastLessonId(restoredProgress.lastLessonId || null);
+    setLastLessonIndex(restoredProgress.lastLessonIndex || 0);
     setVideoReady(false);
     setIsVideoVisible(false);
     setLessons([]);
@@ -870,6 +920,11 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
       setActiveLessonIndex(lessonItems.length - 1);
     }
   }, [activeLessonIndex, lessonItems.length]);
+
+  useEffect(() => {
+    if (!course?.id) return;
+    persistCourseProgress(course.id, progress, completedLessonIds, lastLessonId, lastLessonIndex);
+  }, [course?.id, progress, completedLessonIds, lastLessonId, lastLessonIndex]);
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
@@ -1281,7 +1336,8 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
 
         const transformed = (coursesResponse.data || []).map((course) => {
           const enrollment = enrolledMap.get(course.id);
-          const progress = enrollment?.progress ?? 0;
+          const storedProgress = readStoredCourseProgress(course.id);
+          const progress = Math.max(Number(enrollment?.progress ?? 0), Number(storedProgress.progress ?? 0));
           const status = progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted';
           return {
             id: course.id,

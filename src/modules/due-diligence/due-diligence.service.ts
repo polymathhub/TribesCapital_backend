@@ -41,19 +41,26 @@ export class DueDiligenceService {
   /* ═══════════════════════════════════════════════════════════ */
 
   async create(dto: CreateDueDiligenceDto, userId: string) {
+    const payload = {
+      title: dto.title,
+      description: dto.description || '',
+      type: dto.type || 'investment',
+      targetName: dto.targetName,
+      targetType: dto.targetType || 'company',
+      targetMetadata: dto.targetMetadata || {},
+      priority: dto.priority || 'medium',
+      creatorId: userId,
+      assignedToId: dto.assignedToId || null,
+      targetDeadline: dto.targetDeadline ? new Date(dto.targetDeadline) : null,
+      status: 'draft' as const,
+      completionPercent: 0,
+      score: 0,
+      recommendation: null,
+      riskLevel: 'low' as const,
+    };
+
     return this.prisma.dueDiligence.create({
-      data: {
-        title: dto.title,
-        description: dto.description,
-        type: dto.type || 'investment',
-        targetName: dto.targetName,
-        targetType: dto.targetType,
-        targetMetadata: dto.targetMetadata || {},
-        priority: dto.priority || 'medium',
-        creatorId: userId,
-        assignedToId: dto.assignedToId,
-        targetDeadline: dto.targetDeadline ? new Date(dto.targetDeadline) : null,
-      },
+      data: payload,
       include: {
         creator: {
           select: { id: true, email: true, firstName: true, lastName: true },

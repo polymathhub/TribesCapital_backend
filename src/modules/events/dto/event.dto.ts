@@ -48,6 +48,10 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   meetingInstructions?: string;
+
+  @IsOptional()
+  @IsDateString()
+  registrationDeadline?: string;
 }
 
 export class CreateRsvpDto {
@@ -73,6 +77,7 @@ export class EventResponseDto {
   meetingLink?: string;
   meetingHandle?: string;
   meetingInstructions?: string;
+  registrationDeadline?: Date;
   capacity?: number;
   rsvpCount!: number;
   organizerId!: string;
