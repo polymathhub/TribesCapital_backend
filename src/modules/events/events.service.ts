@@ -17,7 +17,7 @@ export class EventsService {
   async create(organizerId: string, createEventDto: CreateEventDto): Promise<EventResponseDto> {
     const eventData: any = {
       title: createEventDto.title,
-<<<<<<< HEAD
+      slug: createEventDto.slug || slugify(createEventDto.title),
       description: createEventDto.description || '',
       location: createEventDto.location || (createEventDto.isVirtual ? 'Virtual' : 'TBD'),
       isVirtual: Boolean(createEventDto.isVirtual || createEventDto.meetingPlatform || createEventDto.meetingLink),
@@ -25,16 +25,6 @@ export class EventsService {
       meetingLink: createEventDto.meetingLink || null,
       meetingHandle: createEventDto.meetingHandle || createEventDto.meetingLink || null,
       meetingInstructions: createEventDto.meetingInstructions || null,
-=======
-      slug: createEventDto.slug || slugify(createEventDto.title),
-      description: createEventDto.description,
-      location: createEventDto.location,
-      isVirtual: createEventDto.isVirtual || false,
-      meetingPlatform: createEventDto.meetingPlatform,
-      meetingLink: createEventDto.meetingLink,
-      meetingHandle: createEventDto.meetingHandle,
-      meetingInstructions: createEventDto.meetingInstructions,
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
       startDate: new Date(createEventDto.startDate),
       endDate: new Date(createEventDto.endDate),
       capacity: createEventDto.capacity || 100,
@@ -232,11 +222,7 @@ export class EventsService {
       id: event.id,
       title: event.title,
       description: event.description,
-<<<<<<< HEAD
-      slug: (event as any).slug || '',
-=======
       slug: event.slug || slugify(event.title || ''),
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
       startDate: event.startDate,
       endDate: event.endDate,
       location: event.location,

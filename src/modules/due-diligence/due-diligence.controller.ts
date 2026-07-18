@@ -67,14 +67,10 @@ export class DueDiligenceController {
 
   @Post()
   @HttpCode(201)
-<<<<<<< HEAD
   async create(@Body() dto: CreateDueDiligenceDto, @GetCurrentUser('sub') userId: string) {
     if (!userId) {
       throw new BadRequestException('Authenticated user is required to create a due diligence case.');
     }
-=======
-  async create(@Body() dto: CreateDueDiligenceDto, @GetCurrentUser('id') userId: string) {
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
     return this.service.create(dto, userId);
   }
 

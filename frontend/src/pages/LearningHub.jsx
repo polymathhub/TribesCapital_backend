@@ -749,16 +749,11 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
     const nextCompletedLessonIds = [...completedLessonIds, lesson.id];
     try {
       await lessonsAPI.markComplete(lesson.id);
-<<<<<<< HEAD
-      await flushLessonWatch(true, lesson);
+      await flushLessonWatch(true, lesson, lessonWatchStart || Date.now());
       setCompletedLessonIds(nextCompletedLessonIds);
       setLastLessonId(lesson.id);
       setLastLessonIndex(activeLessonIndex);
       await refreshCourseProgress(nextCompletedLessonIds);
-=======
-      await flushLessonWatch(true, lesson, lessonWatchStart || Date.now());
-      setCompletedLessonIds((prev) => [...prev, lesson.id]);
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
       if (isLastLesson) {
         openQuiz();
       } else if (activeLessonIndex < lessonItems.length - 1) {
@@ -940,11 +935,11 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   }, [activeLessonIndex, lessonItems.length]);
 
   useEffect(() => {
-<<<<<<< HEAD
     if (!course?.id) return;
     persistCourseProgress(course.id, progress, completedLessonIds, lastLessonId, lastLessonIndex);
   }, [course?.id, progress, completedLessonIds, lastLessonId, lastLessonIndex]);
-=======
+
+  useEffect(() => {
     if (!lessonItems.length || loadingLessons || hasInitializedLesson) return;
     const preferredIndex = getPreferredLessonIndex(lessonItems, course?.lastLessonId, completedLessonIds);
     setActiveLessonIndex(preferredIndex);
@@ -959,7 +954,6 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
       flushLessonWatch(false, activeLesson, startedAt).catch(() => undefined);
     };
   }, [activeLesson?.id, course?.id, isVideoVisible]);
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
@@ -1370,18 +1364,17 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
 
         const transformed = await Promise.all((coursesResponse.data || []).map(async (course) => {
           const enrollment = enrolledMap.get(course.id);
-<<<<<<< HEAD
-          const storedProgress = readStoredCourseProgress(course.id);
-          const progress = Math.max(Number(enrollment?.progress ?? 0), Number(storedProgress.progress ?? 0));
-=======
           let progressData = null;
           try {
             progressData = await coursesAPI.getProgress(course.id);
           } catch (error) {
             // fall back to the enrollment snapshot if progress is unavailable
           }
-          const progress = progressData?.data?.progress ?? enrollment?.progress ?? 0;
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
+          const storedProgress = readStoredCourseProgress(course.id);
+          const progress = Math.max(
+            Number(progressData?.data?.progress ?? enrollment?.progress ?? 0),
+            Number(storedProgress.progress ?? 0),
+          );
           const status = progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted';
           return {
             id: course.id,
@@ -1393,8 +1386,8 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
             level: course.difficulty || 'Beginner',
             progress,
             status,
-            lastLessonId: progressData?.data?.lastLessonId ?? null,
-            lastAccessedAt: progressData?.data?.lastAccessedAt ?? null,
+            lastLessonId: progressData?.data?.lastLessonId ?? storedProgress.lastLessonId ?? null,
+            lastAccessedAt: progressData?.data?.lastAccessedAt ?? storedProgress.lastAccessedAt ?? null,
             videoId: course.videoId || 'wMQDsjS9WC4',
             thumbnail: course.thumbnail || 'https://img.youtube.com/vi/wMQDsjS9WC4/hqdefault.jpg',
           };

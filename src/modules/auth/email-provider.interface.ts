@@ -1,8 +1,5 @@
-<<<<<<< HEAD
-=======
 export const EMAIL_PROVIDER = 'EMAIL_PROVIDER';
 
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
 export interface EmailSendOptions {
   to: string;
   subject: string;

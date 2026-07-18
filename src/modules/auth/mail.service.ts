@@ -1,20 +1,11 @@
-<<<<<<< HEAD
-import { Injectable, Logger } from '@nestjs/common';
-import { EmailProvider, EmailSendOptions } from './email-provider.interface';
-=======
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EMAIL_PROVIDER, EmailProvider, EmailSendOptions } from './email-provider.interface';
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
 
-<<<<<<< HEAD
-  constructor(private readonly emailProvider: EmailProvider) {}
-=======
   constructor(@Inject(EMAIL_PROVIDER) private readonly emailProvider: EmailProvider) {}
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
 
   async sendPasswordResetEmail(to: string, code: string): Promise<boolean> {
     return this.sendMail({
@@ -56,7 +47,6 @@ export class MailService {
       html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
           <h2>Welcome, ${firstName}!</h2>
-<<<<<<< HEAD
           <p>Thank you for joining Tribes Capital. Your account is now active and ready to use.</p>
           <p>Here are a few next steps to get started:</p>
           <ul>
@@ -66,17 +56,6 @@ export class MailService {
           </ul>
           <p>If you need help, please visit our support page or reply to this email.</p>
           <p>Welcome aboard,</p>
-=======
-          <p>Welcome to Tribes Capital where ideas grow, communities thrive, and opportunities have a funny habit of finding the right people.</p>
-          <p>Here’s what you can do next:</p>
-          <ul>
-            <li>Complete your signup and sign in</li>
-            <li>Explore the learning hub</li>
-            <li>Join office hours and events</li>
-            <li>Review due diligence materials</li>
-          </ul>
-          <p>We’re excited to have you here.</p>
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
           <p>The Tribes Capital Team</p>
         </div>
       `,
@@ -84,13 +63,10 @@ export class MailService {
     });
   }
 
-<<<<<<< HEAD
-=======
   async sendGenericEmail(to: string, subject: string, html: string, text?: string): Promise<boolean> {
     return this.sendMail({ to, subject, html, text });
   }
 
->>>>>>> f8bdf42 (a lot of work compiled and done under pressure)
   private async sendMail(options: EmailSendOptions): Promise<boolean> {
     try {
       return await this.emailProvider.send(options);
