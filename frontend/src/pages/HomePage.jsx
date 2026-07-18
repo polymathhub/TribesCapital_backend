@@ -9,6 +9,7 @@ import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
 import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
 import wavingHandIllustration from '../assets/illustrations/waving-hand-skin-4-svgrepo-com.svg';
 import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
+import { formatRelativeTime } from '../utils/learningHubProgress';
 
 /* ─── DESIGN TOKENS ─── */
 const P   = '#5B21B6';
@@ -72,17 +73,20 @@ const getTourVisitCount = () => {
 };
 
 function readStoredCourseProgress(courseId) {
-  if (typeof window === 'undefined' || !courseId) return { progress: 0, completedLessonIds: [] };
+  if (typeof window === 'undefined' || !courseId) return { progress: 0, completedLessonIds: [], lastLessonId: null, lastLessonIndex: 0, lastAccessedAt: null };
   try {
     const storedValue = window.localStorage.getItem(`${COURSE_PROGRESS_STORAGE_PREFIX}:${courseId}`);
-    if (!storedValue) return { progress: 0, completedLessonIds: [] };
+    if (!storedValue) return { progress: 0, completedLessonIds: [], lastLessonId: null, lastLessonIndex: 0, lastAccessedAt: null };
     const parsed = JSON.parse(storedValue);
     return {
       progress: Number(parsed?.progress || 0),
       completedLessonIds: Array.isArray(parsed?.completedLessonIds) ? parsed.completedLessonIds : [],
+      lastLessonId: parsed?.lastLessonId || null,
+      lastLessonIndex: Number.isInteger(parsed?.lastLessonIndex) ? parsed.lastLessonIndex : 0,
+      lastAccessedAt: parsed?.lastAccessedAt || null,
     };
   } catch {
-    return { progress: 0, completedLessonIds: [] };
+    return { progress: 0, completedLessonIds: [], lastLessonId: null, lastLessonIndex: 0, lastAccessedAt: null };
   }
 }
 
@@ -462,8 +466,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       kind: 'course',
       title: course.title,
       detail: course.description || 'Recently added on the platform',
-      time: 'New',
-      timestamp: Date.now() - 1000,
+      time: formatRelativeTime(course.lastAccessedAt || Date.now()),
+      timestamp: Number(course.lastAccessedAt || Date.now()),
     }));
 
     const announcementItems = (notifications || []).slice(0, 2).map((item) => ({
@@ -480,7 +484,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       kind: 'video',
       title: video.title,
       detail: video.detail || 'You watched this lesson video',
-      time: video.time || 'Recent',
+      time: formatRelativeTime(video.timestamp || Date.now()),
       timestamp: video.timestamp || Date.now(),
     }));
 
@@ -519,6 +523,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           thumbnail: getVisualThumbnail(course.videoId || 'wMQDsjS9WC4', course.thumbnail),
           progress,
           status: progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted',
+          lastAccessedAt: storedProgress.lastAccessedAt || null,
+          lastLessonId: storedProgress.lastLessonId || null,
+          lastLessonIndex: storedProgress.lastLessonIndex || 0,
         };
       });
 
@@ -549,11 +556,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       void loadDashboardData();
     };
 
-    // respond to other tabs updating localStorage
+    // respond to other tabs or pages updating localStorage or custom events
     const onStorage = (e) => {
       if (!e || !e.key) return;
       const interesting = ['tribes-saved-courses', 'tribes-home-watched-videos', TOUR_VISITS_KEY];
-      if (interesting.includes(e.key)) {
+      // Check if any course progress key was updated (stored as 'tribes-course-progress:courseId')
+      const isCourseProgress = e.key?.startsWith('tribes-course-progress:');
+      if (interesting.includes(e.key) || isCourseProgress) {
         void loadDashboardData();
       }
     };
@@ -754,37 +763,65 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     { label: 'Upcoming sessions', value: dashboardEvents.length, badge: 'This week' },
   ];
 
-  const latestCourses = dashboardCourses.slice(0, 3);
+  const currentCourse = useMemo(() => {
+    const inProgressCourses = [...dashboardCourses]
+      .filter((course) => course.progress > 0 && course.progress < 100)
+      .sort((a, b) => (Number(b.progress || 0) - Number(a.progress || 0)) || ((Number(b.lastAccessedAt || 0) - Number(a.lastAccessedAt || 0))));
+    if (inProgressCourses.length > 0) return inProgressCourses[0];
+    if (dashboardCourses.length > 0) return dashboardCourses[0];
+    return null;
+  }, [dashboardCourses]);
+
+  const resumeCardSubtitle = currentCourse
+    ? `${currentCourse.category || 'Course'} • ${currentCourse.duration || 'Self-paced'} • ${currentCourse.lessons || 0} lessons`
+    : 'Open the learning hub to explore your latest content.';
+  const resumeCardMetaLine = currentCourse
+    ? (currentCourse.lastAccessedAt ? `Last active ${formatRelativeTime(currentCourse.lastAccessedAt)}` : 'Resume from your saved progress')
+    : 'Continue from your most recent learning activity.';
+
+  const latestCourses = useMemo(() => {
+    return [...dashboardCourses]
+      .sort((a, b) => (Number(b.progress || 0) - Number(a.progress || 0)) || ((Number(b.lastAccessedAt || 0) - Number(a.lastAccessedAt || 0))))
+      .slice(0, 3);
+  }, [dashboardCourses]);
   const upcomingEvents = dashboardEvents.slice(0, 3);
   const recommendedNextStep = useMemo(() => {
+    if (currentCourse) {
+      const course = currentCourse;
+      const isCompleted = (course.progress || 0) >= 100;
+      return {
+        type: 'course',
+        title: course.title || 'Continue learning',
+        subtitle: course.description || 'Pick up the lesson you left off and keep the momentum going.',
+        detail: `${course.progress || 0}% complete • ${course.duration || 'Self-paced'} • ${course.lessons || 0} lessons`,
+        metaLine: course.lastAccessedAt ? `Last active ${formatRelativeTime(course.lastAccessedAt)}` : 'Resume from your saved progress',
+        actionLabel: isCompleted ? 'Review course' : 'Resume course',
+        actionTarget: 'learning',
+        pillLabel: isCompleted ? 'Completed' : 'In progress',
+      };
+    }
     if (dashboardEvents.length > 0) {
       const event = dashboardEvents[0];
       return {
         type: 'event',
         title: event.title || 'Upcoming session',
         subtitle: event.description || 'Join the next live session and stay close to the community.',
+        detail: `${event.meetingPlatform || 'Live session'} • ${event.startDate ? new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Upcoming'}`,
         actionLabel: 'Join event',
         actionTarget: 'events',
-      };
-    }
-    if (dashboardCourses.length > 0) {
-      const course = dashboardCourses[0];
-      return {
-        type: 'course',
-        title: course.title || 'Continue learning',
-        subtitle: course.description || 'Pick up the next lesson and keep momentum going.',
-        actionLabel: 'Open learning',
-        actionTarget: 'learning',
+        pillLabel: 'Next event',
       };
     }
     return {
       type: 'general',
       title: 'Explore the platform',
       subtitle: 'Browse courses, events, and announcements to build momentum.',
+      detail: 'Fresh learning content and community updates are ready to explore.',
       actionLabel: 'Open hub',
       actionTarget: 'learning',
+      pillLabel: 'Fresh picks',
     };
-  }, [dashboardCourses, dashboardEvents]);
+  }, [currentCourse, dashboardEvents]);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
@@ -1072,16 +1109,41 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <Icon name="doc" size={20} color={P}/>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
-              <p style={{ fontSize:15, fontWeight:600, color:T1, margin:'0 0 4px', lineHeight:1.3 }}>
-                {dashboardCourses[0]?.title || 'Your next course is ready'}
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
+                <p style={{ fontSize:15, fontWeight:600, color:T1, margin:0, lineHeight:1.3 }}>
+                  {currentCourse?.title || 'Your next course is ready'}
+                </p>
+                {currentCourse && (
+                  <span style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.0, textTransform:'uppercase', background:PF, padding:'3px 7px', borderRadius:999 }}>
+                    {currentCourse.progress >= 100 ? 'Completed' : 'In progress'}
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize:13, color:T2, margin:'0 0 6px' }}>
+                {resumeCardSubtitle}
               </p>
-              <p style={{ fontSize:13, color:T2, margin:0 }}>
-                {dashboardCourses[0]?.description || 'Open the learning hub to explore the latest contents.'}
+              <p style={{ fontSize:12, color:P, margin:'0 0 8px', fontWeight:600 }}>
+                {resumeCardMetaLine}
               </p>
+              {currentCourse && (
+                <>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:2 }}>
+                    <div style={{ flex:1, height:4, background:'#E5E7EB', borderRadius:4, overflow:'hidden' }}>
+                      <div style={{ width:`${Math.max(0, Math.min(100, currentCourse.progress || 0))}%`, height:4, background:'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', borderRadius:4 }} />
+                    </div>
+                    <span style={{ fontSize:12, fontWeight:600, color:P }}>{currentCourse.progress || 0}%</span>
+                  </div>
+                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
+                    <span style={{ fontSize:11, color:T2, background:'#F9FAFB', border:'1px solid #E5E7EB', borderRadius:999, padding:'4px 8px' }}>{currentCourse.category || 'Course'}</span>
+                    <span style={{ fontSize:11, color:T2, background:'#F9FAFB', border:'1px solid #E5E7EB', borderRadius:999, padding:'4px 8px' }}>{currentCourse.duration || 'Self-paced'}</span>
+                    <span style={{ fontSize:11, color:T2, background:'#F9FAFB', border:'1px solid #E5E7EB', borderRadius:999, padding:'4px 8px' }}>{currentCourse.lessons || 0} lessons</span>
+                  </div>
+                </>
+              )}
             </div>
             <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 13), padding:'10px 20px', borderRadius:8, fontWeight:600,
               flexShrink:0, whiteSpace:'nowrap', width:isMobile?'100%':'auto', boxShadow:'0 10px 22px rgba(91, 33, 182, 0.18)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
-              Open learning
+              {currentCourse?.progress >= 100 ? 'Review course' : 'Resume course'}
             </button>
           </div>
 
@@ -1115,16 +1177,32 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </div>
 
               <div style={{ ...glassCardStyle(16, isMobile ? '14px' : '16px 18px'), marginBottom:16 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:10 }}>
-                  <div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8, flexWrap:'wrap', marginBottom:10 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.1, textTransform:'uppercase', marginBottom:4 }}>Recommended next step</div>
-                    <div style={{ fontSize:15, fontWeight:700, color:T1 }}>{recommendedNextStep.title}</div>
+                    <div style={{ fontSize:15, fontWeight:700, color:T1, marginBottom:4 }}>{recommendedNextStep.title}</div>
+                    <div style={{ fontSize:12, color:T2, lineHeight:1.4 }}>{recommendedNextStep.subtitle}</div>
                   </div>
-                  <button onClick={() => onNavigate(recommendedNextStep.actionTarget)} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', fontWeight:600, whiteSpace:'nowrap' }}>{recommendedNextStep.actionLabel}</button>
+                  <span style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.0, textTransform:'uppercase', background:PF, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>
+                    {recommendedNextStep.pillLabel}
+                  </span>
                 </div>
-                <div style={{ fontSize:13, color:T2, lineHeight:1.5, marginBottom:12 }}>{recommendedNextStep.subtitle}</div>
+                {recommendedNextStep.detail && (
+                  <div style={{ fontSize:12, color:T2, marginBottom:10, lineHeight:1.45 }}>{recommendedNextStep.detail}</div>
+                )}
+                {recommendedNextStep.metaLine && (
+                  <div style={{ fontSize:12, color:P, fontWeight:600, marginBottom:12 }}>{recommendedNextStep.metaLine}</div>
+                )}
+                {recommendedNextStep.type === 'course' && currentCourse && (
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                    <div style={{ flex:1, height:4, background:'#E5E7EB', borderRadius:4, overflow:'hidden' }}>
+                      <div style={{ width:`${Math.max(0, Math.min(100, currentCourse.progress || 0))}%`, height:4, background:'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', borderRadius:4 }} />
+                    </div>
+                    <span style={{ fontSize:12, fontWeight:600, color:P }}>{currentCourse.progress || 0}%</span>
+                  </div>
+                )}
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                  <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>Continue learning</button>
+                  <button onClick={() => onNavigate(recommendedNextStep.actionTarget)} style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>{recommendedNextStep.actionLabel}</button>
                   <button onClick={() => onNavigate('events')} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>View events</button>
                   <button onClick={() => onNavigate('announcements')} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>See updates</button>
                 </div>
@@ -1149,8 +1227,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     cat={course.category || 'COURSE'}
                     title={course.title}
                     meta={course.description || 'Live from the platform'}
-                    pct={null}
-                    btn={course.videoId ? 'Watch video' : 'Open course'}
+                    pct={course.progress > 0 || course.status === 'completed' ? course.progress : null}
+                    btn={course.videoId ? 'Watch video' : (course.progress > 0 || course.status === 'completed') ? 'Continue' : 'Start'}
                     isMobile={isMobile}
                     thumbnail={course.thumbnail}
                     videoId={course.videoId}

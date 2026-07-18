@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
 import apiClient from '../api/client';
 import learningIllustration from '../assets/illustrations/Learning-cuate.svg';
-import { readStoredCourseProgress, persistCourseProgress, getResumeLessonIndex, COURSE_PROGRESS_STORAGE_PREFIX } from '../utils/learningHubProgress';
+import { readStoredCourseProgress, persistCourseProgress, getResumeLessonIndex, COURSE_PROGRESS_STORAGE_PREFIX, formatRelativeTime } from '../utils/learningHubProgress';
 
 /* ═══════════════════════════════════════════════════════
    BREAKPOINT HOOK — tracks viewport width live
@@ -255,16 +255,23 @@ function HubTopBar({ onMenuToggle, isMobile, isTablet }) {
   );
 }
 
-function PlayerTopBar({ onBack, isMobile, isTablet }) {
+function PlayerTopBar({ onBack, course, onMenuToggle, isMobile, isTablet, progress }) {
+  const handleBack = () => {
+    if (course) {
+      onBack({ ...course, progress, lastLessonIndex: 0 });
+    } else {
+      onBack();
+    }
+  };
   return (
     <header style={{height:54,background:W,borderBottom:`1px solid ${BD}`,display:'flex',alignItems:'center',padding:`0 ${isMobile?14:24}px`,justifyContent:'space-between',flexShrink:0,gap:12}}>
       <div style={{display:'flex',alignItems:'center',gap:isMobile?8:10,fontSize:13,flex:1,minWidth:0}}>
-        <span onClick={onBack} style={{color:PU,cursor:'pointer',flexShrink:0,fontWeight:500}}>
+        <span onClick={handleBack} style={{color:PU,cursor:'pointer',flexShrink:0,fontWeight:500}}>
           {isMobile ? '← Hub' : 'Learning Hub'}
         </span>
         {!isMobile && <Ico name="arrow" size={13} color={T3} sw={1.5}/>}
-        {!isMobile && <span style={{color:T1,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Understanding Clean Energy Ownership Structures</span>}
-        {isMobile && <span style={{color:T1,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:13}}>Clean Energy Ownership</span>}
+        {!isMobile && <span style={{color:T1,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{course?.title || 'Understanding Clean Energy Ownership Structures'}</span>}
+        {isMobile && <span style={{color:T1,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:13}}>{course?.title ? course.title.split(' ').slice(0,3).join(' ') : 'Clean Energy Ownership'}</span>}
       </div>
     </header>
   );
@@ -333,11 +340,22 @@ function QuickQuiz({ questions, title = 'Short 5-question quiz', subtitle = 'A q
 function CourseCard({ course, onAction, onOpenModal, saved, onBookmark }) {
   const [progOpen, setProgOpen] = useState(false);
   const cs    = CAT[course.cat] || { c:T2, b:BG };
-  const inProg = course.status === 'inProgress';
-  const done   = course.status === 'completed';
-  const notSt  = course.status === 'notStarted';
-  const btnLbl = done ? 'Review' : inProg ? 'Resume' : 'Start';
-  const lessonsDone = done ? course.lessons : inProg ? Math.round(course.lessons * course.progress / 100) : 0;
+  
+  // Determine status from progress stored in localStorage
+  const stored = readStoredCourseProgress(course.id);
+  const courseProgress = stored?.progress || course.progress || 0;
+  const courseStatus = stored ? (courseProgress >= 100 ? 'completed' : courseProgress > 0 ? 'inProgress' : 'notStarted') : course.status;
+  
+  const inProg = courseStatus === 'inProgress';
+  const done   = courseStatus === 'completed';
+  const notSt  = courseStatus === 'notStarted';
+  const btnLbl = done ? 'Review' : inProg ? 'Continue' : 'Start';
+  const lessonsDone = done ? course.lessons : inProg ? Math.round(course.lessons * courseProgress / 100) : 0;
+  const continuityLabel = inProg
+    ? `Resume • ${course.lastAccessedAt ? formatRelativeTime(course.lastAccessedAt) : 'recently updated'}`
+    : done
+      ? `Completed • ${course.lastAccessedAt ? formatRelativeTime(course.lastAccessedAt) : 'recently updated'}`
+      : 'Pick up where you left off';
 
   return (
     <div
@@ -366,7 +384,8 @@ function CourseCard({ course, onAction, onOpenModal, saved, onBookmark }) {
         {/* Title */}
         <h3 style={{fontSize:14,fontWeight:700,color:T1,margin:'0 0 8px',lineHeight:1.4}}>{course.title}</h3>
         {/* Description — 3-line clamp */}
-        <p style={{fontSize:12,color:T2,margin:'0 0 14px',lineHeight:1.65,minHeight:58,display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{course.desc}</p>
+        <p style={{fontSize:12,color:T2,margin:'0 0 8px',lineHeight:1.65,minHeight:58,display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{course.desc}</p>
+        <div style={{fontSize:11,color:inProg ? PU : done ? GR : T3,marginBottom:12,fontWeight:600}}>{continuityLabel}</div>
         {/* Meta row */}
         <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}}>
           <span style={{display:'flex',alignItems:'center',gap:4,fontSize:12,color:T2}}><Ico name="clock" size={12} color={T3} sw={1.5}/>{course.dur}</span>
@@ -374,37 +393,38 @@ function CourseCard({ course, onAction, onOpenModal, saved, onBookmark }) {
           <span style={{fontSize:12,color:T2}}>{course.level}</span>
         </div>
 
-        {/* ── PROGRESS BAR — only rendered for in-progress and completed (matches design exactly) ── */}
-        {(inProg || done) && (
-          <div style={{position:'relative',marginBottom:10}}>
+        {/* ── PROGRESS BAR — always rendered for professional appearance ── */}
+        {(inProg || done || true) && (
+          <div style={{position:'relative',marginBottom:12}}>
             {/* Clickable track opens lesson dropdown */}
             <div
-              onClick={e => { e.stopPropagation(); setProgOpen(o => !o); }}
-              style={{cursor:'pointer'}}
+              onClick={e => { e.stopPropagation(); if (inProg || done) setProgOpen(o => !o); }}
+              style={{cursor: inProg || done ? 'pointer' : 'default'}}
             >
-              <div style={{height:4,background:'#F3F4F6',borderRadius:4}}>
+              <div style={{height:5,background:'#ECEFF1',borderRadius:6,overflow:'hidden',boxShadow:'inset 0 1px 2px rgba(0,0,0,0.04)'}}>{
                 <div style={{
-                  height:4,
-                  width:`${course.progress}%`,
-                  background: done ? GR : PU,
-                  borderRadius:4,
-                  transition:'width .3s ease',
+                  height:5,
+                  width:`${courseProgress}%`,
+                  background: done ? GR : inProg ? PU : '#D1D5DB',
+                  borderRadius:6,
+                  transition:'width .3s cubic-bezier(0.4,0,0.2,1)',
+                  boxShadow: (inProg || done) ? `0 1px 3px ${done ? 'rgba(22,163,74,0.3)' : 'rgba(91,33,182,0.3)'}` : 'none',
                 }}/>
-              </div>
+              }</div>
             </div>
 
             {/* Lesson breakdown dropdown */}
-            {progOpen && (
+            {progOpen && (inProg || done) && (
               <>
                 <div style={{position:'fixed',inset:0,zIndex:49}} onClick={e=>{e.stopPropagation();setProgOpen(false);}}/>
                 <div style={{position:'absolute',bottom:'calc(100% + 10px)',left:0,right:0,background:W,border:`1px solid ${BD}`,borderRadius:12,boxShadow:'0 8px 28px rgba(0,0,0,.14)',zIndex:50,overflow:'hidden',minWidth:240}}>
                   <div style={{padding:'11px 14px',borderBottom:`1px solid ${BD}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                     <span style={{fontSize:12,fontWeight:600,color:T1}}>Course progress</span>
-                    <span style={{fontSize:12,fontWeight:600,color:done?GR:PU}}>{course.progress}%</span>
+                    <span style={{fontSize:12,fontWeight:600,color:done?GR:PU}}>{Math.round(courseProgress)}%</span>
                   </div>
                   <div style={{padding:'10px 14px 6px'}}>
-                    <div style={{height:4,background:'#F3F4F6',borderRadius:4}}>
-                      <div style={{height:4,width:`${course.progress}%`,background:done?GR:PU,borderRadius:4}}/>
+                    <div style={{height:5,background:'#ECEFF1',borderRadius:6,overflow:'hidden'}}>
+                      <div style={{height:5,width:`${courseProgress}%`,background:done?GR:PU,borderRadius:6}}/>
                     </div>
                     <div style={{fontSize:11,color:T3,marginTop:5}}>{lessonsDone} of {course.lessons} lessons complete</div>
                   </div>
@@ -436,11 +456,12 @@ function CourseCard({ course, onAction, onOpenModal, saved, onBookmark }) {
             onClick={e => { e.stopPropagation(); if (inProg || done) setProgOpen(o => !o); }}
             style={{
               fontSize:12,
-              color: done ? GR : T2,           // gray for in-progress, green for completed
+              color: done ? GR : inProg ? PU : T2,
+              fontWeight: inProg ? 600 : 500,
               cursor: inProg||done ? 'pointer' : 'default',
             }}
           >
-            {inProg ? `${course.progress}% complete` : done ? 'Completed' : 'Not started'}
+            {inProg ? `${Math.round(courseProgress)}% complete` : done ? 'Completed' : 'Not started'}
           </span>
           <button
             onClick={e => { e.stopPropagation(); onAction(course); }}
@@ -721,12 +742,12 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   async function refreshCourseProgress(nextCompletedLessonIds = completedLessonIds) {
     if (!course?.id) return null;
     const fallbackProgress = lessonCount > 0 ? Math.round((nextCompletedLessonIds.length / lessonCount) * 100) : 0;
-    persistCourseProgress(course.id, fallbackProgress, nextCompletedLessonIds, lastLessonId, lastLessonIndex);
+    persistCourseProgress(course.id, fallbackProgress, nextCompletedLessonIds, lastLessonId, lastLessonIndex, Date.now());
 
     try {
       const response = await coursesAPI.getProgress(course.id);
       const serverProgress = Number(response?.data?.progress ?? fallbackProgress);
-      persistCourseProgress(course.id, serverProgress, nextCompletedLessonIds, lastLessonId, lastLessonIndex);
+      persistCourseProgress(course.id, serverProgress, nextCompletedLessonIds, lastLessonId, lastLessonIndex, Date.now());
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('tribes:course-progress-update', {
           detail: { courseId: course.id, progress: serverProgress, status: response?.data?.status || 'inProgress' },
@@ -936,7 +957,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
 
   useEffect(() => {
     if (!course?.id) return;
-    persistCourseProgress(course.id, progress, completedLessonIds, lastLessonId, lastLessonIndex);
+    persistCourseProgress(course.id, progress, completedLessonIds, lastLessonId, lastLessonIndex, Date.now());
   }, [course?.id, progress, completedLessonIds, lastLessonId, lastLessonIndex]);
 
   useEffect(() => {
@@ -957,7 +978,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
-      <PlayerTopBar onBack={onBack} onMenuToggle={onMenuToggle} isMobile={isMobile} isTablet={isTablet}/>
+      <PlayerTopBar onBack={onBack} course={course} progress={progress} onMenuToggle={onMenuToggle} isMobile={isMobile} isTablet={isTablet}/>
       <div style={{flex:1,overflowY:'auto',background:BG}}>
 
         {/* ── Course info bar ── */}
@@ -1709,8 +1730,23 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
   }, []);
 
   function handlePlay(course) {
-    setPlayerCourse(course);
+    const stored = readStoredCourseProgress(course.id);
+    const courseWithProgress = {
+      ...course,
+      progress: stored?.progress || 0,
+      status: stored?.progress > 0 ? (stored?.progress >= 100 ? 'completed' : 'inProgress') : 'notStarted',
+      lastAccessedAt: stored?.lastAccessedAt,
+    };
+    setPlayerCourse(courseWithProgress);
     setScreen('player');
+  }
+
+  function handleBackFromPlayer(updatedCourse) {
+    // Update localStorage when coming back from player
+    if (updatedCourse?.id) {
+      persistCourseProgress(updatedCourse.id, updatedCourse.progress, updatedCourse.lastLessonIndex);
+    }
+    setScreen('hub');
   }
 
   return (
@@ -1726,7 +1762,7 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
           />
         : <LessonPlayer
             course={playerCourse}
-            onBack={() => setScreen('hub')}
+            onBack={handleBackFromPlayer}
             isMobile={isMobile}
             isTablet={isTablet}
             onMenuToggle={onToggleSidebar}

@@ -12,6 +12,7 @@ import {
   UploadedFile,
   UploadedFiles,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -19,6 +20,7 @@ import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { DueDiligenceService } from './due-diligence.service';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
+import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import {
   CreateDueDiligenceDto,
   UpdateDueDiligenceDto,
@@ -58,6 +60,7 @@ function inferDocumentType(originalname: string, mimetype: string) {
 }
 
 @Controller('due-diligence')
+@UseGuards(JwtAuthGuard)
 export class DueDiligenceController {
   constructor(private service: DueDiligenceService) {}
 

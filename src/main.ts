@@ -94,7 +94,11 @@ async function bootstrap() {
   }
   expressInstance.use('/uploads', express.static(uploadsPath));
 
-  expressInstance.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
+  const spaIndexHandler = (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) => {
     if (req.method !== 'GET') {
       return next();
     }
@@ -104,7 +108,10 @@ async function bootstrap() {
     }
 
     return res.sendFile(join(frontendDistPath, 'index.html'));
-  });
+  };
+
+  expressInstance.get(['/verify-email', '/reset-password'], spaIndexHandler);
+  expressInstance.get(/^\/(?!api(?:\/|$)).*/, spaIndexHandler);
 
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(
