@@ -9,13 +9,14 @@ import { AuthService } from './auth.service';
 import { MailService } from './mail.service';
 import { JwtTokenService } from './jwt-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
 import { EmailitProvider } from './emailit.provider';
 import { EMAIL_PROVIDER } from './email-provider.interface';
 
 @Module({
   imports: [
     DatabaseModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }),
+    PassportModule.register({ defaultStrategy: 'jwt', session: false }),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -37,6 +38,7 @@ import { EMAIL_PROVIDER } from './email-provider.interface';
   providers: [
     AuthService,
     JwtStrategy,
+    GoogleStrategy,
     JwtTokenService,
     MailService,
     {

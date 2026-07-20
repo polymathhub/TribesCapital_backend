@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '@database/prisma.service';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import * as https from 'https';
 import { ConfigService } from '@nestjs/config';
 import {
   RegisterDto,
@@ -59,7 +60,7 @@ export class AuthService {
   }
 
   private buildVerificationUrl(token: string): string {
-    return `${this.getFrontendUrl()}/verify-email?token=${encodeURIComponent(token)}`;
+    return `${this.getFrontendUrl()}/login?token=${encodeURIComponent(token)}`;
   }
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
@@ -105,7 +106,7 @@ export class AuthService {
       throw e;
     }
     if (existingUser) {
-      throw new ConflictException('Email already registered;calm down and use a new one ');
+      throw new ConflictException('Email already registered ,try and login or reset your password champ');
     }
 
     this.logger.log(`${new Date().toISOString()} ${ctx}[6] Hashing password`);
@@ -158,7 +159,7 @@ export class AuthService {
     if (this.mailService) {
       void this.mailService.sendWelcomeEmail(user.email, user.firstName ?? 'there').then((sent) => {
         if (!sent) {
-          this.logger.warn('[REGISTER] Welcome email was not sent. Check SMTP configuration.');
+          this.logger.warn('[REGISTER] Welcome email was not sent succesfully.');
         }
       }).catch(() => this.logger.warn('[REGISTER] sendWelcomeEmail failed (non-blocking)'));
     }
@@ -170,7 +171,7 @@ export class AuthService {
           .sendVerificationEmail(user.email, verificationUrl)
           .then((sent) => {
             if (!sent) {
-              this.logger.warn('[REGISTER] Verification email was not sent. Check SMTP configuration.');
+              this.logger.warn('[REGISTER] Verification email was not sent successfully.');
             }
           })
           .catch(() => this.logger.warn('[REGISTER] sendVerificationEmail failed (non-blocking)'));
@@ -255,11 +256,20 @@ export class AuthService {
   }
 
   async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<AuthTokenResponseDto> {
-    const payload = this.decodeGooglePayload(googleAuthDto.idToken);
-    const email = this.normalizeEmail(payload.email);
+    const payload = await this.verifyGoogleIdToken(googleAuthDto.idToken);
+    return this.authenticateWithGoogleProfile(payload);
+  }
 
+  async authenticateWithGoogleProfile(profile: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    googleId?: string;
+    avatar?: string | null;
+  }): Promise<AuthTokenResponseDto> {
+    const email = this.normalizeEmail(profile.email);
     if (!email) {
-      throw new BadRequestException('Could not extract email from Google token');
+      throw new BadRequestException('Google account did not provide a valid email');
     }
 
     let user = await this.prisma.user.findUnique({
@@ -272,6 +282,7 @@ export class AuthService {
         password: true,
         isActive: true,
         emailVerified: true,
+        googleId: true,
       },
     });
 
@@ -279,11 +290,12 @@ export class AuthService {
       user = await this.prisma.user.create({
         data: {
           email,
-          firstName: payload.firstName || 'User',
-          lastName: payload.lastName || '',
+          firstName: profile.firstName || 'User',
+          lastName: profile.lastName || '',
           password: await bcrypt.hash(this.randomPassword(), 12),
           emailVerified: true,
           isActive: true,
+          googleId: profile.googleId,
         },
         select: {
           id: true,
@@ -293,13 +305,64 @@ export class AuthService {
           password: true,
           isActive: true,
           emailVerified: true,
+          googleId: true,
         },
       });
+    } else if (!user.googleId && profile.googleId) {
+      await this.prisma.user.update({ where: { id: user.id }, data: { googleId: profile.googleId } });
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
     this.logger.log(`Google authentication successful for ${email}`);
     return this.buildAuthResponse(user);
+  }
+
+  private async verifyGoogleIdToken(idToken: string): Promise<{ email: string; firstName?: string; lastName?: string; googleId?: string }> {
+    const clientId =
+      this.configService.get<string>('google.clientId') ??
+      process.env.GOOGLE_CLIENT_ID;
+
+    if (!clientId) {
+      throw new ServiceUnavailableException('Google OAuth client configuration is missing');
+    }
+
+    const payload = await new Promise<any>((resolve, reject) => {
+      const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
+      https.get(url, (res) => {
+        let body = '';
+        res.on('data', (chunk) => {
+          body += chunk;
+        });
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            reject(new BadRequestException('Invalid Google token'));
+            return;
+          }
+          try {
+            resolve(JSON.parse(body));
+          } catch (err) {
+            reject(new BadRequestException('Invalid Google token payload'));
+          }
+        });
+      }).on('error', (err) => {
+        reject(err);
+      });
+    });
+
+    if (!payload || typeof payload !== 'object' || !payload.email) {
+      throw new BadRequestException('Google account did not return an email address');
+    }
+
+    if (payload.aud !== clientId && payload.azp !== clientId) {
+      throw new BadRequestException('Google token audience mismatch');
+    }
+
+    return {
+      email: payload.email,
+      firstName: payload.given_name,
+      lastName: payload.family_name,
+      googleId: payload.sub,
+    };
   }
 
   async validateUser(userId: string): Promise<UserResponseDto | null> {
@@ -436,7 +499,7 @@ export class AuthService {
       },
     });
 
-    // Attempt to send reset email but do not fail the request if sending fails.
+    // Attempt to send reset email but do not fail the request if sending does not get succesful 
     try {
       if (this.mailService) {
         const sent = await this.mailService.sendPasswordResetEmail(email, resetCode);
@@ -542,7 +605,7 @@ export class AuthService {
     }
 
     this.logger.log(`JWT creation completed for ${user.email}`);
-    this.logger.log(`[AUTH] Response about to return for ${user.email}`);
+    this.logger.log(`[AUTH] Response completed for you@ ${user.email}`);
 
     return {
       success: true,

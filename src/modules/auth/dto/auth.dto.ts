@@ -40,8 +40,9 @@ export class GoogleAuthDto {
   @IsString()
   idToken!: string;
 
+  @IsOptional()
   @IsString()
-  accessToken!: string;
+  accessToken?: string;
 }
 
 export class RefreshTokenDto {

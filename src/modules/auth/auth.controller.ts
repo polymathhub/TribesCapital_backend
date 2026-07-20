@@ -1,4 +1,7 @@
-import { Body, Controller, HttpCode, Post, Logger } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Logger, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { Public } from '@common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import {
@@ -17,7 +20,10 @@ import {
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -68,6 +74,65 @@ export class AuthController {
   @HttpCode(200)
   async login(@Body() loginDto: LoginDto): Promise<AuthTokenResponseDto> {
     return this.authService.login(loginDto);
+  }
+
+  @Public()
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  async googleLogin(): Promise<void> {
+    // Passport handles redirect to Google.
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('redirect') redirect?: string,
+  ): Promise<void> {
+    const profile = req.user as {
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      googleId?: string;
+      avatar?: string | null;
+    };
+
+    const authResponse = await this.authService.authenticateWithGoogleProfile({
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      googleId: profile.googleId,
+      avatar: profile.avatar ?? null,
+    });
+
+    const frontendUrl = redirect
+      ? decodeURIComponent(redirect)
+      : this.getFrontendUrl();
+
+    const nextUrl = this.buildFrontendRedirect(frontendUrl, authResponse);
+    res.redirect(nextUrl);
+  }
+
+  private getFrontendUrl(): string {
+    return (
+      this.configService.get<string>('FRONTEND_URL') ??
+      process.env.FRONTEND_URL ??
+      'http://localhost:5173'
+    ).replace(/\/+$/g, '');
+  }
+
+  private buildFrontendRedirect(frontendUrl: string, authResponse: AuthTokenResponseDto): string {
+    const url = new URL(frontendUrl);
+    const authHash = new URLSearchParams({
+      accessToken: authResponse.accessToken,
+      refreshToken: authResponse.refreshToken,
+      expiresIn: String(authResponse.expiresIn),
+      user: JSON.stringify(authResponse.user),
+    }).toString();
+
+    return `${url.toString()}#${authHash}`;
   }
 
   @Public()

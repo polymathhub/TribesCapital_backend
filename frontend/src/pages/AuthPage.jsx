@@ -36,163 +36,28 @@ function useBreakpoint() {
   };
 }
 
-/* ─── PROFESSIONAL GOOGLE OAUTH SERVICE ─────────────────── */
-class GoogleOAuthService {
-  constructor() {
-    this.isInitialized = false;
-    this.isReady = false;
-    this.initPromise = null;
-  }
-
-  async waitForSDK(maxAttempts = 50) {
-    let attempts = 0;
-    while (!window.google?.accounts?.id && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    return !!window.google?.accounts?.id;
-  }
-
-  async initialize() {
-    if (this.isInitialized) return this.initPromise;
-
-    this.initPromise = (async () => {
-      try {
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-        if (!clientId) {
-          console.warn('Google Client ID not configured. Google OAuth will be disabled.');
-          this.isInitialized = true;
-          this.isReady = false;
-          return;
-        }
-
-        const isReady = await this.waitForSDK();
-        if (!isReady) {
-          throw new Error('Google SDK failed to load');
-        }
-
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
-
-        this.isInitialized = true;
-        this.isReady = true;
-      } catch (error) {
-        this.isInitialized = false;
-        this.isReady = false;
-        throw error;
-      }
-    })();
-
-    return this.initPromise;
-  }
-
-  async authenticate() {
-    if (!this.isReady) {
-      await this.initialize();
-    }
-
-    if (!this.isReady) {
-      throw new Error('Google OAuth is not configured or available');
-    }
-
-    return new Promise((resolve, reject) => {
-      const handleCredentialResponse = async (response) => {
-        try {
-          if (!response?.credential) {
-            reject(new Error('No credential received from Google'));
-            return;
-          }
-
-          const authResult = await authAPI.googleAuth({ idToken: response.credential });
-
-          if (!authResult?.data?.accessToken) {
-            reject(new Error('No authentication token in response'));
-            return;
-          }
-
-          // Store auth data
-          localStorage.setItem('accessToken', authResult.data.accessToken);
-          if (authResult.data.refreshToken) {
-            localStorage.setItem('refreshToken', authResult.data.refreshToken);
-          }
-          if (authResult.data.user?.email) {
-            localStorage.setItem('userEmail', authResult.data.user.email);
-          }
-          if (authResult.data.user?.firstName) {
-            localStorage.setItem('userName', authResult.data.user.firstName);
-          }
-
-          resolve({
-            success: true,
-            user: authResult.data.user,
-            accessToken: authResult.data.accessToken,
-          });
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse,
-      });
-
-      // Trigger the One Tap UI
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // One Tap not displayed, user can still click button
-        }
-        if (notification.isSkippedMoment()) {
-          // User dismissed the One Tap UI
-        }
-      });
-    });
-  }
-
-  renderButton(element, customOptions = {}) {
-    if (!this.isReady) return;
-
-    const defaultOptions = {
-      type: 'standard',
-      theme: 'outline',
-      size: 'large',
-      width: '100%',
-    };
-
-    window.google.accounts.id.renderButton(element, { ...defaultOptions, ...customOptions });
-  }
+function buildGoogleAuthRedirectUrl() {
+  const apiBase = import.meta.env.VITE_API_URL?.trim() || `${window.location.origin}/api`;
+  const backendOrigin = apiBase.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  const redirectTarget = `${window.location.origin}/login`;
+  const authUrl = `${backendOrigin}/auth/google?redirect=${encodeURIComponent(redirectTarget)}`;
+  return authUrl;
 }
 
-// Single instance
-const googleOAuthService = new GoogleOAuthService();
-
-// Hook for using Google OAuth
 function useGoogleAuth(onSuccess, onError) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleGoogleAuth = useCallback(async () => {
+  const handleGoogleAuth = useCallback(() => {
     setIsLoading(true);
     try {
-      const result = await googleOAuthService.authenticate();
-      onSuccess(result);
+      window.location.href = buildGoogleAuthRedirectUrl();
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google authentication failed';
       console.error('Google authentication error:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Google authentication failed';
-      onError(errorMessage);
-    } finally {
+      if (onError) onError(message);
       setIsLoading(false);
     }
-  }, [onSuccess, onError]);
-
-  // Initialize on mount
-  useEffect(() => {
-    googleOAuthService.initialize().catch((error) => {
-      console.error('Failed to initialize Google OAuth:', error);
-    });
-  }, []);
+  }, [onError]);
 
   return { handleGoogleAuth, isLoading };
 }
@@ -642,12 +507,37 @@ function LoginPage({ onNavigate, onSuccess }) {
   const { isMobile } = useBreakpoint();
   
   const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
-    (result) => {
-      console.log('Google auth successful:', result.user);
-      onSuccess(result.user);
-    },
-    setError
+    () => {},
+    setError,
   );
+
+  useEffect(() => {
+    if (!window.location.hash) return;
+
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = params.get('accessToken');
+    const refreshToken = params.get('refreshToken');
+    const userJson = params.get('user');
+
+    if (!accessToken) return;
+
+    try {
+      localStorage.setItem('accessToken', accessToken);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      if (userJson) {
+        localStorage.setItem('user', userJson);
+      }
+
+      window.history.replaceState(null, '', window.location.pathname);
+      if (onSuccess && userJson) {
+        onSuccess(JSON.parse(userJson));
+      }
+    } catch (error) {
+      console.error('Failed to persist Google login state:', error);
+    }
+  }, [onSuccess]);
 
   const handleLogin = async () => {
     setError('');
