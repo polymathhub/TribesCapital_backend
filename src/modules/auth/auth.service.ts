@@ -60,7 +60,9 @@ export class AuthService {
   }
 
   private buildVerificationUrl(token: string): string {
-    return `${this.getFrontendUrl()}/login?token=${encodeURIComponent(token)}`;
+    // The frontend expects verification links to land on `/verify-email` so
+    // the SPA can load the verification page and consume the token.
+    return `${this.getFrontendUrl()}/verify-email?token=${encodeURIComponent(token)}`;
   }
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
@@ -592,7 +594,24 @@ export class AuthService {
     emailVerified?: boolean | null;
   }): Promise<AuthTokenResponseDto> {
     this.logger.log(`[AUTH] Entering buildAuthResponse for ${user.email}`);
-    const payload = { sub: user.id, email: user.email, role: 'user' };
+    const userWithRoles = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+        emailVerified: true,
+        roles: {
+          select: { name: true },
+        },
+      },
+    });
+
+    const roleNames = userWithRoles?.roles?.map((role) => role.name) ?? [];
+    const isAdmin = roleNames.includes('admin');
+    const payload = { sub: user.id, email: user.email, role: isAdmin ? 'admin' : 'user', roles: roleNames };
 
     let tokens;
     try {
@@ -621,6 +640,8 @@ export class AuthService {
           lastName: user.lastName ?? '',
           emailVerified: user.emailVerified ?? false,
           isActive: user.isActive ?? true,
+          roles: roleNames,
+          isAdmin,
         },
       },
       accessToken: tokens.accessToken,
@@ -633,6 +654,8 @@ export class AuthService {
         lastName: user.lastName ?? '',
         emailVerified: user.emailVerified ?? false,
         isActive: user.isActive ?? true,
+        roles: roleNames,
+        isAdmin,
       },
     };
   }

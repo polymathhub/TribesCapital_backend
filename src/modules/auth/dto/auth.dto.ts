@@ -83,6 +83,8 @@ export class UserResponseDto {
   emailVerified?: boolean;
   isActive?: boolean;
   googleId?: string;
+  roles?: string[];
+  isAdmin?: boolean;
 }
 
 export class AuthTokenResponseDto {

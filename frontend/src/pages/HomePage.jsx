@@ -174,7 +174,9 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
 
         {/* Body */}
         <div style={{ padding:'2px 18px 18px' }}>
-          <div style={{ fontSize:30, marginBottom:12, lineHeight:1 }}>{cur.icon}</div>
+          <div style={{ fontSize:30, marginBottom:12, lineHeight:1 }}>
+            <Icon name={cur.icon} size={36} color={P} />
+          </div>
           <h3 style={{ fontSize:16, fontWeight:700, color:T1, margin:'0 0 8px', letterSpacing:-.3 }}>{cur.title}</h3>
           <p style={{ fontSize:13, color:T2, lineHeight:1.65, margin:0 }}>{cur.desc}</p>
         </div>

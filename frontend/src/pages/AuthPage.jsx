@@ -37,10 +37,22 @@ function useBreakpoint() {
 }
 
 function buildGoogleAuthRedirectUrl() {
-  const apiBase = import.meta.env.VITE_API_URL?.trim() || `${window.location.origin}/api`;
-  const backendOrigin = apiBase.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  const apiBaseRaw = import.meta.env.VITE_API_URL?.trim() || `${window.location.origin}/api`;
+  const apiBase = apiBaseRaw.replace(/\/+$/, '');
+  if (!import.meta.env.VITE_API_URL) {
+    // eslint-disable-next-line no-console
+    console.warn('VITE_API_URL is not set — Google sign-in may return 404. Set VITE_API_URL to your backend API (e.g. http://localhost:3000/api)');
+  }
+
+  // Ensure we point to the correct OAuth route whether the API root already
+  // contains `/api` or not. Many dev setups expose the backend under
+  // `http://host:port/api`, while some deployments may expose API at the root.
+  const hasApiSegment = /\/api(\/|$)/i.test(apiBase);
+  const baseForAuth = hasApiSegment ? apiBase : `${apiBase}/api`;
   const redirectTarget = `${window.location.origin}/login`;
-  const authUrl = `${backendOrigin}/auth/google?redirect=${encodeURIComponent(redirectTarget)}`;
+  const authUrl = `${baseForAuth}/auth/google?redirect=${encodeURIComponent(redirectTarget)}`;
+  // eslint-disable-next-line no-console
+  console.info('Google auth redirect URL:', authUrl);
   return authUrl;
 }
 
@@ -388,7 +400,7 @@ function PasswordStrengthBar({ password }) {
   );
 }
 
-function Button({ onClick, loading = false, disabled = false, variant = 'primary', children, fullWidth = true }) {
+function Button({ onClick, loading = false, disabled = false, variant = 'primary', children, fullWidth = true, isMobile = false }) {
   const isDisabled = disabled || loading;
   const styles = {
     primary: {
@@ -403,18 +415,21 @@ function Button({ onClick, loading = false, disabled = false, variant = 'primary
     },
   };
   const style = styles[variant];
+  const buttonHeight = isMobile ? 54 : 48;
   return (
     <button
       onClick={onClick}
       disabled={isDisabled}
       style={{
         width: fullWidth ? '100%' : 'auto',
-        height: 48,
+        minHeight: buttonHeight,
+        height: buttonHeight,
+        padding: isMobile ? '0 16px' : '0 14px',
         background: style.bg,
         color: style.color,
         border: style.border,
         borderRadius: 8,
-        fontSize: 15,
+        fontSize: isMobile ? 15.5 : 15,
         fontWeight: 600,
         cursor: isDisabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.15s ease',
@@ -443,19 +458,22 @@ function Divider() {
   );
 }
 
-function GoogleButton({ onClick, loading = false, disabled = false }) {
+function GoogleButton({ onClick, loading = false, disabled = false, isMobile = false }) {
+  const buttonHeight = isMobile ? 54 : 48;
   return (
     <button
       onClick={onClick}
       disabled={disabled || loading}
       style={{
         width: '100%',
-        height: 48,
+        minHeight: buttonHeight,
+        height: buttonHeight,
+        padding: isMobile ? '0 16px' : '0 14px',
         background: COLORS.surface,
         color: COLORS.text,
         border: `1px solid ${COLORS.border}`,
         borderRadius: 8,
-        fontSize: 15,
+        fontSize: isMobile ? 15.5 : 15,
         fontWeight: 600,
         cursor: disabled || loading ? 'not-allowed' : 'pointer',
         transition: 'all 0.15s ease',
@@ -923,13 +941,13 @@ function SignupPage({ onNavigate, onSuccess }) {
         {fieldErrors.agreedToTerms && <p style={{ fontSize: 12, color: COLORS.error, margin: '8px 0 0 28px' }}>{fieldErrors.agreedToTerms}</p>}
       </div>
 
-      <Button onClick={handleSignup} loading={loading} disabled={loading || googleLoading}>
+      <Button onClick={handleSignup} loading={loading} disabled={loading || googleLoading} isMobile={isMobile}>
         Create account
       </Button>
 
       <Divider />
 
-      <GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading} />
+      <GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading} isMobile={isMobile} />
 
       <p style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
         Already have an account?{' '}

@@ -35,7 +35,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       throw error;
     }
     // Prisma query middleware to log all queries, durations and errors
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     this.$use(async (params, next) => {
       const start = Date.now();
       // Log query details (model & action). Avoid logging raw params that may contain secrets.

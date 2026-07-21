@@ -9,10 +9,26 @@ type VerifyCallback = (err: any, user?: any, info?: any) => void;
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(private readonly configService: ConfigService) {
+    const clientId = configService.get<string>('google.clientId');
+    const clientSecret = configService.get<string>('google.clientSecret');
+    const configuredCallback = configService.get<string>('google.callbackUrl');
+
+    // Build a sensible default callback for local/dev if none provided.
+    const appHost = (configService.get<string>('app.host') || process.env.APP_HOST || 'localhost').toString();
+    const appPort = configService.get<number>('app.port') || Number(process.env.PORT) || 3000;
+    const hostForCallback = appHost === '0.0.0.0' ? 'localhost' : appHost;
+    const defaultCallback = `http://${hostForCallback}:${appPort}/api/auth/google/callback`;
+
+    const callbackURL = configuredCallback || defaultCallback;
+    if (!configuredCallback) {
+      // eslint-disable-next-line no-console
+      console.warn(`GOOGLE_CALLBACK_URL not set, falling back to ${callbackURL}. Update GOOGLE_CALLBACK_URL in production.`);
+    }
+
     super({
-      clientID: configService.get<string>('google.clientId'),
-      clientSecret: configService.get<string>('google.clientSecret'),
-      callbackURL: configService.get<string>('google.callbackUrl'),
+      clientID: clientId,
+      clientSecret: clientSecret,
+      callbackURL,
       scope: ['profile', 'email'],
       passReqToCallback: false,
     });

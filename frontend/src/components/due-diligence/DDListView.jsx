@@ -156,7 +156,7 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
           <div style={{ maxWidth: '420px' }}>
             <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>No due diligences yet</div>
             <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: '#6B7280' }}>
-              Create a diligence entry to track an investment, company, or fund with structure and momentum.
+              Create a diligence entry to track an investment, company, or fund with structure and momentum of your entires.
             </p>
           </div>
         </div>
