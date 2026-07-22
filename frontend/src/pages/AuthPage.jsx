@@ -976,7 +976,6 @@ function VerifyPage({ onNavigate, onSuccess }) {
   const email = localStorage.getItem('verificationEmail') || '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [message, setMessage] = useState('');
   const [verificationAttempts, setVerificationAttempts] = useState(0);
   const { isMobile } = useBreakpoint();
@@ -993,12 +992,13 @@ function VerifyPage({ onNavigate, onSuccess }) {
     setLoading(true);
     setVerificationAttempts(prev => prev + 1);
     try {
-      const response = await authAPI.verifyEmail(token);
-      console.log('✅ Email verified successfully');
-      setSuccess(true);
-      setMessage('Email verified successfully! Redirecting to sign in...');
-      // Auto-redirect after 2.5 seconds
-      setTimeout(() => onNavigate('login'), 2500);
+      await authAPI.verifyEmail(token);
+      localStorage.removeItem('verificationEmail');
+      setMessage('Email verified. Taking you to sign in...');
+      if (window.history.replaceState) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+      setTimeout(() => onNavigate('login'), 600);
     } catch (err) {
       console.error('❌ Verification failed:', err);
       const errorMsg = err.response?.data?.message || 'Verification failed. Your link may have expired.';
