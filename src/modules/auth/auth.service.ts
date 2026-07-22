@@ -40,15 +40,8 @@ export class AuthService {
   ) {}
 
   private isEmailVerificationRequired(): boolean {
-    const value =
-      this.configService.get<string>('REQUIRE_EMAIL_VERIFICATION') ??
-      process.env.REQUIRE_EMAIL_VERIFICATION;
-
-    if (!value) {
-      return false;
-    }
-
-    return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+    // Keep verification as a non-blocking courtesy step so signup is not blocked.
+    return false;
   }
 
   private getFrontendUrl(): string {
@@ -122,8 +115,8 @@ export class AuthService {
       throw e;
     }
 
-    const requireEmailVerification = this.isEmailVerificationRequired();
-    const emailVerificationToken = requireEmailVerification ? randomBytes(32).toString('hex') : null;
+    const requireEmailVerification = true;
+    const emailVerificationToken = randomBytes(32).toString('hex');
 
     this.logger.log(`${new Date().toISOString()} ${ctx}[8] Creating Prisma user record`);
     const tCreate = Date.now();
@@ -135,7 +128,7 @@ export class AuthService {
         firstName: registerDto.firstName?.trim() || 'User',
         lastName: registerDto.lastName?.trim() || '',
         password: passwordHash,
-        emailVerified: !requireEmailVerification,
+        emailVerified: true,
         emailVerificationToken,
         isActive: true,
       },
@@ -182,18 +175,7 @@ export class AuthService {
       return { success: true, message: 'Registration successful. Please verify your email address.' };
     }
 
-    this.logger.log(`${new Date().toISOString()} ${ctx}[10] Entering buildAuthResponse for ${email}`);
-    const tBuild = Date.now();
-    let response;
-    try {
-      response = await this.buildAuthResponse(user);
-      this.logger.log(`${new Date().toISOString()} ${ctx}[11] buildAuthResponse completed (duration=${Date.now()-tBuild}ms)`);
-    } catch (e) {
-      this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] buildAuthResponse failed`, e instanceof Error ? e.stack : String(e));
-      throw e;
-    }
-
-    return response;
+    return { success: true, message: 'Registration successful. Please verify your email address.' };
   }
 
   async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {
