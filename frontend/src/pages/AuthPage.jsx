@@ -1424,26 +1424,45 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
 
 /* ─── MAIN COMPONENT ───────────────────────────────── */
 export default function AuthPage({ onLogin }) {
-  const [page, setPage] = useState('login');
+  const getInitialPage = () => {
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (pathname.includes('reset-password') || pathname.includes('forgot-password')) {
+      return 'forgot';
+    }
+    if (pathname.includes('verify-email')) {
+      return 'verify';
+    }
+    if (pathname.includes('signup')) {
+      return 'signup';
+    }
+    return 'login';
+  };
+
+  const [page, setPage] = useState(getInitialPage);
   const [resetToken, setResetToken] = useState(null);
   const { isMobile } = useBreakpoint();
 
   // Detect if we're on verify or forgot-password page based on URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const pathname = window.location.pathname;
     const verifyToken = params.get('token');
     const resetPasswordToken = params.get('token'); // For password reset, also uses 'token' param
 
-    // Check URL path to determine if this is a reset password link
-    const isResetPasswordPath = window.location.pathname.includes('reset-password');
-    
-    if (verifyToken && !isResetPasswordPath) {
-      // Email verification link (uses /verify-email route)
+    const isResetPasswordPath = pathname.includes('reset-password') || pathname.includes('forgot-password');
+    const isVerifyPath = pathname.includes('verify-email');
+
+    if (isVerifyPath) {
       setPage('verify');
     } else if (resetPasswordToken && isResetPasswordPath) {
-      // Password reset link (uses /reset-password route with token)
       setPage('forgot');
       setResetToken(resetPasswordToken);
+    } else if (verifyToken) {
+      setPage('verify');
+    } else if (pathname.includes('signup')) {
+      setPage('signup');
+    } else {
+      setPage('login');
     }
   }, []);
 

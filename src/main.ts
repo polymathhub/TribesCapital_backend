@@ -110,7 +110,7 @@ async function bootstrap() {
     return res.sendFile(join(frontendDistPath, 'index.html'));
   };
 
-  expressInstance.get(['/verify-email', '/reset-password'], spaIndexHandler);
+  expressInstance.get(['/', '/login', '/signup', '/verify-email', '/reset-password', '/forgot-password', '/dashboard', '/home'], spaIndexHandler);
   expressInstance.get(/^\/(?!api(?:\/|$)).*/, spaIndexHandler);
 
   app.useGlobalFilters(new GlobalExceptionFilter());
