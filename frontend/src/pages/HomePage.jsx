@@ -1,6 +1,7 @@
 ﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import LearningHub from './LearningHub';
 import DueDiligencePage from './DueDiligencePage';
+import ProjectPipelinePage from './ProjectPipelinePage';
 import OfficeHoursEvents from './OfficeHoursEvents';
 import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
@@ -1435,6 +1436,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {/* ── DUE DILIGENCE PAGE ── */}
           {currentPage === 'vault' && (
             <DueDiligencePage user={user} isMobile={isMobile} isTablet={isTablet}/>
+          )}
+
+          {/* ── PROJECT PIPELINE PAGE ── */}
+          {currentPage === 'pipeline' && (
+            <ProjectPipelinePage user={user} onNavigate={onNavigate} isMobile={isMobile} isTablet={isTablet} />
           )}
 
           {/* ── OFFICE HOURS & EVENTS PAGE ── */}

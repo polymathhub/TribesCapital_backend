@@ -977,24 +977,29 @@ function VerifyPage({ onNavigate, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [verificationAttempts, setVerificationAttempts] = useState(0);
+  const [verificationState, setVerificationState] = useState('idle');
   const { isMobile } = useBreakpoint();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     if (token) {
-      verifyEmail(token);
+      void verifyEmail(token);
+    } else {
+      setVerificationState('pending');
     }
   }, []);
 
   const verifyEmail = async (token) => {
     setLoading(true);
-    setVerificationAttempts(prev => prev + 1);
+    setVerificationState('loading');
+    setError('');
+    setMessage('');
     try {
       await authAPI.verifyEmail(token);
       localStorage.removeItem('verificationEmail');
       setMessage('Email verified. Taking you to sign in...');
+      setVerificationState('success');
       if (window.history.replaceState) {
         window.history.replaceState({}, '', window.location.pathname);
       }
@@ -1003,6 +1008,7 @@ function VerifyPage({ onNavigate, onSuccess }) {
       console.error('❌ Verification failed:', err);
       const errorMsg = err.response?.data?.message || 'Verification failed. Your link may have expired.';
       setError(errorMsg);
+      setVerificationState('error');
     } finally {
       setLoading(false);
     }
@@ -1011,27 +1017,29 @@ function VerifyPage({ onNavigate, onSuccess }) {
   const handleResendEmail = async () => {
     if (!email) {
       setError('No email found. Please sign up again.');
+      setVerificationState('error');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await authAPI.resendVerification(email);
+      await authAPI.resendVerification(email);
       console.log('📧 Verification email resent');
       setMessage('Verification email sent! Check your inbox and spam folder.');
       setError('');
-      // Clear success message after 5 seconds
+      setVerificationState('pending');
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       console.error('❌ Failed to resend:', err);
       const errorMsg = err.response?.data?.message || 'Failed to resend verification email. Please try again.';
       setError(errorMsg);
+      setVerificationState('error');
     } finally {
       setLoading(false);
     }
   };
 
-  if (success) {
+  if (verificationState === 'success') {
     return (
       <FormContainer isMobile={isMobile}>
         <div style={{ textAlign: 'center' }}>
@@ -1049,6 +1057,24 @@ function VerifyPage({ onNavigate, onSuccess }) {
           <Button onClick={() => onNavigate('login')} fullWidth>
             Go to Sign In
           </Button>
+        </div>
+      </FormContainer>
+    );
+  }
+
+  if (verificationState === 'loading') {
+    return (
+      <FormContainer isMobile={isMobile}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 60, height: 60, background: COLORS.primaryFaint, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <div style={{ width: 24, height: 24, border: `3px solid ${COLORS.primaryFaint}`, borderTopColor: COLORS.primary, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          </div>
+          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
+            Verifying your email
+          </h1>
+          <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: 0 }}>
+            Please wait while we confirm your account.
+          </p>
         </div>
       </FormContainer>
     );

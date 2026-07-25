@@ -40,22 +40,31 @@ export class AuthService {
   ) {}
 
   private isEmailVerificationRequired(): boolean {
-    // Keep verification as a non-blocking courtesy step so signup is not blocked.
-    return false;
+    const configuredValue = this.configService.get<string>('REQUIRE_EMAIL_VERIFICATION');
+    if (configuredValue === undefined || configuredValue === null) {
+      return true;
+    }
+
+    const normalizedValue = configuredValue.toString().trim().toLowerCase();
+    return normalizedValue === '1' || normalizedValue === 'true' || normalizedValue === 'yes';
   }
 
   private getFrontendUrl(): string {
-    return (
+    const configuredFrontendUrl =
+      this.configService.get<string>('app.frontendUrl') ??
       this.configService.get<string>('FRONTEND_URL') ??
       process.env.FRONTEND_URL ??
-      'http://localhost:5173'
-    ).replace(/\/+$|^\s+|\s+$/g, '');
+      process.env.CORS_ORIGIN ??
+      'http://localhost:5173';
+
+    return configuredFrontendUrl.toString().trim().replace(/\/+$/g, '');
   }
 
   private buildVerificationUrl(token: string): string {
     // The frontend expects verification links to land on `/verify-email` so
     // the SPA can load the verification page and consume the token.
-    return `${this.getFrontendUrl()}/verify-email?token=${encodeURIComponent(token)}`;
+    const frontendUrl = this.getFrontendUrl();
+    return `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
   }
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
@@ -115,7 +124,7 @@ export class AuthService {
       throw e;
     }
 
-    const requireEmailVerification = true;
+    const requireEmailVerification = this.isEmailVerificationRequired();
     const emailVerificationToken = randomBytes(32).toString('hex');
 
     this.logger.log(`${new Date().toISOString()} ${ctx}[8] Creating Prisma user record`);
@@ -128,7 +137,7 @@ export class AuthService {
         firstName: registerDto.firstName?.trim() || 'User',
         lastName: registerDto.lastName?.trim() || '',
         password: passwordHash,
-        emailVerified: true,
+        emailVerified: false,
         emailVerificationToken,
         isActive: true,
       },

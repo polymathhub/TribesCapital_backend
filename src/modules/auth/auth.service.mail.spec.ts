@@ -34,7 +34,7 @@ describe('AuthService (welcome email)', () => {
 
     configService = {
       get: jest.fn((key: string) => {
-        if (key === 'REQUIRE_EMAIL_VERIFICATION') return 'false';
+        if (key === 'REQUIRE_EMAIL_VERIFICATION') return 'true';
         if (key === 'FRONTEND_URL') return 'http://localhost:5173';
         return undefined;
       }),
@@ -69,18 +69,24 @@ describe('AuthService (welcome email)', () => {
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
       isActive: true,
-      emailVerified: true,
+      emailVerified: false,
     });
 
     const result = await service.register(registerDto);
 
     expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'olaitanpetertolu@gmail.com' } });
-    expect(prisma.user.create).toHaveBeenCalled();
+    expect(prisma.user.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ emailVerified: false }),
+    }));
     expect(mailService.sendWelcomeEmail).toHaveBeenCalledWith('olaitanpetertolu@gmail.com', 'Olaitan');
+    expect(mailService.sendVerificationEmail).toHaveBeenCalledWith(
+      'olaitanpetertolu@gmail.com',
+      expect.stringContaining('/verify-email?token='),
+    );
     expect(result).toEqual({ success: true, message: 'Registration successful. Please verify your email address.' });
   });
 
-  it('allows login for users whose email is still pending verification', async () => {
+  it('blocks login for users whose email is still pending verification', async () => {
     const loginDto: LoginDto = {
       email: 'pending@example.com',
       password: 'StrongPass123!',
@@ -97,11 +103,7 @@ describe('AuthService (welcome email)', () => {
       isActive: true,
       emailVerified: false,
     });
-    prisma.user.update.mockResolvedValueOnce({});
 
-    const result = await service.login(loginDto);
-
-    expect(result).toHaveProperty('accessToken', 'access');
-    expect(result).toHaveProperty('refreshToken', 'refresh');
+    await expect(service.login(loginDto)).rejects.toThrow('Email is not verified. Please check your inbox.');
   });
 });
