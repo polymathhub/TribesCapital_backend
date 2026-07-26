@@ -3,6 +3,7 @@ import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
 import apiClient from '../api/client';
 import learningIllustration from '../assets/illustrations/Learning-cuate.svg';
 import { readStoredCourseProgress, persistCourseProgress, getResumeLessonIndex, COURSE_PROGRESS_STORAGE_PREFIX, formatRelativeTime } from '../utils/learningHubProgress';
+import { buildLearningHubStats } from '../utils/dashboardMetrics';
 
 /* ═══════════════════════════════════════════════════════
    BREAKPOINT HOOK — tracks viewport width live
@@ -1523,18 +1524,16 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
         {/* Next best actions */}
         <h2 style={{fontSize:isMobile?14:16,fontWeight:600,color:T1,margin:'0 0 12px'}}>Next best actions</h2>
         <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?10:16,marginBottom:24}}>
-          {[
-            {l:'Courses enrolled',v: courses.filter(c => c.status !== 'notStarted').length, badge:`${courses.filter(c => c.status === 'inProgress').length} in progress`, bc:PU, bb:PUF},
-            {l:'Completed',       v: courses.filter(c => c.status === 'completed').length, badge:'Well done', bc:GR, bb:GRB},
-            {l:'Hours learned',   v: `${courses.reduce((sum, c) => sum + (Number(c.dur?.split('h')[0]) || 0), 0)}h`, badge:'This month', bc:TL, bb:TLB},
-            {l:'Active lessons',  v: courses.reduce((sum, c) => sum + (c.lessons || 0), 0), badge:'Keep going!', bc:AM, bb:AMB},
-          ].map(s => (
-            <div key={s.l} style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:12,padding:'14px 18px',backdropFilter:'blur(16px)',boxShadow:'0 10px 24px rgba(15,23,42,0.04)'}}>
-              <div style={{fontSize:12,color:T2,marginBottom:6}}>{s.l}</div>
-              <div style={{fontSize:28,fontWeight:700,color:T1,marginBottom:8,letterSpacing:-.8}}>{s.v}</div>
-              <span style={{background:s.bb,color:s.bc,fontSize:11,fontWeight:500,padding:'2px 10px',borderRadius:20}}>{s.badge}</span>
-            </div>
-          ))}
+          {buildLearningHubStats(courses).map((s, index) => {
+            const palette = index === 0 ? { bc: PU, bb: PUF } : index === 1 ? { bc: GR, bb: GRB } : index === 2 ? { bc: TL, bb: TLB } : { bc: AM, bb: AMB };
+            return (
+              <div key={s.label} style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:12,padding:'14px 18px',backdropFilter:'blur(16px)',boxShadow:'0 10px 24px rgba(15,23,42,0.04)'}}>
+                <div style={{fontSize:12,color:T2,marginBottom:6}}>{s.label}</div>
+                <div style={{fontSize:28,fontWeight:700,color:T1,marginBottom:8,letterSpacing:-.8}}>{s.value}</div>
+                <span style={{background:palette.bb,color:palette.bc,fontSize:11,fontWeight:500,padding:'2px 10px',borderRadius:20}}>{s.badge}</span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Learning path banner */}

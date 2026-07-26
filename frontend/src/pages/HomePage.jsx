@@ -11,6 +11,7 @@ import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
 import wavingHandIllustration from '../assets/illustrations/waving-hand-skin-4-svgrepo-com.svg';
 import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
 import { formatRelativeTime } from '../utils/learningHubProgress';
+import { buildDashboardStats, buildLearningHubStats } from '../utils/dashboardMetrics';
 
 /* ─── DESIGN TOKENS ─── */
 const P   = '#5B21B6';
@@ -360,6 +361,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [memberCount, setMemberCount] = useState(0);
   const [dashboardCourses, setDashboardCourses] = useState([]);
   const [dashboardEvents, setDashboardEvents] = useState([]);
+  const [sharedPipelineProjects, setSharedPipelineProjects] = useState([]);
+  const [sharedDiligenceDocs, setSharedDiligenceDocs] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -452,6 +455,38 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       return deduped;
     });
     setActiveVideo(video);
+  }, []);
+
+  useEffect(() => {
+    const readSharedAppState = () => {
+      if (typeof window === 'undefined') return;
+      try {
+        const pipelineValue = window.localStorage.getItem('tribes-pipeline-projects');
+        const diligenceValue = window.localStorage.getItem('tribes-diligence-docs');
+        const parsedPipeline = pipelineValue ? JSON.parse(pipelineValue) : [];
+        const parsedDiligence = diligenceValue ? JSON.parse(diligenceValue) : [];
+        setSharedPipelineProjects(Array.isArray(parsedPipeline) ? parsedPipeline : []);
+        setSharedDiligenceDocs(Array.isArray(parsedDiligence) ? parsedDiligence : []);
+      } catch {
+        setSharedPipelineProjects([]);
+        setSharedDiligenceDocs([]);
+      }
+    };
+
+    const handleStorage = (event) => {
+      if (event?.key === 'tribes-pipeline-projects' || event?.key === 'tribes-diligence-docs') {
+        readSharedAppState();
+      }
+    };
+
+    readSharedAppState();
+    window.addEventListener('tribes:app-state-update', readSharedAppState);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('tribes:app-state-update', readSharedAppState);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   const updatesFeed = useMemo(() => {
@@ -734,11 +769,14 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const inProgressCourseCount = dashboardCourses.filter((course) => course.progress > 0 && course.progress < 100).length;
   const completedCourseCount = dashboardCourses.filter((course) => course.progress >= 100).length;
 
-  const heroChips = [
-    `${inProgressCourseCount} in-progress ${inProgressCourseCount === 1 ? 'course' : 'courses'}`,
-    `${completedCourseCount} completed ${completedCourseCount === 1 ? 'course' : 'courses'}`,
-    `${memberCount || 0} community ${memberCount === 1 ? 'member' : 'members'}`,
-  ];
+  const heroChips = useMemo(() => {
+    const learningStats = buildLearningHubStats(dashboardCourses);
+    return [
+      `${learningStats[0].value} ${learningStats[0].label.toLowerCase()}`,
+      `${learningStats[1].value} ${learningStats[1].label.toLowerCase()}`,
+      `${memberCount || 0} community ${memberCount === 1 ? 'member' : 'members'}`,
+    ];
+  }, [dashboardCourses, memberCount]);
 
   const courseVideos = dashboardCourses
     .filter((course) => course.videoId)
@@ -759,12 +797,20 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const buildYouTubeEmbedUrl = (videoId) => `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&modestbranding=1&controls=1&rel=0&fs=1`;
 
-  const statCards = [
-    { label: 'Community members', value: memberCount || 0, badge: 'Updated' },
-    { label: 'In progress', value: inProgressCourseCount, badge: 'Momentum' },
-    { label: 'Completed', value: completedCourseCount, badge: 'Done' },
-    { label: 'Upcoming sessions', value: dashboardEvents.length, badge: 'This week' },
-  ];
+  const statCards = useMemo(() => {
+    const stats = buildDashboardStats({
+      memberCount,
+      dashboardCourses,
+      dashboardEvents,
+      pipelineProjects: sharedPipelineProjects,
+      diligenceDocs: sharedDiligenceDocs,
+    });
+    return stats.slice(0, 4).map((card) => ({
+      label: card.label,
+      value: card.value,
+      badge: card.badge,
+    }));
+  }, [memberCount, dashboardCourses, dashboardEvents, sharedPipelineProjects, sharedDiligenceDocs]);
 
   const currentCourse = useMemo(() => {
     const inProgressCourses = [...dashboardCourses]

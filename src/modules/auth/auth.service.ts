@@ -55,7 +55,7 @@ export class AuthService {
       this.configService.get<string>('FRONTEND_URL') ??
       process.env.FRONTEND_URL ??
       process.env.CORS_ORIGIN ??
-      'https://community.tribes.capital';
+      'http://localhost:5173';
 
     return configuredFrontendUrl.toString().trim().replace(/\/+$/g, '');
   }

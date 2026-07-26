@@ -105,6 +105,25 @@ const PRIORITIES   = ['Low', 'Medium', 'High'];
 const STATUSES     = ['Open', 'In review', 'Completed'];
 const FILE_TINT    = { PDF: { c: '#DC2626', b: '#FEF2F2' }, DOCX: { c: '#1D4ED8', b: '#EFF6FF' }, XLSX: { c: '#16A34A', b: '#DCFCE7' }, PPTX: { c: '#D97706', b: '#FEF3C7' } };
 const PER_PAGE = 10;
+const DILIGENCE_STORAGE_KEY = 'tribes-diligence-docs';
+
+function readStoredDiligenceDocs() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const storedValue = window.localStorage.getItem(DILIGENCE_STORAGE_KEY);
+    if (!storedValue) return [];
+    const parsed = JSON.parse(storedValue);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredDiligenceDocs(docs) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(DILIGENCE_STORAGE_KEY, JSON.stringify(docs));
+  window.dispatchEvent(new Event('tribes:app-state-update'));
+}
 
 /* ─── PRIMITIVES ─── */
 const inputStyle = {
@@ -850,7 +869,7 @@ function DocCard({ doc, onOpen }) {
 export default function DueDiligenceVault() {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
 
-  const [docs, setDocs] = useState([]);
+  const [docs, setDocs] = useState(readStoredDiligenceDocs);
   const [loadError, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -934,12 +953,20 @@ export default function DueDiligenceVault() {
           : Array.isArray(payload?.items)
             ? payload.items
             : [];
-      setDocs(items.map(normalizeDoc));
+      const normalizedDocs = items.map(normalizeDoc);
+      setDocs(normalizedDocs);
+      writeStoredDiligenceDocs(normalizedDocs);
       setPage(1);
     } catch (err) {
       console.error('Failed to load due diligence records:', err);
-      setDocs([]);
-      setError(true);
+      const persistedDocs = readStoredDiligenceDocs();
+      if (persistedDocs.length > 0) {
+        setDocs(persistedDocs);
+        setError(false);
+      } else {
+        setDocs([]);
+        setError(true);
+      }
     } finally {
       setLoading(false);
     }
