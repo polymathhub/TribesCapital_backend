@@ -144,8 +144,8 @@ export class AuthService {
         firstName: registerDto.firstName?.trim() || 'User',
         lastName: registerDto.lastName?.trim() || '',
         password: passwordHash,
-        emailVerified: false,
-        emailVerificationToken,
+        emailVerified: !requireEmailVerification,
+        emailVerificationToken: requireEmailVerification ? emailVerificationToken : null,
         isActive: true,
       },
       select: {
@@ -191,7 +191,14 @@ export class AuthService {
       return { success: true, message: 'Registration successful. Please verify your email address.' };
     }
 
-    return { success: true, message: 'Registration successful. Please verify your email address.' };
+    return this.buildAuthResponse({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName ?? 'User',
+      lastName: user.lastName ?? '',
+      isActive: user.isActive ?? true,
+      emailVerified: true,
+    });
   }
 
   async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {
