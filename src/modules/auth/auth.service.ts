@@ -77,8 +77,13 @@ export class AuthService {
 
     this.logger.log(`Email lookup requested for ${email}`);
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
-    return { exists: Boolean(existingUser) };
+    try {
+      const existingUser = await this.prisma.user.findUnique({ where: { email } });
+      return { exists: Boolean(existingUser) };
+    } catch (error) {
+      this.logger.warn('Database unavailable during email lookup', error instanceof Error ? error.stack : String(error));
+      throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
+    }
   }
 
    
@@ -109,6 +114,9 @@ export class AuthService {
       this.logger.log(`${new Date().toISOString()} ${ctx}[5] existingUser lookup completed (duration=${Date.now()-t0}ms): ${existingUser ? 'found' : 'not found'}`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] existingUser lookup failed`, e instanceof Error ? e.stack : String(e));
+      if (this.isDatabaseUnavailableError(e)) {
+        throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
+      }
       throw e;
     }
     if (existingUser) {
@@ -202,18 +210,24 @@ export class AuthService {
     }
 
     this.logger.log(`[LOGIN] Looking up user for ${email}`);
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        password: true,
-        isActive: true,
-        emailVerified: true,
-      },
-    });
+    let user;
+    try {
+      user = await this.prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          password: true,
+          isActive: true,
+          emailVerified: true,
+        },
+      });
+    } catch (error) {
+      this.logger.warn('Database unavailable during login lookup', error instanceof Error ? error.stack : String(error));
+      throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
+    }
     this.logger.log(`[LOGIN] User lookup completed: ${user ? `found(${user.id})` : 'not found'}`);
 
     if (!user) {
@@ -258,6 +272,15 @@ export class AuthService {
   async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<AuthTokenResponseDto> {
     const payload = await this.verifyGoogleIdToken(googleAuthDto.idToken);
     return this.authenticateWithGoogleProfile(payload);
+  }
+
+  private isDatabaseUnavailableError(error: unknown): boolean {
+    if (!error) {
+      return false;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    return message.includes("Can't reach database server") || message.includes('ECONNREFUSED') || message.includes('P1001') || message.includes('P1002');
   }
 
   async authenticateWithGoogleProfile(profile: {

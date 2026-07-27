@@ -12,11 +12,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { EmailitProvider } from './emailit.provider';
 import { EMAIL_PROVIDER } from './email-provider.interface';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     DatabaseModule,
     PassportModule.register({ defaultStrategy: 'jwt', session: false }),
+    NotificationsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
