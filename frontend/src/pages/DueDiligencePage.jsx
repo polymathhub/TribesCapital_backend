@@ -1028,6 +1028,13 @@ export default function DueDiligenceVault() {
         setCreating(false);
         setPage(1);
         setToast('Due diligence created');
+        try {
+          window.dispatchEvent(new CustomEvent('tribes:notifications-update', {
+            detail: { type: 'due-diligence-created', id: createdItem?.id || created?.id },
+          }));
+        } catch (eventError) {
+          console.warn('Failed to dispatch notification refresh event', eventError);
+        }
       }
       await loadDocs();
     } catch (err) {
