@@ -21,7 +21,7 @@ export function resolveGoogleCallbackUrl(configService: ConfigService): string {
     configService.get<string>('app.frontendUrl')?.trim() ||
     configService.get<string>('FRONTEND_URL')?.trim() ||
     process.env.FRONTEND_URL?.trim() ||
-    'http://localhost:5173'
+    'https://community.tribes.capital'
   );
 
   if (frontendUrl) {

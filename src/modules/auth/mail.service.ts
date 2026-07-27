@@ -61,7 +61,7 @@ export class MailService {
   }
 
   async sendWelcomeEmail(to: string, firstName = 'there'): Promise<boolean> {
-    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/g, '');
+    const frontendUrl = (process.env.FRONTEND_URL || 'https://community.tribes.capital').replace(/\/+$/g, '');
 
     return this.sendMail({
       to,

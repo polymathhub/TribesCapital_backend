@@ -119,7 +119,7 @@ export class AuthController {
     return (
       this.configService.get<string>('FRONTEND_URL') ??
       process.env.FRONTEND_URL ??
-      'http://localhost:5173'
+      'https://community.tribes.capital'
     ).replace(/\/+$/g, '');
   }
 
