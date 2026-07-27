@@ -6,6 +6,7 @@ import { existsSync } from 'fs';
 import { resolve } from 'path';
 import configurations from './config';
 import { resolveJwtConfig } from './config/jwt.config';
+import { validateConfig } from './config/validation';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -24,11 +25,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module';
 import { HealthModule } from './modules/health/health.module';
-// DISABLED MODULES - not yet fully implemented
-// import { ProgressModule } from './modules/progress/progress.module';
-// import { RsvpModule } from './modules/rsvp/rsvp.module';
-// import { ProjectsModule } from './modules/projects/projects.module';
-// import { DocumentsModule } from './modules/documents/documents.module';
+
 
 const frontendDistCandidates = [
   resolve(process.cwd(), 'dist', 'frontend'),
@@ -47,15 +44,20 @@ const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(c
       isGlobal: true,
       load: configurations,
       envFilePath: ['.env', '.env.local'],
-      validate: (config) => ({
-        ...config,
-        jwt: resolveJwtConfig(config.jwt as Record<string, unknown>),
-      }),
+      validate: (config) => 
+        validateConfig({
+          ...config,
+          jwt: resolveJwtConfig(config.jwt as Record<string, unknown>),
+        }),
     }),
     ServeStaticModule.forRoot({
       rootPath: frontendDistPath,
       serveRoot: '/',
       exclude: ['/api*'],
+      serveStaticOptions: {
+        index: false,
+        fallthrough: true,
+      },
     }),
     DatabaseModule,
     AuthModule,

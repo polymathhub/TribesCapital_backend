@@ -62,11 +62,9 @@ export class AuthService {
     return configuredFrontendUrl.toString().trim().replace(/\/+$/g, '');
   }
 
-  private buildVerificationUrl(token: string): string {
-    // The frontend expects verification links to land on `/verify-email` so
-    // the SPA can load the verification page and consume the token.
+  private buildVerificationUrl(): string {
     const frontendUrl = this.getFrontendUrl();
-    return `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
+    return `${frontendUrl}/signin`;
   }
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
@@ -127,7 +125,7 @@ export class AuthService {
     const tHash = Date.now();
     let passwordHash;
     try {
-      passwordHash = await bcrypt.hash(password, 12);
+      passwordHash = await bcrypt.hash(password, 8);
       this.logger.log(`${new Date().toISOString()} ${ctx}[7] Password hash completed (duration=${Date.now()-tHash}ms)`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Password hashing failed`, e instanceof Error ? e.stack : String(e));
@@ -179,7 +177,7 @@ export class AuthService {
     }
 
     if (requireEmailVerification) {
-      const verificationUrl = this.buildVerificationUrl(emailVerificationToken!);
+      const verificationUrl = this.buildVerificationUrl();
       if (this.mailService) {
         void this.mailService
           .sendVerificationEmail(user.email, verificationUrl)
@@ -315,7 +313,7 @@ export class AuthService {
           email,
           firstName: profile.firstName || 'User',
           lastName: profile.lastName || '',
-          password: await bcrypt.hash(this.randomPassword(), 12),
+          password: await bcrypt.hash(this.randomPassword(), 8),
           emailVerified: true,
           isActive: true,
           googleId: profile.googleId,
@@ -490,7 +488,7 @@ export class AuthService {
       data: { emailVerificationToken: verificationToken },
     });
 
-    const verificationUrl = this.buildVerificationUrl(verificationToken);
+    const verificationUrl = this.buildVerificationUrl();
     if (this.mailService) {
       this.mailService
         .sendVerificationEmail(normalizedEmail, verificationUrl)
@@ -562,7 +560,7 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset code');
     }
 
-    const passwordHash = await bcrypt.hash(resetPasswordDto.password, 12);
+    const passwordHash = await bcrypt.hash(resetPasswordDto.password, 8);
     await this.prisma.user.update({
       where: { id: user.id },
       data: {

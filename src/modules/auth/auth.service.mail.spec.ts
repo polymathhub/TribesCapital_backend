@@ -92,7 +92,7 @@ describe('AuthService (welcome email)', () => {
       password: 'StrongPass123!',
     };
 
-    const hashedPassword = await bcrypt.hash(loginDto.password, 12);
+    const hashedPassword = await bcrypt.hash(loginDto.password, 8);
 
     prisma.user.findUnique.mockResolvedValueOnce({
       id: 'user-id',
