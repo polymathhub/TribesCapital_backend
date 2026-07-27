@@ -713,6 +713,8 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     setToast('Download started');
   };
 
+  const projectSignals = useMemo(() => deriveProjectSignals(projects, diligenceDocs), [projects, diligenceDocs]);
+
   const filtered = useMemo(() => {
     const q = topSearch.trim().toLowerCase();
     const signalMap = new Map(projectSignals.map(signal => [signal.id, signal]));
@@ -739,8 +741,6 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     setToast(`Exported ${filtered.length} project${filtered.length !== 1 ? 's' : ''}`);
   };
-
-  const projectSignals = useMemo(() => deriveProjectSignals(projects, diligenceDocs), [projects, diligenceDocs]);
 
   const stats = useMemo(() => {
     const any = projects.length > 0;

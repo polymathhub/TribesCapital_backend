@@ -30,23 +30,42 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
 
     if (isDevelopment && !request.headers?.authorization) {
       const demoEmail = 'demo@tribes.capital';
-      let demoUser = await this.prismaService.user.findUnique({
-        where: { email: demoEmail },
-        select: { id: true, email: true, firstName: true, lastName: true, isActive: true, emailVerified: true },
-      });
+      let demoUser: any = null;
+
+      if (this.prismaService.isDatabaseAvailable()) {
+        try {
+          demoUser = await this.prismaService.user.findUnique({
+            where: { email: demoEmail },
+            select: { id: true, email: true, firstName: true, lastName: true, isActive: true, emailVerified: true },
+          });
+
+          if (!demoUser) {
+            demoUser = await this.prismaService.user.create({
+              data: {
+                email: demoEmail,
+                firstName: 'Demo',
+                lastName: 'User',
+                password: 'dev-placeholder-password',
+                isActive: true,
+                emailVerified: true,
+              },
+              select: { id: true, email: true, firstName: true, lastName: true, isActive: true, emailVerified: true },
+            });
+          }
+        } catch (error) {
+          demoUser = null;
+        }
+      }
 
       if (!demoUser) {
-        demoUser = await this.prismaService.user.create({
-          data: {
-            email: demoEmail,
-            firstName: 'Demo',
-            lastName: 'User',
-            password: 'dev-placeholder-password',
-            isActive: true,
-            emailVerified: true,
-          },
-          select: { id: true, email: true, firstName: true, lastName: true, isActive: true, emailVerified: true },
-        });
+        demoUser = {
+          id: 'demo-user',
+          email: demoEmail,
+          firstName: 'Demo',
+          lastName: 'User',
+          isActive: true,
+          emailVerified: true,
+        };
       }
 
       request.user = {

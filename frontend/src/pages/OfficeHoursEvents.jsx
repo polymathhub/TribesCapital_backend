@@ -51,9 +51,14 @@ function inferMeetingPlatform(platform, link) {
 
 function buildMeetingHref(platform, link) {
   const value = `${link || ''}`.trim();
-  if (!value) return null;
-  if (/^https?:\/\//i.test(value)) return value;
   const detectedPlatform = platform || inferMeetingPlatform(platform, link);
+
+  if (!value) {
+    if (detectedPlatform === 'Google Meet') return 'https://meet.google.com/new';
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(value)) return value;
   if (detectedPlatform === 'Google Meet') return `https://meet.google.com/${value.replace(/^\//, '')}`;
   if (detectedPlatform === 'Slack') return `https://slack.com/app_redirect?channel=${encodeURIComponent(value.replace(/^#/, ''))}`;
   if (detectedPlatform === 'Zoom') return `https://zoom.us/j/${encodeURIComponent(value)}`;
@@ -448,7 +453,12 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
             </div>
             <div>
               <label htmlFor="event-meeting-link" style={LB}>Meeting link / handle</label>
-              <input id="event-meeting-link" name="meetingLink" value={f.meetingLink} onChange={set('meetingLink')} placeholder={MEETING_PLATFORMS.find(option => option.value === f.meetingPlatform)?.placeholder || 'Paste a direct join link or handle'} style={IN}/>
+              <input id="event-meeting-link" name="meetingLink" value={f.meetingLink} onChange={set('meetingLink')} placeholder={f.meetingPlatform === 'Google Meet' ? 'Paste the Google Meet link or leave blank to create one' : (MEETING_PLATFORMS.find(option => option.value === f.meetingPlatform)?.placeholder || 'Paste a direct join link or handle')} style={IN}/>
+              {f.meetingPlatform === 'Google Meet' && (
+                <div style={{marginTop:8,fontSize:12,color:C.t2,lineHeight:1.5}}>
+                  Google Meet creation is currently unavailable in this workspace. You can still save the event and add a manual link later.
+                </div>
+              )}
             </div>
           </div>
           <div style={GP}><label htmlFor="event-meeting-instructions" style={LB}>Meeting instructions <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label><textarea id="event-meeting-instructions" name="meetingInstructions" value={f.meetingInstructions} onChange={set('meetingInstructions')} placeholder="Share access notes, passwords, or Slack channel details" rows={3} style={{...IN,resize:'vertical',lineHeight:1.6}}/></div>
@@ -893,8 +903,8 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
               <div style={{display:'flex',flexDirection:isMobile ? 'column' : 'row',alignItems:'center',justifyContent:'space-between',gap:18,padding:isMobile ? '18px 16px' : '22px 24px',background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',borderRadius:16,backdropFilter:'blur(8px)'}}>
                 <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'flex-start',textAlign:'left',maxWidth:420}}>
                   <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:999,background:'rgba(255,255,255,0.16)',color:'rgba(255,255,255,0.95)',fontSize:11,fontWeight:700,letterSpacing:0.7,textTransform:'uppercase',marginBottom:8}}>Community calendar</div>
-                  <h3 style={{fontSize:16,fontWeight:700,color:C.w,margin:'0 0 6px'}}>No sessions are available right now</h3>
-                  <p style={{fontSize:13,color:'rgba(255,255,255,0.82)',margin:0,lineHeight:1.6}}>{eventsError || 'Check back soon for live office hours, workshops, and member circles.'}</p>
+                  <h3 style={{fontSize:16,fontWeight:700,color:C.w,margin:'0 0 6px'}}>No published sessions are available yet</h3>
+                  <p style={{fontSize:13,color:'rgba(255,255,255,0.82)',margin:0,lineHeight:1.6}}>{eventsError || 'Create a published event from the admin flow or check back soon for new live sessions.'}</p>
                 </div>
                 <img src={eventsIllustration} alt="Illustration for an empty community calendar" style={{width:'min(100%, 160px)',maxWidth:160,height:'auto',display:'block',flexShrink:0,opacity:0.96}} />
               </div>

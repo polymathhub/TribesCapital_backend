@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
+  private databaseAvailable = false;
 
   private isDatabaseDisabled(): boolean {
     const value =
@@ -29,10 +30,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       this.logger.log(`${new Date().toISOString()} [PRISMA][1] Connecting to database`);
       const t = Date.now();
       await this.$connect();
+      this.databaseAvailable = true;
       this.logger.log(`${new Date().toISOString()} [PRISMA][2] Database connected (duration=${Date.now()-t}ms)`);
     } catch (error) {
-      this.logger.error('Database connection failed during startup. Application cannot continue without a database.', error instanceof Error ? error.stack : String(error));
-      throw error;
+      this.databaseAvailable = false;
+      this.logger.warn('Database connection unavailable. Continuing in fallback mode for local development.', error instanceof Error ? error.stack : String(error));
+      return;
     }
     // Prisma query middleware to log all queries, durations and errors
     this.$use(async (params, next) => {
@@ -62,5 +65,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     } catch (error) {
       this.logger.warn('Database disconnect failed.', error);
     }
+  }
+
+  isDatabaseAvailable(): boolean {
+    return this.databaseAvailable || this.isDatabaseDisabled();
   }
 }

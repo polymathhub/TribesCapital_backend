@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
+import { inMemoryFallbackStore } from '@common/services/in-memory-fallback.store';
 import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import {
@@ -40,6 +41,18 @@ export class DueDiligenceService {
   /*                   DUE DILIGENCE CRUD                        */
   /* ═══════════════════════════════════════════════════════════ */
 
+  private isDatabaseUnavailable(error?: any): boolean {
+    const message = error?.message || '';
+    return Boolean(
+      error && (
+        message.includes('P1001') ||
+        message.includes("Can't reach database") ||
+        message.includes('connect ECONNREFUSED') ||
+        message.includes('database server')
+      ),
+    );
+  }
+
   async create(dto: CreateDueDiligenceDto, userId: string) {
     const payload = {
       title: dto.title,
@@ -59,22 +72,29 @@ export class DueDiligenceService {
       riskLevel: 'low' as const,
     };
 
-    return this.prisma.dueDiligence.create({
-      data: payload,
-      include: {
-        creator: {
-          select: { id: true, email: true, firstName: true, lastName: true },
+    try {
+      return await this.prisma.dueDiligence.create({
+        data: payload,
+        include: {
+          creator: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
+          assignedTo: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
+          items: true,
+          documents: true,
+          _count: {
+            select: { items: true, documents: true, comments: true, approvals: true },
+          },
         },
-        assignedTo: {
-          select: { id: true, email: true, firstName: true, lastName: true },
-        },
-        items: true,
-        documents: true,
-        _count: {
-          select: { items: true, documents: true, comments: true, approvals: true },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      if (this.isDatabaseUnavailable(error)) {
+        return inMemoryFallbackStore.createDueDiligence(payload, userId);
+      }
+      throw error;
+    }
   }
 
   async findAll(query: QueryDDDto, userId: string) {
@@ -98,12 +118,43 @@ export class DueDiligenceService {
       );
     }
 
-    const [data, total] = await Promise.all([
-      this.prisma.dueDiligence.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
+    try {
+      const [data, total] = await Promise.all([
+        this.prisma.dueDiligence.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            creator: {
+              select: { id: true, email: true, firstName: true, lastName: true },
+            },
+            assignedTo: {
+              select: { id: true, email: true, firstName: true, lastName: true },
+            },
+            documents: true,
+            _count: {
+              select: { items: true, documents: true, comments: true, approvals: true },
+            },
+          },
+        }),
+        this.prisma.dueDiligence.count({ where }),
+      ]);
+
+      return { data, total, page, limit };
+    } catch (error) {
+      if (this.isDatabaseUnavailable(error)) {
+        const data = inMemoryFallbackStore.listDueDiligence().filter((entry) => entry.creatorId === userId || entry.assignedToId === userId);
+        return { data, total: data.length, page, limit };
+      }
+      throw error;
+    }
+  }
+
+  async findOne(id: string, userId: string) {
+    try {
+      const dd = await this.prisma.dueDiligence.findUnique({
+        where: { id },
         include: {
           creator: {
             select: { id: true, email: true, firstName: true, lastName: true },
@@ -111,68 +162,57 @@ export class DueDiligenceService {
           assignedTo: {
             select: { id: true, email: true, firstName: true, lastName: true },
           },
-          documents: true,
+          items: {
+            include: {
+              assignedTo: {
+                select: { id: true, email: true, firstName: true, lastName: true },
+              },
+            },
+          },
+          documents: {
+            include: {
+              uploadedBy: {
+                select: { id: true, email: true, firstName: true, lastName: true },
+              },
+              reviewedBy: {
+                select: { id: true, email: true, firstName: true, lastName: true },
+              },
+            },
+          },
+          comments: {
+            include: {
+              author: {
+                select: { id: true, email: true, firstName: true, lastName: true },
+              },
+            },
+          },
+          approvals: {
+            include: {
+              approver: {
+                select: { id: true, email: true, firstName: true, lastName: true },
+              },
+            },
+          },
           _count: {
-            select: { items: true, documents: true, comments: true, approvals: true },
+            select: { items: true, documents: true, comments: true, auditLogs: true },
           },
         },
-      }),
-      this.prisma.dueDiligence.count({ where }),
-    ]);
+      });
 
-    return { data, total, page, limit };
-  }
-
-  async findOne(id: string, userId: string) {
-    const dd = await this.prisma.dueDiligence.findUnique({
-      where: { id },
-      include: {
-        creator: {
-          select: { id: true, email: true, firstName: true, lastName: true },
-        },
-        assignedTo: {
-          select: { id: true, email: true, firstName: true, lastName: true },
-        },
-        items: {
-          include: {
-            assignedTo: {
-              select: { id: true, email: true, firstName: true, lastName: true },
-            },
-          },
-        },
-        documents: {
-          include: {
-            uploadedBy: {
-              select: { id: true, email: true, firstName: true, lastName: true },
-            },
-            reviewedBy: {
-              select: { id: true, email: true, firstName: true, lastName: true },
-            },
-          },
-        },
-        comments: {
-          include: {
-            author: {
-              select: { id: true, email: true, firstName: true, lastName: true },
-            },
-          },
-        },
-        approvals: {
-          include: {
-            approver: {
-              select: { id: true, email: true, firstName: true, lastName: true },
-            },
-          },
-        },
-        _count: {
-          select: { items: true, documents: true, comments: true, auditLogs: true },
-        },
-      },
-    });
-
-    if (!dd) throw new NotFoundException('Due diligence not found');
-    this.assertAccess(dd, userId);
-    return dd;
+      if (!dd) throw new NotFoundException('Due diligence not found');
+      this.assertAccess(dd, userId);
+      return dd;
+    } catch (error) {
+      if (this.isDatabaseUnavailable(error)) {
+        const dd = inMemoryFallbackStore.getDueDiligence(id);
+        if (!dd) {
+          throw new NotFoundException('Due diligence not found');
+        }
+        this.assertAccess(dd as any, userId);
+        return dd as any;
+      }
+      throw error;
+    }
   }
 
   async update(id: string, dto: UpdateDueDiligenceDto, userId: string) {

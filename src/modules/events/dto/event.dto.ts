@@ -8,8 +8,9 @@ export class CreateEventDto {
   @IsString()
   description?: string;
 
+  @IsOptional()
   @IsString()
-  slug!: string;
+  slug?: string;
 
   @IsDateString()
   startDate!: string;

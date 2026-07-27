@@ -27,6 +27,7 @@ import {
 } from './dto/auth.dto';
 import { JwtTokenService } from './jwt-token.service';
 import { MailService } from './mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AuthService {
@@ -37,6 +38,7 @@ export class AuthService {
     private readonly jwtTokenService: JwtTokenService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private isEmailVerificationRequired(): boolean {
@@ -244,6 +246,11 @@ export class AuthService {
 
     this.logger.log(`[LOGIN] Entering buildAuthResponse for ${email}`);
     const resp = await this.buildAuthResponse(user);
+    try {
+      await this.notificationsService.ensureAnnouncementNotificationForUser(user.id);
+    } catch (notificationError) {
+      this.logger.warn(`[LOGIN] Failed to create announcement notification for ${user.id}`, notificationError instanceof Error ? notificationError.stack : String(notificationError));
+    }
     this.logger.log(`[LOGIN] Response about to return for ${email}`);
     return resp;
   }
