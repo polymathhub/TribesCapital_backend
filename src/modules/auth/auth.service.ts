@@ -63,8 +63,7 @@ export class AuthService {
   }
 
   private buildVerificationUrl(): string {
-    const frontendUrl = this.getFrontendUrl();
-    return `${frontendUrl}/signin`;
+    return this.getFrontendUrl();
   }
 
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
