@@ -2,33 +2,39 @@ export function validateConfig(config: Record<string, unknown>): Record<string, 
   const app = config.app as Record<string, unknown> | undefined;
   const google = config.google as Record<string, unknown> | undefined;
 
-  if (!app || typeof app.frontendUrl !== 'string' || !app.frontendUrl.trim()) {
+  const frontendUrl =
+    (typeof app?.frontendUrl === 'string' && app.frontendUrl.trim()) ||
+    (typeof process.env.FRONTEND_URL === 'string' && process.env.FRONTEND_URL.trim()) ||
+    (typeof process.env.CORS_ORIGIN === 'string' && process.env.CORS_ORIGIN.trim()) ||
+    'https://community.tribes.capital';
+
+  if (!frontendUrl) {
     throw new Error('FRONTEND_URL must be configured and non-empty.');
   }
 
-  if (!google || typeof google.clientId !== 'string' || !google.clientId.trim()) {
-    throw new Error('GOOGLE_CLIENT_ID must be configured.');
+  try {
+    new URL(frontendUrl);
+  } catch {
+    throw new Error('FRONTEND_URL must be a valid absolute URL with scheme (http:// or https://).');
   }
 
-  if (!google || typeof google.clientSecret !== 'string' || !google.clientSecret.trim()) {
-    throw new Error('GOOGLE_CLIENT_SECRET must be configured.');
-  }
+  const googleClientId =
+    (typeof google?.clientId === 'string' && google.clientId.trim()) ||
+    (typeof process.env.GOOGLE_CLIENT_ID === 'string' && process.env.GOOGLE_CLIENT_ID.trim());
 
-  const environment = typeof app.environment === 'string' ? app.environment.trim().toLowerCase() : 'development';
-  let callbackUrl = typeof google.callbackUrl === 'string' ? google.callbackUrl.trim() : '';
+  const googleClientSecret =
+    (typeof google?.clientSecret === 'string' && google.clientSecret.trim()) ||
+    (typeof process.env.GOOGLE_CLIENT_SECRET === 'string' && process.env.GOOGLE_CLIENT_SECRET.trim());
 
-  if (!callbackUrl) {
-    callbackUrl = new URL('/api/auth/google/callback', app.frontendUrl as string).toString();
+  const environment = typeof app?.environment === 'string' ? app.environment.trim().toLowerCase() : 'development';
+  let callbackUrl = typeof google?.callbackUrl === 'string' ? google.callbackUrl.trim() : '';
+
+  if (!callbackUrl && frontendUrl) {
+    callbackUrl = new URL('/api/auth/google/callback', frontendUrl).toString();
   }
 
   if (environment === 'production' && !callbackUrl) {
     throw new Error('GOOGLE_CALLBACK_URL must be configured in production for Google OAuth.');
-  }
-
-  try {
-    new URL(app.frontendUrl as string);
-  } catch {
-    throw new Error('FRONTEND_URL must be a valid absolute URL with scheme (http:// or https://).');
   }
 
   if (callbackUrl) {
@@ -41,6 +47,12 @@ export function validateConfig(config: Record<string, unknown>): Record<string, 
 
   if (google) {
     google.callbackUrl = callbackUrl;
+    google.clientId = googleClientId;
+    google.clientSecret = googleClientSecret;
+  }
+
+  if (app) {
+    app.frontendUrl = frontendUrl;
   }
 
   return config;
