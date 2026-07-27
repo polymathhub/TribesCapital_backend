@@ -375,10 +375,14 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [watchedVideos, setWatchedVideos] = useState([]);
+  const [loginAnnouncement, setLoginAnnouncement] = useState(null);
+  const [isLoginAnnouncementOpen, setIsLoginAnnouncementOpen] = useState(false);
+  const [loginAnnouncementLoading, setLoginAnnouncementLoading] = useState(false);
   const [activeMetricIndex, setActiveMetricIndex] = useState(0);
   const notifRef = useRef(null);
   const searchRef = useRef(null);
   const searchInputRef = useRef(null);
+  const loginAnnouncementIdsRef = useRef([]);
   const getAvatarSeed = (profile) => profile?.id || profile?.email || profile?.name || displayName || 'user';
   const getProfileAvatar = (profile) => {
     const seed = String(getAvatarSeed(profile));
@@ -657,6 +661,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             detail: item.message || item.body || item.description || 'You have a new update',
             time: item.createdAt ? new Date(item.createdAt).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
             read: Boolean(item.read),
+            type: item.type,
           })));
         } else {
           setNotifications(dashboardEvents.slice(0, 3).map((event) => ({
@@ -665,6 +670,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             detail: event.description || 'New session available',
             time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
             read: false,
+            type: 'event',
           })));
         }
       } catch {
@@ -675,6 +681,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             detail: event.description || 'New session available',
             time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
             read: false,
+            type: 'event',
           })));
         }
       } finally {
@@ -685,6 +692,52 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     void loadNotifications();
     return () => { isMounted = false; };
   }, [isNotificationsOpen, dashboardEvents]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!user?.id) return undefined;
+    if (typeof window !== 'undefined' && window.sessionStorage.getItem('tribes-announcement-popup-shown') === 'true') {
+      return undefined;
+    }
+
+    const loadLoginAnnouncements = async () => {
+      try {
+        setLoginAnnouncementLoading(true);
+        const response = await notificationsAPI.list().catch(() => ({ data: [] }));
+        if (!isMounted) return;
+
+        const apiNotifications = Array.isArray(response?.data) ? response.data : [];
+        if (apiNotifications.length > 0) {
+          const mappedNotifications = apiNotifications.map((item) => ({
+            id: item.id,
+            title: item.title || item.type || 'Notification',
+            detail: item.message || item.body || item.description || 'You have a new update',
+            time: item.createdAt ? new Date(item.createdAt).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Now',
+            read: Boolean(item.isRead),
+            type: item.type,
+          }));
+          setNotifications(mappedNotifications);
+
+          const unreadAnnouncements = mappedNotifications.filter((item) => !item.read && String(item.type || '').toLowerCase().includes('announcement'));
+          if (unreadAnnouncements.length > 0) {
+            loginAnnouncementIdsRef.current = unreadAnnouncements.map((item) => item.id).filter(Boolean);
+            setLoginAnnouncement(unreadAnnouncements[0]);
+            setIsLoginAnnouncementOpen(true);
+            if (typeof window !== 'undefined') {
+              window.sessionStorage.setItem('tribes-announcement-popup-shown', 'true');
+            }
+          }
+        }
+      } finally {
+        if (isMounted) setLoginAnnouncementLoading(false);
+      }
+    };
+
+    void loadLoginAnnouncements();
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
@@ -755,6 +808,23 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       window.localStorage.setItem(TOUR_VISITS_KEY, String(nextCount));
     }
     setTourActive(false);
+  };
+
+  const closeLoginAnnouncement = async () => {
+    setIsLoginAnnouncementOpen(false);
+    const announcementIds = loginAnnouncementIdsRef.current;
+    if (!announcementIds || announcementIds.length === 0) return;
+
+    await Promise.all(
+      announcementIds.map((id) => notificationsAPI.markAsRead(id).catch(() => null)),
+    );
+
+    setNotifications((prevNotifications) => prevNotifications.map((item) => (
+      announcementIds.includes(item.id)
+        ? { ...item, read: true }
+        : item
+    )));
+    loginAnnouncementIdsRef.current = [];
   };
 
   const getTimeGreeting = () => {
@@ -1071,6 +1141,30 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           </div>
         </div>
       </div>
+
+      {isLoginAnnouncementOpen && loginAnnouncement && (
+        <div style={{
+          position:'fixed', inset:0, zIndex:1100, background:'rgba(15,23,42,0.55)', display:'flex', alignItems:'center', justifyContent:'center', padding:'18px', pointerEvents:'auto',
+        }}>
+          <div style={{ width:'100%', maxWidth:520, background:W, borderRadius:18, boxShadow:'0 32px 120px rgba(17,24,39,0.18)', overflow:'hidden' }}>
+            <div style={{ padding:'24px 24px 18px', borderBottom:`1px solid ${BD}`, background:'#f7f5ff' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+                <div>
+                  <div style={{ fontSize:12, textTransform:'uppercase', letterSpacing:'0.2em', color:P, fontWeight:800 }}>Announcement</div>
+                  <div style={{ fontSize:18, fontWeight:700, color:T1, marginTop:8 }}>{loginAnnouncement.title}</div>
+                </div>
+                <button onClick={closeLoginAnnouncement} style={{ border:'none', background:'transparent', color:T3, fontSize:20, cursor:'pointer', lineHeight:1 }}>×</button>
+              </div>
+            </div>
+            <div style={{ padding:'24px 24px 20px' }}>
+              <p style={{ fontSize:14, color:T2, lineHeight:1.7, margin:0, whiteSpace:'pre-wrap' }}>{loginAnnouncement.detail}</p>
+              <div style={{ marginTop:20, display:'flex', justifyContent:'flex-end', gap:10, flexWrap:'wrap' }}>
+                <button onClick={closeLoginAnnouncement} style={{ ...btnStyle('none', P, W, 13), padding:'10px 18px', borderRadius:10, fontWeight:700 }}>Got it</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SCROLLABLE CONTENT */}
       <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:isMobile?'16px 14px 60px':'24px 28px 60px' }}>
