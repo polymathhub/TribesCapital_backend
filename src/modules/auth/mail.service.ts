@@ -26,7 +26,7 @@ export class MailService {
   }
 
   async sendVerificationEmail(to: string, verificationUrl: string): Promise<boolean> {
-    const signInUrl = verificationUrl.includes('/signin') ? verificationUrl : `${verificationUrl.replace(/\/+$/, '')}/signin`;
+    const targetUrl = verificationUrl.replace(/\/+$/, '');
 
     return this.sendMail({
       to,
@@ -43,10 +43,10 @@ export class MailService {
               <p style="margin:0 0 10px;font-size:15px;color:#0f172a;">Hi there,</p>
               <p style="margin:0 0 20px;font-size:15px;color:#475569;line-height:1.7;">Thanks for joining Tribes Capital. Please open the sign-in page to continue and get started.</p>
               <div style="text-align:center;margin:24px 0 20px;">
-                <a href="${signInUrl}" target="_blank" rel="noreferrer noopener" style="display:inline-block;padding:14px 28px;border-radius:999px;background:linear-gradient(135deg,#6d28d9 0%, #4338ca 100%);color:#fff;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 12px 30px rgba(99,102,241,0.2);">Go to sign in</a>
+                <a href="${targetUrl}" target="_blank" rel="noreferrer noopener" style="display:inline-block;padding:14px 28px;border-radius:999px;background:linear-gradient(135deg,#6d28d9 0%, #4338ca 100%);color:#fff;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 12px 30px rgba(99,102,241,0.2);">Open Tribes Capital</a>
               </div>
               <p style="margin:0 0 8px;font-size:13px;color:#64748b;">If the button does not work, copy and paste this link into your browser:</p>
-              <p style="margin:0;word-break:break-all;font-size:13px;color:#0f172a;background:#f8fafc;padding:10px 12px;border-radius:10px;">${signInUrl}</p>
+              <p style="margin:0;word-break:break-all;font-size:13px;color:#0f172a;background:#f8fafc;padding:10px 12px;border-radius:10px;">${targetUrl}</p>
               <div style="margin-top:24px;padding:16px 18px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:13px;line-height:1.6;">
                 <strong style="display:block;margin-bottom:6px;color:#0f172a;">Need help?</strong>
                 If this wasn’t you, you can safely ignore this email or contact support@tribes.capital.
@@ -58,7 +58,7 @@ export class MailService {
           </div>
         </div>
       `,
-      text: `Welcome to Tribes Capital! Open the sign-in page to continue: ${signInUrl}`,
+      text: `Welcome to Tribes Capital! Open the site to continue: ${targetUrl}`,
     });
   }
 
