@@ -143,6 +143,11 @@ function App() {
     setUser(normalizedUser);
     setIsAuthenticated(true);
     setCurrentPage('home');
+    try {
+      window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'announcement-updated' } }));
+    } catch (error) {
+      console.warn('Failed to notify notifications after sign-in:', error);
+    }
   };
 
   const handleLogout = () => {

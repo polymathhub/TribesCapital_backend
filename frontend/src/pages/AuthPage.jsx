@@ -106,6 +106,7 @@ function persistAuthSession({ accessToken, refreshToken, user, email }) {
     localStorage.setItem('user', JSON.stringify(user));
     try {
       window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'user-updated', userId: user.id } }));
+      window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'announcement-updated' } }));
     } catch (e) {
       // ignore
     }

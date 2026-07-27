@@ -692,6 +692,18 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   }, [loadNotifications]);
 
   useEffect(() => {
+    const handleNotificationsEvent = (event) => {
+      const eventType = event?.detail?.type;
+      if (eventType && ['notifications-updated', 'due-diligence-created', 'announcement-updated'].includes(eventType)) {
+        void loadNotifications();
+      }
+    };
+
+    window.addEventListener('tribes:notifications-update', handleNotificationsEvent);
+    return () => window.removeEventListener('tribes:notifications-update', handleNotificationsEvent);
+  }, [loadNotifications]);
+
+  useEffect(() => {
     if (!showAnnouncementPopup) return;
     const timer = window.setTimeout(() => {
       setShowAnnouncementPopup(false);
