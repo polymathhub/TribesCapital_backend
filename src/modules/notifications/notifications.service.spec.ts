@@ -27,4 +27,29 @@ describe('NotificationsService', () => {
       }),
     );
   });
+
+  it('marks a notification as read only for the current user', async () => {
+    const prisma = {
+      notification: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'notification-1' }),
+        update: jest.fn().mockResolvedValue({ id: 'notification-1', isRead: true }),
+      },
+    };
+
+    const service = new NotificationsService(prisma as any);
+    await service.markAsRead('notification-1', 'user-1');
+
+    expect(prisma.notification.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'notification-1', userId: 'user-1' },
+        select: { id: true },
+      }),
+    );
+    expect(prisma.notification.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'notification-1' },
+        data: { isRead: true },
+      }),
+    );
+  });
 });

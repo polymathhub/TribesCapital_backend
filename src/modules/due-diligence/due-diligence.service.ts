@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 import { inMemoryFallbackStore } from '@common/services/in-memory-fallback.store';
+import { NotificationsService } from '../notifications/notifications.service';
 import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import {
@@ -35,7 +36,10 @@ function inferDocumentType(originalname: string, mimetype: string) {
 
 @Injectable()
 export class DueDiligenceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService?: NotificationsService,
+  ) {}
 
   /* ═══════════════════════════════════════════════════════════ */
   /*                   DUE DILIGENCE CRUD                        */
@@ -73,7 +77,7 @@ export class DueDiligenceService {
     };
 
     try {
-      return await this.prisma.dueDiligence.create({
+      const created = await this.prisma.dueDiligence.create({
         data: payload,
         include: {
           creator: {
@@ -89,6 +93,17 @@ export class DueDiligenceService {
           },
         },
       });
+
+      if (this.notificationsService) {
+        await this.notificationsService.createForUser(userId, {
+          type: 'due_diligence_created',
+          title: 'Due diligence case created',
+          message: `A new diligence case named “${created.title}” was created for you.`,
+          data: { dueDiligenceId: created.id },
+        });
+      }
+
+      return created;
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
         return inMemoryFallbackStore.createDueDiligence(payload, userId);

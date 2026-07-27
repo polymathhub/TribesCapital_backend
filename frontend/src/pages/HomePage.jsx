@@ -374,6 +374,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
+  const [announcementPopup, setAnnouncementPopup] = useState(null);
   const [watchedVideos, setWatchedVideos] = useState([]);
   const [activeMetricIndex, setActiveMetricIndex] = useState(0);
   const notifRef = useRef(null);
@@ -639,52 +641,64 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isSearchOpen]);
 
-  useEffect(() => {
-    if (!isNotificationsOpen) return;
+  const loadNotifications = useCallback(async () => {
+    try {
+      setNotificationsLoading(true);
+      const response = await notificationsAPI.list().catch(() => ({ data: [] }));
+      const apiNotifications = Array.isArray(response?.data) ? response.data : [];
+      const normalized = apiNotifications.map((item) => ({
+        id: item.id,
+        title: item.title || item.type || 'Notification',
+        detail: item.message || item.body || item.description || 'You have a new update',
+        time: item.createdAt ? new Date(item.createdAt).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+        read: Boolean(item.isRead ?? item.read),
+      }));
 
-    let isMounted = true;
-    const loadNotifications = async () => {
-      try {
-        setNotificationsLoading(true);
-        const response = await notificationsAPI.list().catch(() => ({ data: [] }));
-        if (!isMounted) return;
+      setNotifications(normalized.length > 0 ? normalized : dashboardEvents.slice(0, 3).map((event) => ({
+        id: event.id,
+        title: event.title,
+        detail: event.description || 'New session available',
+        time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+        read: false,
+      })));
 
-        const apiNotifications = Array.isArray(response?.data) ? response.data : [];
-        if (apiNotifications.length > 0) {
-          setNotifications(apiNotifications.map((item) => ({
-            id: item.id,
-            title: item.title || item.type || 'Notification',
-            detail: item.message || item.body || item.description || 'You have a new update',
-            time: item.createdAt ? new Date(item.createdAt).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-            read: Boolean(item.read),
-          })));
-        } else {
-          setNotifications(dashboardEvents.slice(0, 3).map((event) => ({
-            id: event.id,
-            title: event.title,
-            detail: event.description || 'New session available',
-            time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-            read: false,
-          })));
-        }
-      } catch {
-        if (isMounted) {
-          setNotifications(dashboardEvents.slice(0, 3).map((event) => ({
-            id: event.id,
-            title: event.title,
-            detail: event.description || 'New session available',
-            time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-            read: false,
-          })));
-        }
-      } finally {
-        if (isMounted) setNotificationsLoading(false);
+      const nextAnnouncement = normalized.find((item) => (!item.read) && (item.title?.toLowerCase().includes('announcement') || item.title?.toLowerCase().includes('diligence') || item.detail?.toLowerCase().includes('diligence')));
+      if (nextAnnouncement && !isNotificationsOpen) {
+        setAnnouncementPopup(nextAnnouncement);
+        setShowAnnouncementPopup(true);
       }
+    } catch {
+      setNotifications(dashboardEvents.slice(0, 3).map((event) => ({
+        id: event.id,
+        title: event.title,
+        detail: event.description || 'New session available',
+        time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+        read: false,
+      })));
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, [dashboardEvents, isNotificationsOpen]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const runLoad = async () => {
+      await loadNotifications();
+      if (!isMounted) return;
     };
 
-    void loadNotifications();
+    void runLoad();
     return () => { isMounted = false; };
-  }, [isNotificationsOpen, dashboardEvents]);
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!showAnnouncementPopup) return;
+    const timer = window.setTimeout(() => {
+      setShowAnnouncementPopup(false);
+      setAnnouncementPopup(null);
+    }, 4200);
+    return () => window.clearTimeout(timer);
+  }, [showAnnouncementPopup]);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
@@ -1048,7 +1062,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     <div style={{ fontSize:12, fontWeight:700, color:T1 }}>Notifications</div>
                     <div style={{ fontSize:11, color:T3 }}>{notificationsLoading ? 'Loading…' : `${notifications.filter((item) => !item.read).length} unread`}</div>
                   </div>
-                  <span style={{ fontSize:11, color:P, fontWeight:600 }}>View all</span>
+                  <button type="button" onClick={() => { setIsNotificationsOpen(true); void notificationsAPI.markAllAsRead().catch(() => {}); setNotifications((prev) => prev.map((item) => ({ ...item, read: true }))); }} style={{ background:'transparent', border:'none', color:P, fontWeight:600, fontSize:11, cursor:'pointer' }}>Mark all read</button>
                 </div>
                 <div>
                   {notificationsLoading ? (
@@ -1071,6 +1085,19 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           </div>
         </div>
       </div>
+
+      {showAnnouncementPopup && announcementPopup && (
+        <div style={{ position:'fixed', right:20, bottom:20, zIndex:1200, maxWidth:320, background:W, border:`1px solid ${BD}`, borderRadius:16, boxShadow:'0 18px 42px rgba(17,24,39,0.16)', padding:'14px 16px' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start' }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:800, color:P, letterSpacing:'0.16em', textTransform:'uppercase', marginBottom:4 }}>New update</div>
+              <div style={{ fontSize:14, fontWeight:700, color:T1, marginBottom:4 }}>{announcementPopup.title}</div>
+              <div style={{ fontSize:12, color:T2, lineHeight:1.5 }}>{announcementPopup.detail}</div>
+            </div>
+            <button type="button" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }} style={{ background:'transparent', border:'none', color:T3, cursor:'pointer', padding:0, fontSize:14 }}>×</button>
+          </div>
+        </div>
+      )}
 
       {/* SCROLLABLE CONTENT */}
       <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:isMobile?'16px 14px 60px':'24px 28px 60px' }}>

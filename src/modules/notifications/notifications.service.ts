@@ -20,6 +20,19 @@ export interface CreateBroadcastNotificationInput {
 export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
+  async createForUser(userId: string, input: CreateBroadcastNotificationInput) {
+    return this.prisma.notification.create({
+      data: {
+        userId,
+        type: input.type,
+        title: input.title,
+        message: input.message,
+        data: (input.data ?? {}) as Prisma.InputJsonValue,
+        isRead: false,
+      },
+    });
+  }
+
   async createForAllUsers(input: CreateBroadcastNotificationInput) {
     const users = await this.prisma.user.findMany({
       select: { id: true },
@@ -78,6 +91,15 @@ export class NotificationsService {
   }
 
   async markAsRead(id: string, userId: string) {
+    const existing = await this.prisma.notification.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
     return this.prisma.notification.update({
       where: { id },
       data: { isRead: true },
