@@ -377,6 +377,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [watchedVideos, setWatchedVideos] = useState([]);
   const [loginAnnouncement, setLoginAnnouncement] = useState(null);
   const [isLoginAnnouncementOpen, setIsLoginAnnouncementOpen] = useState(false);
+  const [isLoginAnnouncementClosing, setIsLoginAnnouncementClosing] = useState(false);
   const [loginAnnouncementLoading, setLoginAnnouncementLoading] = useState(false);
   const [activeMetricIndex, setActiveMetricIndex] = useState(0);
   const notifRef = useRef(null);
@@ -745,6 +746,19 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     }
   }, [isSearchOpen]);
 
+  useEffect(() => {
+    if (!isLoginAnnouncementOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeLoginAnnouncement();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLoginAnnouncementOpen, closeLoginAnnouncement]);
+
   /* Section refs */
   const bannerRef   = useRef(null);
   const statsRef    = useRef(null);
@@ -810,22 +824,27 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     setTourActive(false);
   };
 
-  const closeLoginAnnouncement = async () => {
-    setIsLoginAnnouncementOpen(false);
+  const closeLoginAnnouncement = useCallback(async () => {
+    setIsLoginAnnouncementClosing(true);
     const announcementIds = loginAnnouncementIdsRef.current;
-    if (!announcementIds || announcementIds.length === 0) return;
+    if (announcementIds && announcementIds.length > 0) {
+      await Promise.all(
+        announcementIds.map((id) => notificationsAPI.markAsRead(id).catch(() => null)),
+      );
 
-    await Promise.all(
-      announcementIds.map((id) => notificationsAPI.markAsRead(id).catch(() => null)),
-    );
+      setNotifications((prevNotifications) => prevNotifications.map((item) => (
+        announcementIds.includes(item.id)
+          ? { ...item, read: true }
+          : item
+      )));
+      loginAnnouncementIdsRef.current = [];
+    }
 
-    setNotifications((prevNotifications) => prevNotifications.map((item) => (
-      announcementIds.includes(item.id)
-        ? { ...item, read: true }
-        : item
-    )));
-    loginAnnouncementIdsRef.current = [];
-  };
+    window.setTimeout(() => {
+      setIsLoginAnnouncementOpen(false);
+      setIsLoginAnnouncementClosing(false);
+    }, 220);
+  }, []);
 
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
@@ -1142,27 +1161,55 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         </div>
       </div>
 
-      {isLoginAnnouncementOpen && loginAnnouncement && (
-        <div style={{
-          position:'fixed', inset:0, zIndex:1100, background:'rgba(15,23,42,0.55)', display:'flex', alignItems:'center', justifyContent:'center', padding:'18px', pointerEvents:'auto',
-        }}>
-          <div style={{ width:'100%', maxWidth:520, background:W, borderRadius:18, boxShadow:'0 32px 120px rgba(17,24,39,0.18)', overflow:'hidden' }}>
+      {(isLoginAnnouncementOpen || isLoginAnnouncementClosing) && loginAnnouncement && (
+        <div
+          onClick={closeLoginAnnouncement}
+          style={{
+            position:'fixed', inset:0, zIndex:1100, background:'rgba(15,23,42,0.55)', display:'flex', alignItems:'center', justifyContent:'center', padding:'18px', pointerEvents:'auto', animation:'popupFadeIn 0.22s ease-out',
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="announcement-dialog-title"
+            aria-describedby="announcement-dialog-description"
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width:'100%', maxWidth:520, background:W, borderRadius:20, boxShadow:'0 32px 120px rgba(17,24,39,0.18)', overflow:'hidden', transform:'translateY(0)', animation: isLoginAnnouncementClosing ? 'popupFadeOut 0.18s ease-in forwards' : 'modalPopIn 0.26s ease-out forwards',
+            }}
+          >
             <div style={{ padding:'24px 24px 18px', borderBottom:`1px solid ${BD}`, background:'#f7f5ff' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
                 <div>
                   <div style={{ fontSize:12, textTransform:'uppercase', letterSpacing:'0.2em', color:P, fontWeight:800 }}>Announcement</div>
-                  <div style={{ fontSize:18, fontWeight:700, color:T1, marginTop:8 }}>{loginAnnouncement.title}</div>
+                  <div id="announcement-dialog-title" style={{ fontSize:20, fontWeight:800, color:T1, marginTop:8, lineHeight:1.15 }}>{loginAnnouncement.title}</div>
                 </div>
-                <button onClick={closeLoginAnnouncement} style={{ border:'none', background:'transparent', color:T3, fontSize:20, cursor:'pointer', lineHeight:1 }}>×</button>
+                <button onClick={closeLoginAnnouncement} aria-label="Close announcement" style={{ border:'none', background:'transparent', color:T3, fontSize:24, cursor:'pointer', lineHeight:1, padding:0, width:34, height:34, borderRadius:'50%', transition:'background .2s ease' }}>
+                  ×
+                </button>
               </div>
             </div>
-            <div style={{ padding:'24px 24px 20px' }}>
-              <p style={{ fontSize:14, color:T2, lineHeight:1.7, margin:0, whiteSpace:'pre-wrap' }}>{loginAnnouncement.detail}</p>
-              <div style={{ marginTop:20, display:'flex', justifyContent:'flex-end', gap:10, flexWrap:'wrap' }}>
-                <button onClick={closeLoginAnnouncement} style={{ ...btnStyle('none', P, W, 13), padding:'10px 18px', borderRadius:10, fontWeight:700 }}>Got it</button>
+            <div style={{ padding:'24px 24px 22px' }}>
+              <p id="announcement-dialog-description" style={{ fontSize:14, color:T2, lineHeight:1.8, margin:0, whiteSpace:'pre-wrap' }}>{loginAnnouncement.detail}</p>
+              <div style={{ marginTop:24, display:'flex', justifyContent:'flex-end', gap:10, flexWrap:'wrap' }}>
+                <button onClick={closeLoginAnnouncement} style={{ ...btnStyle('none', P, W, 14), padding:'12px 20px', borderRadius:12, fontWeight:700, letterSpacing:'.01em' }}>Got it</button>
               </div>
             </div>
           </div>
+          <style>{`
+            @keyframes modalPopIn {
+              0% { opacity: 0; transform: translateY(16px) scale(0.98); }
+              100% { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            @keyframes popupFadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes popupFadeOut {
+              from { opacity: 1; }
+              to { opacity: 0; }
+            }
+          `}</style>
         </div>
       )}
 
