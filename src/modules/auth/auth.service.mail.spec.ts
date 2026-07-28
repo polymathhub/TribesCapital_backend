@@ -75,6 +75,15 @@ describe('AuthService (welcome email)', () => {
     expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'olaitanpetertolu@gmail.com' } });
     expect(prisma.user.create).toHaveBeenCalled();
     expect(mailService.sendWelcomeEmail).toHaveBeenCalledWith('olaitanpetertolu@gmail.com', 'Olaitan');
-    expect(result).toEqual({ success: true, message: 'Registration successful. Please verify your email address.' });
+    expect(mailService.sendVerificationEmail).toHaveBeenCalledWith(
+      'olaitanpetertolu@gmail.com',
+      expect.stringContaining('/verify-email?token='),
+    );
+    expect(result).toEqual(expect.objectContaining({
+      success: true,
+      message: 'Registration successful. Please verify your email address.',
+      accessToken: 'access',
+      refreshToken: 'refresh',
+    }));
   });
 });

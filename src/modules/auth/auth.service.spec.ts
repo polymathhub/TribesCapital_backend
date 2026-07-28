@@ -122,6 +122,53 @@ describe('AuthService', () => {
     expect(response).toEqual(expect.objectContaining({ refreshToken: 'refresh-token' }));
   });
 
+  it('still issues auth tokens when verification is enabled and a verification email is sent', async () => {
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 'user-1',
+          email: 'user@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          isActive: true,
+          emailVerified: false,
+          emailVerificationToken: 'token',
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    } as unknown as PrismaService;
+
+    const jwtTokenService = {
+      issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'access-token', refreshToken: 'refresh-token', expiresIn: 3600 }),
+    } as unknown as JwtTokenService;
+
+    const mail = {
+      sendWelcomeEmail: jest.fn().mockResolvedValue(true),
+      sendVerificationEmail: jest.fn().mockResolvedValue(true),
+    } as unknown as MailService;
+
+    const service = new AuthService(
+      prisma,
+      jwtTokenService,
+      mail,
+      { get: jest.fn((key: string) => (key === 'REQUIRE_EMAIL_VERIFICATION' ? 'true' : undefined)) } as unknown as ConfigService,
+      { ensureAnnouncementNotificationForUser: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationsService,
+    );
+
+    const response = await service.register({
+      email: 'user@example.com',
+      password: 'Password123!',
+      passwordConfirmation: 'Password123!',
+      firstName: 'Test',
+      lastName: 'User',
+    });
+
+    expect(response).toEqual(expect.objectContaining({ accessToken: 'access-token' }));
+    expect(response).toEqual(expect.objectContaining({ refreshToken: 'refresh-token' }));
+    expect(mail.sendVerificationEmail).toHaveBeenCalled();
+  });
+
   it('uses local fallback auth when the database is skipped', async () => {
     const prisma = {
       user: {
