@@ -98,7 +98,27 @@ export class AuthService {
       throw e;
     }
     if (existingUser) {
-      throw new ConflictException('Email already registered ,try and login or reset your password champ');
+      const hasPasswordSet = Boolean(existingUser.password && existingUser.password.trim());
+      if (hasPasswordSet && existingUser.password !== '') {
+        this.logger.warn(`${new Date().toISOString()} ${ctx}[ERR] Email already registered; returning conflict for existing password-based account`);
+        throw new ConflictException('Email already registered ,try and login or reset your password champ');
+      }
+
+      this.logger.log(`${new Date().toISOString()} ${ctx}[6] Existing account found without a usable password; updating password for ${email}`);
+      const passwordHash = await bcrypt.hash(password, 12);
+      await this.prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          password: passwordHash,
+          emailVerified: existingUser.emailVerified || false,
+          isActive: true,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Account updated successfully. You can now sign in with the password you just set.',
+      };
     }
 
     this.logger.log(`${new Date().toISOString()} ${ctx}[6] Hashing password`);
