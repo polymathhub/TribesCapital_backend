@@ -72,7 +72,6 @@ export class MailService {
       to,
       subject: 'Welcome to Tribes Capital',
       html: `
-<<<<<<< HEAD
         <div style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f4f7fb; padding:24px 12px; color:#0f172a;">
           <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 16px 40px rgba(2,6,23,0.08);border:1px solid #e5e7eb;">
             <div style="padding:32px 24px 24px;text-align:center;background:linear-gradient(135deg,#0f172a 0%, #4f46e5 55%, #2563eb 100%);color:#fff;">
@@ -101,20 +100,6 @@ export class MailService {
               <span>Need help? Reply to this email or contact support@tribes.capital.</span>
             </div>
           </div>
-=======
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <h2>Welcome, ${firstName}!</h2>
-          <p>Thank you for joining Tribes Capital. Your account is now active and ready to use.</p>
-          <p>Here are a few next steps to get started:</p>
-          <ul>
-            <li>Complete your profile and sign in.</li>
-            <li>Explore the learning hub, events, and due diligence resources.</li>
-            <li>Connect with other members and engage with the community.</li>
-          </ul>
-          <p>If you need help, please visit our support page or reply to this email.</p>
-          <p>Welcome aboard,</p>
-          <p>The Tribes Capital Team</p>
->>>>>>> 92d7afb (Resolve merge conflicts and wire pipeline navigation)
         </div>
       `,
       text: `Welcome, ${firstName}! We’re excited to have you here at Tribes Capital. Go to ${siteUrl} to get started.`,

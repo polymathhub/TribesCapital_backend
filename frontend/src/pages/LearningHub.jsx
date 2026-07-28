@@ -1386,20 +1386,13 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
 
         const transformed = await Promise.all((coursesResponse.data || []).map(async (course) => {
           const enrollment = enrolledMap.get(course.id);
-<<<<<<< HEAD
-=======
-          const storedProgress = readStoredCourseProgress(course.id);
->>>>>>> 92d7afb (Resolve merge conflicts and wire pipeline navigation)
           let progressData = null;
           try {
             progressData = await coursesAPI.getProgress(course.id);
           } catch (error) {
             // fall back to the enrollment snapshot if progress is unavailable
           }
-<<<<<<< HEAD
           const storedProgress = readStoredCourseProgress(course.id);
-=======
->>>>>>> 92d7afb (Resolve merge conflicts and wire pipeline navigation)
           const progress = Math.max(
             Number(progressData?.data?.progress ?? enrollment?.progress ?? 0),
             Number(storedProgress.progress ?? 0),

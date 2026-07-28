@@ -157,59 +157,28 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
         <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.68)', zIndex:999, pointerEvents:'none' }}/>
       )}
 
-      {/* Tooltip card */}
-      <div style={{
-        position:'fixed', ...tipPos,
-        width:tipW, background:W, borderRadius:14,
-        boxShadow:'0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1)',
-        zIndex:1001, overflow:'hidden',
-        animation:'tipIn 0.25s cubic-bezier(.34,1.56,.64,1)',
-      }}>
-        {/* Purple progress bar */}
-        <div style={{ height:4, background:'#EDE9FE' }}>
-          <div style={{ height:4, background:P, width:`${((step+1)/total)*100}%`, transition:'width .35s ease', borderRadius:'0 2px 2px 0' }}/>
-        </div>
+      useEffect(() => {
+        let isMounted = true;
+        const runLoad = async () => {
+          await loadNotifications();
+          if (!isMounted) return;
+        };
 
-        {/* Header row */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px 8px' }}>
-          <span style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:.8, textTransform:'uppercase' }}>
-            Step {step+1} of {total}
-          </span>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <button onClick={onSkip} style={btnStyle('none', 'none', T3, 12)}>Skip tour</button>
-            <button onClick={onSkip}
-              style={{ ...circleBtn, background:'#F3F4F6', border:'none', color:T2, fontSize:16, lineHeight:1 }}>×</button>
-          </div>
-        </div>
+        void runLoad();
+        return () => { isMounted = false; };
+      }, [loadNotifications]);
 
-        {/* Body */}
-        <div style={{ padding:'2px 18px 18px' }}>
-          <div style={{ fontSize:30, marginBottom:12, lineHeight:1 }}>
-            <Icon name={cur.icon} size={36} color={P} />
-          </div>
-          <h3 style={{ fontSize:16, fontWeight:700, color:T1, margin:'0 0 8px', letterSpacing:-.3 }}>{cur.title}</h3>
-          <p style={{ fontSize:13, color:T2, lineHeight:1.65, margin:0 }}>{cur.desc}</p>
-        </div>
+      useEffect(() => {
+        const handleNotificationsEvent = (event) => {
+          const eventType = event?.detail?.type;
+          if (eventType && ['notifications-updated', 'due-diligence-created', 'announcement-updated'].includes(eventType)) {
+            void loadNotifications();
+          }
+        };
 
-        {/* Footer */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'12px 18px', borderTop:`1px solid ${BD}`, background:BG }}>
-          {/* Dot indicators */}
-          <div style={{ display:'flex', gap:5, alignItems:'center' }}>
-            {STEPS.map((_,i) => (
-              <div key={i} style={{
-                height:6, width:i===step?18:6, borderRadius:3,
-                background:i===step?P:BD, transition:'all .2s ease',
-              }}/>
-            ))}
-          </div>
-          {/* Buttons */}
-          <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-            {step > 0 && (
-              <button onClick={onBack}
-                style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 13), padding:'8px 14px', borderRadius:8, fontWeight:500, whiteSpace:'nowrap' }}>
-                ← Back
-              </button>
+        window.addEventListener('tribes:notifications-update', handleNotificationsEvent);
+        return () => window.removeEventListener('tribes:notifications-update', handleNotificationsEvent);
+      }, [loadNotifications]);
             )}
             <button onClick={onNext}
               style={{ ...btnStyle('none', P, W, 13), padding:'8px 20px', borderRadius:8, fontWeight:500, whiteSpace:'nowrap' }}>
@@ -720,7 +689,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       if (!isMounted) return;
     };
 
-<<<<<<< HEAD
     void runLoad();
     return () => { isMounted = false; };
   }, [loadNotifications]);
@@ -730,37 +698,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       const eventType = event?.detail?.type;
       if (eventType && ['notifications-updated', 'due-diligence-created', 'announcement-updated'].includes(eventType)) {
         void loadNotifications();
-=======
-        const apiNotifications = Array.isArray(response?.data) ? response.data : [];
-        const normalizedNotifications = apiNotifications.map((item) => ({
-          id: item.id,
-          title: item.title || item.type || 'Notification',
-          detail: item.message || item.body || item.description || 'You have a new update',
-          time: item.createdAt ? new Date(item.createdAt).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-          read: Boolean(item.read),
-        }));
-        const fallbackNotifications = dashboardEvents.slice(0, 3).map((event) => ({
-          id: event.id,
-          title: event.title,
-          detail: event.description || 'New session available',
-          time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-          read: false,
-        }));
-        const seededNotifications = [COMMUNITY_ANNOUNCEMENT, ...(normalizedNotifications.length > 0 ? normalizedNotifications : fallbackNotifications)];
-        setNotifications(seededNotifications);
-      } catch {
-        if (isMounted) {
-          setNotifications([COMMUNITY_ANNOUNCEMENT, ...dashboardEvents.slice(0, 3).map((event) => ({
-            id: event.id,
-            title: event.title,
-            detail: event.description || 'New session available',
-            time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-            read: false,
-          }))]);
-        }
-      } finally {
-        if (isMounted) setNotificationsLoading(false);
->>>>>>> 92d7afb (Resolve merge conflicts and wire pipeline navigation)
       }
     };
 
@@ -1173,16 +1110,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       </div>
 
       {showAnnouncementPopup && announcementPopup && (
-<<<<<<< HEAD
-        <div style={{ position:'fixed', right:20, bottom:20, zIndex:1200, maxWidth:320, background:W, border:`1px solid ${BD}`, borderRadius:16, boxShadow:'0 18px 42px rgba(17,24,39,0.16)', padding:'14px 16px' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start' }}>
-            <div>
-              <div style={{ fontSize:11, fontWeight:800, color:P, letterSpacing:'0.16em', textTransform:'uppercase', marginBottom:4 }}>New update</div>
-              <div style={{ fontSize:14, fontWeight:700, color:T1, marginBottom:4 }}>{announcementPopup.title}</div>
-              <div style={{ fontSize:12, color:T2, lineHeight:1.5 }}>{announcementPopup.detail}</div>
-            </div>
-            <button type="button" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }} style={{ background:'transparent', border:'none', color:T3, cursor:'pointer', padding:0, fontSize:14 }}>×</button>
-=======
         <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.58)', display:'flex', alignItems:'center', justifyContent:'center', padding:16, zIndex:1200 }}>
           <div style={{ width:'min(520px, 100%)', background:W, borderRadius:18, boxShadow:'0 24px 70px rgba(17,24,39,0.22)', overflow:'hidden' }}>
             <div style={{ padding:'16px 18px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -1197,7 +1124,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 13), padding:'9px 14px', borderRadius:8, fontWeight:600 }}>Close</button>
               </div>
             </div>
->>>>>>> 92d7afb (Resolve merge conflicts and wire pipeline navigation)
           </div>
         </div>
       )}
