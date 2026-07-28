@@ -27,18 +27,23 @@ const roles = [
   }
 ];
 
-const waysToHelp = [
-  'Share your perspective by creating content that makes energy topics easier to understand.',
-  'Join a live session or office hour to offer practical insight and help others learn.',
-  'Support the community by helping us shape discussions, events, and learning experiences.',
-  'Bring your voice, experience, or network if you want to help the platform grow.'
+const sequence = [
+  'Post 1 introduces the campaign and explains that Tribes Capital is inviting contributors to help build the learning experience.',
+  'Post 2 highlights the different ways people can take part, with content creation as the core invitation.',
+  'Posts 3 to 6 spotlight the contributor roles over the following weeks so the ask feels practical and clear.',
+  'Post 7 adds a human story and explains why the platform is being built with the community.',
+  'Post 8 closes with a warm invitation for anyone who wants to contribute, even if they do not fit a formal title.'
 ];
 
-const invitationPoints = [
-  'We are inviting people who care about helping others learn and build a stronger community.',
-  'If you enjoy writing, speaking, teaching, designing, or organizing, there is a place for you here.',
-  'We are especially interested in people who can share useful knowledge about clean energy, markets, policy, and innovation.',
-  'You do not need a formal title to contribute — thoughtful participation matters.'
+const posts = [
+  'Open with a simple announcement that Tribes Capital is building a stronger learning and community platform with help from contributors.',
+  'Make the main call clear: we are looking for people who can create useful content for the Learning Hub and community experience.',
+  'Feature content creators as the first priority: writers, editors, video makers, designers and storytellers who can explain energy topics clearly.',
+  'Invite keynote speakers who can bring practical insight to Office Hours and live sessions.',
+  'Welcome topic experts with experience in governance, market design, infrastructure, policy and finance.',
+  'Highlight events collaborators who can help host sessions, share reach and strengthen the wider community.',
+  'Add a human-centred story that explains why this campaign matters and why community participation is important.',
+  'Close by welcoming general supporters and enthusiasts who want to contribute even without a formal title.'
 ];
 
 export default function AnnouncementsPage({ onBack, onToggleSidebar, isMobile, isTablet }) {
@@ -56,21 +61,21 @@ export default function AnnouncementsPage({ onBack, onToggleSidebar, isMobile, i
       <div style={{ flex: 1, overflowY: 'auto', padding: isMobileLocal ? '16px' : '24px', background: BG }}>
         <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gap: 16 }}>
           <div style={{ padding: isMobileLocal ? '20px 18px' : '28px 30px', borderRadius: 24, background: '#ffffff', border: '1px solid rgba(124, 58, 237, 0.16)', boxShadow: '0 20px 50px rgba(15, 23, 42, 0.06)' }}>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: P, marginBottom: 8 }}>Community announcement</div>
-            <h2 style={{ fontSize: isMobileLocal ? 22 : 28, fontWeight: 800, color: T1, margin: '0 0 8px' }}>We are building with the community</h2>
-            <h3 style={{ fontSize: isMobileLocal ? 18 : 22, fontWeight: 700, color: P, margin: '0 0 10px' }}>We are looking for people who want to help shape the Learning Hub</h3>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: P, marginBottom: 8 }}>Announcement • 8-post campaign</div>
+            <h2 style={{ fontSize: isMobileLocal ? 22 : 28, fontWeight: 800, color: T1, margin: '0 0 8px' }}>TRIBES CAPITAL</h2>
+            <h3 style={{ fontSize: isMobileLocal ? 18 : 22, fontWeight: 700, color: P, margin: '0 0 10px' }}>Call for contributors to help build the Learning Hub</h3>
             <p style={{ fontSize: 14, lineHeight: 1.7, color: T2, margin: '0 0 10px' }}>
-              Tribes Capital is opening the door for contributors who want to help create a more useful, welcoming, and knowledge-rich community experience.
+              Tribes Capital is inviting people who can help create useful educational content for the platform. We are especially looking for content creators, writers, video makers, speakers and subject-matter contributors who can turn complex energy topics into practical learning material.
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.7, color: T2, margin: 0 }}>
-              Whether you are a writer, speaker, educator, organizer, or simply someone with strong ideas and a willingness to contribute, we would love to hear from you.
+              This campaign is meant to bring in people who can support the Learning Hub, Office Hours, community sessions and broader thought leadership on the platform.
             </p>
           </div>
 
           <div style={{ padding: isMobileLocal ? '18px' : '22px', borderRadius: 20, background: '#ffffff', border: '1px solid rgba(124, 58, 237, 0.16)', boxShadow: '0 16px 34px rgba(15, 23, 42, 0.04)' }}>
-            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 10px' }}>Share your voice</h4>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 10px' }}>Feedback channel</h4>
             <p style={{ fontSize: 14, lineHeight: 1.7, color: T2, margin: '0 0 12px' }}>
-              If you have feedback, ideas, or questions about how this community effort should feel and function, please share them here.
+              This section is only for feedback on the campaign. Please use it to share comments, suggestions or questions about the announcement, the contributor ask or the rollout plan.
             </p>
             <a href={FEEDBACK_URL} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', padding: '10px 14px', borderRadius: 999, background: PF, color: P, fontWeight: 700, textDecoration: 'none' }}>
               Share feedback →
@@ -78,30 +83,31 @@ export default function AnnouncementsPage({ onBack, onToggleSidebar, isMobile, i
           </div>
 
           <div style={{ padding: isMobileLocal ? '18px' : '22px', borderRadius: 20, background: '#ffffff', border: '1px solid rgba(124, 58, 237, 0.16)', boxShadow: '0 16px 34px rgba(15, 23, 42, 0.04)' }}>
-            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 10px' }}>What we are looking for</h4>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 10px' }}>What this announcement is about</h4>
             <p style={{ fontSize: 14, lineHeight: 1.7, color: T2, margin: '0 0 10px' }}>
-              We are looking for people who want to contribute in practical and meaningful ways to the Learning Hub and wider community experience.
+              This is a standalone call for contributors, separate from the broader platform explainer calendar. It is intended to recruit people who can help shape the learning experience and community content in a meaningful way.
             </p>
             <p style={{ fontSize: 14, lineHeight: 1.7, color: T2, margin: 0 }}>
-              Your contribution could be sharing knowledge, helping run events, creating helpful content, or simply bringing energy and perspective to the community.
+              Before launch, the team should confirm the contributor terms, the application route and the right timing for the rollout so the invitation feels clear and actionable.
             </p>
           </div>
 
           <div style={{ padding: isMobileLocal ? '18px' : '22px', borderRadius: 20, background: '#ffffff', border: '1px solid rgba(124, 58, 237, 0.16)', boxShadow: '0 16px 34px rgba(15, 23, 42, 0.04)' }}>
-            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 12px' }}>Ways to get involved</h4>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 12px' }}>Who we are looking for</h4>
             <div style={{ display: 'grid', gridTemplateColumns: isMobileLocal ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-              {waysToHelp.map((way) => (
-                <div key={way} style={{ padding: '14px 16px', borderRadius: 16, background: '#F9FAFB', border: '1px solid rgba(124, 58, 237, 0.1)' }}>
-                  <div style={{ fontSize: 13, lineHeight: 1.6, color: T2 }}>{way}</div>
+              {roles.map((role) => (
+                <div key={role.title} style={{ padding: '14px 16px', borderRadius: 16, background: '#F9FAFB', border: '1px solid rgba(124, 58, 237, 0.1)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: P, marginBottom: 6 }}>{role.title}</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.6, color: T2 }}>{role.description}</div>
                 </div>
               ))}
             </div>
           </div>
 
           <div style={{ padding: isMobileLocal ? '18px' : '22px', borderRadius: 20, background: '#ffffff', border: '1px solid rgba(124, 58, 237, 0.16)', boxShadow: '0 16px 34px rgba(15, 23, 42, 0.04)' }}>
-            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 10px' }}>What makes a good contribution</h4>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 10px' }}>Suggested sequencing</h4>
             <div style={{ display: 'grid', gap: 8 }}>
-              {invitationPoints.map((item, index) => (
+              {sequence.map((item, index) => (
                 <div key={item} style={{ display: 'flex', gap: 8, fontSize: 14, color: T2, lineHeight: 1.6 }}>
                   <span style={{ fontWeight: 700, color: P }}>{index + 1}.</span>
                   <span>{item}</span>
@@ -111,14 +117,14 @@ export default function AnnouncementsPage({ onBack, onToggleSidebar, isMobile, i
           </div>
 
           <div style={{ padding: isMobileLocal ? '18px' : '22px', borderRadius: 20, background: '#ffffff', border: '1px solid rgba(124, 58, 237, 0.16)', boxShadow: '0 16px 34px rgba(15, 23, 42, 0.04)' }}>
-            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 12px' }}>A simple invitation</h4>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: T1, margin: '0 0 12px' }}>Full 8-post breakdown</h4>
             <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ padding: '12px 14px', borderRadius: 14, background: '#F9FAFB', border: '1px solid rgba(124, 58, 237, 0.08)' }}>
-                <div style={{ fontSize: 14, lineHeight: 1.6, color: T2 }}>If this feels like your kind of space, we encourage you to join in and contribute in whatever way feels natural and meaningful to you.</div>
-              </div>
-              <div style={{ padding: '12px 14px', borderRadius: 14, background: '#F9FAFB', border: '1px solid rgba(124, 58, 237, 0.08)' }}>
-                <div style={{ fontSize: 14, lineHeight: 1.6, color: T2 }}>We are excited to see the ideas, energy, and support that the community brings forward.</div>
-              </div>
+              {posts.map((post, index) => (
+                <div key={post} style={{ padding: '12px 14px', borderRadius: 14, background: '#F9FAFB', border: '1px solid rgba(124, 58, 237, 0.08)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: P, marginBottom: 4 }}>Post {index + 1}</div>
+                  <div style={{ fontSize: 14, lineHeight: 1.6, color: T2 }}>{post}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

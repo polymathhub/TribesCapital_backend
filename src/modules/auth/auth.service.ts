@@ -27,67 +27,28 @@ import {
 } from './dto/auth.dto';
 import { JwtTokenService } from './jwt-token.service';
 import { MailService } from './mail.service';
-import { NotificationsService } from '../notifications/notifications.service';
-
-type LocalAuthUser = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  password: string;
-  isActive: boolean;
-  emailVerified: boolean;
-};
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly localUsers = new Map<string, LocalAuthUser>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtTokenService: JwtTokenService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
-    private readonly notificationsService: NotificationsService,
   ) {}
 
   private isEmailVerificationRequired(): boolean {
-    const configuredValue = this.configService.get<string | boolean | undefined>('REQUIRE_EMAIL_VERIFICATION') ?? process.env.REQUIRE_EMAIL_VERIFICATION;
-    if (configuredValue === undefined || configuredValue === null || configuredValue === '') {
-      return false;
-    }
-
-    const normalizedValue = configuredValue.toString().trim().toLowerCase();
-    return normalizedValue === '1' || normalizedValue === 'true' || normalizedValue === 'yes';
-  }
-
-  private isDatabaseDisabled(): boolean {
-    const value = process.env.DB_SKIP || process.env.NO_DATABASE_MODE || process.env.DATABASE_SKIP || process.env.NO_DB;
-    if (!value) {
-      return false;
-    }
-
-    return ['1', 'true', 'yes', 'on'].includes(value.toString().trim().toLowerCase());
-  }
-
-  private shouldUseLocalFallback(): boolean {
-    if (this.isDatabaseDisabled()) {
-      return true;
-    }
-
-    return this.prisma.isDatabaseAvailable?.() === false;
+    // Keep verification as a non-blocking courtesy step so signup is not blocked.
+    return false;
   }
 
   private getFrontendUrl(): string {
-    const configuredFrontendUrl =
-      this.configService.get<string>('app.frontendUrl') ??
-      this.configService.get<string>('FRONTEND_URL') ??
-      process.env.FRONTEND_URL ??
-      process.env.CORS_ORIGIN ??
-      'https://community.tribes.capital';
-
-    return configuredFrontendUrl.toString().trim().replace(/\/+$/g, '');
+    const frontendUrl = this.configService.get<string>('app.frontendUrl') || this.configService.get<string>('FRONTEND_URL') || process.env.FRONTEND_URL;
+    return (
+      frontendUrl || 'https://community.tribes.capital'
+    ).toString().trim().replace(/\/+$/g, '');
   }
 
   private buildVerificationUrl(): string {
@@ -102,13 +63,8 @@ export class AuthService {
 
     this.logger.log(`Email lookup requested for ${email}`);
 
-    try {
-      const existingUser = await this.prisma.user.findUnique({ where: { email } });
-      return { exists: Boolean(existingUser) };
-    } catch (error) {
-      this.logger.warn('Database unavailable during email lookup', error instanceof Error ? error.stack : String(error));
-      throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
-    }
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    return { exists: Boolean(existingUser) };
   }
 
    
@@ -139,10 +95,7 @@ export class AuthService {
       this.logger.log(`${new Date().toISOString()} ${ctx}[5] existingUser lookup completed (duration=${Date.now()-t0}ms): ${existingUser ? 'found' : 'not found'}`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] existingUser lookup failed`, e instanceof Error ? e.stack : String(e));
-      if (!this.shouldUseLocalFallback() && this.isDatabaseUnavailableError(e)) {
-        throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
-      }
-      existingUser = this.localUsers.get(email);
+      throw e;
     }
     if (existingUser) {
       throw new ConflictException('Email already registered ,try and login or reset your password champ');
@@ -159,7 +112,7 @@ export class AuthService {
       throw e;
     }
 
-    const requireEmailVerification = this.isEmailVerificationRequired();
+    const requireEmailVerification = true;
     const emailVerificationToken = randomBytes(32).toString('hex');
 
     this.logger.log(`${new Date().toISOString()} ${ctx}[8] Creating Prisma user record`);
@@ -172,8 +125,8 @@ export class AuthService {
         firstName: registerDto.firstName?.trim() || 'User',
         lastName: registerDto.lastName?.trim() || '',
         password: passwordHash,
-        emailVerified: !requireEmailVerification,
-        emailVerificationToken: requireEmailVerification ? emailVerificationToken : null,
+        emailVerified: true,
+        emailVerificationToken,
         isActive: true,
       },
       select: {
@@ -189,28 +142,7 @@ export class AuthService {
       this.logger.log(`${new Date().toISOString()} ${ctx}[9] Prisma user created (id=${user.id}) (duration=${Date.now()-tCreate}ms)`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Prisma user create failed`, e instanceof Error ? e.stack : String(e));
-      if (!this.shouldUseLocalFallback()) {
-        throw e;
-      }
-
-      user = {
-        id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        email,
-        firstName: registerDto.firstName?.trim() || 'User',
-        lastName: registerDto.lastName?.trim() || '',
-        isActive: true,
-        emailVerified: !requireEmailVerification,
-        emailVerificationToken: requireEmailVerification ? emailVerificationToken : null,
-      };
-      this.localUsers.set(email, {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        password: passwordHash,
-        isActive: user.isActive,
-        emailVerified: user.emailVerified,
-      });
+      throw e;
     }
 
     const total = Date.now() - startRegister;
@@ -236,8 +168,6 @@ export class AuthService {
           })
           .catch(() => this.logger.warn('[REGISTER] sendVerificationEmail failed (non-blocking)'));
       }
-
-      return { success: true, message: 'Registration successful. Please verify your email address.' };
     }
 
     return this.buildAuthResponse({
@@ -263,43 +193,18 @@ export class AuthService {
     }
 
     this.logger.log(`[LOGIN] Looking up user for ${email}`);
-    let user: LocalAuthUser | undefined = this.localUsers.get(email);
-    try {
-      if (!user) {
-        const prismaUser = await this.prisma.user.findUnique({
-          where: { email },
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            password: true,
-            isActive: true,
-            emailVerified: true,
-          },
-        });
-        if (prismaUser) {
-          user = {
-            id: prismaUser.id,
-            email: prismaUser.email,
-            firstName: prismaUser.firstName ?? 'User',
-            lastName: prismaUser.lastName ?? '',
-            password: prismaUser.password,
-            isActive: prismaUser.isActive ?? true,
-            emailVerified: prismaUser.emailVerified ?? false,
-          };
-        }
-      }
-    } catch (error) {
-      this.logger.warn('Database unavailable during login lookup', error instanceof Error ? error.stack : String(error));
-      if (this.isDatabaseUnavailableError(error)) {
-        if (!this.shouldUseLocalFallback()) {
-          throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
-        }
-      }
-
-      user = this.localUsers.get(email);
-    }
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        password: true,
+        isActive: true,
+        emailVerified: true,
+      },
+    });
     this.logger.log(`[LOGIN] User lookup completed: ${user ? `found(${user.id})` : 'not found'}`);
 
     if (!user) {
@@ -320,29 +225,17 @@ export class AuthService {
     }
 
     if (!user.emailVerified && this.isEmailVerificationRequired()) {
-      this.logger.warn('[LOGIN] Attempt to sign in with unverified email: ' + email);
-      throw new UnauthorizedException('Email is not verified. Please check your inbox.');
+      this.logger.warn('[LOGIN] Attempt to sign in with unverified email: ' + email + ' — allowing sign-in while verification remains non-blocking');
     }
 
-    if (this.prisma.user?.update) {
-      try {
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: { lastLogin: new Date() },
-        });
-      } catch (updateError) {
-        this.logger.warn('Failed to update last login timestamp', updateError instanceof Error ? updateError.stack : String(updateError));
-      }
-    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    });
     this.logger.log(`[LOGIN] Last login timestamp updated for ${user.id}`);
 
     this.logger.log(`[LOGIN] Entering buildAuthResponse for ${email}`);
     const resp = await this.buildAuthResponse(user);
-    try {
-      await this.notificationsService.ensureAnnouncementNotificationForUser(user.id);
-    } catch (notificationError) {
-      this.logger.warn(`[LOGIN] Failed to create announcement notification for ${user.id}`, notificationError instanceof Error ? notificationError.stack : String(notificationError));
-    }
     this.logger.log(`[LOGIN] Response about to return for ${email}`);
     return resp;
   }
@@ -350,15 +243,6 @@ export class AuthService {
   async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<AuthTokenResponseDto> {
     const payload = await this.verifyGoogleIdToken(googleAuthDto.idToken);
     return this.authenticateWithGoogleProfile(payload);
-  }
-
-  private isDatabaseUnavailableError(error: unknown): boolean {
-    if (!error) {
-      return false;
-    }
-
-    const message = error instanceof Error ? error.message : String(error);
-    return message.includes("Can't reach database server") || message.includes('ECONNREFUSED') || message.includes('P1001') || message.includes('P1002');
   }
 
   async authenticateWithGoogleProfile(profile: {
@@ -369,6 +253,9 @@ export class AuthService {
     avatar?: string | null;
   }): Promise<AuthTokenResponseDto> {
     const email = this.normalizeEmail(profile.email);
+    if (!email) {
+      throw new BadRequestException('Google account did not provide a valid email');
+    }
     if (!email) {
       throw new BadRequestException('Google account did not provide a valid email');
     }
@@ -693,28 +580,20 @@ export class AuthService {
     emailVerified?: boolean | null;
   }): Promise<AuthTokenResponseDto> {
     this.logger.log(`[AUTH] Entering buildAuthResponse for ${user.email}`);
-    let userWithRoles;
-    try {
-      userWithRoles = await this.prisma.user.findUnique({
-        where: { id: user.id },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          isActive: true,
-          emailVerified: true,
-          roles: {
-            select: { name: true },
-          },
+    const userWithRoles = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+        emailVerified: true,
+        roles: {
+          select: { name: true },
         },
-      });
-    } catch (error) {
-      if (!this.shouldUseLocalFallback()) {
-        throw error;
-      }
-      userWithRoles = null;
-    }
+      },
+    });
 
     const roleNames = userWithRoles?.roles?.map((role) => role.name) ?? [];
     const isAdmin = roleNames.includes('admin');

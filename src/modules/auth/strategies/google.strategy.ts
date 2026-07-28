@@ -6,54 +6,44 @@ import { ConfigService } from '@nestjs/config';
 
 type VerifyCallback = (err: any, user?: any, info?: any) => void;
 
-export function resolveGoogleCallbackUrl(configService: ConfigService): string {
-  const configuredCallback = (
-    configService.get<string>('google.callbackUrl')?.trim() ||
-    configService.get<string>('GOOGLE_CALLBACK_URL')?.trim() ||
-    process.env.GOOGLE_CALLBACK_URL?.trim()
-  );
-
-  if (configuredCallback) {
-    return configuredCallback;
-  }
-
-  const frontendUrl = (
-    configService.get<string>('app.frontendUrl')?.trim() ||
-    configService.get<string>('FRONTEND_URL')?.trim() ||
-    process.env.FRONTEND_URL?.trim() ||
-    'https://community.tribes.capital'
-  );
-
-  if (frontendUrl) {
-    return new URL('/api/auth/google/callback', frontendUrl).toString();
-  }
-
-  const appHost = (configService.get<string>('app.host') || process.env.APP_HOST || 'localhost').toString().trim();
-  const appPort = configService.get<number>('app.port') || Number(process.env.PORT) || 3000;
-  const hostForCallback = appHost === '0.0.0.0' || appHost === '::' ? 'localhost' : appHost;
-  const isLocalHost = hostForCallback === 'localhost' || hostForCallback.startsWith('127.') || hostForCallback === '::1';
-  const protocol = isLocalHost ? 'http' : 'https';
-  const portSuffix = appPort && ![80, 443].includes(appPort) ? `:${appPort}` : '';
-
-  return `${protocol}://${hostForCallback}${portSuffix}/api/auth/google/callback`;
-}
-
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(private readonly configService: ConfigService) {
-    const clientId = configService.get<string>('google.clientId');
-    const clientSecret = configService.get<string>('google.clientSecret');
-    const callbackURL = resolveGoogleCallbackUrl(configService);
+    const clientId = configService.get<string>('google.clientId')?.trim();
+    const clientSecret = configService.get<string>('google.clientSecret')?.trim();
+    const configuredCallback = configService.get<string>('google.callbackUrl')?.trim();
+    const apiPrefix = configService.get<string>('app.apiPrefix')?.trim() || process.env.API_PREFIX?.trim() || 'api';
+    const frontendUrl = (
+      configService.get<string>('app.frontendUrl')?.trim() ||
+      configService.get<string>('FRONTEND_URL')?.trim() ||
+      process.env.FRONTEND_URL?.trim() ||
+      'http://localhost:5173'
+    );
+    const appHost = configService.get<string>('app.host')?.trim() || process.env.APP_HOST || 'localhost';
+    const appPort = configService.get<number>('app.port') || Number(process.env.PORT) || 3000;
+    const hostForCallback = appHost === '0.0.0.0' ? 'localhost' : appHost;
+    const defaultCallback = frontendUrl
+      ? `${frontendUrl.replace(/\/+$/g, '')}/${apiPrefix}/auth/google/callback`
+      : `http://${hostForCallback}:${appPort}/${apiPrefix}/auth/google/callback`;
+    const callbackURL = configuredCallback || defaultCallback;
 
-    if (!configService.get<string>('google.callbackUrl') && !process.env.GOOGLE_CALLBACK_URL) {
+    if (!clientId || !clientSecret) {
+      throw new Error('Google OAuth client ID and secret must be configured.');
+    }
+
+    if (!configuredCallback && process.env.NODE_ENV === 'production') {
+      throw new Error('GOOGLE_CALLBACK_URL must be configured in production.');
+    }
+
+    if (!configuredCallback) {
       // eslint-disable-next-line no-console
-      console.warn(`GOOGLE_CALLBACK_URL not set, using derived callback ${callbackURL}.`);
+      console.warn(`GOOGLE_CALLBACK_URL not set, falling back to ${callbackURL}. Update GOOGLE_CALLBACK_URL in production.`);
     }
 
     super({
       clientID: clientId,
-      clientSecret: clientSecret,
-      callbackURL,
+      clientSecret,
+      callbackURL: callbackURL.replace(/\/+$|^\s+|\s+$/g, ''),
       scope: ['profile', 'email'],
       passReqToCallback: false,
     });

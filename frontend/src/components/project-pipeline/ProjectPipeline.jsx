@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { deriveProjectSignals } from '../../utils/dashboardMetrics';
 
 /* ═══════════════════════════════════════════════════════════
    TRIBES CAPITAL — PROJECT PIPELINE
@@ -128,33 +127,6 @@ const money = n => {
   if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + ' K';
   return '$' + n;
 };
-
-const PIPELINE_STORAGE_KEY = 'tribes-pipeline-projects';
-const DILIGENCE_STORAGE_KEY = 'tribes-diligence-docs';
-
-function readStoredProjects() {
-  if (typeof window === 'undefined') return SEED;
-  try {
-    const storedValue = window.localStorage.getItem(PIPELINE_STORAGE_KEY);
-    if (!storedValue) return SEED;
-    const parsed = JSON.parse(storedValue);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : SEED;
-  } catch {
-    return SEED;
-  }
-}
-
-function readStoredDiligenceDocs() {
-  if (typeof window === 'undefined') return [];
-  try {
-    const storedValue = window.localStorage.getItem(DILIGENCE_STORAGE_KEY);
-    if (!storedValue) return [];
-    const parsed = JSON.parse(storedValue);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
 
 /* ─── PRIMITIVES ─── */
 const inputStyle = {
@@ -600,17 +572,12 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderTop: `1px solid ${BD}`, paddingTop: 12, gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <div style={{ width: 26, height: 26, borderRadius: '50%', background: AMB_BG, color: AMB_T,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
-            {p.owner}
-          </div>
-          <div style={{ fontSize: 12, color: p.linkedDiligenceCount > 0 ? P : T3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {p.linkedDiligenceCount > 0 ? `${p.linkedDiligenceCount} linked diligence` : 'No linked diligence'}
-          </div>
+        borderTop: `1px solid ${BD}`, paddingTop: 12 }}>
+        <div style={{ width: 26, height: 26, borderRadius: '50%', background: AMB_BG, color: AMB_T,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>
+          {p.owner}
         </div>
-        <span style={{ fontSize: 12, color: T3, whiteSpace: 'nowrap' }}>Updated {p.updated}</span>
+        <span style={{ fontSize: 12, color: T3 }}>Updated {p.updated}</span>
       </div>
     </div>
   );
@@ -622,8 +589,7 @@ const BLANK = { name:'', type:'', stage:'', country:'', city:'', capacity:'', va
 export default function ProjectPipeline({ onNavigate = () => {} }) {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
 
-  const [projects, setProjects] = useState(readStoredProjects);
-  const [diligenceDocs, setDiligenceDocs] = useState(readStoredDiligenceDocs);
+  const [projects, setProjects] = useState(SEED);   
   const [view, setView] = useState('kanban');
   const [stage, setStage] = useState('All stages');
   const [fType, setFType] = useState('');
@@ -638,26 +604,6 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const [detail, setDetail] = useState(null);
   const [toDelete, setToDelete] = useState(null);
   const [toast, setToast] = useState(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(PIPELINE_STORAGE_KEY, JSON.stringify(projects));
-    window.dispatchEvent(new Event('tribes:app-state-update'));
-  }, [projects]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const syncFromStorage = () => setDiligenceDocs(readStoredDiligenceDocs());
-    const handleStorage = (e) => {
-      if (e?.key === DILIGENCE_STORAGE_KEY) syncFromStorage();
-    };
-    window.addEventListener('tribes:app-state-update', syncFromStorage);
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      window.removeEventListener('tribes:app-state-update', syncFromStorage);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
 
   const save = form => {
     const shaped = {
@@ -717,17 +663,13 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
 
   const filtered = useMemo(() => {
     const q = topSearch.trim().toLowerCase();
-    const signalMap = new Map(projectSignals.map(signal => [signal.id, signal]));
     return projects.filter(p => {
       if (stage !== 'All stages' && p.stage !== stage) return false;
       if (fType && p.type !== fType) return false;
       if (q && ![p.name, p.sponsor, p.city, p.country, p.description].join(' ').toLowerCase().includes(q)) return false;
       return true;
-    }).map((project) => ({
-      ...project,
-      ...(signalMap.get(project.id) || {}),
-    }));
-  }, [projects, stage, fType, topSearch, projectSignals]);
+    });
+  }, [projects, stage, fType, topSearch]);
 
   const exportCsv = () => {
     if (!filtered.length) { setToast('Nothing to export'); return; }
@@ -746,17 +688,15 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     const any = projects.length > 0;
     const active = projects.filter(p => p.stage !== 'Portfolio');
     const total = projects.reduce((s, p) => s + (p.value || 0), 0);
-    const linkedDiligenceCount = projectSignals.reduce((s, p) => s + (p.linkedDiligenceCount || 0), 0);
     return [
       { l: 'Active projects',    v: String(active.length),                                            tag: 'In pipeline',      tone: 'purple' },
       { l: 'Pipeline value',     v: any ? money(total) : '0',                                         tag: 'Total deal size',  tone: 'green'  },
       { l: 'In due diligence',   v: String(projects.filter(p => p.stage === 'Due Diligence').length), tag: 'Under review',     tone: 'purple' },
-      { l: 'Linked diligence',   v: String(linkedDiligenceCount),                                     tag: 'Connected work',   tone: 'teal'   },
       { l: 'Term sheet stage',   v: String(projects.filter(p => p.stage === 'Term Sheet').length),    tag: 'Negotiating',      tone: 'amber'  },
       { l: 'Portfolio projects', v: String(projects.filter(p => p.stage === 'Portfolio').length),     tag: 'Live investments', tone: 'green'  },
       { l: 'Avg deal size',      v: any ? money(Math.round(total / projects.length)) : '0',           tag: 'Per project',      tone: 'amber'  },
     ];
-  }, [projects, projectSignals]);
+  }, [projects]);
 
   const pad = isMobile ? '14px 12px 32px' : '24px 28px 44px';
   const visibleStages = stage === 'All stages' ? STAGES : [stage];
@@ -820,7 +760,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
             <div style={{ display: 'grid',
               gridTemplateColumns: isMobile ? '1fr 1fr' : isTablet ? 'repeat(3,1fr)' : 'repeat(6,1fr)',
               gap: isMobile ? 10 : 14, marginBottom: 22 }}>
-              {stats.slice(0, 6).map(s => (
+              {stats.map(s => (
                 <div key={s.l} style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12,
                   padding: isMobile ? '14px' : '16px 18px' }}>
                   <div style={{ fontSize: 12.5, color: T2, marginBottom: 6 }}>{s.l}</div>

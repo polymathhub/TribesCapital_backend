@@ -66,7 +66,8 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.setGlobalPrefix('api');
+  const apiPrefix = configService.get<string>('app.apiPrefix') || 'api';
+  app.setGlobalPrefix(apiPrefix);
 
   const frontendDistCandidates = [
     resolve(process.cwd(), 'dist', 'frontend'),
@@ -111,7 +112,7 @@ async function bootstrap() {
   };
 
   expressInstance.get(['/', '/login', '/signup', '/verify-email', '/reset-password', '/forgot-password', '/dashboard', '/home'], spaIndexHandler);
-  expressInstance.get(/^\/(?!api(?:\/|$)).*/, spaIndexHandler);
+  expressInstance.get(new RegExp(`^\/(?!${apiPrefix}(?:\/|$)).*`), spaIndexHandler);
 
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(

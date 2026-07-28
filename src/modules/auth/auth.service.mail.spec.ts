@@ -4,12 +4,11 @@ import { PrismaService } from '@database/prisma.service';
 import { JwtTokenService } from './jwt-token.service';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from './mail.service';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
-import * as bcrypt from 'bcrypt';
+import { RegisterDto } from './dto/auth.dto';
 
 describe('AuthService (welcome email)', () => {
   let service: AuthService;
-  let prisma: { user: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock } };
+  let prisma: { user: { findUnique: jest.Mock; create: jest.Mock } };
   let jwtTokenService: { issueTokenPair: jest.Mock };
   let mailService: { sendWelcomeEmail: jest.Mock; sendVerificationEmail: jest.Mock };
   let configService: { get: jest.Mock };
@@ -19,7 +18,6 @@ describe('AuthService (welcome email)', () => {
       user: {
         findUnique: jest.fn(),
         create: jest.fn(),
-        update: jest.fn(),
       },
     };
 
@@ -34,7 +32,7 @@ describe('AuthService (welcome email)', () => {
 
     configService = {
       get: jest.fn((key: string) => {
-        if (key === 'REQUIRE_EMAIL_VERIFICATION') return 'true';
+        if (key === 'REQUIRE_EMAIL_VERIFICATION') return 'false';
         if (key === 'FRONTEND_URL') return 'http://localhost:5173';
         return undefined;
       }),
@@ -69,41 +67,14 @@ describe('AuthService (welcome email)', () => {
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
       isActive: true,
-      emailVerified: false,
+      emailVerified: true,
     });
 
     const result = await service.register(registerDto);
 
     expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'olaitanpetertolu@gmail.com' } });
-    expect(prisma.user.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ emailVerified: false }),
-    }));
+    expect(prisma.user.create).toHaveBeenCalled();
     expect(mailService.sendWelcomeEmail).toHaveBeenCalledWith('olaitanpetertolu@gmail.com', 'Olaitan');
-    expect(mailService.sendVerificationEmail).toHaveBeenCalledWith(
-      'olaitanpetertolu@gmail.com',
-      expect.stringContaining('/verify-email?token='),
-    );
     expect(result).toEqual({ success: true, message: 'Registration successful. Please verify your email address.' });
-  });
-
-  it('blocks login for users whose email is still pending verification', async () => {
-    const loginDto: LoginDto = {
-      email: 'pending@example.com',
-      password: 'StrongPass123!',
-    };
-
-    const hashedPassword = await bcrypt.hash(loginDto.password, 8);
-
-    prisma.user.findUnique.mockResolvedValueOnce({
-      id: 'user-id',
-      email: loginDto.email,
-      firstName: 'Pending',
-      lastName: 'User',
-      password: hashedPassword,
-      isActive: true,
-      emailVerified: false,
-    });
-
-    await expect(service.login(loginDto)).rejects.toThrow('Email is not verified. Please check your inbox.');
   });
 });
