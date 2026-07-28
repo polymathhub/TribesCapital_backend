@@ -137,8 +137,8 @@ function Icon({ name, size=15, color=T3 }) {
 }
 
 /* ─── TUTORIAL OVERLAY ───────────────────────────────── */
-function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSkip, isMobile }) {
-  const cur = STEPS[step];
+function TutorialOverlay({ step, total, spotlight, tipPos = { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }, onNext, onBack, isMobile = false }) {
+  const cur = STEPS[step] || {};
   const tipW = isMobile ? Math.min(320, (typeof window !== 'undefined' ? window.innerWidth : 340) - 24) : 340;
 
   return (
@@ -146,61 +146,33 @@ function TutorialOverlay({ step, total, spotlight, tipPos, onNext, onBack, onSki
       {/* Spotlight or solid overlay */}
       {spotlight ? (
         <div style={{
-          position:'fixed', top:spotlight.top, left:spotlight.left,
-          width:spotlight.width, height:spotlight.height,
-          borderRadius:14, zIndex:1000, pointerEvents:'none',
-          boxShadow:'0 0 0 9999px rgba(17,24,39,0.68)',
-          border:'2px solid rgba(255,255,255,0.55)',
-          transition:'all 0.35s cubic-bezier(.4,0,.2,1)',
-        }}/>
+          position: 'fixed', top: spotlight.top, left: spotlight.left,
+          width: spotlight.width, height: spotlight.height,
+          borderRadius: 14, zIndex: 1000, pointerEvents: 'none',
+          boxShadow: '0 0 0 9999px rgba(17,24,39,0.68)',
+          border: '2px solid rgba(255,255,255,0.55)',
+          transition: 'all 0.35s cubic-bezier(.4,0,.2,1)'
+        }} />
       ) : (
-        <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.68)', zIndex:999, pointerEvents:'none' }}/>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.68)', zIndex: 999, pointerEvents: 'none' }} />
       )}
 
-      useEffect(() => {
-        let isMounted = true;
-        const runLoad = async () => {
-          await loadNotifications();
-          if (!isMounted) return;
-        };
-
-        void runLoad();
-        return () => { isMounted = false; };
-      }, [loadNotifications]);
-
-      useEffect(() => {
-        const handleNotificationsEvent = (event) => {
-          const eventType = event?.detail?.type;
-          if (eventType && ['notifications-updated', 'due-diligence-created', 'announcement-updated'].includes(eventType)) {
-            void loadNotifications();
-          }
-        };
-
-        window.addEventListener('tribes:notifications-update', handleNotificationsEvent);
-        return () => window.removeEventListener('tribes:notifications-update', handleNotificationsEvent);
-      }, [loadNotifications]);
-            )}
-            <button onClick={onNext}
-              style={{ ...btnStyle('none', P, W, 13), padding:'8px 20px', borderRadius:8, fontWeight:500, whiteSpace:'nowrap' }}>
-              {step === total-1 ? 'Start exploring ✓' : 'Next →'}
-            </button>
+      <div style={{ position: 'fixed', top: tipPos.top, left: tipPos.left, transform: tipPos.transform, zIndex: 1001, width: tipW, maxWidth: '92%', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ ...glassCardStyle(12, '14px'), boxShadow: '0 12px 32px rgba(17,24,39,0.12)', borderRadius: 12 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T1 }}>{cur.title}</div>
+              <div style={{ fontSize: 13, color: T2, marginTop: 6 }}>{cur.desc}</div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+                {onBack && <button onClick={onBack} style={{ ...btnStyle('none', 'transparent', T2, 13), padding: '8px 12px', borderRadius: 8 }}>Back</button>}
+                <button onClick={onNext} style={{ ...btnStyle('none', P, W, 13), padding: '8px 20px', borderRadius: 8, fontWeight: 500 }}>{step === total - 1 ? 'Start exploring ✓' : 'Next →'}</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <style>{`
-        @keyframes tipIn {
-          from { opacity:0; transform: scale(.95) translateY(8px); }
-          to   { opacity:1; transform: scale(1) translateY(0); }
-        }
-        @keyframes wave {
-          0%, 100% { transform: rotate(0deg); }
-          20% { transform: rotate(-10deg); }
-          40% { transform: rotate(14deg); }
-          60% { transform: rotate(-8deg); }
-          80% { transform: rotate(10deg); }
-        }
-      `}</style>
+      <style>{`@keyframes tipIn { from { opacity:0; transform: scale(.95) translateY(8px); } to { opacity:1; transform: scale(1) translateY(0); } }`}</style>
     </>
   );
 }

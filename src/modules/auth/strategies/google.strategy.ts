@@ -28,11 +28,15 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const callbackURL = configuredCallback || defaultCallback;
 
     if (!clientId || !clientSecret) {
-      throw new Error('Google OAuth client ID and secret must be configured.');
+      // In development, allow the app to start even if Google OAuth is not configured.
+      // Passport strategy will not be usable until proper credentials are provided.
+      // eslint-disable-next-line no-console
+      console.warn('Google OAuth client ID and/or secret not configured. Google auth routes will be disabled until configured.');
     }
 
     if (!configuredCallback && process.env.NODE_ENV === 'production') {
-      throw new Error('GOOGLE_CALLBACK_URL must be configured in production.');
+      // eslint-disable-next-line no-console
+      console.warn('GOOGLE_CALLBACK_URL not set in production. Google OAuth callback may be incorrect.');
     }
 
     if (!configuredCallback) {
@@ -41,8 +45,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     }
 
     super({
-      clientID: clientId,
-      clientSecret,
+      clientID: clientId || '',
+      clientSecret: clientSecret || '',
       callbackURL: callbackURL.replace(/\/+$|^\s+|\s+$/g, ''),
       scope: ['profile', 'email'],
       passReqToCallback: false,
