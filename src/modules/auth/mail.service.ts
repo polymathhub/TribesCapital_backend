@@ -32,27 +32,29 @@ export class MailService {
       to,
       subject: 'Verify your Tribes Capital account',
       html: `
-        <div style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f7f9ff; padding:20px; color:#0f172a;">
-          <div style="max-width:680px; margin:0 auto; background:#ffffff; border-radius:24px; overflow:hidden; box-shadow:0 18px 48px rgba(15, 23, 42, 0.08); border:1px solid #e2e8f0;">
-            <div style="padding:28px 24px 20px; text-align:center; background:linear-gradient(135deg,#6d28d9 0%, #2563eb 100%); color:#fff;">
+        <div style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f4f7fb; padding:24px 12px; color:#0f172a;">
+          <div style="max-width:640px; margin:0 auto; background:#ffffff; border-radius:24px; overflow:hidden; box-shadow:0 16px 40px rgba(15, 23, 42, 0.09); border:1px solid #e5e7eb;">
+            <div style="padding:32px 24px 24px; text-align:center; background:linear-gradient(135deg,#0f172a 0%, #4f46e5 55%, #2563eb 100%); color:#fff;">
               <div style="display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.16);font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Almost there</div>
-              <h1 style="margin:12px 0 8px;font-size:24px;font-weight:800;line-height:1.2;">Verify your email</h1>
-              <p style="margin:0;color:rgba(255,255,255,0.92);font-size:15px;line-height:1.6;">You’re one step away from unlocking your Tribes Capital workspace.</p>
+              <h1 style="margin:12px 0 8px;font-size:26px;font-weight:800;line-height:1.2;">Verify your email</h1>
+              <p style="margin:0 auto;max-width:520px;font-size:15px;line-height:1.6;color:rgba(255,255,255,0.92);">You’re almost ready to unlock your Tribes Capital workspace.</p>
             </div>
-            <div style="padding:24px 20px 20px;">
-              <p style="margin:0 0 10px;font-size:15px;color:#0f172a;">Hi there,</p>
-              <p style="margin:0 0 20px;font-size:15px;color:#475569;line-height:1.7;">Thanks for joining Tribes Capital. Please open the sign-in page to continue and get started.</p>
-              <div style="text-align:center;margin:24px 0 20px;">
-                <a href="${targetUrl}" target="_blank" rel="noreferrer noopener" style="display:inline-block;padding:14px 28px;border-radius:999px;background:linear-gradient(135deg,#6d28d9 0%, #4338ca 100%);color:#fff;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 12px 30px rgba(99,102,241,0.2);">Open Tribes Capital</a>
+            <div style="padding:28px 24px 24px;">
+              <p style="margin:0 0 8px;font-size:15px;color:#0f172a;">Hi there,</p>
+              <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.7;">Thanks for joining Tribes Capital. Please open the website to continue and get started.</p>
+              <div style="text-align:center;margin:22px 0 20px;">
+                <a href="${targetUrl}" target="_blank" rel="noreferrer noopener" style="display:inline-block;padding:14px 28px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 10px 24px rgba(37, 99, 235, 0.22);">Open Tribes Capital</a>
               </div>
-              <p style="margin:0 0 8px;font-size:13px;color:#64748b;">If the button does not work, copy and paste this link into your browser:</p>
-              <p style="margin:0;word-break:break-all;font-size:13px;color:#0f172a;background:#f8fafc;padding:10px 12px;border-radius:10px;">${targetUrl}</p>
-              <div style="margin-top:24px;padding:16px 18px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:13px;line-height:1.6;">
-                <strong style="display:block;margin-bottom:6px;color:#0f172a;">Need help?</strong>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;">
+                <p style="margin:0 0 8px;font-size:13px;color:#64748b;">If the button doesn’t work, use this link:</p>
+                <p style="margin:0;word-break:break-all;font-size:13px;color:#0f172a;">${targetUrl}</p>
+              </div>
+              <div style="margin-top:20px;padding:16px 18px;border-radius:12px;background:#fefce8;border:1px solid #fde68a;color:#854d0e;font-size:13px;line-height:1.6;">
+                <strong style="display:block;margin-bottom:6px;color:#713f12;">Need help?</strong>
                 If this wasn’t you, you can safely ignore this email or contact support@tribes.capital.
               </div>
             </div>
-            <div style="padding:16px 20px 24px;background:#fbfdff;color:#94a3b8;font-size:12px;text-align:center;border-top:1px solid #eef2f7;">
+            <div style="padding:18px 24px 24px;background:#fbfdff;color:#94a3b8;font-size:12px;text-align:center;border-top:1px solid #eef2f7;">
               <span>Tribes Capital • Building community for clean energy leaders</span>
             </div>
           </div>
@@ -64,26 +66,26 @@ export class MailService {
 
   async sendWelcomeEmail(to: string, firstName = 'there'): Promise<boolean> {
     const frontendUrl = (process.env.FRONTEND_URL || 'https://community.tribes.capital').replace(/\/+$/g, '');
-    const signInUrl = `${frontendUrl}/signin`;
+    const siteUrl = frontendUrl;
 
     return this.sendMail({
       to,
       subject: 'Welcome to Tribes Capital',
       html: `
-        <div style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f7f9ff; padding:20px; color:#0f172a;">
-          <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 18px 48px rgba(2,6,23,0.08);border:1px solid #e2e8f0;">
-            <div style="padding:28px 24px 20px;text-align:center;background:linear-gradient(135deg,#6d28d9 0%, #2563eb 100%);color:#fff;">
+        <div style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f4f7fb; padding:24px 12px; color:#0f172a;">
+          <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 16px 40px rgba(2,6,23,0.08);border:1px solid #e5e7eb;">
+            <div style="padding:32px 24px 24px;text-align:center;background:linear-gradient(135deg,#0f172a 0%, #4f46e5 55%, #2563eb 100%);color:#fff;">
               <div style="display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.16);font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Welcome aboard</div>
-              <h2 style="margin:12px 0 8px;font-size:24px;font-weight:800;">Welcome, ${firstName}!</h2>
-              <p style="margin:0;color:rgba(255,255,255,0.92);font-size:15px;line-height:1.6;">You’ve joined a vibrant community focused on learning, momentum, and clean energy opportunities.</p>
+              <h2 style="margin:12px 0 8px;font-size:26px;font-weight:800;">Welcome, ${firstName}!</h2>
+              <p style="margin:0 auto;max-width:520px;color:rgba(255,255,255,0.92);font-size:15px;line-height:1.6;">You’ve joined a vibrant community focused on learning, momentum, and clean energy opportunities.</p>
             </div>
-            <div style="padding:24px 20px 20px;">
-              <div style="text-align:center;margin-bottom:22px;">
-                <a href="${signInUrl}" style="display:inline-block;padding:14px 28px;border-radius:999px;background:linear-gradient(135deg,#6d28d9 0%, #4338ca 100%);color:#fff;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 12px 30px rgba(99,102,241,0.2);">Go to sign in</a>
+            <div style="padding:28px 24px 24px;">
+              <div style="text-align:center;margin-bottom:20px;">
+                <a href="${siteUrl}" style="display:inline-block;padding:14px 28px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 10px 24px rgba(37, 99, 235, 0.22);">Open Tribes Capital</a>
               </div>
               <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;">
-                <a href="${signInUrl}" style="padding:10px 16px;border-radius:999px;border:1px solid #e2e8f0;color:#2563eb;text-decoration:none;font-weight:700;background:#f8fbff;">Explore the community</a>
-                <a href="${signInUrl}" style="padding:10px 16px;border-radius:999px;border:1px solid #e2e8f0;color:#334155;text-decoration:none;font-weight:700;background:#ffffff;">See what’s next</a>
+                <a href="${siteUrl}" style="padding:10px 16px;border-radius:999px;border:1px solid #e2e8f0;color:#2563eb;text-decoration:none;font-weight:700;background:#f8fbff;">Explore the community</a>
+                <a href="${siteUrl}" style="padding:10px 16px;border-radius:999px;border:1px solid #e2e8f0;color:#334155;text-decoration:none;font-weight:700;background:#ffffff;">See what’s next</a>
               </div>
               <div style="padding:18px 20px;border-radius:16px;background:#f8fafc;border:1px solid #e2e8f0;">
                 <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#0f172a;">Here’s how to get started:</p>
@@ -100,7 +102,7 @@ export class MailService {
           </div>
         </div>
       `,
-      text: `Welcome, ${firstName}! We’re excited to have you here at Tribes Capital. Go to ${signInUrl} to sign in and get started.`,
+      text: `Welcome, ${firstName}! We’re excited to have you here at Tribes Capital. Go to ${siteUrl} to get started.`,
     });
   }
 
