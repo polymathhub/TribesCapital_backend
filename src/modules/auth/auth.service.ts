@@ -29,9 +29,20 @@ import { JwtTokenService } from './jwt-token.service';
 import { MailService } from './mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
+type LocalAuthUser = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+  isActive: boolean;
+  emailVerified: boolean;
+};
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly localUsers = new Map<string, LocalAuthUser>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -42,13 +53,30 @@ export class AuthService {
   ) {}
 
   private isEmailVerificationRequired(): boolean {
-    const configuredValue = this.configService.get<string>('REQUIRE_EMAIL_VERIFICATION');
-    if (configuredValue === undefined || configuredValue === null) {
-      return true;
+    const configuredValue = this.configService.get<string | boolean | undefined>('REQUIRE_EMAIL_VERIFICATION') ?? process.env.REQUIRE_EMAIL_VERIFICATION;
+    if (configuredValue === undefined || configuredValue === null || configuredValue === '') {
+      return false;
     }
 
     const normalizedValue = configuredValue.toString().trim().toLowerCase();
     return normalizedValue === '1' || normalizedValue === 'true' || normalizedValue === 'yes';
+  }
+
+  private isDatabaseDisabled(): boolean {
+    const value = process.env.DB_SKIP || process.env.NO_DATABASE_MODE || process.env.DATABASE_SKIP || process.env.NO_DB;
+    if (!value) {
+      return false;
+    }
+
+    return ['1', 'true', 'yes', 'on'].includes(value.toString().trim().toLowerCase());
+  }
+
+  private shouldUseLocalFallback(): boolean {
+    if (this.isDatabaseDisabled()) {
+      return true;
+    }
+
+    return this.prisma.isDatabaseAvailable?.() === false;
   }
 
   private getFrontendUrl(): string {
@@ -111,10 +139,10 @@ export class AuthService {
       this.logger.log(`${new Date().toISOString()} ${ctx}[5] existingUser lookup completed (duration=${Date.now()-t0}ms): ${existingUser ? 'found' : 'not found'}`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] existingUser lookup failed`, e instanceof Error ? e.stack : String(e));
-      if (this.isDatabaseUnavailableError(e)) {
+      if (!this.shouldUseLocalFallback() && this.isDatabaseUnavailableError(e)) {
         throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
       }
-      throw e;
+      existingUser = this.localUsers.get(email);
     }
     if (existingUser) {
       throw new ConflictException('Email already registered ,try and login or reset your password champ');
@@ -161,7 +189,28 @@ export class AuthService {
       this.logger.log(`${new Date().toISOString()} ${ctx}[9] Prisma user created (id=${user.id}) (duration=${Date.now()-tCreate}ms)`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Prisma user create failed`, e instanceof Error ? e.stack : String(e));
-      throw e;
+      if (!this.shouldUseLocalFallback()) {
+        throw e;
+      }
+
+      user = {
+        id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        email,
+        firstName: registerDto.firstName?.trim() || 'User',
+        lastName: registerDto.lastName?.trim() || '',
+        isActive: true,
+        emailVerified: !requireEmailVerification,
+        emailVerificationToken: requireEmailVerification ? emailVerificationToken : null,
+      };
+      this.localUsers.set(email, {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        password: passwordHash,
+        isActive: user.isActive,
+        emailVerified: user.emailVerified,
+      });
     }
 
     const total = Date.now() - startRegister;
@@ -214,23 +263,42 @@ export class AuthService {
     }
 
     this.logger.log(`[LOGIN] Looking up user for ${email}`);
-    let user;
+    let user: LocalAuthUser | undefined = this.localUsers.get(email);
     try {
-      user = await this.prisma.user.findUnique({
-        where: { email },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          password: true,
-          isActive: true,
-          emailVerified: true,
-        },
-      });
+      if (!user) {
+        const prismaUser = await this.prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            password: true,
+            isActive: true,
+            emailVerified: true,
+          },
+        });
+        if (prismaUser) {
+          user = {
+            id: prismaUser.id,
+            email: prismaUser.email,
+            firstName: prismaUser.firstName ?? 'User',
+            lastName: prismaUser.lastName ?? '',
+            password: prismaUser.password,
+            isActive: prismaUser.isActive ?? true,
+            emailVerified: prismaUser.emailVerified ?? false,
+          };
+        }
+      }
     } catch (error) {
       this.logger.warn('Database unavailable during login lookup', error instanceof Error ? error.stack : String(error));
-      throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
+      if (this.isDatabaseUnavailableError(error)) {
+        if (!this.shouldUseLocalFallback()) {
+          throw new ServiceUnavailableException('Authentication is temporarily unavailable. Please try again later.');
+        }
+      }
+
+      user = this.localUsers.get(email);
     }
     this.logger.log(`[LOGIN] User lookup completed: ${user ? `found(${user.id})` : 'not found'}`);
 
@@ -256,10 +324,16 @@ export class AuthService {
       throw new UnauthorizedException('Email is not verified. Please check your inbox.');
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    });
+    if (this.prisma.user?.update) {
+      try {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() },
+        });
+      } catch (updateError) {
+        this.logger.warn('Failed to update last login timestamp', updateError instanceof Error ? updateError.stack : String(updateError));
+      }
+    }
     this.logger.log(`[LOGIN] Last login timestamp updated for ${user.id}`);
 
     this.logger.log(`[LOGIN] Entering buildAuthResponse for ${email}`);
@@ -619,20 +693,28 @@ export class AuthService {
     emailVerified?: boolean | null;
   }): Promise<AuthTokenResponseDto> {
     this.logger.log(`[AUTH] Entering buildAuthResponse for ${user.email}`);
-    const userWithRoles = await this.prisma.user.findUnique({
-      where: { id: user.id },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        isActive: true,
-        emailVerified: true,
-        roles: {
-          select: { name: true },
+    let userWithRoles;
+    try {
+      userWithRoles = await this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          isActive: true,
+          emailVerified: true,
+          roles: {
+            select: { name: true },
+          },
         },
-      },
-    });
+      });
+    } catch (error) {
+      if (!this.shouldUseLocalFallback()) {
+        throw error;
+      }
+      userWithRoles = null;
+    }
 
     const roleNames = userWithRoles?.roles?.map((role) => role.name) ?? [];
     const isAdmin = roleNames.includes('admin');

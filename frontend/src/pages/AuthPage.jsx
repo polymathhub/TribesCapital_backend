@@ -598,19 +598,19 @@ function LoginPage({ onNavigate, onSuccess }) {
 
       onSuccess(userData);
     } catch (err) {
-      const serverMessage = err.response?.data?.message;
+      const serverMessage = err.response?.data?.message || err.response?.data?.error || err.response?.data?.detail;
       let userMessage = 'We could not sign you in right now. Please try again.';
 
       if (err.name === 'AbortError') {
         userMessage = 'This is taking longer than expected. Please check your internet connection and try again.';
       } else if (err.response?.status === 401) {
-        userMessage = 'The email or password is incorrect. Please try again.';
+        userMessage = serverMessage || 'The email or password is incorrect. Please try again.';
       } else if (err.response?.status === 400) {
-        userMessage = 'Please check your email and password and try again.';
+        userMessage = serverMessage || 'Please check your email and password and try again.';
       } else if (err.response?.status === 404) {
         userMessage = 'We couldn\'t reach the sign-in service. Please try again in a moment.';
       } else if (err.response?.status === 500) {
-        userMessage = 'Something went wrong on our end. Please try again a little later.';
+        userMessage = serverMessage || 'Something went wrong on our end. Please try again a little later.';
       } else if (err.message?.includes('Network') || err.message?.includes('Failed to fetch')) {
         userMessage = 'We couldn\'t connect to the server. Please check your internet connection and try again.';
       } else if (serverMessage) {
