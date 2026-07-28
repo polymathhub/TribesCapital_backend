@@ -659,8 +659,6 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     setToast('Download started');
   };
 
-  const projectSignals = useMemo(() => deriveProjectSignals(projects, diligenceDocs), [projects, diligenceDocs]);
-
   const filtered = useMemo(() => {
     const q = topSearch.trim().toLowerCase();
     return projects.filter(p => {
