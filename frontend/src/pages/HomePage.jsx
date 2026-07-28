@@ -66,6 +66,14 @@ const STEPS = [
 /* ─── SMALL ICON SVGs ────────────────────────────────── */
 const TOUR_VISITS_KEY = 'tribescapital_welcome_tour_visits';
 const COURSE_PROGRESS_STORAGE_PREFIX = 'tribes-course-progress';
+const COMMUNITY_ANNOUNCEMENT = {
+  id: 'community-announcement',
+  title: 'We are building with the community',
+  detail: 'We are looking for people who want to help shape the Learning Hub and strengthen the wider community experience through content, events, and thoughtful contribution.',
+  time: 'Today',
+  read: false,
+  kind: 'announcement',
+};
 
 const getTourVisitCount = () => {
   if (typeof window === 'undefined') return 0;
@@ -712,6 +720,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       if (!isMounted) return;
     };
 
+<<<<<<< HEAD
     void runLoad();
     return () => { isMounted = false; };
   }, [loadNotifications]);
@@ -721,6 +730,37 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       const eventType = event?.detail?.type;
       if (eventType && ['notifications-updated', 'due-diligence-created', 'announcement-updated'].includes(eventType)) {
         void loadNotifications();
+=======
+        const apiNotifications = Array.isArray(response?.data) ? response.data : [];
+        const normalizedNotifications = apiNotifications.map((item) => ({
+          id: item.id,
+          title: item.title || item.type || 'Notification',
+          detail: item.message || item.body || item.description || 'You have a new update',
+          time: item.createdAt ? new Date(item.createdAt).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+          read: Boolean(item.read),
+        }));
+        const fallbackNotifications = dashboardEvents.slice(0, 3).map((event) => ({
+          id: event.id,
+          title: event.title,
+          detail: event.description || 'New session available',
+          time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+          read: false,
+        }));
+        const seededNotifications = [COMMUNITY_ANNOUNCEMENT, ...(normalizedNotifications.length > 0 ? normalizedNotifications : fallbackNotifications)];
+        setNotifications(seededNotifications);
+      } catch {
+        if (isMounted) {
+          setNotifications([COMMUNITY_ANNOUNCEMENT, ...dashboardEvents.slice(0, 3).map((event) => ({
+            id: event.id,
+            title: event.title,
+            detail: event.description || 'New session available',
+            time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
+            read: false,
+          }))]);
+        }
+      } finally {
+        if (isMounted) setNotificationsLoading(false);
+>>>>>>> 92d7afb (Resolve merge conflicts and wire pipeline navigation)
       }
     };
 
@@ -736,6 +776,15 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     }, 4200);
     return () => window.clearTimeout(timer);
   }, [showAnnouncementPopup]);
+
+  useEffect(() => {
+    if (!user?.id || typeof window === 'undefined') return;
+    const hasSeenAnnouncement = window.sessionStorage.getItem('tribes-community-announcement-seen');
+    if (hasSeenAnnouncement) return;
+    window.sessionStorage.setItem('tribes-community-announcement-seen', 'true');
+    setAnnouncementPopup(COMMUNITY_ANNOUNCEMENT);
+    setShowAnnouncementPopup(true);
+  }, [user?.id]);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
@@ -1124,6 +1173,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       </div>
 
       {showAnnouncementPopup && announcementPopup && (
+<<<<<<< HEAD
         <div style={{ position:'fixed', right:20, bottom:20, zIndex:1200, maxWidth:320, background:W, border:`1px solid ${BD}`, borderRadius:16, boxShadow:'0 18px 42px rgba(17,24,39,0.16)', padding:'14px 16px' }}>
           <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start' }}>
             <div>
@@ -1132,6 +1182,22 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <div style={{ fontSize:12, color:T2, lineHeight:1.5 }}>{announcementPopup.detail}</div>
             </div>
             <button type="button" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }} style={{ background:'transparent', border:'none', color:T3, cursor:'pointer', padding:0, fontSize:14 }}>×</button>
+=======
+        <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.58)', display:'flex', alignItems:'center', justifyContent:'center', padding:16, zIndex:1200 }}>
+          <div style={{ width:'min(520px, 100%)', background:W, borderRadius:18, boxShadow:'0 24px 70px rgba(17,24,39,0.22)', overflow:'hidden' }}>
+            <div style={{ padding:'16px 18px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ fontSize:11, fontWeight:800, letterSpacing:'0.16em', textTransform:'uppercase', color:P }}>Community update</div>
+              <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ border:'none', background:'transparent', color:T3, cursor:'pointer', fontSize:18, padding:0 }}>×</button>
+            </div>
+            <div style={{ padding:'18px 20px 20px' }}>
+              <div style={{ fontSize:20, fontWeight:800, color:T1, marginBottom:8 }}>{announcementPopup.title}</div>
+              <div style={{ fontSize:13, color:T2, lineHeight:1.6, marginBottom:14 }}>{announcementPopup.detail}</div>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                <button type="button" onClick={() => { setShowAnnouncementPopup(false); onNavigate('announcements'); }} style={{ ...btnStyle('none', P, W, 13), padding:'9px 14px', borderRadius:8, fontWeight:600 }}>Open announcement</button>
+                <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 13), padding:'9px 14px', borderRadius:8, fontWeight:600 }}>Close</button>
+              </div>
+            </div>
+>>>>>>> 92d7afb (Resolve merge conflicts and wire pipeline navigation)
           </div>
         </div>
       )}
