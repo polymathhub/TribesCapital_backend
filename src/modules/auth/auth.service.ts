@@ -55,6 +55,19 @@ export class AuthService {
     return this.getFrontendUrl();
   }
 
+  private async withDatabase<T>(operation: () => Promise<T>, context: string): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      if (/can't reach database server|ecconrefused|econnrefused|connect|database server/i.test(detail)) {
+        this.logger.error(`${context} database unavailable: ${detail}`);
+        throw new ServiceUnavailableException('Database unavailable');
+      }
+      throw error;
+    }
+  }
+
   async checkEmail(checkEmailDto: CheckEmailDto): Promise<{ exists: boolean }> {
     const email = this.normalizeEmail(checkEmailDto.email);
     if (!email) {
@@ -91,7 +104,7 @@ export class AuthService {
     const t0 = Date.now();
     let existingUser;
     try {
-      existingUser = await this.prisma.user.findUnique({ where: { email } });
+      existingUser = await this.withDatabase(() => this.prisma.user.findUnique({ where: { email } }), `${ctx} existingUser lookup`);
       this.logger.log(`${new Date().toISOString()} ${ctx}[5] existingUser lookup completed (duration=${Date.now()-t0}ms): ${existingUser ? 'found' : 'not found'}`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] existingUser lookup failed`, e instanceof Error ? e.stack : String(e));
@@ -106,14 +119,14 @@ export class AuthService {
 
       this.logger.log(`${new Date().toISOString()} ${ctx}[6] Existing account found without a usable password; updating password for ${email}`);
       const passwordHash = await bcrypt.hash(password, 12);
-      await this.prisma.user.update({
+      await this.withDatabase(() => this.prisma.user.update({
         where: { id: existingUser.id },
         data: {
           password: passwordHash,
           emailVerified: existingUser.emailVerified || false,
           isActive: true,
         },
-      });
+      }), `${ctx} update existing user password`);
 
       return {
         success: true,
@@ -139,7 +152,7 @@ export class AuthService {
     const tCreate = Date.now();
     let user;
     try {
-      user = await this.prisma.user.create({
+      user = await this.withDatabase(() => this.prisma.user.create({
       data: {
         email,
         firstName: registerDto.firstName?.trim() || 'User',
@@ -158,7 +171,7 @@ export class AuthService {
         emailVerified: true,
         emailVerificationToken: true,
       },
-      });
+      }), `${ctx} create new user`);
       this.logger.log(`${new Date().toISOString()} ${ctx}[9] Prisma user created (id=${user.id}) (duration=${Date.now()-tCreate}ms)`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Prisma user create failed`, e instanceof Error ? e.stack : String(e));
@@ -213,7 +226,7 @@ export class AuthService {
     }
 
     this.logger.log(`[LOGIN] Looking up user for ${email}`);
-    const user = await this.prisma.user.findUnique({
+    const user = await this.withDatabase(() => this.prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
@@ -224,7 +237,7 @@ export class AuthService {
         isActive: true,
         emailVerified: true,
       },
-    });
+    }), '[LOGIN] user lookup');
     this.logger.log(`[LOGIN] User lookup completed: ${user ? `found(${user.id})` : 'not found'}`);
 
     if (!user) {
@@ -233,7 +246,14 @@ export class AuthService {
     }
 
     this.logger.log(`[LOGIN] Password verification started for ${email}`);
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    let isPasswordValid = false;
+    try {
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`[LOGIN] Password comparison failed for ${email}: ${detail}`);
+      throw new UnauthorizedException('Invalid email or password');
+    }
     this.logger.log(`[LOGIN] Password verification completed for ${email}: ${isPasswordValid ? 'valid' : 'invalid'}`);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
@@ -248,10 +268,10 @@ export class AuthService {
       this.logger.warn('[LOGIN] Attempt to sign in with unverified email: ' + email + ' — allowing sign-in while verification remains non-blocking');
     }
 
-    await this.prisma.user.update({
+    await this.withDatabase(() => this.prisma.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() },
-    });
+    }), '[LOGIN] update last login');
     this.logger.log(`[LOGIN] Last login timestamp updated for ${user.id}`);
 
     this.logger.log(`[LOGIN] Entering buildAuthResponse for ${email}`);

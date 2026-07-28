@@ -654,27 +654,52 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         read: Boolean(item.isRead ?? item.read),
       }));
 
-      setNotifications(normalized.length > 0 ? normalized : dashboardEvents.slice(0, 3).map((event) => ({
+      const seededAnnouncement = {
+        id: 'community-announcement',
+        title: 'We are building with the community',
+        detail: 'We are inviting people who want to help shape the Learning Hub and the wider community experience.',
+        time: 'Now',
+        read: false,
+        kind: 'announcement',
+      };
+
+      const displayNotifications = [seededAnnouncement, ...normalized].filter(Boolean);
+      const fallbackEventNotifications = dashboardEvents.slice(0, 2).map((event) => ({
         id: event.id,
         title: event.title,
         detail: event.description || 'New session available',
         time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
         read: false,
-      })));
+      }));
 
-      const nextAnnouncement = normalized.find((item) => (!item.read) && (item.title?.toLowerCase().includes('announcement') || item.title?.toLowerCase().includes('diligence') || item.detail?.toLowerCase().includes('diligence')));
+      setNotifications(displayNotifications.length > 0 ? displayNotifications : fallbackEventNotifications);
+
+      const nextAnnouncement = displayNotifications.find((item) => (!item.read) && (item.kind === 'announcement' || item.title?.toLowerCase().includes('announcement') || item.title?.toLowerCase().includes('diligence') || item.detail?.toLowerCase().includes('diligence')));
       if (nextAnnouncement && !isNotificationsOpen) {
         setAnnouncementPopup(nextAnnouncement);
         setShowAnnouncementPopup(true);
       }
     } catch {
-      setNotifications(dashboardEvents.slice(0, 3).map((event) => ({
+      const seededAnnouncement = {
+        id: 'community-announcement',
+        title: 'We are building with the community',
+        detail: 'We are inviting people who want to help shape the Learning Hub and the wider community experience.',
+        time: 'Now',
+        read: false,
+        kind: 'announcement',
+      };
+
+      setNotifications([seededAnnouncement, ...dashboardEvents.slice(0, 2).map((event) => ({
         id: event.id,
         title: event.title,
         detail: event.description || 'New session available',
         time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
         read: false,
-      })));
+      }))]);
+      if (!isNotificationsOpen) {
+        setAnnouncementPopup({ ...seededAnnouncement });
+        setShowAnnouncementPopup(true);
+      }
     } finally {
       setNotificationsLoading(false);
     }

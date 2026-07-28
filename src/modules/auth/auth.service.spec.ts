@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@database/prisma.service';
 import { AuthService } from './auth.service';
@@ -15,12 +15,11 @@ describe('AuthService', () => {
     delete process.env.DB_SKIP;
   });
 
-  it('returns a 503 when the database is unavailable during login and fallback is disabled', async () => {
+  it('returns a 503 when the database is unavailable during login', async () => {
     const prisma = {
       user: {
         findUnique: jest.fn().mockRejectedValue(new Error('Can\'t reach database server at localhost:5432')),
       },
-      isDatabaseAvailable: jest.fn().mockReturnValue(true),
     } as unknown as PrismaService;
 
     const service = new AuthService(
@@ -28,10 +27,35 @@ describe('AuthService', () => {
       {} as JwtTokenService,
       {} as MailService,
       { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService,
-      {} as NotificationsService,
     );
 
     await expect(service.login({ email: 'user@example.com', password: 'Password123!' })).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('returns unauthorized for invalid password hashes instead of crashing', async () => {
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'user-1',
+          email: 'user@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          password: 'not-a-valid-bcrypt-hash',
+          isActive: true,
+          emailVerified: true,
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    } as unknown as PrismaService;
+
+    const service = new AuthService(
+      prisma,
+      {} as JwtTokenService,
+      {} as MailService,
+      { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService,
+    );
+
+    await expect(service.login({ email: 'user@example.com', password: 'Password123!' })).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('returns auth tokens immediately when email verification is disabled', async () => {
@@ -63,7 +87,6 @@ describe('AuthService', () => {
         sendVerificationEmail: jest.fn().mockResolvedValue(true),
       } as unknown as MailService,
       { get: jest.fn((key: string) => (key === 'REQUIRE_EMAIL_VERIFICATION' ? 'false' : undefined)) } as unknown as ConfigService,
-      { ensureAnnouncementNotificationForUser: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationsService,
     );
 
     const response = await service.register({
@@ -107,7 +130,6 @@ describe('AuthService', () => {
         sendVerificationEmail: jest.fn().mockResolvedValue(true),
       } as unknown as MailService,
       { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService,
-      { ensureAnnouncementNotificationForUser: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationsService,
     );
 
     const response = await service.register({
@@ -153,7 +175,6 @@ describe('AuthService', () => {
       jwtTokenService,
       mail,
       { get: jest.fn((key: string) => (key === 'REQUIRE_EMAIL_VERIFICATION' ? 'true' : undefined)) } as unknown as ConfigService,
-      { ensureAnnouncementNotificationForUser: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationsService,
     );
 
     const response = await service.register({
@@ -169,44 +190,35 @@ describe('AuthService', () => {
     expect(mail.sendVerificationEmail).toHaveBeenCalled();
   });
 
-  it('uses local fallback auth when the database is skipped', async () => {
+  it('returns a 503 when the database is skipped or unavailable during register and login', async () => {
     const prisma = {
       user: {
         findUnique: jest.fn().mockRejectedValue(new Error('Can\'t reach database server at localhost:5432')),
         create: jest.fn().mockRejectedValue(new Error('Can\'t reach database server at localhost:5432')),
         update: jest.fn().mockRejectedValue(new Error('Can\'t reach database server at localhost:5432')),
       },
-      isDatabaseAvailable: jest.fn().mockReturnValue(false),
     } as unknown as PrismaService;
-
-    const jwtTokenService = {
-      issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'access-token', refreshToken: 'refresh-token', expiresIn: 3600 }),
-    } as unknown as JwtTokenService;
 
     const service = new AuthService(
       prisma,
-      jwtTokenService,
+      {} as JwtTokenService,
       {
         sendWelcomeEmail: jest.fn().mockResolvedValue(true),
         sendVerificationEmail: jest.fn().mockResolvedValue(true),
       } as unknown as MailService,
       { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService,
-      { ensureAnnouncementNotificationForUser: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationsService,
     );
 
     process.env.DB_SKIP = 'true';
-    const registerResponse = await service.register({
+    await expect(service.register({
       email: 'local@example.com',
       password: 'Password123!',
       passwordConfirmation: 'Password123!',
       firstName: 'Local',
       lastName: 'User',
-    });
+    })).rejects.toBeInstanceOf(ServiceUnavailableException);
 
-    const loginResponse = await service.login({ email: 'local@example.com', password: 'Password123!' });
-
-    expect(registerResponse).toEqual(expect.objectContaining({ accessToken: 'access-token' }));
-    expect(loginResponse).toEqual(expect.objectContaining({ accessToken: 'access-token' }));
+    await expect(service.login({ email: 'local@example.com', password: 'Password123!' })).rejects.toBeInstanceOf(ServiceUnavailableException);
     delete process.env.DB_SKIP;
   });
 });
