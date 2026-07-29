@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
 import Icon from '../Icon';
 
+const notifyDiligenceRefresh = (detail = {}) => {
+  try {
+    window.dispatchEvent(new CustomEvent('tribes:notifications-update', {
+      detail: { type: 'due-diligence-updated', ...detail },
+    }));
+  } catch (eventError) {
+    console.warn('Failed to dispatch due diligence refresh event', eventError);
+  }
+};
+
 const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,6 +40,7 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
       setFormData({ approverRole: 'reviewer', approvalNotes: '' });
       setShowForm(false);
       onRefresh();
+      notifyDiligenceRefresh({ id: dueDiligenceId, action: 'approval-requested' });
     } catch (error) {
       console.error('Error creating approval:', error);
       alert('Failed to create approval request');
@@ -40,6 +51,7 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
     try {
       await dueDiligenceAPI.approveOrReject(dueDiligenceId, approvalId, { status: decision, approvalNotes: notes });
       onRefresh();
+      notifyDiligenceRefresh({ id: dueDiligenceId, action: 'approval-decided', decision });
     } catch (error) {
       console.error('Error updating approval:', error);
       alert('Failed to update approval');

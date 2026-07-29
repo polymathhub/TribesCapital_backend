@@ -10,7 +10,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let error = 'InternalServerError';
-    let details: unknown = undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -21,14 +20,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message = responseBody;
       } else if (typeof responseBody === 'object' && responseBody !== null) {
         const body = responseBody as Record<string, unknown>;
-        message = (body.message as string) || message;
-        details = body.details ?? body;
-        error = (body.error as string) || error;
+        const bodyMessage = body.message;
+
+        if (typeof bodyMessage === 'string' && bodyMessage.trim()) {
+          message = bodyMessage;
+        } else if (Array.isArray(bodyMessage) && bodyMessage.length > 0) {
+          message = 'Validation failed';
+        }
+
+        const bodyError = body.error;
+        if (typeof bodyError === 'string' && bodyError.trim()) {
+          error = bodyError;
+        }
       }
     } else if (exception instanceof Error) {
-      // Always log uncaught exceptions to console for forensic debugging
-      // regardless of NODE_ENV. The JSON response still preserves safe
-      // production messaging but the console will contain full details.
+      // Always log uncaught exceptions to console for forensic debugging.
+      // The client response stays limited to safe, public information.
       // eslint-disable-next-line no-console
       console.error('========================================');
       // eslint-disable-next-line no-console
@@ -48,11 +55,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // eslint-disable-next-line no-console
       console.error('========================================');
 
-      // Maintain response behavior: reveal message only in non-production
-      const isDevelopment = process.env.NODE_ENV !== 'production';
-      error = exception.name;
-      message = isDevelopment ? exception.message : 'Internal server error';
-      details = isDevelopment ? exception.stack : undefined;
+      error = exception.name || 'InternalServerError';
+      message = process.env.NODE_ENV === 'production' ? 'Internal server error' : 'Unexpected error occurred';
     }
 
     const payload = {
@@ -60,7 +64,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       statusCode: status,
       error,
       message,
-      ...(details !== undefined ? { details } : {}),
       path: request.url,
       timestamp: new Date().toISOString(),
     };

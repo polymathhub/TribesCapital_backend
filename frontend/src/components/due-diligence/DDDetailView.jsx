@@ -39,6 +39,13 @@ const DDDetailView = ({ item, loading = false, onBack, onRefresh }) => {
       await dueDiligenceAPI.update(data.id, { status: newStatus });
       setData(prev => ({ ...prev, status: newStatus }));
       onRefresh();
+      try {
+        window.dispatchEvent(new CustomEvent('tribes:notifications-update', {
+          detail: { type: 'due-diligence-updated', id: data.id, action: 'status-changed', status: newStatus },
+        }));
+      } catch (eventError) {
+        console.warn('Failed to dispatch due diligence refresh event', eventError);
+      }
     } catch (error) {
       console.error('Error updating status:', error);
       alert('Failed to update status');

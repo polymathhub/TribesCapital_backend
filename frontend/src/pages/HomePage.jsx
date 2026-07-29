@@ -330,6 +330,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const notifRef = useRef(null);
   const searchRef = useRef(null);
   const searchInputRef = useRef(null);
+  const unreadNotificationCount = notifications.filter((item) => !item.read).length;
   const getAvatarSeed = (profile) => profile?.id || profile?.email || profile?.name || displayName || 'user';
   const getProfileAvatar = (profile) => {
     const seed = String(getAvatarSeed(profile));
@@ -1042,34 +1043,36 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               type="button"
               onClick={() => setIsNotificationsOpen((prev) => !prev)}
               className="topbar-action"
-              style={{ width:34, height:34, border:`1px solid ${BD}`, borderRadius:'50%',
+              style={{ width:40, height:40, border:`1px solid ${BD}`, borderRadius:'50%',
                 display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', flexShrink:0, background:W, transition:'all .2s ease', boxShadow:'0 1px 3px rgba(17,24,39,0.04)' }}
               aria-label="Open notifications"
             >
-              <Icon name="bell2" size={16} color={T2}/>
-              <div style={{ width:7, height:7, background:'#EF4444', borderRadius:'50%', border:'1.5px solid #fff',
-                position:'absolute', top:6, right:6 }}/>
+              <Icon name="bell2" size={22} color={T2}/>
+              <div style={{ minWidth:20, height:20, padding:'0 5px', background: unreadNotificationCount > 0 ? '#EF4444' : '#6B7280', color:'#fff', borderRadius:999, border:'2px solid #fff',
+                position:'absolute', top:2, right:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, lineHeight:1 }}>
+                {notificationsLoading ? '…' : unreadNotificationCount > 0 ? unreadNotificationCount : 'None'}
+              </div>
             </button>
             {isNotificationsOpen && (
-              <div style={{ position:'fixed', top:isMobile ? 58 : 62, right:isMobile ? 12 : 22, width:280, maxHeight:'calc(100vh - 80px)', overflowY:'auto', background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 18px 42px rgba(17,24,39,0.16)', overflow:'hidden', zIndex:1000 }}>
-                <div style={{ padding:'12px 14px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ position:'fixed', top:isMobile ? 58 : 62, right:isMobile ? 12 : 22, width:340, maxHeight:'calc(100vh - 84px)', overflowY:'auto', background:'linear-gradient(180deg, #FFFFFF 0%, #FBF8FF 100%)', border:`1px solid rgba(103,0,166,0.14)`, borderRadius:18, boxShadow:'0 22px 60px rgba(17,24,39,0.16), inset 0 1px 0 rgba(255,255,255,0.9)', overflow:'hidden', zIndex:1000 }}>
+                <div style={{ padding:'14px 14px 12px', borderBottom:`1px solid rgba(103,0,166,0.10)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'linear-gradient(90deg, rgba(103,0,166,0.06) 0%, rgba(255,255,255,0) 100%)' }}>
                   <div>
-                    <div style={{ fontSize:12, fontWeight:700, color:T1 }}>Notifications</div>
-                    <div style={{ fontSize:11, color:T3 }}>{notificationsLoading ? 'Loading…' : `${notifications.filter((item) => !item.read).length} unread`}</div>
+                    <div style={{ fontSize:12, fontWeight:800, color:T1, letterSpacing:'0.08em', textTransform:'uppercase' }}>Notifications</div>
+                    <div style={{ fontSize:11.5, color:T3, marginTop:2 }}>{notificationsLoading ? 'Loading…' : `${notifications.filter((item) => !item.read).length} unread`}</div>
                   </div>
-                  <button type="button" onClick={() => { setIsNotificationsOpen(true); void notificationsAPI.markAllAsRead().catch(() => {}); setNotifications((prev) => prev.map((item) => ({ ...item, read: true }))); }} style={{ background:'transparent', border:'none', color:P, fontWeight:600, fontSize:11, cursor:'pointer' }}>Mark all read</button>
+                  <button type="button" onClick={() => { setIsNotificationsOpen(true); void notificationsAPI.markAllAsRead().catch(() => {}); setNotifications((prev) => prev.map((item) => ({ ...item, read: true }))); }} style={{ background:'rgba(103,0,166,0.08)', border:`1px solid rgba(103,0,166,0.12)`, color:P, fontWeight:700, fontSize:11, cursor:'pointer', borderRadius:999, padding:'7px 10px' }}>Mark all read</button>
                 </div>
-                <div>
+                <div style={{ padding:'8px 8px 10px' }}>
                   {notificationsLoading ? (
-                    <div style={{ padding:'12px 14px', color:T2, fontSize:13 }}>Loading notifications…</div>
+                    <div style={{ padding:'14px 12px', color:T2, fontSize:13, background:'rgba(255,255,255,0.8)', borderRadius:12 }}>Loading notifications…</div>
                   ) : notifications.length > 0 ? notifications.map((item) => (
-                    <div key={item.id || item.title} style={{ padding:'10px 14px', borderBottom:`1px solid ${BD}`, background:item.read ? '#FCFCFD' : '#F7F3FF' }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:T1, marginBottom:2 }}>{item.title}</div>
-                      <div style={{ fontSize:12, color:T2, marginBottom:4 }}>{item.detail}</div>
-                      <div style={{ fontSize:11, color:T3 }}>{item.time}</div>
+                    <div key={item.id || item.title} style={{ padding:'12px 12px', borderRadius:14, marginBottom:8, border:`1px solid ${item.read ? 'rgba(17,24,39,0.08)' : 'rgba(103,0,166,0.14)'}`, background:item.read ? 'rgba(255,255,255,0.92)' : 'linear-gradient(135deg, #F9F5FF 0%, #FFFFFF 100%)', boxShadow:item.read ? 'none' : '0 10px 24px rgba(103,0,166,0.08)' }}>
+                      <div style={{ fontSize:13.5, fontWeight:700, color:T1, marginBottom:4 }}>{item.title}</div>
+                      <div style={{ fontSize:12.5, color:T2, lineHeight:1.5, marginBottom:6 }}>{item.detail}</div>
+                      <div style={{ fontSize:11.5, color:T3 }}>{item.time}</div>
                     </div>
                   )) : (
-                    <div style={{ padding:'12px 14px', color:T2, fontSize:13 }}>No notifications yet.</div>
+                    <div style={{ padding:'18px 12px', color:T2, fontSize:13, textAlign:'center', background:'rgba(255,255,255,0.8)', borderRadius:12 }}>No notifications yet.</div>
                   )}
                 </div>
               </div>
@@ -1083,17 +1086,17 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
       {showAnnouncementPopup && announcementPopup && (
         <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.58)', display:'flex', alignItems:'center', justifyContent:'center', padding:16, zIndex:1200 }}>
-          <div style={{ width:'min(520px, 100%)', background:W, borderRadius:18, boxShadow:'0 24px 70px rgba(17,24,39,0.22)', overflow:'hidden' }}>
-            <div style={{ padding:'16px 18px', borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ width:'min(520px, 100%)', background:'linear-gradient(180deg, #FFFFFF 0%, #FCF9FF 100%)', borderRadius:22, boxShadow:'0 24px 70px rgba(17,24,39,0.22)', overflow:'hidden', border:`1px solid rgba(103,0,166,0.12)` }}>
+            <div style={{ padding:'16px 18px', borderBottom:`1px solid rgba(103,0,166,0.10)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'linear-gradient(90deg, rgba(103,0,166,0.06) 0%, rgba(255,255,255,0) 100%)' }}>
               <div style={{ fontSize:11, fontWeight:800, letterSpacing:'0.16em', textTransform:'uppercase', color:P }}>Community update</div>
-              <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ border:'none', background:'transparent', color:T3, cursor:'pointer', fontSize:18, padding:0 }}>×</button>
+              <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ border:'none', background:'rgba(17,24,39,0.06)', color:T3, cursor:'pointer', fontSize:16, width:30, height:30, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>
             </div>
             <div style={{ padding:'18px 20px 20px' }}>
               <div style={{ fontSize:20, fontWeight:800, color:T1, marginBottom:8 }}>{announcementPopup.title}</div>
-              <div style={{ fontSize:13, color:T2, lineHeight:1.6, marginBottom:14 }}>{announcementPopup.detail}</div>
+              <div style={{ fontSize:13.5, color:T2, lineHeight:1.7, marginBottom:14 }}>{announcementPopup.detail}</div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                <button type="button" onClick={() => { setShowAnnouncementPopup(false); onNavigate('announcements'); }} style={{ ...btnStyle('none', P, W, 13), padding:'9px 14px', borderRadius:8, fontWeight:600 }}>Open announcement</button>
-                <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 13), padding:'9px 14px', borderRadius:8, fontWeight:600 }}>Close</button>
+                <button type="button" onClick={() => { setShowAnnouncementPopup(false); onNavigate('announcements'); }} style={{ ...btnStyle('none', P, W, 13), padding:'9px 14px', borderRadius:10, fontWeight:700 }}>Open announcement</button>
+                <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ ...btnStyle(`1px solid rgba(103,0,166,0.14)`, 'rgba(255,255,255,0.95)', T2, 13), padding:'9px 14px', borderRadius:10, fontWeight:700 }}>Close</button>
               </div>
             </div>
           </div>
