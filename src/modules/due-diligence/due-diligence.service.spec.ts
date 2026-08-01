@@ -31,4 +31,24 @@ describe('DueDiligenceService', () => {
       }),
     );
   });
+
+  it('lists every diligence case for the shared feed instead of filtering by owner', async () => {
+    const prisma = {
+      dueDiligence: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+    };
+
+    const service = new DueDiligenceService(prisma as any);
+    await service.findAll({ page: 1, limit: 10 }, 'user-1');
+
+    expect(prisma.dueDiligence.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {},
+        skip: 0,
+        take: 10,
+      }),
+    );
+  });
 });

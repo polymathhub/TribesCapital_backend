@@ -1,14 +1,21 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 /* ═══════════════════════════════════════════════════════════
    TRIBES CAPITAL — PROJECT PIPELINE
    Interactive · functional · responsive (mobile / tablet / desktop)
 
-   Built around the same interaction model as the Due Diligence Vault so
-   the two experiences feel coherent and connected.
+   Built on the same architecture as DueDiligenceVault.jsx so the
+   two dashboards behave identically.
+
+   Flows:
+     ADD     → drawer → validate → card lands in its stage column → toast
+     EDIT    → drawer prefilled → "Save changes" → card updates (can move stage)
+     DELETE  → confirm modal → card removed → toast
+     EXPORT  → CSV of everything currently filtered
+     DOWNLOAD→ single-project brief as .txt
 ═══════════════════════════════════════════════════════════ */
 
-/* ─── TOKENS (aligned to the app theme) ─── */
+/* ─── TOKENS (identical to Due Diligence Vault) ─── */
 const P   = '#6700A6';
 const PL  = '#8B3FD6';
 const PF  = '#F5EDFC';
@@ -33,6 +40,25 @@ const PANEL_BD = '#EFEAF8';
 
 const SIDEBAR_W = 260;
 const PERMS = { canCreate: true, canEdit: true, canDelete: true };
+const PIPELINE_STORAGE_KEY = 'tribes-pipeline-projects';
+
+function readStoredPipelineProjects() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const storedValue = window.localStorage.getItem(PIPELINE_STORAGE_KEY);
+    if (!storedValue) return [];
+    const parsed = JSON.parse(storedValue);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredPipelineProjects(projects) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(PIPELINE_STORAGE_KEY, JSON.stringify(projects));
+  window.dispatchEvent(new Event('tribes:app-state-update'));
+}
 
 /* ─── RESPONSIVE ─── */
 function useBreakpoint() {
@@ -59,6 +85,8 @@ const PATHS = {
   x:       <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
   plus:    <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
   chevD:   <polyline points="6,9 12,15 18,9"/>,
+  chevL:   <polyline points="15,18 9,12 15,6"/>,
+  chevR:   <polyline points="9,18 15,12 9,6"/>,
   edit:    <><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/></>,
   trash:   <><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></>,
   download:<><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
@@ -85,6 +113,8 @@ const STAGES = ['Sourcing', 'Screening', 'Due Diligence', 'Term Sheet', 'Closing
 const TYPES  = ['Mini-grid', 'Solar PV', 'Wind', 'Hydro', 'Battery Storage', 'C&I Solar'];
 const COUNTRIES = ['Nigeria', 'Ghana', 'Kenya', 'Togo', 'Senegal', 'Uganda', "Côte d'Ivoire"];
 
+/* Sample data — not rendered. To preview the populated kanban during design
+   review, change the projects useState below from [] to SEED. Safe to delete. */
 const SEED = [
   { id:1, name:'Lomé Port Hybrid Microgrid', type:'Mini-grid', stage:'Sourcing', country:'Togo', city:'Lomé',
     capacity:4.0, value:4500000, irr:17, sponsor:'Togo Energy Partners', progress:5,
@@ -214,6 +244,134 @@ function Overlay({ onClick, offset, z = 200, dark = 0.45 }) {
   return <div onClick={onClick} style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: offset,
     background: `rgba(30,30,35,${dark})`, zIndex: z }} />;
 }
+
+/* ═══ SIDEBAR ═══ */
+const NAV = [
+  { id: 'home',     label: 'Home',                     icon: 'home' },
+  { id: 'learning', label: 'Learning Hub',             icon: 'book' },
+  { id: 'vault',    label: 'Due Diligence Vault',      icon: 'shield' },
+  { id: 'events',   label: 'Office Hours & Events',    icon: 'cal' },
+  { id: 'pipeline', label: 'Project Pipeline',         icon: 'pipeline', active: true },
+  null,
+  { id: 'announce', label: 'Announcements & Feedback', icon: 'bell' },
+  { id: 'help',     label: 'Help',                     icon: 'help' },
+];
+
+function Sidebar({ open, onClose, isMobile, isTablet, onLogout }) {
+  const overlay = isMobile || isTablet;
+  if (!open) return null;
+  return (
+    <>
+      {overlay && <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 300 }} />}
+      <aside style={{ width: SIDEBAR_W, minWidth: SIDEBAR_W, background: W, borderRight: `1px solid ${BD}`,
+        display: 'flex', flexDirection: 'column', flexShrink: 0,
+        ...(overlay
+          ? { position: 'fixed', top: 0, left: 0, height: '100%', zIndex: 301, boxShadow: '4px 0 28px rgba(0,0,0,.18)' }
+          : { position: 'sticky', top: 0, height: '100vh' }) }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <svg width={28} height={28} viewBox="0 0 28 28" fill="none" aria-hidden="true">
+              <circle cx="14" cy="14" r="12" stroke={P} strokeWidth="2.2" />
+              <path d="M14 8v8M9.5 14h9" stroke={P} strokeWidth="2.2" strokeLinecap="round" />
+            </svg>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T1, letterSpacing: 1, textTransform: 'uppercase' }}>
+              Tribes Capital
+            </span>
+          </div>
+          <button onClick={onClose} aria-label="Close menu"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}>
+            <I k="x" s={18} c={T2} />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 20px 18px' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#E4D3F5', flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: T1 }}>Oyewumi Olukunle</div>
+            <div style={{ fontSize: 12, color: T2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              oyewumi.olukunle@gmail.c…
+            </div>
+          </div>
+        </div>
+
+        <nav style={{ flex: 1, padding: '6px 12px', overflowY: 'auto' }}>
+          {NAV.map((it, i) => {
+            if (!it) return <div key={`d${i}`} style={{ height: 1, background: BD, margin: '10px 8px' }} />;
+            return (
+              <div key={it.id} onClick={overlay ? onClose : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px',
+                  margin: '2px 0', borderRadius: 8, cursor: 'pointer',
+                  background: it.active ? PF : 'transparent',
+                  color: it.active ? PL : T2,
+                  fontSize: 14, fontWeight: it.active ? 500 : 400,
+                  borderLeft: it.active ? `3px solid ${PL}` : '3px solid transparent' }}>
+                <I k={it.icon} s={18} c={it.active ? PL : T2} />
+                <span>{it.label}</span>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div style={{ padding: 16 }}>
+          <button onClick={onLogout}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '13px 16px', borderRadius: 10,
+              background: RED_BG, border: `1px solid ${RED_BD}`, color: RED,
+              fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <I k="logout" s={17} c={RED} />Log out
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+/* ═══ TOPBAR ═══ */
+function TopBar({ onMenu, isMobile, isTablet, sidebarOpen, search, setSearch }) {
+  const showBurger = isMobile || isTablet || !sidebarOpen;
+  return (
+    <header style={{ height: 64, background: W, borderBottom: `1px solid ${BD}`, display: 'flex',
+      alignItems: 'center', padding: `0 ${isMobile ? 14 : 24}px`, gap: 12,
+      justifyContent: 'space-between', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+        {showBurger && (
+          <button onClick={onMenu} aria-label="Open menu"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}>
+            <I k="menu" s={22} c={T1} />
+          </button>
+        )}
+        {!isMobile ? (
+          <div style={{ flex: 1, maxWidth: 560, background: BG, border: `1px solid ${BD}`, borderRadius: 999,
+            height: 44, display: 'flex', alignItems: 'center', gap: 10, padding: '0 18px' }}>
+            <I k="search" s={17} c={T3} />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search topics, documents, people, events…"
+              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: T1, fontFamily: 'inherit' }} />
+          </div>
+        ) : (
+          <span style={{ fontSize: 15, fontWeight: 600, color: T1 }}>Pipeline</span>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16, flexShrink: 0 }}>
+        {isMobile && (
+          <button aria-label="Search" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}>
+            <I k="search" s={20} c={T2} />
+          </button>
+        )}
+        <div style={{ position: 'relative', display: 'flex', cursor: 'pointer' }}>
+          <I k="bell" s={21} c={T2} />
+          <span style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: PL, border: `1.5px solid ${W}` }} />
+        </div>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#E4D3F5', flexShrink: 0 }} />
+      </div>
+    </header>
+  );
+}
+
+/* ═══ ADD / EDIT DRAWER ═══ */
+const BLANK = { name:'', type:'', stage:'', country:'', city:'', capacity:'', value:'',
+                irr:'', sponsor:'', progress:'0', tags:'', description:'' };
 
 function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
   const editing = !!initial;
@@ -386,6 +544,7 @@ function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
   );
 }
 
+/* ═══ DETAIL DRAWER ═══ */
 function DetailPanel({ p, onClose, onEdit, onDelete, onDownload, isMobile, offset }) {
   const cell = { background: BG, borderRadius: 8, padding: '12px 14px', fontSize: 14, color: T2 };
   const lbl  = { fontSize: 13, color: T1, fontWeight: 500, marginBottom: 6 };
@@ -463,6 +622,7 @@ function DetailPanel({ p, onClose, onEdit, onDelete, onDownload, isMobile, offse
   );
 }
 
+/* ═══ DELETE CONFIRM ═══ */
 function DeleteModal({ p, onClose, onConfirm, isMobile, offset }) {
   const [busy, setBusy] = useState(false);
   return (
@@ -501,6 +661,7 @@ function DeleteModal({ p, onClose, onConfirm, isMobile, offset }) {
   );
 }
 
+/* ═══ TOAST ═══ */
 function Toast({ msg, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, [msg, onDone]);
   return (
@@ -513,6 +674,7 @@ function Toast({ msg, onDone }) {
   );
 }
 
+/* ═══ EMPTY STATE ═══ */
 function EmptyState() {
   return (
     <div style={{ padding: '90px 20px', textAlign: 'center' }}>
@@ -527,6 +689,7 @@ function EmptyState() {
   );
 }
 
+/* ═══ KANBAN CARD ═══ */
 function PipelineCard({ p, onOpen, onEdit, onDownload }) {
   const meta = { background: BG, borderRadius: 8, padding: '9px 11px' };
   const ml   = { fontSize: 11, color: T3, marginBottom: 3 };
@@ -583,28 +746,25 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
   );
 }
 
-const BLANK = { name:'', type:'', stage:'', country:'', city:'', capacity:'', value:'',
-                irr:'', sponsor:'', progress:'0', tags:'', description:'' };
-
-export default function ProjectPipeline({ onNavigate = () => {} }) {
+/* ═══ MAIN ═══ */
+export default function ProjectPipeline() {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
 
-  const [projects, setProjects] = useState(SEED);   
-  const [view, setView] = useState('kanban');
-  const [stage, setStage] = useState('All stages');
-  const [fType, setFType] = useState('');
-  const [topSearch, setTop] = useState('');
+  const [projects, setProjects] = useState(() => readStoredPipelineProjects());
+  const [view, setView]         = useState('kanban');
+  const [stage, setStage]       = useState('All stages');
+  const [fType, setFType]       = useState('');
+  const [topSearch, setTop]     = useState('');
 
-  const [sidebar, setSidebar] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
-  useEffect(() => { setSidebar(isDesktop); }, [isDesktop]);
-  const overlayOffset = isDesktop && sidebar ? SIDEBAR_W : 0;
+  const overlayOffset = 0;
 
-  const [adding, setAdding] = useState(false);
-  const [editP, setEditP] = useState(null);
-  const [detail, setDetail] = useState(null);
+  const [adding, setAdding]     = useState(false);
+  const [editP, setEditP]       = useState(null);
+  const [detail, setDetail]     = useState(null);
   const [toDelete, setToDelete] = useState(null);
-  const [toast, setToast] = useState(null);
+  const [toast, setToast]       = useState(null);
 
+  /* ── SAVE (add + edit) ── */
   const save = form => {
     const shaped = {
       name: form.name.trim(),
@@ -620,24 +780,33 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
       description: form.description.trim(),
     };
+
+    let nextProjects = [];
     if (editP) {
-      setProjects(ps => ps.map(x => x.id === editP.id ? { ...x, ...shaped, updated: 'just now' } : x));
+      nextProjects = projects.map(x => x.id === editP.id ? { ...x, ...shaped, updated: 'just now' } : x);
+      setProjects(nextProjects);
+      writeStoredPipelineProjects(nextProjects);
       setDetail(d => (d && d.id === editP.id ? { ...d, ...shaped, updated: 'just now' } : d));
       setEditP(null);
       setToast('Changes saved');
     } else {
-      setProjects(ps => [{ ...shaped, id: Date.now(), owner: 'OO', updated: 'just now' }, ...ps]);
+      nextProjects = [{ ...shaped, id: Date.now(), owner: 'OO', updated: 'just now' }, ...projects];
+      setProjects(nextProjects);
+      writeStoredPipelineProjects(nextProjects);
       setAdding(false);
       setToast('Project added to pipeline');
     }
   };
 
   const remove = p => {
-    setProjects(ps => ps.filter(x => x.id !== p.id));
+    const nextProjects = projects.filter(x => x.id !== p.id);
+    setProjects(nextProjects);
+    writeStoredPipelineProjects(nextProjects);
     setToDelete(null); setDetail(null);
     setToast('Project deleted');
   };
 
+  /* ── DOWNLOAD one project ── */
   const download = p => {
     const body = [
       `Project:         ${p.name}`,
@@ -659,6 +828,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     setToast('Download started');
   };
 
+  /* ── FILTER ── */
   const filtered = useMemo(() => {
     const q = topSearch.trim().toLowerCase();
     return projects.filter(p => {
@@ -669,6 +839,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     });
   }, [projects, stage, fType, topSearch]);
 
+  /* ── EXPORT filtered set as CSV ── */
   const exportCsv = () => {
     if (!filtered.length) { setToast('Nothing to export'); return; }
     const head = ['Name','Type','Stage','Country','City','Capacity (MW)','Deal value (USD)','IRR (%)','Sponsor','Progress (%)','Tags'];
@@ -682,10 +853,11 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     setToast(`Exported ${filtered.length} project${filtered.length !== 1 ? 's' : ''}`);
   };
 
+  /* ── STATS (all derived from data) ── */
   const stats = useMemo(() => {
-    const any = projects.length > 0;
+    const any    = projects.length > 0;
     const active = projects.filter(p => p.stage !== 'Portfolio');
-    const total = projects.reduce((s, p) => s + (p.value || 0), 0);
+    const total  = projects.reduce((s, p) => s + (p.value || 0), 0);
     return [
       { l: 'Active projects',    v: String(active.length),                                            tag: 'In pipeline',      tone: 'purple' },
       { l: 'Pipeline value',     v: any ? money(total) : '0',                                         tag: 'Total deal size',  tone: 'green'  },
@@ -700,7 +872,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const visibleStages = stage === 'All stages' ? STAGES : [stage];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100%', width: '100%', background: PAGE,
+    <div style={{ minHeight: '100%', background: PAGE,
       fontFamily: "'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: T1 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
@@ -712,20 +884,20 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
         :focus-visible{outline:2px solid ${PL};outline-offset:2px;}
       `}</style>
 
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <main style={{ flex: 1, padding: pad }}>
-          <div style={{ background: PANEL, border: `1px solid ${PANEL_BD}`,
-            borderRadius: isMobile ? 14 : 20, padding: isMobile ? '20px 16px 30px' : '32px 32px 42px' }}>
+      <main style={{ padding: pad }}>
+        <div style={{ background: PANEL, border: `1px solid ${PANEL_BD}`,
+          borderRadius: isMobile ? 14 : 20, padding: isMobile ? '20px 16px 30px' : '32px 32px 42px' }}>
 
+            {/* ── Header ── */}
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row',
               alignItems: isMobile ? 'stretch' : 'flex-start', justifyContent: 'space-between',
-              gap: 16, marginBottom: 18 }}>
+              gap: 16, marginBottom: 26 }}>
               <div>
                 <h1 style={{ fontSize: isMobile ? 24 : 30, fontWeight: 600, margin: '0 0 8px', letterSpacing: -0.5 }}>
                   Project Pipeline
                 </h1>
                 <p style={{ fontSize: 15, color: T2, margin: 0 }}>
-                  Track energy infrastructure deals from sourcing through to active portfolio.
+                  Track energy infrastructure deals from sourcing through to active portfolio
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
@@ -748,13 +920,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, padding: '14px 16px', background: PF, border: `1px solid ${PB}`, borderRadius: 12, color: '#5B2A86' }}>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Projects in the Due Diligence stage stay connected to the Due Diligence Vault workflow.</div>
-              <button onClick={() => onNavigate('vault')} style={{ background: W, border: `1px solid ${PB}`, color: P, borderRadius: 999, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                Open Due Diligence Vault
-              </button>
-            </div>
-
+            {/* ── Stats ── */}
             <div style={{ display: 'grid',
               gridTemplateColumns: isMobile ? '1fr 1fr' : isTablet ? 'repeat(3,1fr)' : 'repeat(6,1fr)',
               gap: isMobile ? 10 : 14, marginBottom: 22 }}>
@@ -768,6 +934,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               ))}
             </div>
 
+            {/* ── Stage chips + type filter ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', flex: 1, minWidth: 0, paddingBottom: 2 }}>
                 {['All stages', ...STAGES].map(s => {
@@ -788,6 +955,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             </div>
 
+            {/* ── Count + view toggle ── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <span style={{ fontSize: 17, fontWeight: 600 }}>
                 All projects <span style={{ color: T3, fontWeight: 400 }}>({filtered.length})</span>
@@ -803,6 +971,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             </div>
 
+            {/* ── Content ── */}
             {projects.length === 0 ? (
               <EmptyState />
             ) : filtered.length === 0 ? (
@@ -905,9 +1074,9 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             )}
           </div>
-        </main>
-      </div>
+      </main>
 
+      {/* ── Overlays ── */}
       {adding && <ProjectPanel onClose={() => setAdding(false)} onSave={save} isMobile={isMobile} offset={overlayOffset} />}
       {editP  && <ProjectPanel initial={editP} onClose={() => setEditP(null)} onSave={save} isMobile={isMobile} offset={overlayOffset} />}
       {detail && !editP && !toDelete && (

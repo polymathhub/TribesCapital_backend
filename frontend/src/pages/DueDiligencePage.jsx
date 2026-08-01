@@ -409,6 +409,7 @@ function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
     if (!f.targetName.trim())  e.targetName = true;
     if (!f.type)               e.type = true;
     if (!f.description.trim()) e.description = true;
+    if (!selectedFile)         e.file = true;
     setErr(e);
     return Object.keys(e).length === 0;
   };
@@ -429,6 +430,8 @@ function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
     if (!file) return;
     setSelectedFile(file);
     set('fileName', file.name);
+    const previewUrl = URL.createObjectURL(file);
+    setF((prev) => ({ ...prev, previewUrl }));
   };
 
   const heading = step === 'preview'
@@ -518,23 +521,89 @@ function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
             onDragLeave={() => setDrag(false)}
             onDrop={e => { e.preventDefault(); setDrag(false); pick(e.dataTransfer.files[0]); }}
             style={{
-              border: `1.5px dashed ${drag ? PL : BD}`, borderRadius: 12,
-              background: drag ? PF : W, padding: '26px 18px', textAlign: 'center',
+              border: `1.5px dashed ${drag ? PL : BD}`, borderRadius: 16,
+              background: drag ? PF : W, padding: '14px', textAlign: 'center',
               cursor: 'pointer', marginBottom: 20, transition: 'all .15s',
+              boxShadow: drag ? `0 8px 28px rgba(103,0,166,0.10)` : 'none',
             }}>
             <input ref={fileRef} type="file" hidden
               onChange={e => pick(e.target.files[0])} />
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-              <I k="upload" s={26} c={PL} />
-            </div>
+
             {f.fileName ? (
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: T1 }}>{f.fileName}</p>
+              <div style={{
+                minHeight: 210, borderRadius: 12, overflow: 'hidden',
+                background: '#F8F5FD', border: `1px solid ${PB}`,
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+              }}>
+                <div style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: '#FFFFFF',
+                  position: 'relative', padding: 12,
+                }}>
+                  {(selectedFile && selectedFile.type?.startsWith('image/')) ? (
+                    <img
+                      src={f.previewUrl || URL.createObjectURL(selectedFile)}
+                      alt={f.fileName}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%', height: '100%', borderRadius: 10,
+                      background: 'linear-gradient(135deg, #F5EDFC 0%, #F9F5FF 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexDirection: 'column', gap: 12,
+                    }}>
+                      <div style={{
+                        width: 74, height: 74, borderRadius: 18,
+                        background: W, border: `1px solid ${PB}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 8px 22px rgba(103,0,166,0.10)',
+                      }}>
+                        <I k="file" s={34} c={PL} />
+                      </div>
+                      <div style={{ fontSize: 13, color: T2, fontWeight: 600 }}>{(selectedFile?.type || 'document').split('/').pop()?.toUpperCase() || 'FILE'}</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{
+                  padding: '12px 14px', background: W, borderTop: `1px solid ${PB}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                }}>
+                  <div style={{ textAlign: 'left', minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: T1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.fileName}</div>
+                    <div style={{ fontSize: 12, color: T3, marginTop: 2 }}>Attached and ready to create</div>
+                  </div>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 999,
+                    background: selectedFile?.type?.startsWith('image/') ? '#F5EDFC' : '#EEF2FF',
+                    border: `1px solid ${PB}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(103,0,166,0.08)',
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 16V5" stroke="#8B3FD6" strokeWidth="1.9" strokeLinecap="round" />
+                      <path d="M8.5 8.5L12 5l3.5 3.5" stroke="#8B3FD6" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M4 15.5V18a2 2 0 002 2h12a2 2 0 002-2v-2.5" stroke="#8B3FD6" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <p style={{ margin: 0, fontSize: 14, color: T2 }}>
-                <span style={{ color: PL, fontWeight: 500 }}>Click to upload</span> or drag and drop
-              </p>
+              <div style={{ padding: '26px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 72, height: 72, borderRadius: 20,
+                  background: 'linear-gradient(135deg, #F5EDFC 0%, #F9F5FF 100%)',
+                  border: `1px solid ${PB}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 8px 24px rgba(103,0,166,0.08)',
+                }}>
+                  <I k="upload" s={28} c={PL} />
+                </div>
+                <div style={{ fontSize: 14, color: T1, fontWeight: 600 }}>
+                  <span style={{ color: PL }}>Click to upload</span> or drag and drop
+                </div>
+                <div style={{ fontSize: 12, color: T3 }}>PDF, DOCX, XLSX, PPTX, images, and photos — max 50MB</div>
+              </div>
             )}
-            <p style={{ margin: '6px 0 0', fontSize: 12, color: T3 }}>PDF, DOCX, XLSX, PPTX — max 50MB</p>
+            {err.file && <div style={{ marginTop: 10, fontSize: 12, color: RED }}>Attach a document before creating the due diligence case.</div>}
           </div>
 
           {uploadOnly ? (
@@ -869,7 +938,7 @@ function DocCard({ doc, onOpen }) {
 export default function DueDiligenceVault() {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
 
-  const [docs, setDocs] = useState(readStoredDiligenceDocs);
+  const [docs, setDocs] = useState([]);
   const [loadError, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -955,18 +1024,11 @@ export default function DueDiligenceVault() {
             : [];
       const normalizedDocs = items.map(normalizeDoc);
       setDocs(normalizedDocs);
-      writeStoredDiligenceDocs(normalizedDocs);
       setPage(1);
     } catch (err) {
       console.error('Failed to load due diligence records:', err);
-      const persistedDocs = readStoredDiligenceDocs();
-      if (persistedDocs.length > 0) {
-        setDocs(persistedDocs);
-        setError(false);
-      } else {
-        setDocs([]);
-        setError(true);
-      }
+      setDocs([]);
+      setError(true);
     } finally {
       setLoading(false);
     }
