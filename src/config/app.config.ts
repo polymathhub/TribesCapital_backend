@@ -4,7 +4,7 @@ export default registerAs('app', () => {
   const environment = (process.env.NODE_ENV || 'development').trim();
   const rawFrontendUrl =
     process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
-  const frontendUrl = rawFrontendUrl?.toString().trim().replace(/\/+|^\s+|\s+$/g, '');
+  const frontendUrl = rawFrontendUrl?.toString().trim().replace(/\/+$/g, '');
   const rawCorsOrigin = process.env.CORS_ORIGIN || rawFrontendUrl || 'http://localhost:5173';
 
   return {
