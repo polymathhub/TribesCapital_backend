@@ -13,18 +13,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const clientSecret = configService.get<string>('google.clientSecret')?.trim();
     const configuredCallback = configService.get<string>('google.callbackUrl')?.trim();
     const apiPrefix = configService.get<string>('app.apiPrefix')?.trim() || process.env.API_PREFIX?.trim() || 'api';
-    const frontendUrl = (
-      configService.get<string>('app.frontendUrl')?.trim() ||
-      configService.get<string>('FRONTEND_URL')?.trim() ||
-      process.env.FRONTEND_URL?.trim() ||
-      'http://localhost:5173'
-    );
-    const appHost = configService.get<string>('app.host')?.trim() || process.env.APP_HOST || 'localhost';
+    const appHost = configService.get<string>('app.host')?.trim() || process.env.APP_HOST || '0.0.0.0';
     const appPort = configService.get<number>('app.port') || Number(process.env.PORT) || 3000;
     const hostForCallback = appHost === '0.0.0.0' ? 'localhost' : appHost;
-    const defaultCallback = frontendUrl
-      ? `${frontendUrl.replace(/\/+$/g, '')}/${apiPrefix}/auth/google/callback`
-      : `http://${hostForCallback}:${appPort}/${apiPrefix}/auth/google/callback`;
+    const defaultCallback = `http://${hostForCallback}:${appPort}/${apiPrefix}/auth/google/callback`;
     const callbackURL = configuredCallback || defaultCallback;
 
     if (!clientId || !clientSecret) {

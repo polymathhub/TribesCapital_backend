@@ -27,10 +27,13 @@ export function validateConfig(config: Record<string, unknown>): Record<string, 
     (typeof process.env.GOOGLE_CLIENT_SECRET === 'string' && process.env.GOOGLE_CLIENT_SECRET.trim());
 
   const environment = typeof app?.environment === 'string' ? app.environment.trim().toLowerCase() : 'development';
+  const appHost = (typeof app?.host === 'string' && app.host.trim()) || process.env.APP_HOST || '0.0.0.0';
+  const appPort = Number(typeof app?.port === 'number' ? app.port : Number(process.env.PORT) || 3000);
+  const callbackHost = appHost === '0.0.0.0' ? 'localhost' : appHost;
   let callbackUrl = typeof google?.callbackUrl === 'string' ? google.callbackUrl.trim() : '';
 
-  if (!callbackUrl && frontendUrl) {
-    callbackUrl = new URL('/api/auth/google/callback', frontendUrl).toString();
+  if (!callbackUrl) {
+    callbackUrl = new URL(`/api/auth/google/callback`, `http://${callbackHost}:${appPort}`).toString();
   }
 
   if (environment === 'production' && !callbackUrl) {

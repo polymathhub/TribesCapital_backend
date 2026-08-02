@@ -37,9 +37,11 @@ function useBreakpoint() {
 }
 
 function buildGoogleAuthRedirectUrl() {
-  const apiBaseRaw = import.meta.env.VITE_API_URL?.trim() || `${window.location.origin}/api`;
+  const isDev = import.meta.env.DEV;
+  const apiBaseRaw = isDev ? `${window.location.origin}/api` : (import.meta.env.VITE_API_URL?.trim() || `${window.location.origin}/api`);
   const apiBase = apiBaseRaw.replace(/\/+$/, '');
-  if (!import.meta.env.VITE_API_URL) {
+
+  if (!isDev && !import.meta.env.VITE_API_URL) {
     // eslint-disable-next-line no-console
     console.warn('VITE_API_URL is not set — Google sign-in may return 404. Set VITE_API_URL to your backend API (e.g. http://localhost:3000/api)');
   }

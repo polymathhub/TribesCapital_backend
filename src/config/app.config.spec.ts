@@ -1,4 +1,5 @@
 import appConfig from './app.config';
+import { validateConfig } from './validation';
 
 describe('app config', () => {
   const originalFrontendUrl = process.env.FRONTEND_URL;
@@ -25,5 +26,30 @@ describe('app config', () => {
     const config = appConfig();
 
     expect(config.frontendUrl).toBe('https://community.tribes.capital');
+  });
+
+  it('builds the Google callback from the backend origin when GOOGLE_CALLBACK_URL is absent', () => {
+    delete process.env.GOOGLE_CALLBACK_URL;
+    process.env.FRONTEND_URL = 'http://localhost:5173';
+    process.env.CORS_ORIGIN = 'http://localhost:5173';
+    process.env.APP_HOST = '0.0.0.0';
+    process.env.PORT = '3000';
+
+    const validated = validateConfig({
+      app: {
+        frontendUrl: 'http://localhost:5173',
+        host: '0.0.0.0',
+        port: 3000,
+      },
+      google: {
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        callbackUrl: '',
+      },
+    } as Record<string, unknown>);
+
+    expect(validated.google).toMatchObject({
+      callbackUrl: 'http://localhost:3000/api/auth/google/callback',
+    });
   });
 });
