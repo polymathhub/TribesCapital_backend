@@ -56,8 +56,9 @@ export class CreateEventDto {
 }
 
 export class CreateRsvpDto {
+  @IsOptional()
   @IsNumber()
-  guestCount!: number;
+  guestCount?: number;
 
   @IsOptional()
   @IsString()

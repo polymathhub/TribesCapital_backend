@@ -26,6 +26,15 @@ export class EventsController {
     return this.eventsService.findById(id);
   }
 
+  @Get(':id/rsvp-status')
+  @UseGuards(JwtAuthGuard)
+  async getRsvpStatus(
+    @Param('id') eventId: string,
+    @GetCurrentUser('sub') userId: string,
+  ): Promise<{ attending: boolean }> {
+    return this.eventsService.getRsvpStatus(eventId, userId);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(

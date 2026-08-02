@@ -813,7 +813,6 @@ function SignupPage({ onNavigate, onSuccess }) {
       };
 
       const response = await authAPI.register(payload);
-      localStorage.setItem('verificationEmail', formData.email.trim().toLowerCase());
 
       if (response.data?.accessToken) {
         const userData = {
@@ -834,7 +833,10 @@ function SignupPage({ onNavigate, onSuccess }) {
         return;
       }
 
-      // Verification is required and the server returned a message-only response.
+      const emailForVerification = formData.email.trim().toLowerCase();
+      localStorage.setItem('verificationEmail', emailForVerification);
+
+      // Only enter the verify page when the backend actually returns a verification-only message.
       onNavigate('verify');
     } catch (err) {
       const serverMessage = err.response?.data?.message;
@@ -1429,10 +1431,13 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
 export default function AuthPage({ onLogin }) {
   const getInitialPage = () => {
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const query = typeof window !== 'undefined' ? window.location.search : '';
+    const hasVerificationToken = new URLSearchParams(query).get('token');
+
     if (pathname.includes('reset-password') || pathname.includes('forgot-password')) {
       return 'forgot';
     }
-    if (pathname.includes('verify-email')) {
+    if (pathname.includes('verify-email') && hasVerificationToken) {
       return 'verify';
     }
     if (pathname.includes('signup')) {
@@ -1450,18 +1455,16 @@ export default function AuthPage({ onLogin }) {
     const params = new URLSearchParams(window.location.search);
     const pathname = window.location.pathname;
     const verifyToken = params.get('token');
-    const resetPasswordToken = params.get('token'); // For password reset, also uses 'token' param
+    const resetPasswordToken = params.get('token');
 
     const isResetPasswordPath = pathname.includes('reset-password') || pathname.includes('forgot-password');
     const isVerifyPath = pathname.includes('verify-email');
 
-    if (isVerifyPath) {
+    if (verifyToken && isVerifyPath) {
       setPage('verify');
     } else if (resetPasswordToken && isResetPasswordPath) {
       setPage('forgot');
       setResetToken(resetPasswordToken);
-    } else if (verifyToken) {
-      setPage('verify');
     } else if (pathname.includes('signup')) {
       setPage('signup');
     } else {

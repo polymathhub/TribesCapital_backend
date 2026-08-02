@@ -79,13 +79,15 @@ describe('AuthService', () => {
       issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'access-token', refreshToken: 'refresh-token', expiresIn: 3600 }),
     } as unknown as JwtTokenService;
 
+    const mail = {
+      sendWelcomeEmail: jest.fn().mockResolvedValue(true),
+      sendVerificationEmail: jest.fn().mockResolvedValue(true),
+    } as unknown as MailService;
+
     const service = new AuthService(
       prisma,
       jwtTokenService,
-      {
-        sendWelcomeEmail: jest.fn().mockResolvedValue(true),
-        sendVerificationEmail: jest.fn().mockResolvedValue(true),
-      } as unknown as MailService,
+      mail,
       { get: jest.fn((key: string) => (key === 'REQUIRE_EMAIL_VERIFICATION' ? 'false' : undefined)) } as unknown as ConfigService,
     );
 
@@ -99,6 +101,7 @@ describe('AuthService', () => {
 
     expect(response).toEqual(expect.objectContaining({ accessToken: 'access-token' }));
     expect(response).toEqual(expect.objectContaining({ refreshToken: 'refresh-token' }));
+    expect(mail.sendVerificationEmail).not.toHaveBeenCalled();
   });
 
   it('defaults to allowing immediate sign-in when the verification setting is missing', async () => {

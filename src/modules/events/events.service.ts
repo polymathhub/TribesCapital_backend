@@ -141,10 +141,11 @@ export class EventsService {
         throw new ConflictException('Already RSVP\'d to this event');
       }
 
+      const guestCount = createRsvpDto.guestCount || 1;
       if (event.capacity) {
         const totalRsvps = event.rsvps.reduce((sum, r) => sum + r.guestCount, 0);
 
-        if (totalRsvps + createRsvpDto.guestCount > event.capacity) {
+        if (totalRsvps + guestCount > event.capacity) {
           throw new BadRequestException('Event capacity exceeded');
         }
       }
@@ -153,7 +154,7 @@ export class EventsService {
         data: {
           userId,
           eventId,
-          guestCount: createRsvpDto.guestCount,
+          guestCount,
         },
       });
 
@@ -204,6 +205,27 @@ export class EventsService {
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
         return inMemoryFallbackStore.getRsvps(eventId).map(rsvp => this.formatRsvpResponse({ ...rsvp, status: 'attending', notes: null }));
+      }
+      throw error;
+    }
+  }
+
+  async getRsvpStatus(eventId: string, userId: string): Promise<{ attending: boolean }> {
+    try {
+      const rsvp = await this.prisma.rSVP.findUnique({
+        where: {
+          userId_eventId: {
+            userId,
+            eventId,
+          },
+        },
+      });
+
+      return { attending: Boolean(rsvp) };
+    } catch (error) {
+      if (this.isDatabaseUnavailable(error)) {
+        const fallbackRsvp = inMemoryFallbackStore.getRsvps(eventId).find((rsvp) => rsvp.userId === userId);
+        return { attending: Boolean(fallbackRsvp) };
       }
       throw error;
     }

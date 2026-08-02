@@ -78,7 +78,7 @@ export default function HelpPage({ onBack, onToggleSidebar, isMobile, isTablet }
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize: 14, color: T1, background: PAGE_SURFACE }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', fontSize: 14, color: T1, background: PAGE_SURFACE }}>
       {/* HEADER */}
       <div style={{ padding: isMobileLocal ? '12px 16px' : '20px 24px', borderBottom: `1px solid rgba(124, 58, 237, 0.16)`, background: 'rgba(255,255,255,0.78)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 12px 40px rgba(91,33,182,0.06)' }}>
         <div style={{ width: 44, height: 44, borderRadius: 12, background: PF, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

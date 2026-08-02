@@ -67,6 +67,20 @@ function buildMeetingHref(platform, link) {
   return value;
 }
 
+function formatDateForGoogleCalendar(iso) {
+  if (!iso) return '';
+  return new Date(iso).toISOString().replace(/[-:]|\.\d{3}/g, '') + 'Z';
+}
+
+function buildGoogleCalendarLink(event) {
+  if (!event?.startIso || !event?.endIso) return null;
+  const title = encodeURIComponent(event.title || 'Tribes Capital event');
+  const details = encodeURIComponent(`${event.desc || ''}\n\n${event.meetingInstructions || ''}`.trim());
+  const location = encodeURIComponent(event.meetingLink || event.location || '');
+  const dates = `${formatDateForGoogleCalendar(event.startIso)}/${formatDateForGoogleCalendar(event.endIso)}`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}&dates=${dates}`;
+}
+
 /* ─── BREAKPOINT HOOK ─── */
 function useBreakpoint() {
   const getW = () => (typeof window !== 'undefined' ? window.innerWidth : 1280);
@@ -349,6 +363,12 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onRsvp, isMobile }) {
                 <I k="monitor" s={11} c={C.pu}/>Join
               </button>
             )}
+            {buildGoogleCalendarLink(ev) && (
+              <button onClick={(e)=>{e.stopPropagation(); window.open(buildGoogleCalendarLink(ev), '_blank', 'noopener,noreferrer');}}
+                style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.bg,color:C.t1,border:`1px solid ${C.bd}`}}>
+                <I k="cal" s={11} c={C.t2}/>Add to calendar
+              </button>
+            )}
             <button onClick={()=>onRsvp(ev.id)}
               style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:ev.rsvped?C.w:C.pu,color:ev.rsvped?C.gr:C.w,border:ev.rsvped?`1px solid ${C.gr}`:'none'}}>
               {ev.rsvped&&<I k="check" s={11} c={C.gr} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP'}
@@ -544,10 +564,18 @@ function DetailModal({ ev, onClose, onRsvp, isMobile }) {
         </div>
         <div style={{padding:'14px 20px 18px',borderTop:`1px solid ${C.bd}`,flexShrink:0}}>
           <div style={{fontSize:13,color:C.t2,marginBottom:10}}>{ev.spotsLeft} spots remaining</div>
-          <button onClick={()=>onRsvp(ev.id)}
-            style={{width:'100%',padding:'12px',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:ev.rsvped?C.pu:C.w,color:ev.rsvped?C.w:C.pu,border:ev.rsvped?'none':`1.5px solid ${C.pu}`}}>
-            {ev.rsvped&&<I k="check" s={16} c={C.w} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP now'}
-          </button>
+          <div style={{display:'grid',gap:10}}>
+            {buildGoogleCalendarLink(ev) && (
+              <button onClick={() => window.open(buildGoogleCalendarLink(ev), '_blank', 'noopener,noreferrer')}
+                style={{width:'100%',padding:'12px',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',background:C.bg,color:C.t1,border:`1px solid ${C.bd}`}}>
+                <I k="cal" s={16} c={C.t2}/> Add to Google Calendar
+              </button>
+            )}
+            <button onClick={()=>onRsvp(ev.id)}
+              style={{width:'100%',padding:'12px',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:ev.rsvped?C.pu:C.w,color:ev.rsvped?C.w:C.pu,border:ev.rsvped?'none':`1.5px solid ${C.pu}`}}>
+              {ev.rsvped&&<I k="check" s={16} c={C.w} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP now'}
+            </button>
+          </div>
         </div>
       </div>
     </>
@@ -659,6 +687,8 @@ function formatEventForUi(event) {
     calMonth: start.getMonth(),
     calYear: start.getFullYear(),
     sortTs: start.getTime(),
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
     spotsLeft,
     totalSpots: event.capacity || 0,
     rsvped: false,
@@ -699,14 +729,31 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
   useEffect(() => {
     let isMounted = true;
+    const authToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     const loadEvents = async () => {
       try {
         const response = await eventsAPI.list({ skip: 0, take: 20 });
         const mapped = (response.data || []).map(formatEventForUi);
+
         if (isMounted) {
           setEvents(mapped);
           setCalEvDays(mapped.map(event => ({ day: event.calDay, month: event.calMonth, year: event.calYear })));
           setEventsError(null);
+        }
+
+        if (authToken && mapped.length > 0) {
+          const statuses = await Promise.allSettled(mapped.map(async (event) => {
+            const resp = await eventsAPI.getRSVPStatus(event.id);
+            return { id: event.id, attending: Boolean(resp.data?.attending) };
+          }));
+
+          const statusMap = new Map(statuses
+            .filter(result => result.status === 'fulfilled')
+            .map(result => result.status === 'fulfilled' ? [result.value.id, result.value.attending] : []));
+
+          if (isMounted) {
+            setEvents((prev) => prev.map((event) => ({ ...event, rsvped: statusMap.get(event.id) || event.rsvped })));
+          }
         }
       } catch (error) {
         if (isMounted) {
@@ -734,7 +781,7 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
     try {
       if (!event.rsvped) {
-        await eventsAPI.rsvp(id);
+        await eventsAPI.rsvp(id, 1);
       } else {
         await eventsAPI.cancelRSVP(id);
       }
@@ -743,6 +790,7 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
       if (detailEv?.id === id) setDetail(p => ({ ...p, rsvped: !p.rsvped }));
       try {
         window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'events-updated', id } }));
+        window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'events-updated', id } }));
       } catch (e) {
         // ignore
       }
