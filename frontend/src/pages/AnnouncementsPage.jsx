@@ -6,7 +6,7 @@ const T1 = '#111827';
 const T2 = '#6B7280';
 const BG = '#F9FAFB';
 const PAGE_SURFACE = 'radial-gradient(circle at top left, rgba(124,58,237,0.16), transparent 34%), linear-gradient(135deg, #f8f5ff 0%, #f9fafb 100%)';
-const FEEDBACK_URL = 'https://docs.google.com/spreadsheets/d/1s37cO0WHPYuzddpyevxpPEj40hopIUdqR9ciJWDzLgY/edit?usp=sharing';
+const FEEDBACK_URL = 'https://forms.gle/taaDeFNGVxmp7gcn6';
 
 const roles = [
   {
