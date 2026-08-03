@@ -22,7 +22,7 @@ function useBreakpoint() {
 /* ═══════════════════════════════════════════════════════
    TOKENS — exact from design
 ═══════════════════════════════════════════════════════ */
-const PU='#5B21B6', PUF='#EDE9FE', PUL='#7C3AED', PUD='#4C1D95';
+const PU='#5B21B6', PUF='#F3F4F6', PUL='#7C3AED', PUD='#4C1D95';
 const GR='#16A34A', GRB='#DCFCE7', AM='#D97706', AMB='#FEF3C7';
 const TL='#0D9488', TLB='#CCFBF1';
 const T1='#111827', T2='#6B7280', T3='#9CA3AF';
@@ -1101,15 +1101,23 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:10,marginTop:14}}>
                   {prevLesson && (
-                    <button onClick={() => goToLesson(activeLessonIndex - 1)} style={{width:'100%',textAlign:'left',padding:'12px 14px',border:`1px solid ${BD}`,borderRadius:10,background:W,color:T1,cursor:'pointer',fontSize:12,fontWeight:600,display:'flex',alignItems:'center',gap:8}}>
-                      <span style={{fontSize:10,color:T3,textTransform:'uppercase',letterSpacing:0.7}}>Previous lesson</span>
-                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prevLesson.title}</span>
+                    <button onClick={() => goToLesson(activeLessonIndex - 1)} style={{width:'100%',minHeight:84,textAlign:'left',padding:'14px 16px',border:`1px solid ${BD}`,borderRadius:14,background:W,color:T1,cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',flexDirection:'column',gap:8,boxShadow:'0 8px 20px rgba(15,23,42,0.04)'}}>
+                      <span style={{fontSize:11,color:T3,textTransform:'uppercase',letterSpacing:0.8}}>Previous lesson</span>
+                      <span style={{fontSize:14,fontWeight:700,color:T1,lineHeight:1.35,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prevLesson.title}</span>
+                      <div style={{display:'flex',alignItems:'center',gap:8,color:T3,fontSize:12}}>
+                        <Ico name="arrow" size={14} color={T3} sw={1.5} style={{transform:'rotate(180deg)'}} />
+                        <span>Go back</span>
+                      </div>
                     </button>
                   )}
                   {nextLesson && (
-                    <button onClick={() => goToLesson(activeLessonIndex + 1)} style={{width:'100%',textAlign:'left',padding:'12px 14px',border:`1px solid ${BD}`,borderRadius:10,background:PUF,color:T1,cursor:'pointer',fontSize:12,fontWeight:600,display:'flex',alignItems:'center',gap:8}}>
-                      <span style={{fontSize:10,color:T3,textTransform:'uppercase',letterSpacing:0.7}}>Next lesson</span>
-                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nextLesson.title}</span>
+                    <button onClick={() => goToLesson(activeLessonIndex + 1)} style={{width:'100%',minHeight:84,textAlign:'left',padding:'14px 16px',border:'none',borderRadius:14,background:'linear-gradient(135deg, #7C3AED, #A855F7)',color:W,cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',flexDirection:'column',gap:8,boxShadow:'0 12px 30px rgba(124,58,237,0.18)'}}>
+                      <span style={{fontSize:11,color:'rgba(255,255,255,0.8)',textTransform:'uppercase',letterSpacing:0.8}}>Next lesson</span>
+                      <span style={{fontSize:14,fontWeight:700,lineHeight:1.35,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nextLesson.title}</span>
+                      <div style={{display:'flex',alignItems:'center',gap:8,color:'rgba(255,255,255,0.9)',fontSize:12}}>
+                        <span>Continue</span>
+                        <Ico name="arrow" size={14} color={W} sw={1.5} />
+                      </div>
                     </button>
                   )}
                 </div>

@@ -113,43 +113,6 @@ const STAGES = ['Sourcing', 'Screening', 'Due Diligence', 'Term Sheet', 'Closing
 const TYPES  = ['Mini-grid', 'Solar PV', 'Wind', 'Hydro', 'Battery Storage', 'C&I Solar'];
 const COUNTRIES = ['Nigeria', 'Ghana', 'Kenya', 'Togo', 'Senegal', 'Uganda', "Côte d'Ivoire"];
 
-/* Sample data — not rendered. To preview the populated kanban during design
-   review, change the projects useState below from [] to SEED. Safe to delete. */
-const SEED = [
-  { id:1, name:'Lomé Port Hybrid Microgrid', type:'Mini-grid', stage:'Sourcing', country:'Togo', city:'Lomé',
-    capacity:4.0, value:4500000, irr:17, sponsor:'Togo Energy Partners', progress:5,
-    tags:['Microgrid','Port'], owner:'RA', updated:'recently',
-    description:'Hybrid solar-plus-storage microgrid serving port operations and adjacent light industry.' },
-  { id:2, name:'Accra Industrial Rooftop', type:'C&I Solar', stage:'Screening', country:'Ghana', city:'Accra',
-    capacity:2.4, value:1900000, irr:19, sponsor:'Gold Coast Power', progress:22,
-    tags:['C&I','Rooftop'], owner:'KA', updated:'2 days ago',
-    description:'Rooftop solar portfolio across four manufacturing sites with a single anchor offtaker.' },
-  { id:3, name:'Ikeja Cluster Mini-grid', type:'Mini-grid', stage:'Screening', country:'Nigeria', city:'Lagos, Ikeja',
-    capacity:3.1, value:2800000, irr:18, sponsor:'Greenfield Energy', progress:30,
-    tags:['Microgrid','Urban'], owner:'NF', updated:'4 days ago',
-    description:'Cluster of urban mini-grids serving SME workshops currently running on diesel.' },
-  { id:4, name:'Rift Valley Wind Phase I', type:'Wind', stage:'Due Diligence', country:'Kenya', city:'Nakuru',
-    capacity:24.0, value:31000000, irr:15.4, sponsor:'Rift Renewables', progress:58,
-    tags:['Wind','Utility'], owner:'BO', updated:'1 day ago',
-    description:'First phase of a utility-scale wind facility in the Rift Valley corridor.' },
-  { id:5, name:'Kumasi Hospital Solar + BESS', type:'Battery Storage', stage:'Due Diligence', country:'Ghana', city:'Kumasi',
-    capacity:1.8, value:2200000, irr:20.1, sponsor:'Ashanti Health Trust', progress:64,
-    tags:['Healthcare','BESS'], owner:'RA', updated:'3 days ago',
-    description:'Solar and battery installation removing diesel dependency at a regional teaching hospital.' },
-  { id:6, name:'Dakar Cold Chain Solar', type:'Solar PV', stage:'Term Sheet', country:'Senegal', city:'Dakar',
-    capacity:5.5, value:6100000, irr:16.8, sponsor:'Sahel Infra', progress:78,
-    tags:['Cold chain','Agri'], owner:'KA', updated:'6 hours ago',
-    description:'Solar generation for cold storage facilities across the Dakar agricultural corridor.' },
-  { id:7, name:'Abidjan Grid Battery', type:'Battery Storage', stage:'Closing', country:"Côte d'Ivoire", city:'Abidjan',
-    capacity:20.0, value:18500000, irr:16.4, sponsor:'CIE Partners', progress:92,
-    tags:['Grid','BESS'], owner:'BO', updated:'yesterday',
-    description:'Grid-scale battery supporting frequency response and evening peak on the CIE network.' },
-  { id:8, name:'Jinja Run-of-River Rehab', type:'Hydro', stage:'Portfolio', country:'Uganda', city:'Jinja',
-    capacity:8.0, value:6200000, irr:19.1, sponsor:'Nile Hydro Co', progress:100,
-    tags:['Hydro','Operating'], owner:'NF', updated:'1 month ago',
-    description:'Rehabilitated run-of-river facility, commissioned and generating 36 GWh annually.' },
-];
-
 const money = n => {
   if (!n && n !== 0) return '—';
   if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + ' B';
@@ -480,25 +443,25 @@ function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
                 <Select value={f.country} onChange={v => set('country', v)} options={COUNTRIES} placeholder="Select country" />
               </Field>
               <Field label="City / Location">
-                <TextInput value={f.city} onChange={v => set('city', v)} placeholder="Lagos, Ikeja" />
+                <TextInput value={f.city} onChange={v => set('city', v)} placeholder="City, location" />
               </Field>
             </div>
 
             <div style={row}>
               <Field label="Capacity (MW)">
-                <TextInput type="number" value={f.capacity} onChange={v => set('capacity', v)} placeholder="4.0" />
+                <TextInput type="number" value={f.capacity} onChange={v => set('capacity', v)} placeholder="Capacity in MW" />
               </Field>
               <Field label="Deal value (USD)">
-                <TextInput type="number" value={f.value} onChange={v => set('value', v)} placeholder="4500000" />
+                <TextInput type="number" value={f.value} onChange={v => set('value', v)} placeholder="Deal value in USD" />
               </Field>
             </div>
 
             <div style={row}>
               <Field label="IRR target (%)">
-                <TextInput type="number" value={f.irr} onChange={v => set('irr', v)} placeholder="17" />
+                <TextInput type="number" value={f.irr} onChange={v => set('irr', v)} placeholder="IRR target" />
               </Field>
               <Field label="Lead sponsor">
-                <TextInput value={f.sponsor} onChange={v => set('sponsor', v)} placeholder="Greenfield Energy" />
+                <TextInput value={f.sponsor} onChange={v => set('sponsor', v)} placeholder="Sponsor name" />
               </Field>
             </div>
 

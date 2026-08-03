@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { eventsAPI } from '../api/endpoints';
+import { eventsAPI, notificationsAPI } from '../api/endpoints';
 import CorporateMemphisIllustration from '../components/CorporateMemphisIllustration';
 import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
 
 /* ─── DESIGN TOKENS ─── */
 const C = {
-  pu:'#5B21B6', puf:'#EDE9FE', pul:'#7C3AED', pud:'#4C1D95',
+  pu:'#5B21B6', puf:'#F3F4F6', pul:'#7C3AED', pud:'#4C1D95',
   gr:'#16A34A', grb:'#DCFCE7', am:'#D97706', amb:'#FEF3C7',
   tl:'#0D9488', tlb:'#CCFBF1', rd:'#DC2626', rdb:'#FEF2F2',
   t1:'#111827', t2:'#6B7280', t3:'#9CA3AF',
@@ -725,6 +725,7 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   const [detailEv,    setDetail]      = useState(null);
   const [viewAll,     setViewAll]     = useState(false);
   const [toast,       setToast]       = useState(null);
+  const [notifyLoading, setNotifyLoading] = useState(false);
   const [calEvDays,   setCalEvDays]   = useState([]);
 
   useEffect(() => {
@@ -775,6 +776,30 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
   const showToast = msg => setToast(msg);
 
+  const handleNotifyMe = async () => {
+    if (notifyLoading) return;
+    setNotifyLoading(true);
+
+    try {
+      await notificationsAPI.create({
+        type: 'event-notification',
+        title: 'Upcoming events alert enabled',
+        message: 'You will receive notifications for future events and office hours updates.',
+      });
+      try {
+        window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'notifications-updated' } }));
+      } catch (e) {
+        // ignore
+      }
+      showToast('You are now subscribed to event updates.');
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || 'Unable to subscribe to event updates right now.';
+      showToast(`Notification failed: ${message}`);
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
+
   const handleRsvp = async id => {
     const event = events.find(e => e.id === id);
     if (!event) return;
@@ -801,28 +826,43 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   };
 
   const handleSave = async form => {
-    const parts = form.date ? form.date.split('/') : [];
-    const startDate = parts[2] && parts[0] && parts[1]
-      ? new Date(`${parts[2]}-${parts[0]}-${parts[1]}T${form.time || '00:00'}`)
-      : new Date();
+    const title = String(form.title || '').trim();
+    const dateParts = form.date ? form.date.split('/') : [];
+    const time = String(form.time || '').trim();
+    const dateString = dateParts.length === 3
+      ? `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}T${time || '00:00'}`
+      : form.date || '';
+    const startDate = new Date(dateString);
     const endDate = new Date(startDate.getTime() + 90 * 60000);
     const registrationDeadline = form.registrationDeadline
       ? new Date(`${form.registrationDeadline}T00:00:00`)
       : null;
+
+    if (!title || !form.date || !time || Number.isNaN(startDate.getTime())) {
+      showToast('Please provide a valid title, date, and time for this event.');
+      return;
+    }
+
+    if (form.registrationDeadline && Number.isNaN(registrationDeadline.getTime())) {
+      showToast('Please provide a valid registration deadline date.');
+      return;
+    }
+
+    const meetingLinkValue = String(form.meetingLink || '').trim();
     const payload = {
-      title: form.title,
-      description: form.desc || '',
-      slug: (form.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      title,
+      description: String(form.desc || '').trim(),
+      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      location: form.location || (form.isVirtual ? 'Virtual' : 'TBD'),
-      isVirtual: Boolean(form.isVirtual || form.meetingPlatform || form.meetingLink),
-      capacity: parseInt(form.maxCap, 10) || 100,
-      eventType: form.type || 'Office hours',
-      meetingPlatform: inferMeetingPlatform(form.meetingPlatform, form.meetingLink),
-      meetingLink: form.meetingLink || '',
-      meetingHandle: form.meetingLink || '',
-      meetingInstructions: form.meetingInstructions || '',
+      location: String(form.location || '').trim() || (Boolean(form.isVirtual || form.meetingPlatform || meetingLinkValue) ? 'Virtual' : 'TBD'),
+      isVirtual: Boolean(form.isVirtual || form.meetingPlatform || meetingLinkValue),
+      capacity: parseInt(String(form.maxCap || ''), 10) || 100,
+      eventType: String(form.type || 'Office hours'),
+      meetingPlatform: inferMeetingPlatform(form.meetingPlatform, meetingLinkValue),
+      meetingLink: meetingLinkValue || undefined,
+      meetingHandle: meetingLinkValue || undefined,
+      meetingInstructions: String(form.meetingInstructions || '').trim() || undefined,
       registrationDeadline: registrationDeadline ? registrationDeadline.toISOString() : undefined,
     };
 
@@ -839,10 +879,17 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
         setEvents(p => [created, ...p]);
         setCalEvDays(p => [...p, { day: created.calDay, month: created.calMonth, year: created.calYear }]);
         setCreate(false);
+        try {
+          window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'events-updated', id: created.id } }));
+          window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'events-updated', id: created.id } }));
+        } catch (e) {
+          // ignore
+        }
         showToast('Event created successfully');
       }
     } catch (error) {
-      showToast('Unable to save this event right now.');
+      const message = error?.response?.data?.message || error?.message || 'Unable to save this event right now.';
+      showToast(`Unable to save event: ${message}`);
     }
   };
 
@@ -900,8 +947,9 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
               <p style={{fontSize:13,color:C.t2,margin:0,lineHeight:1.5}}>Live sessions, workshops, and replays from the Tribes Capital team and network</p>
             </div>
             <div style={{display:'flex',gap:8,flexShrink:0,width:isMobile?'100%':'auto'}}>
-              <button onClick={()=>showToast("You'll be notified about upcoming events!")}
-                style={{flex:isMobile?1:0,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:`1px solid ${C.bd}`,borderRadius:9,background:C.w,color:C.t1,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+              <button onClick={handleNotifyMe}
+                disabled={notifyLoading}
+                style={{flex:isMobile?1:0,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:`1px solid ${C.bd}`,borderRadius:9,background:C.w,color:C.t1,fontSize:13,fontWeight:500,cursor:notifyLoading?'not-allowed':'pointer',opacity:notifyLoading?0.6:1,fontFamily:'inherit',whiteSpace:'nowrap'}}>
                 <I k="bell" s={14} c={C.t2}/>Notify me
               </button>
               <button onClick={()=>setCreate(true)}

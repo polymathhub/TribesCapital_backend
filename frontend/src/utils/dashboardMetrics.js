@@ -45,9 +45,19 @@ function buildDashboardStats({
 }
 
 function parseHoursFromDuration(duration) {
-  if (typeof duration !== 'string') return 0;
-  const hourMatch = duration.match(/(\d+)\s*h/i);
-  const minuteMatch = duration.match(/(\d+)\s*m/i);
+  if (typeof duration === 'number' && Number.isFinite(duration)) {
+    // duration is stored in minutes (e.g. 60 => 1h)
+    return duration / 60;
+  }
+  if (!duration || typeof duration !== 'string') return 0;
+
+  const normalized = duration.trim();
+  if (/^\d+$/.test(normalized)) {
+    return Number(normalized) / 60;
+  }
+
+  const hourMatch = normalized.match(/(\d+)\s*h/i);
+  const minuteMatch = normalized.match(/(\d+)\s*m/i);
   const hours = hourMatch ? Number(hourMatch[1]) : 0;
   const minutes = minuteMatch ? Number(minuteMatch[1]) : 0;
   return hours + (minutes / 60);

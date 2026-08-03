@@ -76,6 +76,7 @@ export const documentsAPI = {
 
 export const notificationsAPI = {
   list: () => apiClient.get('/notifications'),
+  create: (data) => apiClient.post('/notifications', data),
   markAsRead: (id) => apiClient.patch(`/notifications/${id}/read`),
   markAllAsRead: () => apiClient.patch('/notifications/mark-all-read'),
 };

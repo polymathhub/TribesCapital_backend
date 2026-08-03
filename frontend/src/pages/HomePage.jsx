@@ -66,6 +66,7 @@ const STEPS = [
 /* ─── SMALL ICON SVGs ────────────────────────────────── */
 const TOUR_VISITS_KEY = 'tribescapital_welcome_tour_visits';
 const COURSE_PROGRESS_STORAGE_PREFIX = 'tribes-course-progress';
+const ANNOUNCEMENT_SEEN_KEY = 'tribes-community-announcement-seen';
 const COMMUNITY_ANNOUNCEMENT = {
   id: 'community-announcement',
   title: 'We are building with the community',
@@ -625,9 +626,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       setNotifications(displayNotifications.length > 0 ? displayNotifications : fallbackEventNotifications);
 
       const nextAnnouncement = displayNotifications.find((item) => (!item.read) && (item.kind === 'announcement' || item.title?.toLowerCase().includes('announcement') || item.title?.toLowerCase().includes('diligence') || item.detail?.toLowerCase().includes('diligence')));
-      if (nextAnnouncement && !isNotificationsOpen) {
+      const hasSeenAnnouncement = typeof window !== 'undefined' && window.sessionStorage.getItem(ANNOUNCEMENT_SEEN_KEY);
+      if (nextAnnouncement && !isNotificationsOpen && !hasSeenAnnouncement) {
         setAnnouncementPopup(nextAnnouncement);
         setShowAnnouncementPopup(true);
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(ANNOUNCEMENT_SEEN_KEY, 'true');
+        }
       }
     } catch {
       const seededAnnouncement = {
@@ -646,9 +651,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
         read: false,
       }))]);
-      if (!isNotificationsOpen) {
+      const hasSeenAnnouncement = typeof window !== 'undefined' && window.sessionStorage.getItem(ANNOUNCEMENT_SEEN_KEY);
+      if (!isNotificationsOpen && !hasSeenAnnouncement) {
         setAnnouncementPopup({ ...seededAnnouncement });
         setShowAnnouncementPopup(true);
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(ANNOUNCEMENT_SEEN_KEY, 'true');
+        }
       }
     } finally {
       setNotificationsLoading(false);
