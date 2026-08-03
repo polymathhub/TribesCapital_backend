@@ -69,7 +69,7 @@ export default function HelpPage({ onBack, onToggleSidebar, isMobile, isTablet }
   ];
 
   const contactMethods = [
-    { icon: 'mail', label: 'Email Support', value: 'info@tribescapital', action: 'mailto:hello@tribescapital' },
+    { icon: 'mail', label: 'Email Support', value: 'hello@tribes.capital', action: 'mailto:hello@tribes.capital' },
     { icon: 'book', label: 'Documentation', value: 'Knowledge Base', action: '#' },
   ];
 

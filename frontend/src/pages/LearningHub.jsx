@@ -665,6 +665,17 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   const currentLessonNumber = Math.min(activeLessonIndex + 1, lessonCount);
   const selectedVideoId = activeLesson?.videoId || course?.videoId || 'wMQDsjS9WC4';
   const isCompleted = progress >= 100;
+  const prevLesson = activeLessonIndex > 0 ? lessonItems[activeLessonIndex - 1] : null;
+  const nextLesson = activeLessonIndex < lessonCount - 1 ? lessonItems[activeLessonIndex + 1] : null;
+
+  const goToLesson = (index) => {
+    if (index < 0 || index >= lessonItems.length) return;
+    setActiveLessonIndex(index);
+    setLastLessonIndex(index);
+    setLastLessonId(lessonItems[index]?.id || null);
+    setVideoReady(false);
+    setIsVideoVisible(true);
+  };
 
   const quizAllAnswered = QUICK_QUIZ.every((question) => quizAnswers[question.id] !== undefined);
   const quizScore = QUICK_QUIZ.reduce((total, question) => total + (quizAnswers[question.id] === question.correct ? 1 : 0), 0);
@@ -749,18 +760,8 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
       const response = await coursesAPI.getProgress(course.id);
       const serverProgress = Number(response?.data?.progress ?? fallbackProgress);
       persistCourseProgress(course.id, serverProgress, nextCompletedLessonIds, lastLessonId, lastLessonIndex, Date.now());
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('tribes:course-progress-update', {
-          detail: { courseId: course.id, progress: serverProgress, status: response?.data?.status || 'inProgress' },
-        }));
-      }
       return serverProgress;
     } catch {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('tribes:course-progress-update', {
-          detail: { courseId: course.id, progress: fallbackProgress, status: fallbackProgress >= 100 ? 'completed' : 'inProgress' },
-        }));
-      }
       return fallbackProgress;
     }
   }
@@ -1097,6 +1098,20 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
                 </div>
                 <div style={{fontSize:13,color:T2,lineHeight:1.6}}>
                   {loadingLessons ? 'Loading course lessons…' : `${activeLesson?.title || 'Lesson'} · ${activeLesson?.duration || 'Self-paced'}${completedLessonIds.includes(activeLesson?.id) ? ' · completed' : ''}`}
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:10,marginTop:14}}>
+                  {prevLesson && (
+                    <button onClick={() => goToLesson(activeLessonIndex - 1)} style={{width:'100%',textAlign:'left',padding:'12px 14px',border:`1px solid ${BD}`,borderRadius:10,background:W,color:T1,cursor:'pointer',fontSize:12,fontWeight:600,display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{fontSize:10,color:T3,textTransform:'uppercase',letterSpacing:0.7}}>Previous lesson</span>
+                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prevLesson.title}</span>
+                    </button>
+                  )}
+                  {nextLesson && (
+                    <button onClick={() => goToLesson(activeLessonIndex + 1)} style={{width:'100%',textAlign:'left',padding:'12px 14px',border:`1px solid ${BD}`,borderRadius:10,background:PUF,color:T1,cursor:'pointer',fontSize:12,fontWeight:600,display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{fontSize:10,color:T3,textTransform:'uppercase',letterSpacing:0.7}}>Next lesson</span>
+                      <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nextLesson.title}</span>
+                    </button>
+                  )}
                 </div>
               </div>
               </div>

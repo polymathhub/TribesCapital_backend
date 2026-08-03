@@ -30,17 +30,34 @@ export function readStoredCourseProgress(courseId) {
 export function persistCourseProgress(courseId, progress, completedLessonIds, lastLessonId = null, lastLessonIndex = 0, lastAccessedAt = Date.now()) {
   if (typeof window === 'undefined' || !courseId) return;
 
+  const payload = {
+    progress: Number(progress || 0),
+    completedLessonIds: Array.isArray(completedLessonIds) ? completedLessonIds : [],
+    lastLessonId: lastLessonId || null,
+    lastLessonIndex: Number.isInteger(lastLessonIndex) ? lastLessonIndex : 0,
+    lastAccessedAt: lastAccessedAt || Date.now(),
+  };
+
   try {
     window.localStorage.setItem(
       `${COURSE_PROGRESS_STORAGE_PREFIX}:${courseId}`,
-      JSON.stringify({
-        progress: Number(progress || 0),
-        completedLessonIds: Array.isArray(completedLessonIds) ? completedLessonIds : [],
-        lastLessonId: lastLessonId || null,
-        lastLessonIndex: Number.isInteger(lastLessonIndex) ? lastLessonIndex : 0,
-        lastAccessedAt: lastAccessedAt || Date.now(),
-      }),
+      JSON.stringify(payload),
     );
+    try {
+      window.dispatchEvent(new CustomEvent('tribes:course-progress-update', {
+        detail: {
+          type: 'course-progress',
+          courseId,
+          progress: payload.progress,
+          completedLessonIds: payload.completedLessonIds,
+          lastLessonId: payload.lastLessonId,
+          lastLessonIndex: payload.lastLessonIndex,
+          lastAccessedAt: payload.lastAccessedAt,
+        },
+      }));
+    } catch {
+      // ignore event dispatch failure
+    }
   } catch {
     // ignore storage failures
   }

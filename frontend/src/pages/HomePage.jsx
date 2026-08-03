@@ -679,6 +679,21 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   }, [loadNotifications]);
 
   useEffect(() => {
+    if (!isNotificationsOpen || notificationsLoading) return;
+
+    const markViewedNotifications = async () => {
+      try {
+        await notificationsAPI.markAllAsRead();
+      } catch {
+        // Silently ignore backend failure, local state will still update.
+      }
+      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+    };
+
+    markViewedNotifications();
+  }, [isNotificationsOpen, notificationsLoading]);
+
+  useEffect(() => {
     if (!showAnnouncementPopup) return;
     const timer = window.setTimeout(() => {
       setShowAnnouncementPopup(false);
