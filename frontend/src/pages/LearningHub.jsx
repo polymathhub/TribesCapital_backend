@@ -1284,7 +1284,6 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const savedCount = Object.keys(savedCourseIds || {}).length;
-  const [isPathDetailsOpen, setIsPathDetailsOpen] = useState(false);
 
   const TABS    = [{id:'all',label:'All courses'},{id:'inProgress',label:'In progress'},{id:'completed',label:'Completed'},{id:'saved',label:`Saved (${savedCount})`}];
   const FILTERS = [{id:'thisMonth',label:'This month'},{id:'energyFinance',label:'Energy Finance'},{id:'solarStorage',label:'Solar & Storage'},{id:'riskFX',label:'Risk & FX'},{id:'policyESG',label:'Policy & ESG'}];
@@ -1468,6 +1467,79 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
   });
 
   const resumeCourse = courses.find(c => c.status === 'inProgress');
+  const completedCount = courses.filter(c => c.status === 'completed').length;
+  const nextRecommendedCourse = [...courses].sort((a, b) => {
+    const aScore = a.status === 'inProgress' ? 2 : a.status === 'completed' ? 0 : 1;
+    const bScore = b.status === 'inProgress' ? 2 : b.status === 'completed' ? 0 : 1;
+    return bScore - aScore || (Number(b.progress || 0) - Number(a.progress || 0));
+  })[0];
+
+  const actionCards = [
+    {
+      key: 'resume',
+      title: resumeCourse ? 'Resume your latest lesson' : 'Start a course',
+      subtitle: resumeCourse
+        ? `${resumeCourse.title} • ${resumeCourse.progress}% complete`
+        : 'Pick from the latest curated learning tracks.',
+      badge: resumeCourse ? 'In progress' : 'Ready to begin',
+      accent: '#5B21B6',
+      onClick: () => {
+        if (resumeCourse) {
+          onPlay(resumeCourse);
+        } else {
+          setActiveTab('all');
+          setActiveFilter('thisMonth');
+        }
+      },
+    },
+    {
+      key: 'completed',
+      title: `${completedCount} completed course${completedCount === 1 ? '' : 's'}`,
+      subtitle: completedCount > 0 ? 'Review what you have already mastered.' : 'Complete your first course to build momentum.',
+      badge: completedCount > 0 ? 'Track record' : 'First steps',
+      accent: '#16A34A',
+      onClick: () => {
+        setActiveTab('completed');
+        setActiveFilter('thisMonth');
+      },
+    },
+    {
+      key: 'saved',
+      title: `${savedCount} saved course${savedCount === 1 ? '' : 's'}`,
+      subtitle: savedCount > 0 ? 'Jump back into content you bookmarked.' : 'Bookmark courses to revisit later.',
+      badge: savedCount > 0 ? 'Saved for later' : 'Keep a list',
+      accent: '#0D9488',
+      onClick: () => {
+        setActiveTab('saved');
+        setActiveFilter('thisMonth');
+      },
+    },
+    {
+      key: 'next',
+      title: nextRecommendedCourse ? `Next up: ${nextRecommendedCourse.title}` : 'Explore the full library',
+      subtitle: nextRecommendedCourse ? 'Continue with the most relevant course in your path.' : 'Browse curated energy infrastructure content.',
+      badge: nextRecommendedCourse ? 'Recommended' : 'Discover',
+      accent: '#D97706',
+      onClick: () => {
+        if (nextRecommendedCourse) {
+          onPlay(nextRecommendedCourse);
+        } else {
+          setActiveTab('all');
+          setActiveFilter('thisMonth');
+        }
+      },
+    },
+  ];
+
+  const [activeActionIndex, setActiveActionIndex] = useState(0);
+
+  useEffect(() => {
+    if (!actionCards.length) return;
+    const timer = window.setInterval(() => {
+      setActiveActionIndex((prev) => (prev + 1) % actionCards.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [actionCards.length]);
 
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
@@ -1544,19 +1616,46 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
           </div>
         )}
 
-        {/* Next best actions */}
-        <h2 style={{fontSize:isMobile?14:16,fontWeight:600,color:T1,margin:'0 0 12px'}}>Next best actions</h2>
-        <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?10:16,marginBottom:24}}>
-          {buildLearningHubStats(courses).map((s, index) => {
-            const palette = index === 0 ? { bc: PU, bb: PUF } : index === 1 ? { bc: GR, bb: GRB } : index === 2 ? { bc: TL, bb: TLB } : { bc: AM, bb: AMB };
-            return (
-              <div key={s.label} style={{background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:12,padding:'14px 18px',backdropFilter:'blur(16px)',boxShadow:'0 10px 24px rgba(15,23,42,0.04)'}}>
-                <div style={{fontSize:12,color:T2,marginBottom:6}}>{s.label}</div>
-                <div style={{fontSize:28,fontWeight:700,color:T1,marginBottom:8,letterSpacing:-.8}}>{s.value}</div>
-                <span style={{background:palette.bb,color:palette.bc,fontSize:11,fontWeight:500,padding:'2px 10px',borderRadius:20}}>{s.badge}</span>
-              </div>
-            );
-          })}
+        <div style={{marginBottom:18, position:'relative'}}>
+          <div style={{position:'relative', overflow:'hidden', borderRadius:16, border:'1px solid rgba(91,33,182,0.16)', background:'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.92) 100%)', boxShadow:'0 14px 34px rgba(15,23,42,0.05)', backdropFilter:'blur(16px)'}}>
+            <div style={{display:'flex', transition:'transform 0.45s ease', transform:`translateX(-${activeActionIndex * 100}%)`}}>
+              {actionCards.map((card) => (
+                <button
+                  key={card.key}
+                  onClick={card.onClick}
+                  style={{
+                    minWidth:'100%',
+                    textAlign:'left',
+                    border:'none',
+                    background:'transparent',
+                    padding:'18px 20px',
+                    cursor:'pointer',
+                    display:'flex',
+                    flexDirection:'column',
+                    gap:8,
+                  }}
+                >
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+                    <span style={{fontSize:11,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:card.accent}}>{card.badge}</span>
+                    <span style={{width:8,height:8,borderRadius:'50%',background:card.accent}} />
+                  </div>
+                  <div style={{fontSize:15,fontWeight:700,color:T1,lineHeight:1.3}}>{card.title}</div>
+                  <div style={{fontSize:12.5,color:T2,lineHeight:1.5}}>{card.subtitle}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:10}}>
+            {actionCards.map((card, index) => (
+              <button
+                key={`${card.key}-dot`}
+                type="button"
+                onClick={() => setActiveActionIndex(index)}
+                aria-label={`Show ${card.key} card`}
+                style={{width:8,height:8,borderRadius:'50%',border:'none',background:index === activeActionIndex ? PU : 'rgba(91,33,182,0.25)',cursor:'pointer',padding:0}}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Learning path banner */}
@@ -1578,29 +1677,6 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
                 );
               })}
             </div>
-          </div>
-          <div style={{position:'relative',flexShrink:0,marginTop:isMobile?8:0}}>
-            <button
-              onClick={() => setIsPathDetailsOpen((prev) => !prev)}
-              style={{background:'rgba(255,255,255,.15)',color:W,border:'1.5px solid rgba(255,255,255,.4)',borderRadius:8,padding:'8px 14px',fontSize:13,fontWeight:500,cursor:'pointer',whiteSpace:'nowrap'}}>
-              View full path
-            </button>
-            {isPathDetailsOpen && (
-              <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:260,background:'rgba(255,255,255,0.95)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:12,padding:'12px 12px 10px',boxShadow:'0 16px 36px rgba(15,23,42,0.16)',backdropFilter:'blur(14px)',zIndex:20}}>
-                <div style={{fontSize:12,fontWeight:700,color:PU,marginBottom:8,letterSpacing:0.3,textTransform:'uppercase'}}>Learning path preview</div>
-                <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                  {PATH_STEPS.map((step, index) => (
-                    <div key={step.label} style={{display:'flex',alignItems:'flex-start',gap:8,padding:'8px 9px',borderRadius:10,background:index === 0 ? 'rgba(91,33,182,0.06)' : 'rgba(17,24,39,0.03)'}}>
-                      <div style={{width:20,height:20,borderRadius:'50%',background:index === 0 ? PU : 'rgba(17,24,39,0.12)',color:index === 0 ? W : T1,fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>{step.n}</div>
-                      <div>
-                        <div style={{fontSize:12,fontWeight:600,color:T1,marginBottom:1}}>{step.label}</div>
-                        <div style={{fontSize:11,color:T2}}>{index === 0 ? 'Start with core concepts' : index === 1 ? 'Build practical context' : 'Apply your understanding'}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 

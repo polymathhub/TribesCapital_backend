@@ -11,7 +11,7 @@ import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
 import wavingHandIllustration from '../assets/illustrations/waving-hand-skin-4-svgrepo-com.svg';
 import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
 import { formatRelativeTime } from '../utils/learningHubProgress';
-import { buildDashboardStats, buildLearningHubStats } from '../utils/dashboardMetrics';
+import { buildDashboardStats } from '../utils/dashboardMetrics';
 
 /* ─── DESIGN TOKENS ─── */
 const P   = '#5B21B6';
@@ -311,6 +311,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [memberCount, setMemberCount] = useState(0);
   const [dashboardCourses, setDashboardCourses] = useState([]);
   const [dashboardEvents, setDashboardEvents] = useState([]);
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [sharedPipelineProjects, setSharedPipelineProjects] = useState([]);
   const [sharedDiligenceDocs, setSharedDiligenceDocs] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -318,6 +319,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeVideo, setActiveVideo] = useState(null);
+  const [recommendedCourse, setRecommendedCourse] = useState(null);
 
   const isOverlay = isMobile || isTablet;
   const displayName = user?.name || user?.firstName || user?.email?.split('@')[0] || 'there';
@@ -511,6 +513,36 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const isMountedRef = React.useRef(true);
 
+  const applyCourseProgressUpdate = React.useCallback((detail) => {
+    const courseId = detail?.courseId;
+    const progressValue = Number(detail?.progress ?? 0);
+    if (!courseId) return;
+
+    setDashboardCourses((prev) => prev.map((course) => {
+      if (String(course.id) !== String(courseId)) return course;
+      const nextStatus = progressValue >= 100 ? 'completed' : progressValue > 0 ? 'inProgress' : 'notStarted';
+      return {
+        ...course,
+        progress: progressValue,
+        status: nextStatus,
+        lastAccessedAt: detail?.lastAccessedAt || course.lastAccessedAt,
+        lastLessonId: detail?.lastLessonId || course.lastLessonId,
+        lastLessonIndex: detail?.lastLessonIndex ?? course.lastLessonIndex,
+      };
+    }));
+
+    setEnrolledCourses((prev) => prev.map((enrollment) => {
+      const enrollmentCourseId = enrollment?.courseId || enrollment?.course?.id;
+      if (String(enrollmentCourseId) !== String(courseId)) return enrollment;
+      const nextStatus = progressValue >= 100 ? 'completed' : progressValue > 0 ? 'inProgress' : 'notStarted';
+      return {
+        ...enrollment,
+        progress: progressValue,
+        status: nextStatus,
+      };
+    }));
+  }, []);
+
   const loadDashboardData = React.useCallback(async () => {
     try {
       const [membersRes, coursesRes, eventsRes, enrolledRes] = await Promise.all([
@@ -523,6 +555,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       if (!isMountedRef.current) return;
 
       const enrolledMap = new Map((Array.isArray(enrolledRes?.data) ? enrolledRes.data : []).map((enrollment) => [String(enrollment.courseId || enrollment.course?.id || ''), enrollment]));
+      const enrolledCoursesList = Array.isArray(enrolledRes?.data) ? enrolledRes.data : [];
       const normalizedCourses = (Array.isArray(coursesRes?.data) ? coursesRes.data : []).map((course) => {
         const enrollment = enrolledMap.get(String(course.id));
         const storedProgress = readStoredCourseProgress(course.id);
@@ -538,6 +571,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           videoId: course.videoId || 'wMQDsjS9WC4',
           thumbnail: getVisualThumbnail(course.videoId || 'wMQDsjS9WC4', course.thumbnail),
           progress,
+          enrolled: Boolean(enrollment),
           status: progress >= 100 ? 'completed' : progress > 0 ? 'inProgress' : 'notStarted',
           lastAccessedAt: storedProgress.lastAccessedAt || null,
           lastLessonId: storedProgress.lastLessonId || null,
@@ -545,9 +579,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         };
       });
 
-      setMemberCount(Array.isArray(membersRes?.data) ? membersRes.data.length : 0);
+      setMemberCount(Number(membersRes?.total ?? (Array.isArray(membersRes?.data) ? membersRes.data.length : 0)));
       setDashboardCourses(normalizedCourses);
       setDashboardEvents(Array.isArray(eventsRes?.data) ? eventsRes.data : []);
+      setEnrolledCourses(enrolledCoursesList);
     } catch (error) {
       if (isMountedRef.current) {
         setMemberCount(0);
@@ -566,6 +601,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
     // react to cross-component custom events
     const onDataUpdate = (event) => {
+      if (event?.detail?.type === 'course-progress') {
+        applyCourseProgressUpdate(event.detail);
+        return;
+      }
       if (event?.detail?.type && !['saved-courses', 'course-progress'].includes(event.detail.type)) {
         return;
       }
@@ -593,7 +632,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       window.removeEventListener('tribes:course-progress-update', onDataUpdate);
       window.removeEventListener('storage', onStorage);
     };
-  }, [loadDashboardData]);
+  }, [applyCourseProgressUpdate, loadDashboardData]);
 
   useEffect(() => {
     if (!isNotificationsOpen) return;
@@ -825,17 +864,15 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const greeting = getTimeGreeting();
 
-  const inProgressCourseCount = dashboardCourses.filter((course) => course.progress > 0 && course.progress < 100).length;
-  const completedCourseCount = dashboardCourses.filter((course) => course.progress >= 100).length;
-
   const heroChips = useMemo(() => {
-    const learningStats = buildLearningHubStats(dashboardCourses);
+    const enrolledCount = enrolledCourses.length;
+    const completedCount = enrolledCourses.filter((enrollment) => String(enrollment?.status || '').toLowerCase() === 'completed' || Number(enrollment?.progress || 0) >= 100).length;
     return [
-      `${learningStats[0].value} ${learningStats[0].label.toLowerCase()}`,
-      `${learningStats[1].value} ${learningStats[1].label.toLowerCase()}`,
+      `${enrolledCount} ${enrolledCount === 1 ? 'course enrolled' : 'courses enrolled'}`,
+      `${completedCount} completed`,
       `${memberCount || 0} community ${memberCount === 1 ? 'member' : 'members'}`,
     ];
-  }, [dashboardCourses, memberCount]);
+  }, [enrolledCourses, memberCount]);
 
   const courseVideos = dashboardCourses
     .filter((course) => course.videoId)
@@ -880,6 +917,38 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     return null;
   }, [dashboardCourses]);
 
+  useEffect(() => {
+    if (!dashboardCourses.length) {
+      setRecommendedCourse(null);
+      return;
+    }
+
+    const userIdentity = user?.id || user?.email || user?.name || 'guest';
+    const storageKey = `tribes-home-recommended-course:${String(userIdentity)}`;
+
+    let storedSelection = null;
+    try {
+      const storedValue = window.localStorage.getItem(storageKey);
+      if (storedValue) {
+        storedSelection = JSON.parse(storedValue);
+      }
+    } catch {
+      storedSelection = null;
+    }
+
+    const availableCourses = dashboardCourses.filter((course) => course?.id && (!storedSelection?.id || String(course.id) !== String(storedSelection.id)));
+    const candidatePool = availableCourses.length > 0 ? availableCourses : dashboardCourses;
+    const nextCourse = candidatePool[Math.floor(Math.random() * candidatePool.length)];
+
+    setRecommendedCourse(nextCourse || null);
+
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify({ id: nextCourse?.id, title: nextCourse?.title, selectedAt: Date.now() }));
+    } catch {
+      // ignore storage failures
+    }
+  }, [dashboardCourses, user?.id, user?.email, user?.name]);
+
   const resumeCardSubtitle = currentCourse
     ? `${currentCourse.category || 'Course'} • ${currentCourse.duration || 'Self-paced'} • ${currentCourse.lessons || 0} lessons`
     : 'Open the learning hub to explore your latest content.';
@@ -894,18 +963,18 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   }, [dashboardCourses]);
   const upcomingEvents = dashboardEvents.slice(0, 3);
   const recommendedNextStep = useMemo(() => {
-    if (currentCourse) {
-      const course = currentCourse;
+    if (recommendedCourse) {
+      const course = recommendedCourse;
       const isCompleted = (course.progress || 0) >= 100;
       return {
         type: 'course',
         title: course.title || 'Continue learning',
         subtitle: course.description || 'Pick up the lesson you left off and keep the momentum going.',
         detail: `${course.progress || 0}% complete • ${course.duration || 'Self-paced'} • ${course.lessons || 0} lessons`,
-        metaLine: course.lastAccessedAt ? `Last active ${formatRelativeTime(course.lastAccessedAt)}` : 'Resume from your saved progress',
-        actionLabel: isCompleted ? 'Review course' : 'Resume course',
+        metaLine: course.lastAccessedAt ? `Last active ${formatRelativeTime(course.lastAccessedAt)}` : 'A fresh recommendation for your next session',
+        actionLabel: isCompleted ? 'Review course' : 'Explore course',
         actionTarget: 'learning',
-        pillLabel: isCompleted ? 'Completed' : 'In progress',
+        pillLabel: isCompleted ? 'Completed' : 'Recommended',
       };
     }
     if (dashboardEvents.length > 0) {
@@ -1246,17 +1315,15 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             marginBottom:24, display:'flex', flexDirection:isMobile?'column':'row',
             alignItems:isMobile?'flex-start':'center', gap:isMobile?10:16,
           }}>
-            <div style={{ width:44, minWidth:44, height:52, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ width:36, height:36, borderRadius:8, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background:P }}>
-                <img
-                  src="https://file+.vscode-resource.vscode-cdn.net/private/var/folders/gs/g90fghjd68l5vc9q18hnvs300000gn/T/boy-student-sitting-stack-books-with-laptop-flat-icon-illustration_1284-64037.avif?version%3D1785775766420"
-                  alt="Your next course"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-                />
-                <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" style={{ position:'absolute' }}>
-                  <rect x="0" y="0" width="24" height="24" rx="4" fill={P} />
-                  <path d="M8 10h8v6H8z" fill="#fff" />
+            <div style={{ width:54, minWidth:54, height:54, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <div style={{ width:54, height:54, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', boxShadow:'0 12px 28px rgba(91, 33, 182, 0.2)' }}>
+                <svg viewBox="0 0 64 64" width={40} height={40} aria-hidden="true" style={{ display:'block' }}>
+                  <rect x="10" y="10" width="44" height="44" rx="12" fill="rgba(255,255,255,0.18)" />
+                  <path d="M24 18h16" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+                  <path d="M24 30h16" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+                  <path d="M24 42h10" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+                  <path d="M44 42l6 6" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+                  <path d="M50 42l-6 6" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
                 </svg>
               </div>
             </div>
