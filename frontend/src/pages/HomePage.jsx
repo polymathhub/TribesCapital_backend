@@ -362,6 +362,31 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   };
   const profileAvatar = getProfileAvatar(user);
 
+  // editable avatar (data URL persisted to localStorage)
+  const [avatarDataUrl, setAvatarDataUrl] = useState(null);
+  const avatarInputRef = useRef(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem('tribes-avatar');
+      if (stored) setAvatarDataUrl(stored);
+    } catch {
+      // ignore
+    }
+  }, []);
+  const handleAvatarClick = () => { avatarInputRef.current?.click(); };
+  const handleAvatarChange = (e) => {
+    const f = e?.target?.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = reader.result;
+      setAvatarDataUrl(url);
+      try { window.localStorage.setItem('tribes-avatar', url); } catch {}
+    };
+    reader.readAsDataURL(f);
+  };
+
   const achievementImages = [
     'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80',
     'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1200&q=80',
@@ -1078,13 +1103,25 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </div>
             </button>
             {isNotificationsOpen && (
-              <div style={{ position:'fixed', top:isMobile ? 58 : 62, right:isMobile ? 12 : 22, width:340, maxHeight:'calc(100vh - 84px)', overflowY:'auto', background:'linear-gradient(180deg, #FFFFFF 0%, #FBF8FF 100%)', border:`1px solid rgba(103,0,166,0.14)`, borderRadius:18, boxShadow:'0 22px 60px rgba(17,24,39,0.16), inset 0 1px 0 rgba(255,255,255,0.9)', overflow:'hidden', zIndex:1000 }}>
+              <div style={{ position:'absolute', top:'calc(100% + 8px)', right:0, width:320, maxHeight:'min(360px, calc(100vh - 160px))', overflowY:'auto', background:'linear-gradient(180deg, #FFFFFF 0%, #FBF8FF 100%)', border:`1px solid rgba(103,0,166,0.08)`, borderRadius:12, boxShadow:'0 8px 24px rgba(17,24,39,0.08)', overflow:'hidden', zIndex:200 }}>
                 <div style={{ padding:'14px 14px 12px', borderBottom:`1px solid rgba(103,0,166,0.10)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'linear-gradient(90deg, rgba(103,0,166,0.06) 0%, rgba(255,255,255,0) 100%)' }}>
                   <div>
                     <div style={{ fontSize:12, fontWeight:800, color:T1, letterSpacing:'0.08em', textTransform:'uppercase' }}>Notifications</div>
                     <div style={{ fontSize:11.5, color:T3, marginTop:2 }}>{notificationsLoading ? 'Loading…' : `${notifications.filter((item) => !item.read).length} unread`}</div>
                   </div>
-                  <button type="button" onClick={() => { setIsNotificationsOpen(true); void notificationsAPI.markAllAsRead().catch(() => {}); setNotifications((prev) => prev.map((item) => ({ ...item, read: true }))); }} style={{ background:'rgba(103,0,166,0.08)', border:`1px solid rgba(103,0,166,0.12)`, color:P, fontWeight:700, fontSize:11, cursor:'pointer', borderRadius:999, padding:'7px 10px' }}>Mark all read</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNotificationsOpen(true);
+                      // call API but don't block UI
+                      void notificationsAPI.markAllAsRead().catch(() => {});
+                      // clear the notifications list locally
+                      setNotifications([]);
+                    }}
+                    style={{ background:'rgba(103,0,166,0.08)', border:`1px solid rgba(103,0,166,0.12)`, color:P, fontWeight:700, fontSize:11, cursor:'pointer', borderRadius:999, padding:'7px 10px' }}
+                  >
+                    Mark all read
+                  </button>
                 </div>
                 <div style={{ padding:'8px 8px 10px' }}>
                   {notificationsLoading ? (
@@ -1102,8 +1139,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </div>
             )}
           </div>
-          <div title={displayName} className="topbar-avatar" style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'1.5px solid rgba(255,255,255,0.95)', boxShadow:'0 10px 24px rgba(17,24,39,0.16)', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', padding:0, transition:'transform .2s ease, box-shadow .2s ease' }}>
-            <img src={profilePlaceholderImage} alt={`${displayName} avatar`} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+          <div title={displayName} className="topbar-avatar" onClick={handleAvatarClick} style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'1.5px solid rgba(255,255,255,0.95)', boxShadow:'0 10px 24px rgba(17,24,39,0.16)', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', padding:0, transition:'transform .2s ease, box-shadow .2s ease', cursor:'pointer' }}>
+            <img src={avatarDataUrl || profilePlaceholderImage} alt={`${displayName} avatar`} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+            <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display:'none' }} />
           </div>
         </div>
       </div>
@@ -1208,9 +1246,19 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             marginBottom:24, display:'flex', flexDirection:isMobile?'column':'row',
             alignItems:isMobile?'flex-start':'center', gap:isMobile?10:16,
           }}>
-            <div style={{ width:44, minWidth:44, height:52, background:PF, borderRadius:8,
-              display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <Icon name="doc" size={20} color={P}/>
+            <div style={{ width:44, minWidth:44, height:52, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <div style={{ width:36, height:36, borderRadius:8, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background:P }}>
+                <img
+                  src="https://file+.vscode-resource.vscode-cdn.net/private/var/folders/gs/g90fghjd68l5vc9q18hnvs300000gn/T/boy-student-sitting-stack-books-with-laptop-flat-icon-illustration_1284-64037.avif?version%3D1785775766420"
+                  alt="Your next course"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                />
+                <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" style={{ position:'absolute' }}>
+                  <rect x="0" y="0" width="24" height="24" rx="4" fill={P} />
+                  <path d="M8 10h8v6H8z" fill="#fff" />
+                </svg>
+              </div>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
@@ -1265,8 +1313,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   const icon = item.kind === 'event' ? 'calendar' : item.kind === 'announcement' ? 'bell' : item.kind === 'video' ? 'play' : 'spark';
                   return (
                     <div key={item.id} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 0', borderBottom:index < arr.length - 1 ? `1px solid ${BD}` : 'none' }}>
-                      <div style={{ width:34, height:34, borderRadius:10, background:PF, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
-                        <Icon name={icon} size={15} color={P}/>
+                      <div style={{ width:34, height:34, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
+                        <svg width={20} height={20} viewBox="0 0 24 24" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10" fill={P} />
+                          <circle cx="12" cy="12" r="4" fill="#fff" />
+                        </svg>
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:12, fontWeight:600, color:T1, marginBottom:2 }}>{item.title}</div>

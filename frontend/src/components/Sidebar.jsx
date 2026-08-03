@@ -18,7 +18,12 @@ const NAV_ITEMS = [
 function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user }) {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const displayName = user?.name || user?.email?.split('@')[0] || 'Member';
-  const avatarSrc = user?.avatar || profilePlaceholderImage;
+  const [storedAvatar, setStoredAvatar] = React.useState(null);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { const s = window.localStorage.getItem('tribes-avatar'); if (s) setStoredAvatar(s); } catch {}
+  }, []);
+  const avatarSrc = storedAvatar || user?.avatar || profilePlaceholderImage;
 
   return (
     <div ref={sidebarRef} style={{

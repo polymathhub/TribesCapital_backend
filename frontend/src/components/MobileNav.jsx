@@ -18,6 +18,11 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
     onNavigate(key);
     onClose();
   };
+  const [storedAvatar, setStoredAvatar] = React.useState(null);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { const s = window.localStorage.getItem('tribes-avatar'); if (s) setStoredAvatar(s); } catch {}
+  }, []);
 
   return (
     <>
@@ -125,7 +130,7 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
               }}
             >
               <img
-                src={user?.avatar || profilePlaceholderImage}
+                src={storedAvatar || user?.avatar || profilePlaceholderImage}
                 alt={user?.name || user?.email?.split('@')[0] || 'Profile'}
                 style={{
                   width: '32px',
