@@ -1019,7 +1019,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
               {shareOpen && (
                 <>
                   <div style={{position:'fixed',inset:0,zIndex:9}} onClick={()=>{setShareOpen(false);setLinkCopied(false);}}/>
-                  <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:224,background:W,border:`1px solid ${BD}`,borderRadius:12,boxShadow:'0 8px 28px rgba(0,0,0,.13)',zIndex:10,overflow:'hidden'}}>
+                  <div style={{position: isMobile ? 'fixed' : 'absolute', top: isMobile ? 68 : 'calc(100% + 8px)', right: isMobile ? 12 : 0, left: isMobile ? 12 : 'auto', width: isMobile ? 'calc(100% - 24px)' : 224, background:W,border:`1px solid ${BD}`,borderRadius:12,boxShadow:'0 8px 28px rgba(0,0,0,.13)',zIndex: isMobile ? 1000 : 10,overflow:'hidden'}}>
                     <div style={{padding:'13px 16px',fontSize:13,fontWeight:600,color:T1,borderBottom:`1px solid ${BD}`}}>Share this course</div>
                     <div onClick={handleCopyLink} style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:10,fontSize:13,cursor:'pointer',borderBottom:`1px solid ${BD}`,color:linkCopied?GR:T1,background:linkCopied?GRB:W}}>
                       <Ico name="check" size={15} color={linkCopied?GR:T2} sw={2} style={{visibility:linkCopied?'visible':'hidden'}}/>
@@ -1709,7 +1709,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
             {sortOpen && (
               <>
                 <div style={{position:'fixed',inset:0,zIndex:9}} onClick={()=>setSortOpen(false)}/>
-                <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:W,border:`1px solid ${BD}`,borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,.1)',minWidth:130,overflow:'hidden',zIndex:10}}>
+                <div style={{position: isMobile ? 'fixed' : 'absolute', top: isMobile ? 68 : 'calc(100% + 6px)', right: isMobile ? 12 : 0, left: isMobile ? 12 : 'auto', background:W,border:`1px solid ${BD}`,borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,.1)',minWidth:isMobile? 'auto' : 130, width:isMobile? 'calc(100% - 24px)' : 'auto',overflow:'hidden',zIndex:isMobile?1000:10}}>
                   {SORTS.map(s => (
                     <div key={s.id} onClick={()=>{setSortBy(s.id);setSortOpen(false);}}
                       style={{padding:'10px 16px',cursor:'pointer',fontSize:13,color:sortBy===s.id?PU:T1,background:sortBy===s.id?PUF:'transparent',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
