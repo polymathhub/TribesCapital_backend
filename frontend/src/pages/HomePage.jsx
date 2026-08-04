@@ -1170,7 +1170,21 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </div>
             </button>
             {isNotificationsOpen && (
-              <div style={{ position:'absolute', top:'100%', right:0, marginTop:8, width:'min(384px, 90vw)', maxHeight:'min(360px, calc(100vh - 160px))', overflow:'hidden', background:W, border:`1px solid ${BD}`, borderRadius:20, boxShadow:'0 22px 60px rgba(15,23,42,0.12)', zIndex:200 }}>
+              <div style={{
+                position: isMobile ? 'fixed' : 'absolute',
+                top: isMobile ? 58 : '100%',
+                right: isMobile ? 12 : 0,
+                left: isMobile ? 12 : 'auto',
+                marginTop: isMobile ? 0 : 8,
+                width: isMobile ? 'calc(100% - 24px)' : 'min(384px, 90vw)',
+                maxHeight: 'min(360px, calc(100vh - 160px))',
+                overflow: 'hidden',
+                background: W,
+                border: `1px solid ${BD}`,
+                borderRadius: 20,
+                boxShadow: '0 22px 60px rgba(15,23,42,0.12)',
+                zIndex: 200
+              }}>
                 <div className="notification-header" style={{ padding:'16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid rgba(226,232,240,0.9)` }}>
                   <div>
                     <div style={{ fontSize:12, fontWeight:800, color:T1, letterSpacing:'0.08em', textTransform:'uppercase' }}>Notifications</div>

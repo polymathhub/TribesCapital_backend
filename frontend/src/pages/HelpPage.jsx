@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const P   = '#5B21B6';
 const PL  = '#7C3AED';
-const PF  = '#EDE9FE';
+const PF  = '#F3F4F6';
 const T1  = '#111827';
 const T2  = '#6B7280';
 const T3  = '#9CA3AF';
@@ -10,7 +10,7 @@ const BD  = '#E5E7EB';
 const BG  = '#F9FAFB';
 const W   = '#FFFFFF';
 const GR  = '#059669';
-const PAGE_SURFACE = 'radial-gradient(circle at top left, rgba(124,58,237,0.16), transparent 32%), linear-gradient(135deg, #f8f5ff 0%, #f9fafb 100%)';
+const PAGE_SURFACE = 'linear-gradient(135deg, #f8f5ff 0%, #f9fafb 100%)';
 
 function Icon({ name, size = 15, color = T3 }) {
   const s = { width: size, height: size, flexShrink: 0 };
@@ -118,15 +118,15 @@ export default function HelpPage({ onBack, onToggleSidebar, isMobile, isTablet }
                   }}
                   onMouseEnter={(e) => {
                     if (!isMobileLocal) {
-                      e.currentTarget.style.background = 'rgba(237,233,254,0.9)';
-                      e.currentTarget.style.borderColor = P;
+                      e.currentTarget.style.background = 'rgba(243,244,246,0.95)';
+                      e.currentTarget.style.borderColor = BD;
                       e.currentTarget.style.transform = 'translateY(-2px)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isMobileLocal) {
                       e.currentTarget.style.background = 'rgba(255,255,255,0.82)';
-                      e.currentTarget.style.borderColor = 'rgba(124, 58, 237, 0.16)';
+                      e.currentTarget.style.borderColor = 'rgba(0,0,0,0.06)';
                       e.currentTarget.style.transform = 'translateY(0)';
                     }
                   }}
@@ -178,7 +178,7 @@ export default function HelpPage({ onBack, onToggleSidebar, isMobile, isTablet }
                       transition: 'background 0.3s ease',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isMobileLocal) e.currentTarget.style.background = 'rgba(237,233,254,0.7)';
+                      if (!isMobileLocal) e.currentTarget.style.background = 'rgba(243,244,246,0.7)';
                     }}
                     onMouseLeave={(e) => {
                       if (!isMobileLocal) e.currentTarget.style.background = 'none';
