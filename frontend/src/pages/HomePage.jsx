@@ -17,7 +17,7 @@ import { buildDashboardStats } from '../utils/dashboardMetrics';
 const P   = '#5B21B6';
 const PL  = '#7C3AED';
 const PD  = '#4C1D95';
-const PF  = '#EDE9FE';
+const PF  = '#F8FAFC';
 const GR  = '#059669';
 const GRB = '#ECFDF5';
 const AM  = '#D97706';
@@ -30,16 +30,14 @@ const T1  = '#111827';
 const T2  = '#6B7280';
 const T3  = '#9CA3AF';
 const BD  = '#E5E7EB';
-const BG  = '#F9FAFB';
+const BG  = '#F8FAFC';
 const W   = '#FFFFFF';
 
 const glassCardStyle = (radius = 16, padding = '16px 18px') => ({
-  background: 'linear-gradient(135deg, rgba(255,255,255,0.84) 0%, rgba(248,250,252,0.72) 100%)',
-  backdropFilter: 'blur(24px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-  border: '1px solid rgba(255,255,255,0.72)',
+  background: W,
+  border: `1px solid rgba(226,232,240,0.95)`,
   borderRadius: radius,
-  boxShadow: '0 18px 42px rgba(15,23,42,0.07), inset 0 1px 0 rgba(255,255,255,0.74)',
+  boxShadow: '0 10px 24px rgba(15,23,42,0.06)',
   padding,
 });
 
@@ -1028,13 +1026,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   /* ── RENDER ── */
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100dvh', minHeight:'100dvh', background:'radial-gradient(circle at top left, rgba(124,58,237,0.10), transparent 28%), linear-gradient(135deg, #f8f7ff 0%, #f5f7ff 42%, #f9fbff 100%)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100dvh', minHeight:'100dvh', background: BG, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden' }}>
 
       {/* ══ TOPBAR ══ */}
       <div style={{
-        minHeight:54, height:'auto', background:'rgba(255,255,255,0.58)', backdropFilter:'blur(18px) saturate(180%)', WebkitBackdropFilter:'blur(18px) saturate(180%)',
-        borderBottom:`1px solid rgba(255,255,255,0.65)`, display:'flex', alignItems:'center', padding:isMobile ? '10px 14px' : `0 ${24}px`, gap:12,
-        flexShrink:0, justifyContent:'space-between', boxShadow:'0 10px 30px rgba(15,23,42,0.06)', position:'relative', zIndex:60,
+        minHeight:54, height:'auto', background:'rgba(248,250,252,0.92)', backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)',
+        borderBottom:`1px solid ${BD}`, display:'flex', alignItems:'center', padding:isMobile ? '10px 14px' : `0 ${24}px`, gap:12,
+        flexShrink:0, justifyContent:'space-between', boxShadow:'0 8px 20px rgba(15,23,42,0.06)', position:'relative', zIndex:60,
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 }}>
           {/* Sidebar toggle */}
@@ -1065,7 +1063,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     }}
                     onFocus={() => { setIsSearchOpen(true); setSearchFocused(true); }}
                     onBlur={() => setSearchFocused(false)}
-                    placeholder="Search topics, documents, people, events…"
+                    placeholder="Search dashboards, documents, and events…"
                     style={{ flex:1, border:'none', outline:'none', background:'transparent', fontSize:13, color:T1, padding:0 }}
                   />
                 </div>
@@ -1112,7 +1110,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     }}
                     onFocus={() => { setIsSearchOpen(true); setSearchFocused(true); }}
                     onBlur={() => setSearchFocused(false)}
-                    placeholder="Search the platform"
+                    placeholder="Search dashboards, documents, and events…"
                     style={{ flex:1, border:'none', outline:'none', background:'transparent', fontSize:13, color:T1, padding:0 }}
                   />
                 </div>
@@ -1172,8 +1170,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </div>
             </button>
             {isNotificationsOpen && (
-              <div style={{ position:'absolute', top:'calc(100% + 8px)', right:0, width:320, maxHeight:'min(360px, calc(100vh - 160px))', overflowY:'auto', background:'linear-gradient(180deg, #FFFFFF 0%, #FBF8FF 100%)', border:`1px solid rgba(103,0,166,0.08)`, borderRadius:12, boxShadow:'0 8px 24px rgba(17,24,39,0.08)', overflow:'hidden', zIndex:200 }}>
-                <div style={{ padding:'14px 14px 12px', borderBottom:`1px solid rgba(103,0,166,0.10)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'linear-gradient(90deg, rgba(103,0,166,0.06) 0%, rgba(255,255,255,0) 100%)' }}>
+              <div style={{ position:'absolute', top:'100%', right:0, marginTop:8, width:'min(384px, 90vw)', maxHeight:'min(360px, calc(100vh - 160px))', overflow:'hidden', background:W, border:`1px solid ${BD}`, borderRadius:20, boxShadow:'0 22px 60px rgba(15,23,42,0.12)', zIndex:200 }}>
+                <div className="notification-header" style={{ padding:'16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid rgba(226,232,240,0.9)` }}>
                   <div>
                     <div style={{ fontSize:12, fontWeight:800, color:T1, letterSpacing:'0.08em', textTransform:'uppercase' }}>Notifications</div>
                     <div style={{ fontSize:11.5, color:T3, marginTop:2 }}>{notificationsLoading ? 'Loading…' : `${notifications.filter((item) => !item.read).length} unread`}</div>
@@ -1181,28 +1179,29 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   <button
                     type="button"
                     onClick={() => {
-                      setIsNotificationsOpen(true);
-                      // call API but don't block UI
                       void notificationsAPI.markAllAsRead().catch(() => {});
-                      // clear the notifications list locally
-                      setNotifications([]);
+                      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
                     }}
-                    style={{ background:'rgba(103,0,166,0.08)', border:`1px solid rgba(103,0,166,0.12)`, color:P, fontWeight:700, fontSize:11, cursor:'pointer', borderRadius:999, padding:'7px 10px' }}
+                    className="notification-action"
                   >
                     Mark all read
                   </button>
                 </div>
-                <div style={{ padding:'8px 8px 10px' }}>
+                <div className="notification-list" style={{ maxHeight:'min(360px, calc(100vh - 160px))', overflowY:'auto' }}>
                   {notificationsLoading ? (
-                    <div style={{ padding:'14px 12px', color:T2, fontSize:13, background:'rgba(255,255,255,0.8)', borderRadius:12 }}>Loading notifications…</div>
+                    <div className="notification-empty" style={{ padding:'18px 16px', color:T2, fontSize:13, textAlign:'center', background:W }}>Loading notifications…</div>
                   ) : notifications.length > 0 ? notifications.map((item) => (
-                    <div key={item.id || item.title} style={{ padding:'12px 12px', borderRadius:14, marginBottom:8, border:`1px solid ${item.read ? 'rgba(17,24,39,0.08)' : 'rgba(103,0,166,0.14)'}`, background:item.read ? 'rgba(255,255,255,0.92)' : 'linear-gradient(135deg, #F9F5FF 0%, #FFFFFF 100%)', boxShadow:item.read ? 'none' : '0 10px 24px rgba(103,0,166,0.08)' }}>
+                    <div
+                      key={item.id || item.title}
+                      className={`notification-item ${item.read ? 'notification-item-read' : 'notification-item-unread'}`}
+                      style={{ borderRadius:0, border:'none', padding:'16px', display:'block' }}
+                    >
                       <div style={{ fontSize:13.5, fontWeight:700, color:T1, marginBottom:4 }}>{item.title}</div>
                       <div style={{ fontSize:12.5, color:T2, lineHeight:1.5, marginBottom:6 }}>{item.detail}</div>
                       <div style={{ fontSize:11.5, color:T3 }}>{item.time}</div>
                     </div>
                   )) : (
-                    <div style={{ padding:'18px 12px', color:T2, fontSize:13, textAlign:'center', background:'rgba(255,255,255,0.8)', borderRadius:12 }}>No notifications yet.</div>
+                    <div className="notification-empty" style={{ padding:'18px 16px', color:T2, fontSize:13, textAlign:'center', background:W }}>No notifications yet.</div>
                   )}
                 </div>
               </div>
@@ -1217,8 +1216,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
       {showAnnouncementPopup && announcementPopup && (
         <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.58)', display:'flex', alignItems:'center', justifyContent:'center', padding:16, zIndex:1200 }}>
-          <div style={{ width:'min(520px, 100%)', background:'linear-gradient(180deg, #FFFFFF 0%, #FCF9FF 100%)', borderRadius:22, boxShadow:'0 24px 70px rgba(17,24,39,0.22)', overflow:'hidden', border:`1px solid rgba(103,0,166,0.12)` }}>
-            <div style={{ padding:'16px 18px', borderBottom:`1px solid rgba(103,0,166,0.10)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'linear-gradient(90deg, rgba(103,0,166,0.06) 0%, rgba(255,255,255,0) 100%)' }}>
+          <div style={{ width:'min(520px, 100%)', background:W, borderRadius:22, boxShadow:'0 24px 70px rgba(15,23,42,0.18)', overflow:'hidden', border:`1px solid rgba(226,232,240,0.9)` }}>
+            <div style={{ padding:'16px 18px', borderBottom:`1px solid rgba(226,232,240,0.9)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:PF }}>
               <div style={{ fontSize:11, fontWeight:800, letterSpacing:'0.16em', textTransform:'uppercase', color:P }}>Community update</div>
               <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ border:'none', background:'rgba(17,24,39,0.06)', color:T3, cursor:'pointer', fontSize:16, width:30, height:30, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>
             </div>
@@ -1241,30 +1240,31 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {currentPage === 'home' && (
           <>
           <div ref={bannerRef} className="soft-card" style={{
-            background:'linear-gradient(135deg, #140A2E 0%, #24105A 34%, #46208D 70%, #6D28D9 100%)',
-            borderRadius:20, padding:isMobile?'16px 16px':'22px 24px', marginBottom:20,
+            background: W,
+            border: `1px solid ${BD}`,
+            borderRadius:20, padding:isMobile?'18px 18px':'24px 26px', marginBottom:20,
             display:'flex', flexDirection:isMobile?'column':'row',
             justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?14:18,
-            boxShadow:'0 24px 60px rgba(76,29,149,0.28), inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -12px 24px rgba(15,23,42,0.16)',
-            position:'relative', overflow:'hidden', minHeight:isMobile?'260px':'290px',
+            boxShadow:'0 18px 40px rgba(15,23,42,0.08)',
+            position:'relative', overflow:'hidden', minHeight:isMobile?'240px':'260px',
           }}>
-            <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 36%), radial-gradient(circle at bottom left, rgba(255,255,255,0.08), transparent 34%)', pointerEvents:'none' }} />
-            <div style={{ position:'absolute', top:'-36px', right:'-24px', width:180, height:180, borderRadius:'50%', background:'rgba(255,255,255,0.10)', filter:'blur(2px)', pointerEvents:'none' }} />
-            <div style={{ position:'absolute', bottom:'-48px', left:'-20px', width:150, height:150, borderRadius:'50%', background:'rgba(255,255,255,0.06)', filter:'blur(2px)', pointerEvents:'none' }} />
+            <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at top right, rgba(124,58,237,0.08), transparent 42%), radial-gradient(circle at bottom left, rgba(124,58,237,0.05), transparent 36%)', pointerEvents:'none', animation:'softDrift 14s ease-in-out infinite' }} />
+            <div style={{ position:'absolute', top:'-36px', right:'-24px', width:180, height:180, borderRadius:'50%', background:'rgba(124,58,237,0.08)', filter:'blur(4px)', pointerEvents:'none', animation:'floatPulse 8s ease-in-out infinite' }} />
+            <div style={{ position:'absolute', bottom:'-48px', left:'-20px', width:150, height:150, borderRadius:'50%', background:'rgba(124,58,237,0.05)', filter:'blur(4px)', pointerEvents:'none', animation:'floatPulse 9s ease-in-out infinite', animationDelay:'-2s' }} />
             <div style={{ minWidth:0, width:'100%', position:'relative', zIndex:1, display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
-              <p style={{ color:'rgba(255,255,255,.9)', fontSize:10, fontWeight:800, letterSpacing:1.35,
-                textTransform:'uppercase', margin:'0 0 6px', textShadow:'0 2px 8px rgba(0,0,0,0.22)' }}>WELCOME</p>
-              <h1 style={{ color:W, fontSize:isMobile?18:24, fontWeight:800, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', lineHeight:1.14, textShadow:'0 3px 10px rgba(0,0,0,0.2)' }}>
+              <p style={{ color:P, fontSize:10, fontWeight:800, letterSpacing:1.35,
+                textTransform:'uppercase', margin:'0 0 6px' }}>WELCOME</p>
+              <h1 style={{ color:T1, fontSize:isMobile?22:30, fontWeight:800, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', lineHeight:1.14 }}>
                 <span>{greeting}, {displayName}</span>
-                <img src={wavingHandIllustration} alt="" width="22" height="22" aria-hidden="true" style={{ flexShrink:0, animation:'wave 1.2s ease-in-out infinite', transformOrigin:'70% 60%' }} />
+                <img src={wavingHandIllustration} alt="" width="26" height="26" aria-hidden="true" style={{ flexShrink:0, animation:'wave 1.4s ease-in-out infinite', transformOrigin:'70% 60%', display:'block' }} />
               </h1>
-              <p style={{ color:'rgba(255,255,255,.9)', fontSize:isMobile?11:12.5, margin:'0 0 12px', maxWidth:470, lineHeight:isMobile?1.5:1.6, textShadow:'0 1px 6px rgba(0,0,0,0.18)' }}>
+              <p style={{ color:T2, fontSize:isMobile?14:15, margin:'0 0 12px', maxWidth:470, lineHeight:isMobile?1.7:1.75 }}>
                 Welcome to Tribes Capital, your home for clean energy learning, live sessions, and the momentum behind every next move.
               </p>
               <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                 {heroChips.map((chip) => (
-                  <div key={chip} style={{ background:'rgba(255,255,255,.16)', border:'1px solid rgba(255,255,255,.24)',
-                    borderRadius:999, padding:'4px 10px', fontSize:11, fontWeight:600, color:W, whiteSpace:'nowrap' }}>
+                  <div key={chip} style={{ background:'#EEF2FF', border:'1px solid rgba(226,232,240,0.9)',
+                    borderRadius:999, padding:'5px 12px', fontSize:11, fontWeight:600, color:P, whiteSpace:'nowrap' }}>
                     {chip}
                   </div>
                 ))}
@@ -1316,7 +1316,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             alignItems:isMobile?'flex-start':'center', gap:isMobile?10:16,
           }}>
             <div style={{ width:54, minWidth:54, height:54, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ width:54, height:54, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', boxShadow:'0 12px 28px rgba(91, 33, 182, 0.2)' }}>
+              <div style={{ width:54, height:54, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', background:'#EEF2FF', boxShadow:'0 10px 24px rgba(91, 33, 182, 0.08)' }}>
                 <svg viewBox="0 0 64 64" width={40} height={40} aria-hidden="true" style={{ display:'block' }}>
                   <rect x="10" y="10" width="44" height="44" rx="12" fill="rgba(255,255,255,0.18)" />
                   <path d="M24 18h16" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
@@ -1348,7 +1348,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 <>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:2 }}>
                     <div style={{ flex:1, height:4, background:'#E5E7EB', borderRadius:4, overflow:'hidden' }}>
-                      <div style={{ width:`${Math.max(0, Math.min(100, currentCourse.progress || 0))}%`, height:4, background:'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', borderRadius:4 }} />
+                      <div style={{ width:`${Math.max(0, Math.min(100, currentCourse.progress || 0))}%`, height:4, background:P, borderRadius:4 }} />
                     </div>
                     <span style={{ fontSize:12, fontWeight:600, color:P }}>{currentCourse.progress || 0}%</span>
                   </div>
@@ -1360,7 +1360,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 </>
               )}
             </div>
-            <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 13), padding:'10px 20px', borderRadius:8, fontWeight:600,
+            <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', P, W, 13), padding:'10px 20px', borderRadius:8, fontWeight:600,
               flexShrink:0, whiteSpace:'nowrap', width:isMobile?'100%':'auto', boxShadow:'0 10px 22px rgba(91, 33, 182, 0.18)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
               {currentCourse?.progress >= 100 ? 'Review course' : 'Resume course'}
             </button>
@@ -1418,13 +1418,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 {recommendedNextStep.type === 'course' && currentCourse && (
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
                     <div style={{ flex:1, height:4, background:'#E5E7EB', borderRadius:4, overflow:'hidden' }}>
-                      <div style={{ width:`${Math.max(0, Math.min(100, currentCourse.progress || 0))}%`, height:4, background:'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', borderRadius:4 }} />
+                      <div style={{ width:`${Math.max(0, Math.min(100, currentCourse.progress || 0))}%`, height:4, background:P, borderRadius:4 }} />
                     </div>
                     <span style={{ fontSize:12, fontWeight:600, color:P }}>{currentCourse.progress || 0}%</span>
                   </div>
                 )}
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                  <button onClick={() => onNavigate(recommendedNextStep.actionTarget)} style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>{recommendedNextStep.actionLabel}</button>
+                  <button onClick={() => onNavigate(recommendedNextStep.actionTarget)} style={{ ...btnStyle('none', P, W, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>{recommendedNextStep.actionLabel}</button>
                   <button onClick={() => onNavigate('events')} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>View events</button>
                   <button onClick={() => onNavigate('announcements')} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>See updates</button>
                 </div>
@@ -1513,11 +1513,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                           <p style={{ fontSize:isMobile?9.5:11, color:T2, margin:0, lineHeight:1.3 }}>{meta}</p>
                         </div>
                         <button onClick={() => onNavigate('events')} style={{
-                          ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 12),
+                          ...btnStyle('none', P, W, 12),
                           padding:'7px 14px', borderRadius:7, fontWeight:600, flexShrink:0,
                           marginTop:isMobile?4:0,
                           width:isMobile?'100%':'auto',
-                          boxShadow:'0 8px 18px rgba(91, 33, 182, 0.16)', transition:'transform 0.2s ease, box-shadow 0.2s ease',
+                          boxShadow:'0 8px 18px rgba(91, 33, 182, 0.12)', transition:'transform 0.2s ease, box-shadow 0.2s ease',
                         }}>Open</button>
                       </div>
                     );
@@ -1587,36 +1587,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                           <button
                             type="button"
                             onClick={() => recordWatchedVideo(video)}
-                            style={{ ...btnStyle('none', 'linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%)', W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:'100%', boxShadow:'0 8px 16px rgba(91, 33, 182, 0.16)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
+                            style={{ ...btnStyle('none', P, W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:'100%', boxShadow:'0 8px 16px rgba(91, 33, 182, 0.12)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
                             Play
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-
-              {/* Announcements */}
-              <div style={{ marginTop:isMobile?12:20 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, gap:8, flexWrap:'wrap' }}>
-                  <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:0 }}>Announcements</h3>
-                  <button onClick={() => onNavigate('announcements')} style={{ fontSize:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>View all</button>
-                </div>
-                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
-                  {notifications.length > 0 ? notifications.map((item, index, arr) => (
-                    <div key={`${item.title}-${index}`} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:isMobile?'10px 12px':'11px 14px',
-                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
-                      <div style={{ width:8, height:8, borderRadius:'50%', background:P, flexShrink:0 }}/>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:12, fontWeight:500, color:T1, margin:'0 0 2px' }}>{item.title}</p>
-                        <p style={{ fontSize:11, color:T3, margin:0 }}>{item.detail}</p>
-                      </div>
-                      <span style={{ background:PF, color:P, fontSize:11, fontWeight:500, padding:'2px 9px', borderRadius:6, flexShrink:0, marginTop:isMobile?4:0 }}>{item.time}</span>
-                    </div>
-                  )) : (
-                    <div style={{ padding:'12px 14px', color:T2, lineHeight:1.55 }}>No new updates yet. Join a session or watch a lesson to start building your activity stream.</div>
-                  )}
                 </div>
               </div>
 
@@ -1724,6 +1701,16 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         .topbar-action{transition:transform .2s ease, box-shadow .2s ease, background-color .2s ease;}
         .topbar-action:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(91,33,182,0.12); background-color:rgba(245,243,255,0.9);}
         .topbar-avatar{transition:transform .2s ease, box-shadow .2s ease;}
+        .notification-action{background:transparent;border:0;padding:0;color:#7C3AED;font-size:0.78rem;font-weight:600;cursor:pointer;line-height:1;}
+        .notification-action:hover{text-decoration:underline;color:#5B21B6;}
+        .notification-list{max-height:min(360px, calc(100vh - 160px));overflow-y:auto;scrollbar-color:#CBD5E1 transparent;scrollbar-width:thin;}
+        .notification-item{transition:background .2s ease;color:#111827;}
+        .notification-item:hover{background:#F8FAFF;}
+        .notification-item-unread{border-left:2px solid #7C3AED;background:rgba(124,58,237,0.1);}
+        .notification-item-read{background:transparent;}
+        @keyframes softDrift { 0%, 100% { transform: translate(0,0) scale(1); opacity:1; } 50% { transform: translate(6px,-4px) scale(1.01); opacity:0.94; } }
+        @keyframes floatPulse { 0%, 100% { transform: translate(0,0) scale(1); opacity:1; } 30% { transform: translate(0,-4px) scale(1.04); opacity:0.88; } 60% { transform: translate(0,2px) scale(1.02); opacity:0.92; } }
+        @keyframes wave { 0% { transform: rotate(0deg) scale(0.96); } 15% { transform: rotate(12deg) scale(1.04); } 30% { transform: rotate(-8deg) scale(1.02); } 45% { transform: rotate(10deg) scale(1.06); } 60% { transform: rotate(-4deg) scale(1.03); } 75% { transform: rotate(6deg) scale(1.05); } 100% { transform: rotate(0deg) scale(0.96); } }
         .topbar-avatar:hover{transform:translateY(-1px) scale(1.01); box-shadow:0 12px 24px rgba(17,24,39,0.16);}
         ::-webkit-scrollbar{width:5px;height:4px;}
         ::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:10px;}

@@ -10,17 +10,17 @@ import { dueDiligenceAPI } from '../../api/endpoints';
 ═══════════════════════════════════════════════════════════ */
 
 /* ─── TOKENS (aligned to the app theme) ─── */
-const P   = '#6700A6';
-const PL  = '#8B3FD6';
-const PF  = '#F5EDFC';
-const PB  = '#E9D5F7';
+const P   = '#5B21B6';
+const PL  = '#7C3AED';
+const PF  = '#F8FAFC';
+const PB  = '#E5E7EB';
 
 const T1  = '#1F1F24';
 const T2  = '#6B6F76';
 const T3  = '#9CA0A8';
 
-const BD  = '#E7E8EC';
-const BG  = '#F7F7F8';
+const BD  = '#E5E7EB';
+const BG  = '#F8FAFC';
 const W   = '#FFFFFF';
 
 const RED   = '#DC2626', RED_BG = '#FEF2F2', RED_BD = '#FECACA';
@@ -28,9 +28,9 @@ const GRN   = '#16A34A', GRN_BG = '#F0FDF4', GRN_BD = '#BBF7D0';
 const AMB_T = '#B45309', AMB_BG = '#FEF3C7';
 const TEAL  = '#0369A1', TEAL_BG = '#E0F2FE';
 
-const PAGE     = 'linear-gradient(160deg, #EDE7F8 0%, #F5F2FB 42%, #FCFBFE 100%)';
-const PANEL    = '#FCFBFE';
-const PANEL_BD = '#EFEAF8';
+const PAGE     = '#F8FAFC';
+const PANEL    = '#FFFFFF';
+const PANEL_BD = '#E5E7EB';
 
 const SIDEBAR_W = 260;
 const PERMS = { canCreate: true, canEdit: true, canDelete: true };
@@ -684,7 +684,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <main style={{ flex: 1, padding: pad }}>
           <div style={{ background: PANEL, border: `1px solid ${PANEL_BD}`,
-            borderRadius: isMobile ? 14 : 20, padding: isMobile ? '20px 16px 30px' : '32px 32px 42px' }}>
+            borderRadius: isMobile ? 14 : 20, padding: isMobile ? '20px 16px 30px' : '32px 32px 42px', boxShadow: '0 12px 32px rgba(15,23,42,0.06)' }}>
 
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row',
               alignItems: isMobile ? 'stretch' : 'flex-start', justifyContent: 'space-between',
@@ -702,7 +702,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                     padding: '0 20px', height: 44, background: W, color: T1,
                     border: `1px solid ${BD}`, borderRadius: 8, fontSize: 15, fontWeight: 500,
-                    cursor: 'pointer', whiteSpace: 'nowrap', flex: isMobile ? 1 : 'none' }}>
+                    cursor: 'pointer', whiteSpace: 'nowrap', flex: isMobile ? 1 : 'none', boxShadow: '0 4px 18px rgba(15,23,42,0.04)' }}>
                   <I k="download" s={16} c={T2} />Export
                 </button>
                 {PERMS.canCreate && (
@@ -717,9 +717,9 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, padding: '14px 16px', background: PF, border: `1px solid ${PB}`, borderRadius: 12, color: '#5B2A86' }}>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Projects in the Due Diligence stage stay connected to the Due Diligence Vault workflow.</div>
-              <button onClick={() => onNavigate('vault')} style={{ background: W, border: `1px solid ${PB}`, color: P, borderRadius: 999, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, padding: '18px 20px', background: PF, border: `1px solid ${PB}`, borderRadius: 16, color: T2 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: T1 }}>Projects in the Due Diligence stage stay connected to the Due Diligence Vault workflow.</div>
+              <button onClick={() => onNavigate('vault')} style={{ background: W, border: `1px solid ${BD}`, color: P, borderRadius: 999, padding: '10px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 600, minWidth: 170 }}>
                 Open Due Diligence Vault
               </button>
             </div>
@@ -728,8 +728,8 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               gridTemplateColumns: isMobile ? '1fr 1fr' : isTablet ? 'repeat(3,1fr)' : 'repeat(6,1fr)',
               gap: isMobile ? 10 : 14, marginBottom: 22 }}>
               {stats.map(s => (
-                <div key={s.l} style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12,
-                  padding: isMobile ? '14px' : '16px 18px' }}>
+                <div key={s.l} style={{ background: W, border: `1px solid ${BD}`, borderRadius: 16,
+                  padding: isMobile ? '15px' : '18px 20px', boxShadow: '0 10px 24px rgba(15,23,42,0.05)' }}>
                   <div style={{ fontSize: 12.5, color: T2, marginBottom: 6 }}>{s.l}</div>
                   <div style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, marginBottom: 10, letterSpacing: -0.5 }}>{s.v}</div>
                   <Tag tone={s.tone}>{s.tag}</Tag>
@@ -743,10 +743,10 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
                   const on = stage === s;
                   return (
                     <button key={s} onClick={() => setStage(s)}
-                      style={{ padding: '9px 18px', borderRadius: 999, whiteSpace: 'nowrap', cursor: 'pointer',
-                        fontSize: 14, fontWeight: on ? 600 : 400, fontFamily: 'inherit',
-                        background: on ? PF : W, color: on ? P : T2,
-                        border: `1px solid ${on ? PB : BD}` }}>
+                      style={{ padding: '10px 20px', borderRadius: 999, whiteSpace: 'nowrap', cursor: 'pointer',
+                        fontSize: 14, fontWeight: on ? 600 : 500, fontFamily: 'inherit',
+                        background: on ? '#EEF2FF' : W, color: on ? P : T2,
+                        border: `1px solid ${on ? '#C7D2FE' : BD}`, boxShadow: on ? '0 6px 18px rgba(91,33,182,0.12)' : 'none' }}>
                       {s}
                     </button>
                   );
@@ -757,11 +757,11 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <span style={{ fontSize: 17, fontWeight: 600 }}>
                 All projects <span style={{ color: T3, fontWeight: 400 }}>({filtered.length})</span>
               </span>
-              <div style={{ display: 'flex', background: W, border: `1px solid ${BD}`, borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', background: W, border: `1px solid ${BD}`, borderRadius: 10, overflow: 'hidden' }}>
                 {[['kanban', 'grid'], ['list', 'list']].map(([v, icon]) => (
                   <button key={v} onClick={() => setView(v)} aria-label={`${v} view`}
                     style={{ padding: '9px 12px', border: 'none', cursor: 'pointer', display: 'flex',
