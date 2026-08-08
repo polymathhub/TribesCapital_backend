@@ -225,8 +225,9 @@ export class CreateDDDocumentDto {
   @IsNumber()
   fileSize?: number;
 
+  @IsOptional()
   @IsString()
-  category!: string;
+  category?: string;
 
   @IsOptional()
   @IsString()

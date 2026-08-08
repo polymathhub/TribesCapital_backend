@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { dueDiligenceAPI } from '../../api/endpoints';
+import { computeProjectScore } from '../../utils/dashboardMetrics';
 
 /* ═══════════════════════════════════════════════════════════
    TRIBES CAPITAL — PROJECT PIPELINE
@@ -33,7 +34,24 @@ const PANEL    = '#FFFFFF';
 const PANEL_BD = '#E5E7EB';
 
 const SIDEBAR_W = 260;
-const PERMS = { canCreate: true, canEdit: true, canDelete: true };
+function getCurrentPermissions() {
+  try {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
+    if (!stored) return { canCreate: false, canEdit: false, canDelete: false };
+    const user = JSON.parse(stored);
+    const roles = user?.roles || [];
+    const isAdmin = user?.isAdmin || roles.includes && roles.includes('admin');
+    return {
+      canCreate: Boolean(isAdmin || roles.includes('editor') || roles.includes('contributor')),
+      canEdit: Boolean(isAdmin || roles.includes('editor') || roles.includes('moderator')),
+      canDelete: Boolean(isAdmin || roles.includes('admin') || roles.includes('moderator')),
+    };
+  } catch (e) {
+    return { canCreate: false, canEdit: false, canDelete: false };
+  }
+}
+
+const PERMS = getCurrentPermissions();
 
 /* ─── RESPONSIVE ─── */
 function useBreakpoint() {
@@ -92,6 +110,43 @@ const money = n => {
   if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + ' M';
   if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + ' K';
   return '$' + n;
+};
+
+const mapDueDiligenceToPipelineProject = (item) => {
+  const metadata = item?.targetMetadata && typeof item.targetMetadata === 'object' ? item.targetMetadata : {};
+  const progress = typeof metadata.progress === 'number'
+    ? metadata.progress
+    : typeof item?.completionPercent === 'number'
+      ? item.completionPercent
+      : null;
+  const value = typeof metadata.value === 'number'
+    ? metadata.value
+    : typeof metadata.dealValue === 'number'
+      ? metadata.dealValue
+      : null;
+
+  return {
+    id: `dd-${item.id}`,
+    dueDiligenceId: item.id,
+    name: item?.title || 'Untitled diligence',
+    type: item?.type || 'investment',
+    stage: 'Due Diligence',
+    country: typeof metadata.country === 'string' ? metadata.country : '',
+    city: typeof metadata.city === 'string' ? metadata.city : '',
+    capacity: typeof metadata.capacity === 'number' ? metadata.capacity : null,
+    value,
+    irr: typeof metadata.irr === 'number' ? metadata.irr : null,
+    sponsor: typeof metadata.sponsor === 'string' ? metadata.sponsor : '',
+    progress,
+    tags: Array.isArray(metadata.tags) ? metadata.tags.filter(tag => typeof tag === 'string') : [],
+    description: item?.description || '',
+    updated: item?.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'just now',
+    updatedAt: item?.updatedAt ? new Date(item.updatedAt).toISOString() : null,
+    source: 'due-diligence',
+    sourceType: 'due-diligence',
+    status: item?.status || 'draft',
+    owner: 'DD',
+  };
 };
 
 /* ─── PRIMITIVES ─── */
@@ -508,17 +563,39 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <I k="download" s={14} c={T2} />
           </button>
-          {PERMS.canEdit && (
-            <button onClick={e => { e.stopPropagation(); onEdit(p); }} aria-label={`Edit ${p.name}`}
-              style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${BD}`, background: W,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <I k="edit" s={14} c={T2} />
-            </button>
-          )}
+            {PERMS.canEdit && (
+              <button onClick={e => { e.stopPropagation(); onEdit(p); }} aria-label={`Edit ${p.name}`}
+                style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${BD}`, background: W,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <I k="edit" s={14} c={T2} />
+              </button>
+            )}
+
+            {p && p.source === 'due-diligence' && (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={e => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('tribes:request-approval', { detail: { id: p.dueDiligenceId } })); }}
+                  title="Request approval" aria-label="Request approval"
+                  style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${BD}`, background: W,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <I k="plus" s={14} c={T2} />
+                </button>
+                <button onClick={e => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('tribes:quick-approve', { detail: { id: p.dueDiligenceId } })); }}
+                  title="Quick approve" aria-label="Quick approve"
+                  style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${BD}`, background: '#DCFCE7',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <I k="check" s={14} c={GRN} />
+                </button>
+              </div>
+            )}
         </div>
       </div>
 
       <div style={{ fontSize: 15, fontWeight: 600, color: T1, lineHeight: 1.35, marginBottom: 5 }}>{p.name}</div>
+      {p.dueDiligenceId && (
+        <div style={{ marginBottom: 10 }}>
+          <Tag tone="green">Approved diligence</Tag>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: T2, marginBottom: 12 }}>
         <I k="pin" s={13} c={T3} />{[p.city, p.country].filter(Boolean).join(', ') || '—'}
       </div>
@@ -556,6 +633,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
 
   const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const [view, setView] = useState('kanban');
   const [stage, setStage] = useState('All stages');
   const [fType, setFType] = useState('');
@@ -570,6 +648,113 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const [detail, setDetail] = useState(null);
   const [toDelete, setToDelete] = useState(null);
   const [toast, setToast] = useState(null);
+
+  const syncApprovedPipelineProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const response = await dueDiligenceAPI.list({ page: 1, limit: 100, status: 'approved' });
+      const payload = response?.data;
+      const items = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.items)
+            ? payload.items
+            : [];
+      const approvedProjects = items.map(mapDueDiligenceToPipelineProject);
+      setProjects(prev => {
+        const manualProjects = prev.filter(project => !project.dueDiligenceId);
+        const approvedIds = new Set(approvedProjects.map(project => project.dueDiligenceId));
+        const persistedApprovedProjects = prev
+          .filter(project => project.dueDiligenceId && approvedIds.has(project.dueDiligenceId))
+          .map(project => {
+            const incoming = approvedProjects.find(item => item.dueDiligenceId === project.dueDiligenceId);
+            return incoming ? { ...project, ...incoming } : project;
+          });
+        return [...manualProjects, ...approvedProjects.map(project => {
+          const existing = persistedApprovedProjects.find(item => item.dueDiligenceId === project.dueDiligenceId);
+          return existing ? { ...existing, ...project } : project;
+        })];
+      });
+    } catch (error) {
+      console.error('Failed to load approved due diligence projects:', error);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  useEffect(() => {
+    void syncApprovedPipelineProjects();
+  }, []);
+
+  useEffect(() => {
+    const refreshFromDiligenceEvents = (event) => {
+      const detail = event?.detail;
+      if (detail?.type === 'due-diligence-updated' || detail?.type === 'due-diligence-created' || detail?.action === 'approval-decided') {
+        void syncApprovedPipelineProjects();
+      }
+    };
+
+    // Listen for in-app notifications and custom events
+    window.addEventListener('tribes:notifications-update', refreshFromDiligenceEvents);
+    // Also listen for a lower-level event used by backend/dev tooling
+    window.addEventListener('tribes:due-diligence-approved', () => { void syncApprovedPipelineProjects(); });
+    return () => {
+      window.removeEventListener('tribes:notifications-update', refreshFromDiligenceEvents);
+      window.removeEventListener('tribes:due-diligence-approved', () => { void syncApprovedPipelineProjects(); });
+    };
+  }, []);
+
+  useEffect(() => {
+    const notify = (detail = {}) => {
+      try {
+        window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'due-diligence-updated', ...detail } }));
+      } catch (e) {
+        console.warn('notify failed', e);
+      }
+    };
+
+    const handleRequest = async (e) => {
+      const id = e?.detail?.id;
+      if (!id) return;
+      try {
+        await dueDiligenceAPI.createApproval(id, { approverRole: 'reviewer', approvalNotes: 'Requested from pipeline' });
+        setToast('Approval requested');
+        notify({ id, action: 'approval-requested' });
+        void syncApprovedPipelineProjects();
+      } catch (err) {
+        console.error('request approval failed', err);
+        setToast('Failed to request approval');
+      }
+    };
+
+    const handleQuickApprove = async (e) => {
+      const id = e?.detail?.id;
+      if (!id) return;
+      try {
+        const res = await dueDiligenceAPI.createApproval(id, { approverRole: 'admin', approvalNotes: 'Quick-approved from pipeline' });
+        const approvalId = res?.data?.id || res?.id || null;
+        if (approvalId) {
+          await dueDiligenceAPI.approveOrReject(id, approvalId, { status: 'approved', approvalNotes: 'Quick-approved from pipeline' });
+          setToast('Project approved');
+          notify({ id, action: 'approval-decided', decision: 'approved' });
+          void syncApprovedPipelineProjects();
+        } else {
+          setToast('Approval created, but could not apply decision');
+        }
+      } catch (err) {
+        console.error('quick approve failed', err);
+        setToast('Quick approve failed');
+      }
+    };
+
+    window.addEventListener('tribes:request-approval', handleRequest);
+    window.addEventListener('tribes:quick-approve', handleQuickApprove);
+    return () => {
+      window.removeEventListener('tribes:request-approval', handleRequest);
+      window.removeEventListener('tribes:quick-approve', handleQuickApprove);
+    };
+  }, []);
 
   const save = form => {
     const shaped = {
@@ -629,12 +814,16 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
 
   const filtered = useMemo(() => {
     const q = topSearch.trim().toLowerCase();
-    return projects.filter(p => {
+    const base = projects.filter(p => {
       if (stage !== 'All stages' && p.stage !== stage) return false;
       if (fType && p.type !== fType) return false;
       if (q && ![p.name, p.sponsor, p.city, p.country, p.description].join(' ').toLowerCase().includes(q)) return false;
       return true;
     });
+
+    // Compute prioritization score and sort descending
+    return base.map(p => ({ ...p, priorityScore: computeProjectScore(p) }))
+      .sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
   }, [projects, stage, fType, topSearch]);
 
   const exportCsv = () => {
@@ -705,7 +894,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
                     cursor: 'pointer', whiteSpace: 'nowrap', flex: isMobile ? 1 : 'none', boxShadow: '0 4px 18px rgba(15,23,42,0.04)' }}>
                   <I k="download" s={16} c={T2} />Export
                 </button>
-                {PERMS.canCreate && (
+                {
                   <button onClick={() => setAdding(true)}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                       padding: '0 22px', height: 44, background: P, color: W, border: 'none',
@@ -713,7 +902,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
                       whiteSpace: 'nowrap', flex: isMobile ? 1 : 'none' }}>
                     <I k="plus" s={17} c={W} sw={2.2} />Add project
                   </button>
-                )}
+                }
               </div>
             </div>
 
@@ -772,7 +961,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             </div>
 
-            {projects.length === 0 ? (
+            {projects.length === 0 && !loadingProjects ? (
               <EmptyState />
             ) : filtered.length === 0 ? (
               <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12, padding: '60px 20px', textAlign: 'center' }}>

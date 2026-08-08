@@ -88,8 +88,42 @@ function buildLearningHubStats(courses = []) {
   ];
 }
 
-export {
-  deriveProjectSignals,
-  buildDashboardStats,
-  buildLearningHubStats,
-};
+function computeProjectScore(project = {}) {
+  // Normalize value (USD) using a log scale, cap at ~1 for large deals
+  const value = typeof project.value === 'number' && Number.isFinite(project.value) ? Math.max(0, project.value) : 0;
+  const valueScore = value > 0 ? Math.min(1, Math.log10(value + 1) / 6) : 0; // ~1 at 1e6
+
+  // Progress score 0-1
+  const progress = typeof project.progress === 'number' ? Math.max(0, Math.min(100, project.progress)) : 0;
+  const progressScore = progress / 100;
+
+  // IRR normalized to a 0-1 scale assuming 0-30% sensible range
+  const irr = typeof project.irr === 'number' && Number.isFinite(project.irr) ? Math.max(0, project.irr) : 0;
+  const irrScore = Math.min(1, irr / 30);
+
+  // Linked diligence count (few docs -> small boost)
+  const linked = typeof project.linkedDiligenceCount === 'number' ? Math.max(0, project.linkedDiligenceCount) : 0;
+  const linkedScore = Math.min(1, linked / 5);
+
+  // Weighted combination (tunable): value 50%, progress 30%, irr 12%, linked 8%
+  const score = (valueScore * 0.5) + (progressScore * 0.3) + (irrScore * 0.12) + (linkedScore * 0.08);
+  return Math.round(score * 100);
+}
+// Provide ESM named exports for the frontend (Vite).
+export { deriveProjectSignals, buildDashboardStats, buildLearningHubStats, computeProjectScore };
+
+// Also set `module.exports` when running in a CommonJS/Node environment
+// (Jest, Node scripts). Guard against `module` being undefined in the
+// browser ESM runtime used by Vite.
+try {
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      deriveProjectSignals,
+      buildDashboardStats,
+      buildLearningHubStats,
+      computeProjectScore,
+    };
+  }
+} catch (e) {
+  // ignore in browser contexts where `module` is not available
+}

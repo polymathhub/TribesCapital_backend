@@ -105,9 +105,24 @@ export class DueDiligenceService {
 
       return created;
     } catch (error) {
-      if (this.isDatabaseUnavailable(error)) {
-        return inMemoryFallbackStore.createDueDiligence(payload, userId);
+      // If the Prisma client was not able to connect at startup, or the error
+      // indicates the database is unavailable, use the in-memory fallback so
+      // the API remains usable in dev/offline scenarios. Log the original
+      // error to aid debugging when running locally or in CI.
+      // Also fallback if the Prisma service reports the DB as unavailable.
+      if (!this.prisma.isDatabaseAvailable() || this.isDatabaseUnavailable(error)) {
+        try {
+          return inMemoryFallbackStore.createDueDiligence(payload, userId);
+        } catch (memErr) {
+          // If even the in-memory store fails, surface the original error below.
+          // Log both for easier debugging.
+          // eslint-disable-next-line no-console
+          console.error('In-memory fallback create failed:', memErr);
+        }
       }
+      // Log and rethrow the original error for upstream handling.
+      // eslint-disable-next-line no-console
+      console.error('Prisma create due diligence failed:', error);
       throw error;
     }
   }
@@ -329,33 +344,53 @@ export class DueDiligenceService {
     const fileType = dto.fileType || inferDocumentType(fileName, dto.fileUrl || '');
     const fileUrl = dto.fileUrl || '';
     const fileSize = dto.fileSize ?? 0;
+    const category = dto.category || 'general';
     const tags = Array.isArray(dto.tags)
       ? dto.tags
       : typeof dto.tags === 'string'
       ? dto.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
       : [];
 
-    const doc = await this.prisma.dueDiligenceDocument.create({
-      data: {
-        fileName,
-        fileUrl,
-        fileType,
-        fileSize,
-        category: dto.category,
-        description: dto.description,
-        tags,
-        uploadedById: userId,
-        dueDiligenceId,
-      },
-      include: {
-        uploadedBy: {
-          select: { id: true, email: true, firstName: true, lastName: true },
+    try {
+      const doc = await this.prisma.dueDiligenceDocument.create({
+        data: {
+          fileName,
+          fileUrl,
+          fileType,
+          fileSize,
+          category,
+          description: dto.description,
+          tags,
+          uploadedById: userId,
+          dueDiligenceId,
         },
-      },
-    });
+        include: {
+          uploadedBy: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
+        },
+      });
 
-    await this.logAudit(dueDiligenceId, userId, 'UPLOAD_DOCUMENT', 'DueDiligenceDocument', doc.id, null, doc);
-    return doc;
+      await this.logAudit(dueDiligenceId, userId, 'UPLOAD_DOCUMENT', 'DueDiligenceDocument', doc.id, null, doc);
+      return doc;
+    } catch (error) {
+      if (this.isDatabaseUnavailable(error)) {
+        const doc = inMemoryFallbackStore.createDueDiligenceDocument(dueDiligenceId, {
+          fileName,
+          fileUrl,
+          fileType,
+          fileSize,
+          category,
+          description: dto.description,
+          tags,
+          uploadedById: userId,
+        });
+
+        await this.logAudit(dueDiligenceId, userId, 'UPLOAD_DOCUMENT', 'DueDiligenceDocument', doc.id, null, doc);
+        return doc as any;
+      }
+      throw error;
+    }
   }
 
   async deleteDocument(dueDiligenceId: string, docId: string, userId: string) {
@@ -480,6 +515,28 @@ export class DueDiligenceService {
 
       if (pendingApprovals === 0) {
         await this.update(dueDiligenceId, { status: DDStatus.APPROVED }, userId);
+        // Notify the original creator that their diligence case was approved.
+        try {
+          if (this.notificationsService) {
+            await this.notificationsService.createForUser(dd.creatorId, {
+              type: 'due_diligence_approved',
+              title: 'Due diligence approved',
+              message: `Your due diligence “${dd.title}” has been approved.`,
+              data: { dueDiligenceId },
+            });
+          }
+        } catch (e) {
+          // non-fatal: don't block approval flow on notification errors
+        }
+        // Emit a lightweight process-wide event so in-browser clients can refresh
+        try {
+          // Emit a process event for any local listeners (dev servers)
+          if (typeof process !== 'undefined' && (process as any).emit) {
+            (process as any).emit('due-diligence-approved', { id: dueDiligenceId });
+          }
+        } catch (e) {
+          // don't block on event emission
+        }
       }
     }
 
@@ -526,17 +583,25 @@ export class DueDiligenceService {
     oldValue: any,
     newValue: any,
   ) {
-    await this.prisma.dueDiligenceAuditLog.create({
-      data: {
-        action,
-        entity,
-        entityId,
-        oldValue: oldValue ? JSON.parse(JSON.stringify(oldValue)) : undefined,
-        newValue: newValue ? JSON.parse(JSON.stringify(newValue)) : undefined,
-        actorId: userId,
-        dueDiligenceId,
-      },
-    });
+    try {
+      await this.prisma.dueDiligenceAuditLog.create({
+        data: {
+          action,
+          entity,
+          entityId,
+          oldValue: oldValue ? JSON.parse(JSON.stringify(oldValue)) : undefined,
+          newValue: newValue ? JSON.parse(JSON.stringify(newValue)) : undefined,
+          actorId: userId,
+          dueDiligenceId,
+        },
+      });
+    } catch (error) {
+      if (this.isDatabaseUnavailable(error)) {
+        // In fallback mode, don't let audit logging block the main operation.
+        return;
+      }
+      throw error;
+    }
   }
 
   private assertAccess(_dd: any, _userId: string) {

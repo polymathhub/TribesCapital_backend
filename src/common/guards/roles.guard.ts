@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { RolesService } from '@modules/roles/roles.service';
 
@@ -26,6 +27,11 @@ export class RolesGuard implements CanActivate {
       context.getClass(),
     ]);
 
+    const requiredPermission = this.reflector.getAllAndOverride<{ resource: string; action: string } | undefined>(PERMISSIONS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
     if (!requiredRoles) {
       return true;
     }
@@ -39,10 +45,20 @@ export class RolesGuard implements CanActivate {
 
     const userRoles = user.roles?.map((r: any) => r.name) || [];
 
-    const hasRole = requiredRoles.some((role) => userRoles.includes(role));
+    // If specific permission metadata is present, check it via rolesService
+    if (requiredPermission && requiredPermission.resource && requiredPermission.action) {
+      const ok = await this.rolesService.hasPermission(user.id, requiredPermission.resource, requiredPermission.action);
+      if (!ok) {
+        throw new ForbiddenException('Insufficient permissions');
+      }
+      return true;
+    }
 
-    if (!hasRole) {
-      throw new ForbiddenException('Insufficient permissions');
+    if (requiredRoles) {
+      const hasRole = requiredRoles.some((role) => userRoles.includes(role));
+      if (!hasRole) {
+        throw new ForbiddenException('Insufficient permissions');
+      }
     }
 
     return true;

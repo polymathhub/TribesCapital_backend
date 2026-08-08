@@ -1,4 +1,5 @@
 const { buildDashboardStats, deriveProjectSignals } = require('./dashboardMetrics');
+const { computeProjectScore } = require('./dashboardMetrics');
 
 describe('dashboardMetrics', () => {
   it('builds live stats from pipeline, diligence, courses, and events', () => {
@@ -46,5 +47,16 @@ describe('dashboardMetrics', () => {
     expect(stats[1]).toEqual(expect.objectContaining({ label: 'Completed', value: 1 }));
     expect(stats[2]).toEqual(expect.objectContaining({ label: 'Hours learned', value: '2.8h' }));
     expect(stats[3]).toEqual(expect.objectContaining({ label: 'Active lessons', value: 10 }));
+  });
+
+  it('computes a reasonable priority score for projects', () => {
+    const low = computeProjectScore({ value: 1000, progress: 10, irr: 5, linkedDiligenceCount: 0 });
+    const mid = computeProjectScore({ value: 500000, progress: 40, irr: 12, linkedDiligenceCount: 1 });
+    const high = computeProjectScore({ value: 5000000, progress: 80, irr: 20, linkedDiligenceCount: 3 });
+    expect(typeof low).toBe('number');
+    expect(typeof mid).toBe('number');
+    expect(typeof high).toBe('number');
+    expect(low).toBeLessThanOrEqual(mid);
+    expect(mid).toBeLessThanOrEqual(high);
   });
 });

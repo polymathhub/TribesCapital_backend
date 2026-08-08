@@ -43,10 +43,10 @@ async function main() {
   console.log('✅ User role created/updated:', userRole);
 
   // Create admin user (optional - you can modify email/password)
-  const hashedPassword = await bcrypt.hash('Admin@123456', 10);
+  const hashedPassword = await bcrypt.hash('FundedEnergy12@', 10);
   
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@tribescapital.com' },
+    where: { email: 'admin@tribes.capitaland' },
     update: {},
     create: {
       email: 'admin@tribescapital.com',

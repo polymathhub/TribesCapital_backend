@@ -585,6 +585,8 @@ function LoginPage({ onNavigate, onSuccess }) {
         firstName: response.data.user?.firstName || email.split('@')[0],
         lastName: response.data.user?.lastName || '',
         ...response.data.user,
+        isAdmin: Boolean(response.data.user?.isAdmin || response.data.user?.roles?.includes('admin')),
+        roles: response.data.user?.roles || [],
       };
 
       persistAuthSession({
@@ -639,7 +641,7 @@ function LoginPage({ onNavigate, onSuccess }) {
       <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px', letterSpacing: -0.5 }}>
         Welcome back
       </h1>
-      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 16px', lineHeight: 1.6 }}>
         Sign in to access your community
       </p>
 
@@ -718,6 +720,233 @@ function LoginPage({ onNavigate, onSuccess }) {
           }}
         >
           Create one
+        </button>
+      </p>
+      <p style={{ textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, marginTop: 12 }}>
+        <button
+          type="button"
+          onClick={() => onNavigate('admin-login')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: COLORS.primaryLight,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            textDecoration: 'underline',
+            textUnderlineOffset: 2,
+          }}
+        >
+          Sign in as admin
+        </button>
+      </p>
+    </FormContainer>
+  );
+}
+
+const LEGAL_CONTENT = {
+  terms: {
+    title: 'Terms of Use',
+    intro: 'These Terms of Use describe how you may access and use Tribes Capital, the community platform for clean energy leaders, investors, and operators.',
+    sections: [
+      {
+        heading: '1. Account use',
+        body: 'You are responsible for keeping your account secure and for all activity carried out through your account. You agree to provide accurate information and to use the platform in a lawful and respectful manner.',
+      },
+      {
+        heading: '2. Community expectations',
+        body: 'You may use Tribes Capital to connect, share updates, and learn from others. You may not post content that is unlawful, misleading, abusive, or that infringes another person’s rights.',
+      },
+      {
+        heading: '3. Platform rights',
+        body: 'Tribes Capital may update, suspend, or discontinue features at any time. We may also remove content that violates these terms or creates a risk for the community.',
+      },
+      {
+        heading: '4. Limitation of liability',
+        body: 'The platform is provided for informational and networking purposes. Tribes Capital is not a financial advisor, and any decisions you make based on content here are your own responsibility.',
+      },
+    ],
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    intro: 'This Privacy Policy explains what information Tribes Capital collects when you register and how that information is used to operate the platform.',
+    sections: [
+      {
+        heading: '1. Information we collect',
+        body: 'We collect your name, email address, password, role, and account activity needed to create and secure your account. We may also collect technical information such as device details and usage patterns for security and platform reliability.',
+      },
+      {
+        heading: '2. How we use it',
+        body: 'Your information is used to authenticate your account, personalize your experience, send important service communications, and improve the quality and security of the platform.',
+      },
+      {
+        heading: '3. Sharing and storage',
+        body: 'We may share information with trusted service providers that help us operate the app, including hosting, analytics, and security services. We do not sell personal data for unrelated marketing purposes.',
+      },
+      {
+        heading: '4. Your choices',
+        body: 'You may request access to, correction of, or deletion of your account information by contacting the team through the support channels available in the app. We may retain some information where required for security, legal, or operational reasons.',
+      },
+    ],
+  },
+};
+
+function LegalPage({ type, onNavigate }) {
+  const content = LEGAL_CONTENT[type] || LEGAL_CONTENT.terms;
+  const { isMobile } = useBreakpoint();
+
+  return (
+    <FormContainer isMobile={isMobile}>
+      <button
+        onClick={() => onNavigate('signup')}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: COLORS.primaryLight,
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: 'pointer',
+          padding: 0,
+          marginBottom: 20,
+          fontFamily: 'inherit',
+        }}
+      >
+        ← Back to sign up
+      </button>
+
+      <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 10px' }}>
+        {content.title}
+      </h1>
+      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 20px', lineHeight: 1.7 }}>
+        {content.intro}
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {content.sections.map((section) => (
+          <div key={section.heading} style={{ background: COLORS.background, borderRadius: 10, padding: '14px 16px', border: `1px solid ${COLORS.border}` }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, margin: '0 0 6px' }}>{section.heading}</h2>
+            <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: 0, lineHeight: 1.6 }}>{section.body}</p>
+          </div>
+        ))}
+      </div>
+
+      <p style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 20, lineHeight: 1.6 }}>
+        If you have questions about these policies, please contact the Tribes Capital team through the support channels in the app.
+      </p>
+    </FormContainer>
+  );
+}
+
+function AdminLoginPage({ onNavigate, onSuccess }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { isMobile } = useBreakpoint();
+
+  const handleAdminLogin = async () => {
+    setError('');
+
+    if (!validateEmail(email)) {
+      setError('Please enter a valid administrator email address');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await authAPI.login({ email: email.trim().toLowerCase(), password });
+
+      if (!response.data?.accessToken) {
+        throw new Error('No access token returned from the server');
+      }
+
+      const userData = {
+        email: email.trim().toLowerCase(),
+        firstName: response.data.user?.firstName || 'Admin',
+        lastName: response.data.user?.lastName || '',
+        ...response.data.user,
+        isAdmin: Boolean(response.data.user?.isAdmin || response.data.user?.roles?.includes('admin')),
+        roles: response.data.user?.roles || [],
+      };
+
+      persistAuthSession({
+        accessToken: response.data.accessToken,
+        refreshToken: response.data.refreshToken,
+        user: userData,
+        email: userData.email,
+      });
+
+      onSuccess(userData);
+    } catch (err) {
+      const serverMessage = err.response?.data?.message || err.response?.data?.error || err.response?.data?.detail;
+      let userMessage = 'We could not sign you in right now. Please try again.';
+
+      if (err.response?.status === 401) {
+        userMessage = serverMessage || 'The provided administrator credentials are not recognized.';
+      } else if (err.response?.status === 400) {
+        userMessage = serverMessage || 'Please check your administrator credentials and try again.';
+      } else if (serverMessage) {
+        userMessage = serverMessage;
+      }
+
+      setError(userMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <FormContainer isMobile={isMobile}>
+      <div style={{ marginBottom: 24 }}>
+        <LogoFull size="medium" />
+      </div>
+      <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
+        Administrator sign in
+      </h1>
+      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
+        Access the administrative console.
+      </p>
+
+      {error && <Alert type="error" message={error} />}
+
+      <FormField label="Administrator email" required>
+        <TextInput
+          type="email"
+          placeholder="admin@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+        />
+      </FormField>
+
+      <FormField label="Password" required>
+        <TextInput
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
+          icon={<EyeIcon open={showPassword} />}
+          onIconClick={() => setShowPassword(!showPassword)}
+        />
+      </FormField>
+
+      <Button onClick={handleAdminLogin} loading={loading} disabled={loading} isMobile={isMobile}>
+        Continue to admin console
+      </Button>
+
+      <p style={{ textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, marginTop: 20 }}>
+        <button
+          onClick={() => onNavigate('login')}
+          style={{ background: 'none', border: 'none', color: COLORS.primaryLight, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+        >
+          Return to sign in
         </button>
       </p>
     </FormContainer>
@@ -934,10 +1163,54 @@ function SignupPage({ onNavigate, onSuccess }) {
         <CheckboxInput
           id="terms"
           label={
-            <>
-              I agree to the <span style={{ fontWeight: 600, color: COLORS.primaryLight }}>Terms of Use</span> and{' '}
-              <span style={{ fontWeight: 600, color: COLORS.primaryLight }}>Privacy Policy</span>
-            </>
+            <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
+              I agree to the{' '}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onNavigate('terms');
+                }}
+                disabled={loading || googleLoading}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: COLORS.primaryLight,
+                  fontWeight: 600,
+                  cursor: loading || googleLoading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: 2,
+                }}
+              >
+                Terms of Use
+              </button>{' '}
+              and{' '}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onNavigate('privacy');
+                }}
+                disabled={loading || googleLoading}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: COLORS.primaryLight,
+                  fontWeight: 600,
+                  cursor: loading || googleLoading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: 2,
+                }}
+              >
+                Privacy Policy
+              </button>
+            </span>
           }
           checked={formData.agreedToTerms}
           onChange={(e) => setFormData({ ...formData, agreedToTerms: e.target.checked })}
@@ -949,6 +1222,16 @@ function SignupPage({ onNavigate, onSuccess }) {
       <Button onClick={handleSignup} loading={loading} disabled={loading || googleLoading} isMobile={isMobile}>
         Create account
       </Button>
+
+      <p style={{ textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, marginTop: 16 }}>
+        <button
+          type="button"
+          onClick={() => onNavigate('admin-login')}
+          style={{ background: 'none', border: 'none', color: COLORS.primaryLight, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
+        >
+          Sign in as admin
+        </button>
+      </p>
 
       <Divider />
 
@@ -1502,6 +1785,9 @@ export default function AuthPage({ onLogin }) {
 
       {page === 'login' && <LoginPage onNavigate={setPage} onSuccess={handleSuccess} />}
       {page === 'signup' && <SignupPage onNavigate={setPage} onSuccess={handleSuccess} />}
+      {page === 'admin-login' && <AdminLoginPage onNavigate={setPage} onSuccess={handleSuccess} />}
+      {page === 'terms' && <LegalPage type="terms" onNavigate={setPage} />}
+      {page === 'privacy' && <LegalPage type="privacy" onNavigate={setPage} />}
       {page === 'verify' && <VerifyPage onNavigate={setPage} onSuccess={handleSuccess} />}
       {page === 'forgot' && <ForgotPasswordPage onNavigate={setPage} onSuccess={handleSuccess} resetToken={resetToken} />}
     </div>
