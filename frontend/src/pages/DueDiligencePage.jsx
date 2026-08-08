@@ -38,7 +38,42 @@ const AMB_BG = '#FDF6E3', AMB_BD = '#F0E0B0', AMB_TX = '#8B5A2B';
 const RED    = '#DC2626', RED_BG = '#FEF2F2', RED_BD = '#FECACA';
 const GRN    = '#16A34A', GRN_BG = '#F0FDF4', GRN_BD = '#BBF7D0';
 
-const PERMS = { canCreate: true, canEdit: true, canDelete: true };
+function getCurrentPermissions() {
+  try {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
+    if (!stored) return { canCreate: false, canEdit: false, canDelete: false };
+    const user = JSON.parse(stored);
+    const roles = user?.roles || [];
+    const isAdmin = user?.isAdmin || (roles.includes && roles.includes('admin'));
+    return {
+      canCreate: Boolean(isAdmin || roles.includes('editor') || roles.includes('contributor')),
+      canEdit: Boolean(isAdmin || roles.includes('editor') || roles.includes('moderator')),
+      canDelete: Boolean(isAdmin || roles.includes('admin') || roles.includes('moderator')),
+    };
+  } catch (e) {
+    return { canCreate: false, canEdit: false, canDelete: false };
+  }
+}
+
+const PERMS = getCurrentPermissions();
+
+// Dynamic permissions state — recompute on auth changes or storage events.
+function useDynamicPerms() {
+  const [perms, setPerms] = useState(() => getCurrentPermissions());
+  useEffect(() => {
+    const refresh = () => setPerms(getCurrentPermissions());
+    // Listen for storage events from other tabs and custom auth updates
+    window.addEventListener('storage', refresh);
+    window.addEventListener('tribes:auth-updated', refresh);
+    // Refresh once on mount
+    refresh();
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('tribes:auth-updated', refresh);
+    };
+  }, []);
+  return perms;
+}
 
 /* ─── RESPONSIVE ─── */
 function useBreakpoint() {
@@ -804,17 +839,17 @@ function DetailPanel({ doc, onClose, onEdit, onDelete, onDownload, isMobile, off
         </div>
 
         {/* Footer — Cancel · Edit · Delete */}
-        <div style={{
+          <div style={{
           padding: '16px 24px', borderTop: `1px solid ${BD}`, background: W,
           display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0,
         }}>
           <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
-          {PERMS.canEdit && (
+          {perms.canEdit && (
             <Btn variant="ghost" onClick={() => onEdit(doc)}>
               <I k="edit" s={16} c={T1} />Edit
             </Btn>
           )}
-          {PERMS.canDelete && (
+          {perms.canDelete && (
             <Btn onClick={() => onDelete(doc)}>
               <I k="trash" s={16} c={W} />Delete
             </Btn>
@@ -916,6 +951,21 @@ function EmptyState() {
 
 /* ═══ GRID CARD ═══ */
 function DocCard({ doc, onOpen }) {
+  const statusLabel = doc.status === 'approved'
+    ? 'Approved'
+    : doc.status === 'rejected'
+      ? 'Rejected'
+      : doc.status === 'review'
+        ? 'In review'
+        : doc.status === 'in_progress'
+          ? 'In progress'
+          : 'Draft';
+  const statusTone = doc.status === 'approved'
+    ? { bg: '#DCFCE7', color: '#15803D' }
+    : doc.status === 'rejected'
+      ? { bg: '#FEE2E2', color: '#991B1B' }
+      : { bg: '#F5EDFC', color: PL };
+
   return (
     <div onClick={() => onOpen(doc)}
       style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer' }}>
@@ -926,7 +976,12 @@ function DocCard({ doc, onOpen }) {
         }}>{doc.fileType}</span>
       </div>
       <div style={{ padding: '14px 16px 16px' }}>
-        <div style={{ fontSize: 12, color: PL, fontWeight: 500, marginBottom: 6 }}>{doc.category}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <div style={{ fontSize: 12, color: PL, fontWeight: 500 }}>{doc.category}</div>
+          <span style={{ background: statusTone.bg, color: statusTone.color, borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 600 }}>
+            {statusLabel}
+          </span>
+        </div>
         <div style={{ fontSize: 15, fontWeight: 600, color: T1, marginBottom: 6, lineHeight: 1.35 }}>{doc.title}</div>
         <div style={{ fontSize: 13, color: T3 }}>{doc.size} · Updated {doc.updated}</div>
       </div>
@@ -952,6 +1007,7 @@ export default function DueDiligenceVault() {
   const [fType, setFType] = useState('');
 
   const [creating, setCreating] = useState(false);
+  const perms = useDynamicPerms();
   const [editDoc, setEditDoc] = useState(null);
   const [detail, setDetail] = useState(null);
   const [toDelete, setToDelete] = useState(null);
@@ -978,6 +1034,14 @@ export default function DueDiligenceVault() {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const unwrapApiData = (response) => {
+    const payload = response?.data;
+    if (payload && typeof payload === 'object' && 'data' in payload && payload.data !== undefined) {
+      return payload.data;
+    }
+    return payload ?? response;
   };
 
   const normalizeDoc = (item) => {
@@ -1014,7 +1078,7 @@ export default function DueDiligenceVault() {
         ...(fPriority ? { priority: fPriority.toLowerCase() } : {}),
         ...(fType ? { type: fType.toLowerCase() } : {}),
       });
-      const payload = response?.data;
+      const payload = unwrapApiData(response);
       const items = Array.isArray(payload)
         ? payload
         : Array.isArray(payload?.data)
@@ -1076,23 +1140,34 @@ export default function DueDiligenceVault() {
           targetDeadline: form.deadline ? new Date(form.deadline.split('/').reverse().join('-')).toISOString() : undefined,
         };
         const response = await dueDiligenceAPI.create(payload);
-        const createdItem = response?.data || response;
+        const createdItem = unwrapApiData(response);
+
+        let uploadFailed = false;
         if (form.file) {
-          const uploadData = new FormData();
-          uploadData.append('file', form.file);
-          uploadData.append('fileName', form.file.name);
-          await dueDiligenceAPI.uploadDocument(createdItem.id, uploadData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          try {
+            const uploadData = new FormData();
+            uploadData.append('file', form.file);
+            uploadData.append('fileName', form.file.name);
+            uploadData.append('category', form.category || 'general');
+            await dueDiligenceAPI.uploadDocument(createdItem.id, uploadData);
+          } catch (uploadErr) {
+            uploadFailed = true;
+            console.error('Document upload failed after creating due diligence:', uploadErr);
+          }
         }
+
         const created = normalizeDoc(createdItem);
         setDocs(d => [created, ...d]);
         setCreating(false);
         setPage(1);
-        setToast('Due diligence created');
+        setToast(uploadFailed ? 'Due diligence created, but document upload failed.' : 'Due diligence created');
         try {
           window.dispatchEvent(new CustomEvent('tribes:notifications-update', {
             detail: { type: 'due-diligence-created', id: createdItem?.id || created?.id },
+          }));
+          // Also emit a dedicated event for pipeline listeners
+          window.dispatchEvent(new CustomEvent('tribes:due-diligence-created', {
+            detail: { id: createdItem?.id || created?.id },
           }));
         } catch (eventError) {
           console.warn('Failed to dispatch notification refresh event', eventError);
@@ -1216,7 +1291,6 @@ export default function DueDiligenceVault() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
-              {PERMS.canCreate && (
                 <button onClick={() => setCreating(true)}
                   style={{
                     flex: isMobile ? 1 : 'none', display: 'flex', alignItems: 'center',
@@ -1226,7 +1300,6 @@ export default function DueDiligenceVault() {
                   }}>
                   <I k="plus" s={17} c={W} sw={2.2} />New Due Diligence
                 </button>
-              )}
             </div>
           </div>
 
@@ -1345,7 +1418,7 @@ export default function DueDiligenceVault() {
                           <div style={{ fontSize: 15, fontWeight: 600, color: T1 }}>{d.title}</div>
                           <div style={{ fontSize: 13, color: T3 }}>{d.size}</div>
                         </div>
-                        {PERMS.canEdit && (
+                        {perms.canEdit && (
                           <button onClick={e => { e.stopPropagation(); setEditDoc(d); }} aria-label="Edit"
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                             <I k="edit" s={17} c={PL} />
@@ -1394,7 +1467,7 @@ export default function DueDiligenceVault() {
                             <td style={{ padding: '16px 20px' }}><PriorityPill level={d.priority || '—'} /></td>
                             <td style={{ padding: '16px 20px', fontSize: 14, color: T2, whiteSpace: 'nowrap' }}>{d.deadline || '—'}</td>
                             <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                              {PERMS.canEdit && (
+                              {perms.canEdit && (
                                 <button onClick={e => { e.stopPropagation(); setEditDoc(d); }} aria-label={`Edit ${d.title}`}
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                                   <I k="edit" s={18} c={PL} />
