@@ -1035,8 +1035,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         flexShrink:0, justifyContent:'space-between', boxShadow:'0 8px 20px rgba(15,23,42,0.06)', position:'relative', zIndex:60,
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 }}>
-          {/* Sidebar toggle */}
-          {(isOverlay || !isSidebarOpen) && (
+          {/* Sidebar toggle (desktop only when collapsed) */}
+          {(!isOverlay && !isSidebarOpen) && (
             <button className="topbar-action" onClick={onToggleSidebar} style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex', alignItems:'center', flexShrink:0 }}>
               <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={T1} strokeWidth="2" strokeLinecap="round">
                 <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>

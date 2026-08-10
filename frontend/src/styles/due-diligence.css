@@ -11,7 +11,7 @@
   --danger: #EF4444;
   --info: #3B82F6;
   --critical: #7C3AED;
-  --bg: #F9FAFB;
+  --bg: #FFFFFF;
   --surface: #FFFFFF;
   --border: #E5E7EB;
   --text-primary: #111827;
@@ -81,13 +81,11 @@
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 .dd-hero-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.84) 0%, rgba(245,243,255,0.9) 100%);
-  border: 1px solid rgba(91, 33, 182, 0.16);
+  background: var(--surface);
+  border: 1px solid rgba(91, 33, 182, 0.06);
   border-radius: 16px;
   padding: 20px 22px;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
 }
 
 .dd-toolbar-actions {

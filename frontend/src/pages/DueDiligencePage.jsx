@@ -29,10 +29,10 @@ const BD  = '#E7E8EC';   // hairline
 const BG  = '#F7F7F8';   // neutral surface (inputs, table header, meta cells)
 const W   = '#FFFFFF';
 
-/* Page canvas — soft lavender wash, with the content on a white rounded panel */
-const PAGE      = 'linear-gradient(160deg, #EDE7F8 0%, #F5F2FB 42%, #FCFBFE 100%)';
-const PANEL     = '#FCFBFE';
-const PANEL_BD  = '#EFEAF8';
+/* Page canvas — use pure white background and white panel */
+const PAGE      = '#FFFFFF';
+const PANEL     = '#FFFFFF';
+const PANEL_BD  = '#F3F4F6';
 
 const AMB_BG = '#FDF6E3', AMB_BD = '#F0E0B0', AMB_TX = '#8B5A2B';
 const RED    = '#DC2626', RED_BG = '#FEF2F2', RED_BD = '#FECACA';

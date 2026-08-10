@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { label: 'Help', page: 'help', icon: 'help' },
 ];
 
-function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user }) {
+function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user, collapsed = false }) {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const displayName = user?.name || user?.email?.split('@')[0] || 'Member';
   const [storedAvatar, setStoredAvatar] = React.useState(null);
@@ -27,9 +27,13 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
 
   return (
     <div ref={sidebarRef} style={{
-      width: 220, minWidth: 220, background: 'rgba(255,255,255,0.54)', backdropFilter: 'blur(22px) saturate(180%)', WebkitBackdropFilter: 'blur(22px) saturate(180%)',
-      borderRight: `1px solid rgba(255,255,255,0.6)`, display: 'flex', flexDirection: 'column', overflowY: 'auto', flexShrink: 0, zIndex: 5,
-      boxShadow: '0 18px 50px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.7)',
+      width: collapsed ? 64 : 220,
+      minWidth: collapsed ? 64 : 220,
+      background: 'rgba(255,255,255,0.9)',
+      backdropFilter: 'blur(14px) saturate(140%)', WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+      borderRight: `1px solid rgba(0,0,0,0.04)`, display: 'flex', flexDirection: 'column', overflowY: 'auto', flexShrink: 0, zIndex: 5,
+      boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255,255,255,0.7)',
+      transition: 'width 220ms cubic-bezier(0.2,0.9,0.2,1)',
     }}>
       <style>{`
         @keyframes slideInLeft {
@@ -102,29 +106,33 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
         }
       `}</style>
       
-      <div style={{ padding: '12px 12px 12px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <img src={logoPng} alt="Tribes Capital" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
-          <span style={{ fontWeight: 700, fontSize: 11, color: COLORS.T1, letterSpacing: .8, textTransform: 'uppercase' }}>Tribes Capital</span>
+      <div style={{ padding: '10px 10px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10, minWidth: 0 }}>
+          <img src={logoPng} alt="Tribes Capital" style={{ width: collapsed ? 36 : 36, height: collapsed ? 36 : 36, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+          {!collapsed && <span style={{ fontWeight: 700, fontSize: 11, color: COLORS.T1, letterSpacing: .8, textTransform: 'uppercase' }}>Tribes Capital</span>}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: COLORS.T2, fontSize: 18, lineHeight: 1, padding: 4 }}
-          aria-label="Close sidebar"
-        >
-          ×
-        </button>
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: COLORS.T2, fontSize: 18, lineHeight: 1, padding: 6 }}
+            aria-label="Close sidebar"
+          >
+            ×
+          </button>
+        )}
       </div>
-      <div style={{ padding: '14px 12px 14px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(245,246,252,0.86)' }}>
-        <img src={avatarSrc} alt={`${displayName} profile`} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.8)' }} />
-        <div style={{ minWidth: 0, overflow: 'hidden' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.T1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
-          <div style={{ fontSize: 11, color: COLORS.T2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email || 'Community member'}</div>
+      {!collapsed && (
+        <div style={{ padding: '12px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(245,246,252,0.86)' }}>
+          <img src={avatarSrc} alt={`${displayName} profile`} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.8)' }} />
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.T1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+            <div style={{ fontSize: 11, color: COLORS.T2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email || 'Community member'}</div>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div style={{ flex: 1, padding: '8px 0' }}>
+      <div style={{ flex: 1, padding: collapsed ? '8px 0' : '8px 0' }}>
         {NAV_ITEMS.map((item, i) => {
           if (!item) return <div key={i} style={{ height: 1, background: COLORS.BD, margin: '6px 14px' }}/>
           const isActive = activePage === item.page;
@@ -149,9 +157,9 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
-                padding: '10px 14px',
-                margin: '2px 6px',
+                gap: collapsed ? 0 : 12,
+                padding: collapsed ? '12px 8px' : '10px 14px',
+                margin: collapsed ? '6px 6px' : '2px 6px',
                 borderRadius: 10,
                 cursor: 'pointer',
                 background: isActive ? COLORS.PF : isHovered ? 'rgba(123, 58, 237, 0.08)' : 'transparent',
@@ -160,24 +168,26 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
                 fontSize: 13,
                 borderLeft: isActive ? `3px solid ${COLORS.P}` : '3px solid transparent',
                 boxShadow: isHovered ? '0 8px 18px rgba(123, 58, 237, 0.12)' : 'none',
-                transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                transition: 'all 0.18s cubic-bezier(0.2,0.9,0.2,1)',
                 transform: isHovered ? 'translateX(2px)' : 'translateX(0)',
+                justifyContent: collapsed ? 'center' : 'flex-start',
               }}
               onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(null)}
+              title={item.label}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, flexShrink: 0 }}>
-                <div style={{ animation: isHovered ? 'scaleIcon 0.35s ease-out forwards' : 'none' }}>
-                  <Icon name={item.icon} size={16} color={isActive ? COLORS.P : COLORS.T2} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: collapsed ? 40 : 22, height: collapsed ? 40 : 22, flexShrink: 0, borderRadius: 8 }}>
+                <div style={{ animation: isHovered ? 'scaleIcon 0.35s ease-out forwards' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name={item.icon} size={collapsed ? 24 : 16} strokeWidth={collapsed ? 2.2 : 1.5} color={isActive ? COLORS.P : COLORS.T1} />
                 </div>
               </div>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+              {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>}
             </div>
           );
         })}
       </div>
 
-      <div style={{ marginTop: 'auto', padding: '10px 12px 14px', borderTop: `1px solid ${COLORS.BD}`, position: 'sticky', bottom: 0, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+      <div style={{ marginTop: 'auto', padding: collapsed ? '8px 6px' : '10px 12px 14px', borderTop: `1px solid ${COLORS.BD}`, position: 'sticky', bottom: 0, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', display: 'flex', justifyContent: 'center' }}>
         <button
           type="button"
           onClick={() => {
@@ -185,23 +195,25 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
             onClose();
           }}
           style={{
-            width: '100%',
+            width: collapsed ? 44 : '100%',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
-            padding: '10px 12px',
-            border: `1px solid rgba(185, 28, 28, 0.16)`,
+            gap: collapsed ? 0 : 10,
+            padding: collapsed ? '10px 8px' : '10px 12px',
+            border: `1px solid rgba(185, 28, 28, 0.12)`,
             borderRadius: 10,
-            background: 'linear-gradient(135deg, #fff7f7 0%, #fef2f2 100%)',
+            background: collapsed ? '#fff' : 'linear-gradient(135deg, #fff7f7 0%, #fef2f2 100%)',
             color: '#B91C1C',
             cursor: 'pointer',
             fontSize: 13,
             fontWeight: 700,
-            boxShadow: '0 8px 18px rgba(185, 28, 28, 0.08)',
+            boxShadow: '0 6px 16px rgba(185, 28, 28, 0.06)',
+            justifyContent: 'center',
           }}
+          title="Log out"
         >
           <Icon name="logout" size={16} color="#B91C1C" />
-          <span>Log out</span>
+          {!collapsed && <span>Log out</span>}
         </button>
       </div>
     </div>

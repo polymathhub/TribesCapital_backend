@@ -18,6 +18,17 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
     onNavigate(key);
     onClose();
   };
+  const [showRack, setShowRack] = React.useState(true);
+  const rackTimerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    // auto-hide the rack after 3s when visible and drawer is closed
+    if (!isOpen && showRack) {
+      clearTimeout(rackTimerRef.current);
+      rackTimerRef.current = setTimeout(() => setShowRack(false), 3000);
+    }
+    return () => clearTimeout(rackTimerRef.current);
+  }, [isOpen, showRack]);
   const [storedAvatar, setStoredAvatar] = React.useState(null);
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -273,6 +284,55 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
           </button>
         </div>
       </div>
+
+      {/* Compact Icon Rack (mobile) */}
+      {!isOpen && showRack && (
+        <div style={{ position: 'fixed', left: 8, top: '24vh', display: 'flex', flexDirection: 'column', gap: 8, zIndex: 360 }}
+             onMouseEnter={() => { clearTimeout(rackTimerRef.current); }}
+             onMouseLeave={() => { clearTimeout(rackTimerRef.current); rackTimerRef.current = setTimeout(() => setShowRack(false), 3000); }}>
+          {NAV_ITEMS.map((item, idx) => (
+            <button key={item.key}
+              onClick={() => handleNavClick(item.key)}
+              title={item.label}
+              style={{ width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', border: '1px solid #E6E7EB', boxShadow: '0 6px 18px rgba(15,23,42,0.06)', padding: 8 }}>
+              <Icon name={item.icon} size={20} color={currentPage === item.key ? '#5B21B6' : '#111827'} />
+            </button>
+          ))}
+          <button onClick={() => setShowRack(false)} aria-label="Hide navigation rack" style={{ width: 48, height: 36, borderRadius: 10, background: '#F3F4F6', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}>
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Floating reopen arrow when rack is hidden */}
+      {!isOpen && !showRack && (
+        <div style={{ position: 'fixed', left: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 370 }}>
+          <button
+            onClick={() => { clearTimeout(rackTimerRef.current); setShowRack(true); }}
+            aria-label="Open navigation rack"
+            title="Open navigation"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#FFFFFF',
+              border: '1px solid rgba(148, 163, 184, 0.24)',
+              boxShadow: '0 12px 24px rgba(15, 23, 42, 0.12)',
+              padding: 0,
+              cursor: 'pointer',
+              color: '#4338CA',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-50%) scale(1.05)'; e.currentTarget.style.boxShadow = '0 16px 30px rgba(15, 23, 42, 0.18)'; e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.38)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; e.currentTarget.style.boxShadow = '0 12px 24px rgba(15, 23, 42, 0.12)'; e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.24)'; }}
+          >
+            <Icon name="arrow" size={20} strokeWidth={2.2} color="#4338CA" />
+          </button>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeIn {
