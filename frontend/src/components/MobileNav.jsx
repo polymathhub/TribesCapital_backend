@@ -232,8 +232,8 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
                 }
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, flexShrink: 0 }}>
-                <Icon name={item.icon} size={16} color={currentPage === item.key ? '#5B21B6' : '#6B7280'} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, flexShrink: 0 }}>
+                <Icon name={item.icon} size={16} strokeWidth={3} color={currentPage === item.key ? '#5B21B6' : '#6B7280'} />
               </div>
               <span>{item.label}</span>
             </button>
@@ -295,7 +295,7 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
               onClick={() => handleNavClick(item.key)}
               title={item.label}
               style={{ width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', border: '1px solid #E6E7EB', boxShadow: '0 6px 18px rgba(15,23,42,0.06)', padding: 8 }}>
-              <Icon name={item.icon} size={20} color={currentPage === item.key ? '#5B21B6' : '#111827'} />
+              <Icon name={item.icon} size={20} strokeWidth={3} color={currentPage === item.key ? '#5B21B6' : '#111827'} />
             </button>
           ))}
           <button onClick={() => setShowRack(false)} aria-label="Hide navigation rack" style={{ width: 48, height: 36, borderRadius: 10, background: '#F3F4F6', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}>
