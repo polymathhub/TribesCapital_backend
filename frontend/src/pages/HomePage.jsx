@@ -5,6 +5,7 @@ import ProjectPipelinePage from './ProjectPipelinePage';
 import OfficeHoursEvents from './OfficeHoursEvents';
 import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
+import ProfileSettings from '../components/ProfileSettings';
 import { usersAPI, coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
 import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
 import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
@@ -301,7 +302,7 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false
 }
 
 /* ─── MAIN APP ───────────────────────────────────────── */
-export default function HomePage({ user, currentPage = 'home', onNavigate = () => {}, onLogout = () => {}, onToggleSidebar = () => {}, isMobile = false, isTablet = false, isSidebarOpen = true }) {
+export default function HomePage({ user, currentPage = 'home', onNavigate = () => {}, onLogout = () => {}, onUpdateUser = () => {}, onToggleSidebar = () => {}, isMobile = false, isTablet = false, isSidebarOpen = true }) {
   const [tourStep,   setTourStep]   = useState(0);
   const [tourActive, setTourActive] = useState(() => getTourVisitCount() < 2);
   const [spotlight,  setSpotlight]  = useState(null);
@@ -374,7 +375,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       // ignore
     }
   }, []);
-  const handleAvatarClick = () => { avatarInputRef.current?.click(); };
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const handleAvatarClick = () => { setShowProfileModal(true); };
   const handleAvatarChange = (e) => {
     const f = e?.target?.files?.[0];
     if (!f) return;
@@ -1221,8 +1223,14 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               </div>
             )}
           </div>
-          <div title={displayName} className="topbar-avatar" onClick={handleAvatarClick} style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'1.5px solid rgba(255,255,255,0.95)', boxShadow:'0 10px 24px rgba(17,24,39,0.16)', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', padding:0, transition:'transform .2s ease, box-shadow .2s ease', cursor:'pointer' }}>
+          <div title={displayName} className="topbar-avatar" onClick={handleAvatarClick} style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'1.5px solid rgba(255,255,255,0.95)', boxShadow:'0 10px 24px rgba(17,24,39,0.16)', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', padding:0, transition:'transform .2s ease, box-shadow .2s ease', cursor:'pointer', position:'relative' }}>
             <img src={avatarDataUrl || profilePlaceholderImage} alt={`${displayName} avatar`} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+            <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', opacity:0, transition:'opacity .16s ease' }} className="avatar-overlay">
+              <div style={{ background:'rgba(0,0,0,0.48)', color:'#fff', padding:'6px 8px', borderRadius:8, display:'flex', gap:8, alignItems:'center', fontSize:12 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                Edit
+              </div>
+            </div>
             <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display:'none' }} />
           </div>
         </div>
@@ -1667,6 +1675,24 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {currentPage === 'help' && (
             <HelpPage user={user} onToggleSidebar={onToggleSidebar} isMobile={isMobile} isTablet={isTablet}/>
           )}
+
+          {/* ── PROFILE SETTINGS PAGE ── */}
+          {currentPage === 'settings' && (
+            <ProfileSettings user={user} avatarDataUrl={avatarDataUrl} onAvatarChange={(e) => {
+              // adapter for avatar change: update local state and persist
+              const file = e?.target?.files?.[0];
+              const dataUrl = e?.dataUrl || null;
+              if (dataUrl) {
+                setAvatarDataUrl(dataUrl);
+              } else if (!file) {
+                setAvatarDataUrl(null);
+              }
+            }} onSaved={(updated) => {
+              if (typeof onUpdateUser === 'function') {
+                onUpdateUser(updated);
+              }
+            }} />
+          )}
         </div>
 
       {activeVideo && (
@@ -1704,6 +1730,24 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           onSkip={skip}
           isMobile={isMobile}
         />
+      )}
+      {showProfileModal && (
+        <div style={{ position:'fixed', inset:0, display:'flex', alignItems:'center', justifyContent:'center', zIndex:1400 }}>
+          <div onClick={() => setShowProfileModal(false)} style={{ position:'absolute', inset:0, background:'rgba(17,24,39,0.48)' }} />
+          <div style={{ position:'relative', width:'min(920px, 96%)', maxHeight:'90vh', overflow:'auto', zIndex:1401 }}>
+            <ProfileSettings user={user} avatarDataUrl={avatarDataUrl} onAvatarChange={(e) => {
+              const dataUrl = e?.dataUrl || null;
+              const file = e?.target?.files?.[0];
+              if (dataUrl) setAvatarDataUrl(dataUrl);
+              if (!file && dataUrl === null) setAvatarDataUrl(null);
+            }} onSaved={(updated) => {
+              if (typeof onUpdateUser === 'function') {
+                onUpdateUser(updated);
+              }
+              setShowProfileModal(false);
+            }} onClose={() => setShowProfileModal(false)} />
+          </div>
+        </div>
       )}
       <style>{`
         *{box-sizing:border-box;}

@@ -35,7 +35,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
     setFirstName(user?.firstName || '');
     setLastName(user?.lastName || '');
     setBio(user?.bio || '');
-  }, [user?.id]);
+  }, [user?.id, user?.name, user?.firstName, user?.lastName, user?.bio]);
 
   const onPickAvatar = () => fileRef.current?.click();
 
