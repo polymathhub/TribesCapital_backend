@@ -10,6 +10,42 @@ const DEMO_USER = {
 const DEMO_ACCESS_TOKEN = 'demo-access-token';
 const DEMO_REFRESH_TOKEN = 'demo-refresh-token';
 
+const normalizeRoleName = (value) => String(value ?? '').trim().toLowerCase();
+
+export function normalizeUserRoles(rawRoles = []) {
+  if (!rawRoles) return [];
+
+  const entries = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
+  return entries
+    .flatMap((role) => {
+      if (typeof role === 'string') {
+        return [normalizeRoleName(role)];
+      }
+
+      if (role && typeof role === 'object') {
+        const name = normalizeRoleName(role.name ?? role.role ?? role.value ?? '');
+        return name ? [name] : [];
+      }
+
+      return [];
+    })
+    .filter(Boolean);
+}
+
+export function normalizeStoredUser(user) {
+  if (!user || typeof user !== 'object') return user;
+
+  const roleNames = normalizeUserRoles(user.roles ?? user.role ?? []);
+  const normalizedUser = {
+    ...user,
+    roles: roleNames,
+    role: roleNames[0] || normalizeRoleName(user.role || user.roleName || user.permission || user.permissions || ''),
+    isAdmin: Boolean(user.isAdmin || roleNames.includes('admin') || roleNames.includes('super-admin') || normalizeRoleName(user.permission ?? user.permissions) === 'admin'),
+  };
+
+  return normalizedUser;
+}
+
 const getStorage = (storage) => {
   if (storage) return storage;
   if (typeof window === 'undefined') return null;
@@ -34,7 +70,10 @@ export function getAuthState(storage) {
 
   try {
     const rawUser = targetStorage.getItem('user');
-    const user = rawUser ? JSON.parse(rawUser) : null;
+    const user = rawUser ? normalizeStoredUser(JSON.parse(rawUser)) : null;
+    if (user) {
+      targetStorage.setItem('user', JSON.stringify(user));
+    }
     return {
       accessToken: targetStorage.getItem('accessToken'),
       refreshToken: targetStorage.getItem('refreshToken'),
@@ -55,6 +94,8 @@ export function persistAuthSession({ accessToken, refreshToken, user, email } = 
   const targetStorage = getStorage();
   if (!targetStorage) return getAuthState();
 
+  const normalizedUser = normalizeStoredUser(user);
+
   if (accessToken) {
     targetStorage.setItem('accessToken', accessToken);
   }
@@ -64,14 +105,20 @@ export function persistAuthSession({ accessToken, refreshToken, user, email } = 
   if (email) {
     targetStorage.setItem('userEmail', email);
   }
-  if (user?.firstName) {
-    targetStorage.setItem('userName', user.firstName);
+  if (normalizedUser?.firstName) {
+    targetStorage.setItem('userName', normalizedUser.firstName);
   }
-  if (user) {
-    targetStorage.setItem('user', JSON.stringify(user));
-    if (user.email) {
-      targetStorage.setItem('userEmail', user.email);
+  if (normalizedUser) {
+    targetStorage.setItem('user', JSON.stringify(normalizedUser));
+    if (normalizedUser.email) {
+      targetStorage.setItem('userEmail', normalizedUser.email);
     }
+  }
+
+  try {
+    window.dispatchEvent(new CustomEvent('tribes:auth-updated', { detail: { user: normalizedUser } }));
+  } catch (error) {
+    // no-op in non-browser env
   }
 
   return getAuthState(targetStorage);
