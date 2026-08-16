@@ -954,7 +954,7 @@ function EmptyState() {
 }
 
 /* ═══ GRID CARD ═══ */
-function DocCard({ doc, onOpen }) {
+function DocCard({ doc, onOpen, onApprove, canApprove }) {
   const statusLabel = doc.status === 'approved'
     ? 'Approved'
     : doc.status === 'rejected'
@@ -988,6 +988,30 @@ function DocCard({ doc, onOpen }) {
         </div>
         <div style={{ fontSize: 15, fontWeight: 600, color: T1, marginBottom: 6, lineHeight: 1.35 }}>{doc.title}</div>
         <div style={{ fontSize: 13, color: T3 }}>{doc.size} · Updated {doc.updated}</div>
+
+        {canApprove && (
+          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onApprove(doc, event);
+              }}
+              style={{
+                background: '#5B21B6',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 12px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Approve
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1001,7 +1025,7 @@ export default function DueDiligenceVault() {
   const [loadError, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const [view, setView] = useState('list');
+  const [view, setView] = useState('grid');
   const [page, setPage] = useState(1);
   const [topSearch, setTopSearch] = useState('');
 
@@ -1109,6 +1133,36 @@ export default function DueDiligenceVault() {
   /* Retry → loads the documents */
   const retry = () => {
     void loadDocs();
+  };
+
+  const handleApproveFromList = async (doc, event) => {
+    if (event) event.stopPropagation();
+    if (!perms.canDelete) return;
+
+    try {
+      const response = await dueDiligenceAPI.createApproval(doc.id, {
+        approverRole: 'admin',
+        approvalNotes: 'Approved from due diligence vault',
+      });
+      const approvalId = response?.data?.id || response?.id || null;
+
+      if (approvalId) {
+        await dueDiligenceAPI.approveOrReject(doc.id, approvalId, {
+          status: 'approved',
+          approvalNotes: 'Approved from due diligence vault',
+        });
+      }
+
+      window.dispatchEvent(new CustomEvent('tribes:notifications-update', {
+        detail: { type: 'due-diligence-updated', id: doc.id, action: 'approval-decided', decision: 'approved' },
+      }));
+      window.dispatchEvent(new CustomEvent('tribes:due-diligence-approved', { detail: { id: doc.id } }));
+      setToast('Case approved and moved to project pipeline');
+      await loadDocs();
+    } catch (err) {
+      console.error('Failed to approve due diligence case:', err);
+      setToast('We could not approve this case right now.');
+    }
   };
 
   /* CREATE + EDIT */
@@ -1409,7 +1463,7 @@ export default function DueDiligenceVault() {
                   display: 'grid', gap: 20,
                   gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(3,1fr)',
                 }}>
-                  {slice.map(d => <DocCard key={d.id} doc={d} onOpen={setDetail} />)}
+                  {slice.map(d => <DocCard key={d.id} doc={d} onOpen={setDetail} onApprove={handleApproveFromList} canApprove={Boolean(perms.canDelete)} />)}
                 </div>
               ) : isMobile ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1475,6 +1529,12 @@ export default function DueDiligenceVault() {
                                 <button onClick={e => { e.stopPropagation(); setEditDoc(d); }} aria-label={`Edit ${d.title}`}
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                                   <I k="edit" s={18} c={PL} />
+                                </button>
+                              )}
+                              {perms.canDelete && (
+                                <button onClick={(e) => { e.stopPropagation(); void handleApproveFromList(d, e); }} aria-label={`Approve ${d.title}`}
+                                  style={{ background: '#5B21B6', border: 'none', borderRadius: 6, cursor: 'pointer', padding: '6px 10px', color: '#fff', marginLeft: 8, fontWeight: 700, fontSize: 12 }}>
+                                  Approve
                                 </button>
                               )}
                             </td>
