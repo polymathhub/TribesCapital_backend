@@ -4,7 +4,8 @@ const DEMO_USER = {
   firstName: 'Demo',
   lastName: 'User',
   name: 'Demo User',
-  role: 'member',
+  role: 'admin',
+  isAdmin: true,
 };
 
 const DEMO_ACCESS_TOKEN = 'demo-access-token';

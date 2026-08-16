@@ -38,24 +38,32 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT || configService.get<number>('app.port') || 3000);
   const host = process.env.APP_HOST || configService.get<string>('app.host') || '0.0.0.0';
-  let corsOrigin: string | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void) = 'http://localhost:3000';
-
   const corsOriginConfig = configService.get<string>('app.corsOrigin') || 'http://localhost:3000,http://localhost:5173';
-  
-  // Parse multiple origins if comma-separated
-  const allowedOrigins = corsOriginConfig.split(',').map(origin => origin.trim()).filter(Boolean);
-  
-  // If multiple origins, use a function to validate dynamically
+  const allowedOrigins = corsOriginConfig
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const normalizeOrigin = (origin: string) => origin.replace(/\/+$/, '');
+  const allowedOriginSet = new Set(allowedOrigins.map(normalizeOrigin));
+
+  let corsOrigin: string | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void) = allowedOrigins[0] || 'http://localhost:5173';
+
   if (allowedOrigins.length > 1) {
     corsOrigin = (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) {
         callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+        return;
       }
+
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (allowedOriginSet.has(normalizedOrigin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Not allowed by CORS'));
     };
-  } else if (allowedOrigins.length === 1) {
-    corsOrigin = allowedOrigins[0]; 
   }
 
   app.use(helmet());

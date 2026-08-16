@@ -52,4 +52,15 @@ describe('app config', () => {
       callbackUrl: 'http://localhost:3000/api/auth/google/callback',
     });
   });
+
+  it('keeps localhost origins available for local development even when a production frontend URL is configured', () => {
+    process.env.FRONTEND_URL = 'https://community.tribes.capital';
+    process.env.CORS_ORIGIN = 'https://community.tribes.capital';
+
+    const config = appConfig();
+
+    expect(config.corsOrigin).toContain('http://localhost:5173');
+    expect(config.corsOrigin).toContain('http://localhost:3000');
+    expect(config.corsOrigin).toContain('https://community.tribes.capital');
+  });
 });

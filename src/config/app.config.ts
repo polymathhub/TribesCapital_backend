@@ -5,7 +5,20 @@ export default registerAs('app', () => {
   const rawFrontendUrl =
     process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
   const frontendUrl = rawFrontendUrl?.toString().trim().replace(/\/+$/g, '');
-  const rawCorsOrigin = process.env.CORS_ORIGIN || rawFrontendUrl || 'http://localhost:5173';
+  const configuredCorsOrigin = (process.env.CORS_ORIGIN || '').trim();
+  const defaultLocalOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
+
+  const corsOrigins = new Set<string>();
+  if (configuredCorsOrigin) {
+    configuredCorsOrigin.split(',').map((origin) => origin.trim()).filter(Boolean).forEach((origin) => corsOrigins.add(origin));
+  }
+  defaultLocalOrigins.forEach((origin) => corsOrigins.add(origin));
+
+  if (frontendUrl && !corsOrigins.has(frontendUrl)) {
+    corsOrigins.add(frontendUrl);
+  }
+
+  const rawCorsOrigin = Array.from(corsOrigins).join(',');
 
   return {
     name: process.env.APP_NAME || 'Tribes Capital',
