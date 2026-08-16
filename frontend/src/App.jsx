@@ -5,7 +5,7 @@ import LoadingScreen from './components/LoadingScreen';
 import Sidebar from './components/Sidebar';
 import MobileNav from './components/MobileNav';
 import { usersAPI } from './api/endpoints';
-import { persistDemoSession, clearAuthSession } from './utils/authSession';
+import { clearAuthSession } from './utils/authSession';
 import './App.css';
 
 function App() {
@@ -69,16 +69,6 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
-
-    if (import.meta.env.DEV && !token && !userEmail) {
-      const demoSession = persistDemoSession();
-      setUser(demoSession.user);
-      setIsAuthenticated(true);
-      setCurrentPage('home');
-      setIsLoading(false);
-      setHasBootstrapped(true);
-      return;
-    }
 
     const finishBootstrap = () => {
       setIsLoading(false);
