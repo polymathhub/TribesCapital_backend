@@ -41,6 +41,9 @@ describe('DueDiligenceService', () => {
       dueDiligenceDocument: {
         create: jest.fn().mockRejectedValue(new Error('P1001: Server is shutting down')),
       },
+      dueDiligenceAuditLog: {
+        create: jest.fn().mockResolvedValue({}),
+      },
     };
 
     const service = new DueDiligenceService(prisma as any);
@@ -93,6 +96,37 @@ describe('DueDiligenceService', () => {
         where: {},
         skip: 0,
         take: 10,
+      }),
+    );
+  });
+
+  it('marks a diligence case as approved as soon as an admin approves it', async () => {
+    const prisma = {
+      dueDiligence: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'dd-1',
+          title: 'Acme diligence',
+          creatorId: 'user-1',
+        }),
+        update: jest.fn().mockResolvedValue({ id: 'dd-1', status: 'approved' }),
+      },
+      dueDiligenceApproval: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'approval-1', dueDiligenceId: 'dd-1' }),
+        update: jest.fn().mockResolvedValue({ id: 'approval-1', status: 'approved' }),
+        count: jest.fn().mockResolvedValue(2),
+      },
+      dueDiligenceAuditLog: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    const service = new DueDiligenceService(prisma as any);
+    await service.approveOrReject('dd-1', 'approval-1', { status: 'approved', approvalNotes: 'Approve' }, 'user-1');
+
+    expect(prisma.dueDiligence.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'dd-1' },
+        data: expect.objectContaining({ status: 'approved' }),
       }),
     );
   });

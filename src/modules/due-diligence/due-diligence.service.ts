@@ -509,34 +509,29 @@ export class DueDiligenceService {
     });
 
     if (dto.status === 'approved') {
-      const pendingApprovals = await this.prisma.dueDiligenceApproval.count({
-        where: { dueDiligenceId, status: 'pending' },
-      });
+      await this.update(dueDiligenceId, { status: DDStatus.APPROVED }, userId);
 
-      if (pendingApprovals === 0) {
-        await this.update(dueDiligenceId, { status: DDStatus.APPROVED }, userId);
-        // Notify the original creator that their diligence case was approved.
-        try {
-          if (this.notificationsService) {
-            await this.notificationsService.createForUser(dd.creatorId, {
-              type: 'due_diligence_approved',
-              title: 'Due diligence approved',
-              message: `Your due diligence “${dd.title}” has been approved.`,
-              data: { dueDiligenceId },
-            });
-          }
-        } catch (e) {
-          // non-fatal: don't block approval flow on notification errors
+      // Notify the original creator that their diligence case was approved.
+      try {
+        if (this.notificationsService) {
+          await this.notificationsService.createForUser(dd.creatorId, {
+            type: 'due_diligence_approved',
+            title: 'Due diligence approved',
+            message: `Your due diligence “${dd.title}” has been approved.`,
+            data: { dueDiligenceId },
+          });
         }
-        // Emit a lightweight process-wide event so in-browser clients can refresh
-        try {
-          // Emit a process event for any local listeners (dev servers)
-          if (typeof process !== 'undefined' && (process as any).emit) {
-            (process as any).emit('due-diligence-approved', { id: dueDiligenceId });
-          }
-        } catch (e) {
-          // don't block on event emission
+      } catch (e) {
+        // non-fatal: don't block approval flow on notification errors
+      }
+
+      // Emit a lightweight process-wide event so in-browser clients can refresh.
+      try {
+        if (typeof process !== 'undefined' && (process as any).emit) {
+          (process as any).emit('due-diligence-approved', { id: dueDiligenceId });
         }
+      } catch (e) {
+        // don't block on event emission
       }
     }
 
