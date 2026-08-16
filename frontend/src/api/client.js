@@ -1,10 +1,11 @@
 import axios from 'axios';
 
 const isDev = import.meta.env.DEV;
-const API_ENV_URL = isDev ? '' : import.meta.env.VITE_API_URL?.trim();
+const isLocalHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+const API_ENV_URL = import.meta.env.VITE_API_URL?.trim();
 const DEFAULT_API_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api';
 const DEV_API_BASE = '/api';
-const API_BASE_URL = API_ENV_URL || (isDev ? DEV_API_BASE : DEFAULT_API_BASE);
+const API_BASE_URL = API_ENV_URL || (isDev || isLocalHost ? DEV_API_BASE : DEFAULT_API_BASE);
 const NORMALIZED_API_BASE_URL = API_BASE_URL.replace(/\/+$/g, '');
 
 if (!API_ENV_URL) {

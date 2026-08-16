@@ -728,13 +728,17 @@ function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
 }
 
 /* ═══ DETAIL DRAWER ═══ */
-function DetailPanel({ doc, onClose, onEdit, onDelete, onDownload, isMobile, offset }) {
+function DetailPanel({ doc, perms, onClose, onEdit, onDelete, onDownload, isMobile, offset }) {
+  if (!doc) return null;
+
   const tint = FILE_TINT[doc.fileType] || FILE_TINT.PDF;
   const cell = { background: BG, borderRadius: 8, padding: '12px 14px' };
   const ext = (doc.fileName || doc.fileType || '').split('.').pop()?.toLowerCase();
   const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext || '');
   const isPdf = ext === 'pdf';
   const previewUrl = doc.fileUrl || '';
+  const canEdit = Boolean(perms?.canEdit);
+  const canDelete = Boolean(perms?.canDelete);
 
   return (
     <>
@@ -844,12 +848,12 @@ function DetailPanel({ doc, onClose, onEdit, onDelete, onDownload, isMobile, off
           display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0,
         }}>
           <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
-          {perms.canEdit && (
+          {canEdit && (
             <Btn variant="ghost" onClick={() => onEdit(doc)}>
               <I k="edit" s={16} c={T1} />Edit
             </Btn>
           )}
-          {perms.canDelete && (
+          {canDelete && (
             <Btn onClick={() => onDelete(doc)}>
               <I k="trash" s={16} c={W} />Delete
             </Btn>
@@ -1518,7 +1522,7 @@ export default function DueDiligenceVault() {
       {creating && <DiligencePanel onClose={() => setCreating(false)} onSave={save} isMobile={isMobile} offset={overlayOffset} />}
       {editDoc  && <DiligencePanel initial={editDoc} onClose={() => setEditDoc(null)} onSave={save} isMobile={isMobile} offset={overlayOffset} />}
       {detail && !editDoc && !toDelete && (
-        <DetailPanel doc={detail} onClose={() => setDetail(null)}
+        <DetailPanel doc={detail} perms={perms} onClose={() => setDetail(null)}
           onEdit={setEditDoc} onDelete={setToDelete} onDownload={download}
           isMobile={isMobile} offset={overlayOffset} />
       )}
