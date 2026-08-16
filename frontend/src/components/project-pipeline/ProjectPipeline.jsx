@@ -125,12 +125,15 @@ const mapDueDiligenceToPipelineProject = (item) => {
       ? metadata.dealValue
       : null;
 
+  const baseTags = Array.isArray(metadata.tags) ? metadata.tags.filter(tag => typeof tag === 'string') : [];
+  const normalizedTags = item?.status === 'approved' ? Array.from(new Set([...baseTags, 'Approved'])) : baseTags;
+
   return {
     id: `dd-${item.id}`,
     dueDiligenceId: item.id,
     name: item?.title || 'Untitled diligence',
     type: item?.type || 'investment',
-    stage: 'Due Diligence',
+    stage: item?.status === 'approved' ? 'Approved' : 'Due Diligence',
     country: typeof metadata.country === 'string' ? metadata.country : '',
     city: typeof metadata.city === 'string' ? metadata.city : '',
     capacity: typeof metadata.capacity === 'number' ? metadata.capacity : null,
@@ -138,7 +141,7 @@ const mapDueDiligenceToPipelineProject = (item) => {
     irr: typeof metadata.irr === 'number' ? metadata.irr : null,
     sponsor: typeof metadata.sponsor === 'string' ? metadata.sponsor : '',
     progress,
-    tags: Array.isArray(metadata.tags) ? metadata.tags.filter(tag => typeof tag === 'string') : [],
+    tags: normalizedTags,
     description: item?.description || '',
     updated: item?.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'just now',
     updatedAt: item?.updatedAt ? new Date(item.updatedAt).toISOString() : null,
@@ -688,6 +691,17 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   }, []);
 
   useEffect(() => {
+    const addApprovedProject = (event) => {
+      const item = event?.detail?.project || event?.detail?.dueDiligence || event?.detail?.item;
+      if (!item) return;
+
+      const mapped = mapDueDiligenceToPipelineProject(item);
+      setProjects(prev => {
+        const next = prev.filter(project => project.dueDiligenceId !== mapped.dueDiligenceId);
+        return [mapped, ...next];
+      });
+    };
+
     const refreshFromDiligenceEvents = (event) => {
       const detail = event?.detail;
       if (detail?.type === 'due-diligence-updated' || detail?.type === 'due-diligence-created' || detail?.action === 'approval-decided') {
@@ -699,9 +713,11 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     window.addEventListener('tribes:notifications-update', refreshFromDiligenceEvents);
     // Also listen for a lower-level event used by backend/dev tooling
     window.addEventListener('tribes:due-diligence-approved', () => { void syncApprovedPipelineProjects(); });
+    window.addEventListener('tribes:project-pipeline-add', addApprovedProject);
     return () => {
       window.removeEventListener('tribes:notifications-update', refreshFromDiligenceEvents);
       window.removeEventListener('tribes:due-diligence-approved', () => { void syncApprovedPipelineProjects(); });
+      window.removeEventListener('tribes:project-pipeline-add', addApprovedProject);
     };
   }, []);
 

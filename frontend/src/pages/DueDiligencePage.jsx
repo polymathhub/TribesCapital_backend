@@ -1153,9 +1153,19 @@ export default function DueDiligenceVault() {
         });
       }
 
+      const approvedProject = {
+        ...(doc?.raw || {}),
+        status: 'approved',
+        targetMetadata: {
+          ...(doc?.raw?.targetMetadata || {}),
+          tags: [...new Set([...(doc?.raw?.targetMetadata?.tags || []), 'Approved'])],
+        },
+      };
+
       window.dispatchEvent(new CustomEvent('tribes:notifications-update', {
         detail: { type: 'due-diligence-updated', id: doc.id, action: 'approval-decided', decision: 'approved' },
       }));
+      window.dispatchEvent(new CustomEvent('tribes:project-pipeline-add', { detail: { project: approvedProject } }));
       window.dispatchEvent(new CustomEvent('tribes:due-diligence-approved', { detail: { id: doc.id } }));
       setToast('Case approved and moved to project pipeline');
       await loadDocs();
