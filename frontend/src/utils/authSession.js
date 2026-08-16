@@ -10,12 +10,82 @@ const DEMO_USER = {
 const DEMO_ACCESS_TOKEN = 'demo-access-token';
 const DEMO_REFRESH_TOKEN = 'demo-refresh-token';
 
-function getStorage(storage = window.localStorage) {
-  return storage || window.localStorage;
+const getStorage = (storage) => {
+  if (storage) return storage;
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage;
+  } catch (error) {
+    return null;
+  }
+};
+
+export function getAuthState(storage) {
+  const targetStorage = getStorage(storage);
+
+  if (!targetStorage) {
+    return {
+      accessToken: null,
+      refreshToken: null,
+      user: null,
+      email: null,
+    };
+  }
+
+  try {
+    const rawUser = targetStorage.getItem('user');
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    return {
+      accessToken: targetStorage.getItem('accessToken'),
+      refreshToken: targetStorage.getItem('refreshToken'),
+      user,
+      email: targetStorage.getItem('userEmail') || user?.email || null,
+    };
+  } catch (error) {
+    return {
+      accessToken: null,
+      refreshToken: null,
+      user: null,
+      email: null,
+    };
+  }
+}
+
+export function persistAuthSession({ accessToken, refreshToken, user, email } = {}) {
+  const targetStorage = getStorage();
+  if (!targetStorage) return getAuthState();
+
+  if (accessToken) {
+    targetStorage.setItem('accessToken', accessToken);
+  }
+  if (refreshToken) {
+    targetStorage.setItem('refreshToken', refreshToken);
+  }
+  if (email) {
+    targetStorage.setItem('userEmail', email);
+  }
+  if (user?.firstName) {
+    targetStorage.setItem('userName', user.firstName);
+  }
+  if (user) {
+    targetStorage.setItem('user', JSON.stringify(user));
+    if (user.email) {
+      targetStorage.setItem('userEmail', user.email);
+    }
+  }
+
+  return getAuthState(targetStorage);
 }
 
 export function persistDemoSession({ storage } = {}) {
   const targetStorage = getStorage(storage);
+  if (!targetStorage) {
+    return {
+      accessToken: DEMO_ACCESS_TOKEN,
+      refreshToken: DEMO_REFRESH_TOKEN,
+      user: DEMO_USER,
+    };
+  }
 
   targetStorage.setItem('accessToken', DEMO_ACCESS_TOKEN);
   targetStorage.setItem('refreshToken', DEMO_REFRESH_TOKEN);
@@ -30,8 +100,12 @@ export function persistDemoSession({ storage } = {}) {
   };
 }
 
-export function clearAuthSession(storage = window.localStorage) {
+export function clearAuthSession(storage) {
   const targetStorage = getStorage(storage);
+
+  if (!targetStorage) {
+    return;
+  }
 
   targetStorage.removeItem('accessToken');
   targetStorage.removeItem('refreshToken');
@@ -61,3 +135,4 @@ export function shouldUseDemoFallback({ email, password, error } = {}) {
 
   return false;
 }
+
