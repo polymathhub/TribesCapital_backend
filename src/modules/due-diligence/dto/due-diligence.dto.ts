@@ -302,11 +302,13 @@ export class QueryDDDto {
   @IsEnum(DDPriority)
   priority?: DDPriority;
 
+  @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(1)
   page?: number = 1;
 
+  @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(1)

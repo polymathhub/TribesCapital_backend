@@ -150,6 +150,27 @@ function App() {
     }
   };
 
+  const handleUpdateUser = (updatedUser) => {
+    setUser((currentUser) => {
+      const nextUser = {
+        ...currentUser,
+        ...updatedUser,
+      };
+      nextUser.name = nextUser.name || `${nextUser.firstName || ''} ${nextUser.lastName || ''}`.trim() || nextUser.email?.split('@')[0] || 'there';
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('user', JSON.stringify(nextUser));
+          if (nextUser.email) {
+            window.localStorage.setItem('userEmail', nextUser.email);
+          }
+        }
+      } catch {
+        // ignore storage failures
+      }
+      return nextUser;
+    });
+  };
+
   const handleLogout = () => {
     clearAuthSession();
     setIsAuthenticated(false);
@@ -208,6 +229,7 @@ function App() {
             onNavigate={handleNavigate}
             onLogout={handleLogout}
             onToggleSidebar={handleToggleSidebar}
+            onUpdateUser={handleUpdateUser}
             isSidebarOpen={isSidebarOpen}
             isMobile={isMobile}
             isTablet={isTablet}

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, Query, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, Query, UseGuards, HttpCode, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Type } from 'class-transformer';
 import { EventsService } from './events.service';
 import { CreateEventDto, EventResponseDto, RsvpResponseDto, CreateRsvpDto } from './dto/event.dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
@@ -14,8 +15,8 @@ export class EventsController {
   @Public()
   @Get()
   async findAll(
-    @Query('skip') skip: number = 0,
-    @Query('take') take: number = 10,
+    @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip: number,
+    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
   ): Promise<EventResponseDto[]> {
     return this.eventsService.findAll(skip, take);
   }

@@ -30,17 +30,28 @@ export class CoursesService {
   }
 
   async findAll(skip: number = 0, take: number = 10): Promise<CourseResponseDto[]> {
-    const courses = await this.prisma.course.findMany({
-      where: { isPublished: true },
-      skip,
-      take,
-      include: {
-        lessons: true,
-        enrollments: true,
-      },
-    });
+    if (!this.prisma.isDatabaseAvailable()) {
+      return [];
+    }
 
-    return courses.map(course => this.formatCourseResponse(course));
+    try {
+      const courses = await this.prisma.course.findMany({
+        where: { isPublished: true },
+        skip,
+        take,
+        include: {
+          lessons: true,
+          enrollments: true,
+        },
+      });
+
+      return courses.map(course => this.formatCourseResponse(course));
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error && String((error as any).message).includes('PrismaClientInitializationError')) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   async findById(id: string): Promise<CourseResponseDto> {
@@ -102,6 +113,10 @@ export class CoursesService {
   }
 
   async getEnrollments(userId: string): Promise<EnrollmentResponseDto[]> {
+    if (!this.prisma.isDatabaseAvailable()) {
+      return [];
+    }
+
     const enrollments = await this.prisma.enrollment.findMany({
       where: { userId },
       include: {
@@ -129,6 +144,17 @@ export class CoursesService {
   }
 
   async getProgress(courseId: string, userId: string): Promise<{ progress: number; status: string; completedLessons: number; totalLessons: number; lastLessonId: string | null; lastAccessedAt: string | null }> {
+    if (!this.prisma.isDatabaseAvailable()) {
+      return {
+        progress: 0,
+        status: 'notStarted',
+        completedLessons: 0,
+        totalLessons: 0,
+        lastLessonId: null,
+        lastAccessedAt: null,
+      };
+    }
+
     const totalLessons = await this.prisma.lesson.count({ where: { courseId } });
     const completedLessons = await this.prisma.progress.count({
       where: {

@@ -6,7 +6,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   private readonly logger = new Logger(PrismaService.name);
   private databaseAvailable = false;
 
-  private isDatabaseDisabled(): boolean {
+  isDatabaseDisabled(): boolean {
     const value =
       process.env.DB_SKIP ||
       process.env.NO_DATABASE_MODE ||
@@ -22,6 +22,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleInit() {
     if (this.isDatabaseDisabled()) {
+      this.databaseAvailable = false;
       this.logger.warn('Database connection skipped because DB_SKIP/NO_DATABASE_MODE is enabled.');
       return;
     }
@@ -68,6 +69,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   isDatabaseAvailable(): boolean {
-    return this.databaseAvailable || this.isDatabaseDisabled();
+    return this.databaseAvailable && !this.isDatabaseDisabled();
   }
 }

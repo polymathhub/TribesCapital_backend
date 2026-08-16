@@ -7,6 +7,22 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async getUserById(id: string) {
+    if (!this.prisma.isDatabaseAvailable()) {
+      if (id === 'demo-user') {
+        return {
+          id: 'demo-user',
+          email: 'demo@tribes.capital',
+          firstName: 'Demo',
+          lastName: 'User',
+          isActive: true,
+          emailVerified: true,
+          roles: [],
+          permissions: [],
+        };
+      }
+      throw new NotFoundException('User not found');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -59,6 +75,15 @@ export class UsersService {
   }
 
   async getAllUsers(skip = 0, take = 10) {
+    if (!this.prisma.isDatabaseAvailable()) {
+      return {
+        data: [],
+        total: 0,
+        skip,
+        take,
+      };
+    }
+
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         skip,

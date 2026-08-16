@@ -17,6 +17,7 @@ export const usersAPI = {
   getProfile: () => apiClient.get('/users/me'),
   getAll: (params) => apiClient.get('/users', { params }),
   updateProfile: (data) => apiClient.patch('/users/me', data),
+  uploadAvatar: (formData, config = {}) => apiClient.post('/users/me/avatar', formData, Object.assign({ headers: { 'Content-Type': 'multipart/form-data' } }, config)),
   getById: (id) => apiClient.get(`/users/${id}`),
 };
 

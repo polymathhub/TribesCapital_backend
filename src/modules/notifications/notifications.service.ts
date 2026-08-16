@@ -83,6 +83,10 @@ export class NotificationsService {
   }
 
   async listForUser(userId: string) {
+    if (!this.prisma.isDatabaseAvailable()) {
+      return [];
+    }
+
     return this.prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },

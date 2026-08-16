@@ -18,6 +18,12 @@ export class CoursesController {
     return this.coursesService.findAll(skip, take);
   }
 
+  @Get('enrolled')
+  @UseGuards(JwtAuthGuard)
+  async getEnrolled(@GetCurrentUser('id') userId: string): Promise<EnrollmentResponseDto[]> {
+    return this.coursesService.getEnrollments(userId);
+  }
+
   @Public()
   @Get(':id')
   async findById(@Param('id') id: string): Promise<CourseResponseDto> {
@@ -31,12 +37,6 @@ export class CoursesController {
     @GetCurrentUser('id') userId: string,
   ): Promise<{ progress: number; status: string; completedLessons: number; totalLessons: number; lastLessonId: string | null; lastAccessedAt: string | null }> {
     return this.coursesService.getProgress(courseId, userId);
-  }
-
-  @Get('enrolled')
-  @UseGuards(JwtAuthGuard)
-  async getEnrolled(@GetCurrentUser('id') userId: string): Promise<EnrollmentResponseDto[]> {
-    return this.coursesService.getEnrollments(userId);
   }
 
   @Post()

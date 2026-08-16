@@ -1163,25 +1163,25 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
           )}
         </div>
 
-        <div style={{position:'sticky',bottom:0,background:W,border:`1px solid ${BD}`,borderRadius:12,padding:'12px 18px',margin:isMobile?'0 14px 20px':'0 24px 24px',display:'flex',gap:10,flexWrap:'wrap'}}>
+        <div style={{position:'sticky',bottom:0,background:W,border:`1px solid ${BD}`,borderRadius:12,padding:'12px 18px',margin:isMobile?'0 14px 20px':'0 24px 24px',display:'flex',gap:10,flexWrap:'wrap',boxSizing:'border-box'}}>
           <button
             onClick={handleStartCourse}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background:'linear-gradient(135deg, #7C3AED, #A855F7)', color: W, border:'none', boxShadow:'0 14px 30px rgba(124,58,237,0.24)'}}>
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background:'linear-gradient(135deg, #7C3AED, #A855F7)', color: W, border:'none', boxShadow:'0 14px 30px rgba(124,58,237,0.24)', width: isMobile ? '100%' : 'auto'}}>
             {progress === 0 ? 'Start course' : 'Restart course'}
           </button>
           <button
             onClick={handleContinue}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: progress > 0 && progress < 100 ? 'linear-gradient(135deg, #7C3AED, #A855F7)' : W, color: progress > 0 && progress < 100 ? W : T2, border: progress > 0 && progress < 100 ? 'none' : `1px solid ${BD}`, boxShadow: progress > 0 && progress < 100 ? '0 14px 30px rgba(124,58,237,0.24)' : 'none'}}>
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: progress > 0 && progress < 100 ? 'linear-gradient(135deg, #7C3AED, #A855F7)' : W, color: progress > 0 && progress < 100 ? W : T2, border: progress > 0 && progress < 100 ? 'none' : `1px solid ${BD}`, boxShadow: progress > 0 && progress < 100 ? '0 14px 30px rgba(124,58,237,0.24)' : 'none', width: isMobile ? '100%' : 'auto'}}>
             {progress >= 100 ? 'Review course' : 'Continue'}
           </button>
           <button
             onClick={() => handleCompleteLesson(activeLesson)}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: activeLesson && completedLessonIds.includes(activeLesson.id) ? GRB : W, color: activeLesson && completedLessonIds.includes(activeLesson.id) ? GR : T2, border: activeLesson && completedLessonIds.includes(activeLesson.id) ? `1px solid ${GR}` : `1px solid ${BD}`}}>
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: activeLesson && completedLessonIds.includes(activeLesson.id) ? GRB : W, color: activeLesson && completedLessonIds.includes(activeLesson.id) ? GR : T2, border: activeLesson && completedLessonIds.includes(activeLesson.id) ? `1px solid ${GR}` : `1px solid ${BD}`, width: isMobile ? '100%' : 'auto'}}>
             {activeLesson && completedLessonIds.includes(activeLesson.id) ? 'Completed' : 'Mark complete'}
           </button>
           <button
             onClick={handleReview}
-            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: W, color: T2, border: `1px solid ${BD}`}}>
+            style={{padding:'10px 20px',borderRadius:8,fontSize:13,fontWeight:500,cursor:'pointer',background: W, color: T2, border: `1px solid ${BD}`, width: isMobile ? '100%' : 'auto'}}>
             Review all
           </button>
         </div>
