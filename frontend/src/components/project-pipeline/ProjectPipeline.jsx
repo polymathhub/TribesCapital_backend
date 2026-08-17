@@ -37,7 +37,7 @@ const SIDEBAR_W = 260;
 function getCurrentPermissions() {
   try {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
-    if (!stored) return { canCreate: false, canEdit: false, canDelete: false };
+    if (!stored) return { canCreate: false, canEdit: false, canDelete: false, canExport: false };
     const user = JSON.parse(stored);
     const roles = user?.roles || [];
     const isAdmin = user?.isAdmin || roles.includes && roles.includes('admin');
@@ -45,9 +45,10 @@ function getCurrentPermissions() {
       canCreate: Boolean(isAdmin || roles.includes('editor') || roles.includes('contributor')),
       canEdit: Boolean(isAdmin || roles.includes('editor') || roles.includes('moderator')),
       canDelete: Boolean(isAdmin || roles.includes('admin') || roles.includes('moderator')),
+      canExport: Boolean(isAdmin),
     };
   } catch (e) {
-    return { canCreate: false, canEdit: false, canDelete: false };
+    return { canCreate: false, canEdit: false, canDelete: false, canExport: false };
   }
 }
 
@@ -867,6 +868,10 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   }, [projects, stage, fType, topSearch]);
 
   const exportCsv = () => {
+    if (!PERMS.canExport) {
+      setToast('Only admins can export the pipeline');
+      return;
+    }
     if (!filtered.length) { setToast('Nothing to export'); return; }
     const head = ['Name','Type','Stage','Country','City','Capacity (MW)','Deal value (USD)','IRR (%)','Sponsor','Progress (%)','Tags'];
     const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -927,13 +932,15 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-                <button onClick={exportCsv}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: '0 20px', height: 44, background: W, color: T1,
-                    border: `1px solid ${BD}`, borderRadius: 8, fontSize: 15, fontWeight: 500,
-                    cursor: 'pointer', whiteSpace: 'nowrap', flex: isMobile ? 1 : 'none', boxShadow: '0 4px 18px rgba(15,23,42,0.04)' }}>
-                  <I k="download" s={16} c={T2} />Export
-                </button>
+                {PERMS.canExport && (
+                  <button onClick={exportCsv}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      padding: '0 20px', height: 44, background: W, color: T1,
+                      border: `1px solid ${BD}`, borderRadius: 8, fontSize: 15, fontWeight: 500,
+                      cursor: 'pointer', whiteSpace: 'nowrap', flex: isMobile ? 1 : 'none', boxShadow: '0 4px 18px rgba(15,23,42,0.04)' }}>
+                    <I k="download" s={16} c={T2} />Export
+                  </button>
+                )}
                 {
                   <button onClick={() => setAdding(true)}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

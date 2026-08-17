@@ -14,6 +14,7 @@
     "jest": "^30.4.2",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "pdfjs-dist": "^6.2.108",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

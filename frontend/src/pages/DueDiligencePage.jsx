@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import * as pdfjsLib from 'pdfjs-dist';
 import { dueDiligenceAPI } from '../api/endpoints';
 import dueDiligenceIllustration from '../assets/illustrations/Questions.mp4';
 import dueDiligenceGif from '../assets/illustrations/Accept-tasks.gif';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
 /* ═══════════════════════════════════════════════════════════
    TRIBES CAPITAL — DUE DILIGENCE VAULT
@@ -980,8 +983,58 @@ function DocCard({ doc, onOpen, onApprove, canApprove }) {
       ? { bg: '#FEE2E2', color: '#991B1B' }
       : { bg: '#F5EDFC', color: PL };
 
-  // Render document preview based on file type
+  const [pdfThumbnail, setPdfThumbnail] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const fileUrl = doc.fileUrl;
+    const isPdf = /\.pdf$/i.test(fileUrl || '') || (doc.mimeType || doc.fileType || '').toLowerCase() === 'application/pdf';
+
+    if (!isPdf || !fileUrl) {
+      setPdfThumbnail('');
+      return () => { cancelled = true; };
+    }
+
+    const renderPdfThumbnail = async () => {
+      try {
+        const pdf = await pdfjsLib.getDocument(fileUrl).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.2 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: context, viewport }).promise;
+        if (!cancelled) {
+          setPdfThumbnail(canvas.toDataURL('image/png'));
+        }
+      } catch (error) {
+        console.warn('Failed to render PDF thumbnail:', error);
+        if (!cancelled) setPdfThumbnail('');
+      }
+    };
+
+    renderPdfThumbnail();
+    return () => { cancelled = true; };
+  }, [doc.fileUrl, doc.fileType, doc.mimeType]);
+
+  const getFileExtension = () => {
+    const source = doc.fileName || doc.fileUrl || doc.fileType || '';
+    const token = source.split(/[?#]/)[0];
+    const ext = token.split('.').pop()?.toLowerCase();
+    return ext || '';
+  };
+
   const renderPreview = () => {
+    const ext = getFileExtension();
+    const mime = (doc.mimeType || doc.fileType || '').toLowerCase();
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'heic', 'heif'].includes(ext)
+      || mime.startsWith('image/');
+    const isPdf = ext === 'pdf' || mime === 'application/pdf';
+    const isOffice = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'txt', 'rtf'].includes(ext)
+      || ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'text/plain', 'application/rtf', 'text/csv'].includes(mime);
+
     if (!doc.fileUrl) {
       return (
         <div style={{
@@ -993,10 +1046,46 @@ function DocCard({ doc, onOpen, onApprove, canApprove }) {
         </div>
       );
     }
-    const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(doc.fileUrl);
+
     if (isImage) {
-      return <img src={doc.fileUrl} alt={doc.fileName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+      return <img src={doc.fileUrl} alt={doc.fileName || doc.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
     }
+
+    if (isPdf && pdfThumbnail) {
+      return <img src={pdfThumbnail} alt={doc.fileName || doc.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+    }
+
+    if (isPdf) {
+      return (
+        <div style={{
+          width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(135deg, #FEE2E2 0%, #F9F5FF 100%)', flexDirection: 'column', gap: 8,
+        }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16, background: '#FCA5A5', color: '#7F1D1D',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700,
+          }}>PDF</div>
+          <span style={{ fontSize: 11, color: '#7F1D1D', fontWeight: 700 }}>PDF preview</span>
+        </div>
+      );
+    }
+
+    if (isOffice) {
+      const label = (ext || (doc.fileType || 'FILE')).toUpperCase();
+      return (
+        <div style={{
+          width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%)', flexDirection: 'column', gap: 8,
+        }}>
+          <div style={{
+            width: 62, height: 62, borderRadius: 18, background: 'rgba(255,255,255,0.7)', color: '#1D4ED8',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700,
+          }}>{label.slice(0, 4)}</div>
+          <span style={{ fontSize: 11, color: '#1E3A8A', fontWeight: 700 }}>{doc.fileType || 'Document'}</span>
+        </div>
+      );
+    }
+
     return (
       <div style={{
         width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
