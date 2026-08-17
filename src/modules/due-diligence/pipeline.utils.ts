@@ -56,5 +56,8 @@ export function mapDueDiligenceToPipelineProject(item: any) {
     sourceType: 'due-diligence',
     status: item?.status || DDStatus.DRAFT,
     owner: ownerInitials || ownerName.slice(0, 2).toUpperCase(),
+    documentPreview: item?.documents && Array.isArray(item.documents) && item.documents.length > 0
+      ? item.documents[0].fileUrl
+      : null,
   };
 }

@@ -438,13 +438,23 @@ function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
   const uploadOnly = editing;
 
   const validate = () => {
-    if (uploadOnly) return true;
+    if (uploadOnly) {
+      // On edit, still require a file if replacing
+      const e = {};
+      if (!selectedFile) e.file = true;
+      setErr(e);
+      return Object.keys(e).length === 0;
+    }
+    // On create, all fields required including file
     const e = {};
     if (!f.title.trim())       e.title = true;
     if (!f.targetName.trim())  e.targetName = true;
     if (!f.type)               e.type = true;
     if (!f.description.trim()) e.description = true;
-    if (!selectedFile)         e.file = true;
+    if (!selectedFile) {
+      e.file = true;
+      alert('You must attach a file before creating a due diligence case.');
+    }
     setErr(e);
     return Object.keys(e).length === 0;
   };
@@ -970,10 +980,41 @@ function DocCard({ doc, onOpen, onApprove, canApprove }) {
       ? { bg: '#FEE2E2', color: '#991B1B' }
       : { bg: '#F5EDFC', color: PL };
 
+  // Render document preview based on file type
+  const renderPreview = () => {
+    if (!doc.fileUrl) {
+      return (
+        <div style={{
+          width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#F3F4F6', flexDirection: 'column', gap: 8,
+        }}>
+          <I k="file" s={48} c="#D1D5DB" />
+          <span style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 500 }}>No preview</span>
+        </div>
+      );
+    }
+    const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(doc.fileUrl);
+    if (isImage) {
+      return <img src={doc.fileUrl} alt={doc.fileName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+    }
+    return (
+      <div style={{
+        width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'linear-gradient(135deg, #F5EDFC 0%, #F9F5FF 100%)', flexDirection: 'column', gap: 8,
+      }}>
+        <I k="file" s={48} c={PL} />
+        <span style={{ fontSize: 11, color: PL, fontWeight: 600, textAlign: 'center', padding: '0 8px' }}>
+          {doc.fileType || 'Document'}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div onClick={() => onOpen(doc)}
       style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer' }}>
-      <div style={{ position: 'relative', height: 160, background: '#B7B7B7' }}>
+      <div style={{ position: 'relative', height: 160, background: '#B7B7B7', overflow: 'hidden' }}>
+        {renderPreview()}
         <span style={{
           position: 'absolute', top: 12, right: 12, background: W, borderRadius: 6,
           padding: '4px 10px', fontSize: 11, fontWeight: 600, color: T1,

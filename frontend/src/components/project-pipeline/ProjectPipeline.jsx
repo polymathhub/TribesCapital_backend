@@ -594,6 +594,22 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
       </div>
 
       <div style={{ fontSize: 15, fontWeight: 600, color: T1, lineHeight: 1.35, marginBottom: 5 }}>{p.name}</div>
+      
+      {/* Document preview for approved diligence */}
+      {p.dueDiligenceId && p.documentPreview && (
+        <div style={{ marginBottom: 12, height: 120, borderRadius: 8, overflow: 'hidden', border: `1px solid ${BD}`, background: '#F3F4F6' }}>
+          {/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(p.documentPreview) ? (
+            <img src={p.documentPreview} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'linear-gradient(135deg, #F5EDFC 0%, #F9F5FF 100%)', flexDirection: 'column', gap: 6 }}>
+              <I k="file" s={32} c={PL} />
+              <span style={{ fontSize: 11, color: PL, fontWeight: 600 }}>Document</span>
+            </div>
+          )}
+        </div>
+      )}
+      
       {p.dueDiligenceId && (
         <div style={{ marginBottom: 10 }}>
           <Tag tone="green">Approved diligence</Tag>
@@ -709,14 +725,22 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
       }
     };
 
+    // Listen for pipeline sync when approval is finalized from due diligence
+    const handlePipelineSync = () => {
+      setTimeout(() => { void syncApprovedPipelineProjects(); }, 50);
+    };
+
     // Listen for in-app notifications and custom events
     window.addEventListener('tribes:notifications-update', refreshFromDiligenceEvents);
     // Also listen for a lower-level event used by backend/dev tooling
     window.addEventListener('tribes:due-diligence-approved', () => { void syncApprovedPipelineProjects(); });
+    // Listen for pipeline sync event from approval panel
+    window.addEventListener('tribes:pipeline-sync-approved', handlePipelineSync);
     window.addEventListener('tribes:project-pipeline-add', addApprovedProject);
     return () => {
       window.removeEventListener('tribes:notifications-update', refreshFromDiligenceEvents);
       window.removeEventListener('tribes:due-diligence-approved', () => { void syncApprovedPipelineProjects(); });
+      window.removeEventListener('tribes:pipeline-sync-approved', handlePipelineSync);
       window.removeEventListener('tribes:project-pipeline-add', addApprovedProject);
     };
   }, []);
