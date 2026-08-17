@@ -477,11 +477,21 @@ export class DueDiligenceService {
 
   async createApproval(dueDiligenceId: string, dto: CreateDDApprovalDto, userId: string) {
     const dd = await this.findOne(dueDiligenceId, userId);
+    const actingUser = await this.prisma.user?.findUnique?.({
+      where: { id: userId },
+      include: { roles: { select: { name: true } } },
+    });
+
+    const roleNames = actingUser?.roles?.map((role) => role.name) ?? [];
+    const isAdmin = roleNames.some((role) => ['admin', 'super-admin'].includes(role));
+    if (!isAdmin) {
+      throw new ForbiddenException('Only admins can create due diligence approvals');
+    }
 
     return this.prisma.dueDiligenceApproval.create({
       data: {
-        approverRole: dto.approverRole,
-        approverId: dto.approverId,
+        approverRole: dto.approverRole || 'admin',
+        approverId: dto.approverId || userId,
         level: dto.level || 1,
         dueDiligenceId,
       },
@@ -495,6 +505,17 @@ export class DueDiligenceService {
 
   async approveOrReject(dueDiligenceId: string, approvalId: string, dto: ApproveDDDto, userId: string) {
     const dd = await this.findOne(dueDiligenceId, userId);
+    const actingUser = await this.prisma.user?.findUnique?.({
+      where: { id: userId },
+      include: { roles: { select: { name: true } } },
+    });
+
+    const roleNames = actingUser?.roles?.map((role) => role.name) ?? [];
+    const isAdmin = roleNames.some((role) => ['admin', 'super-admin'].includes(role));
+    if (!isAdmin) {
+      throw new ForbiddenException('Only admins can approve due diligence cases');
+    }
+
     const approval = await this.prisma.dueDiligenceApproval.findUnique({ where: { id: approvalId } });
     if (!approval) throw new NotFoundException('Approval not found');
 

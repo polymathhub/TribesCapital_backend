@@ -102,6 +102,12 @@ describe('DueDiligenceService', () => {
 
   it('marks a diligence case as approved as soon as an admin approves it', async () => {
     const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'user-1',
+          roles: [{ name: 'admin' }],
+        }),
+      },
       dueDiligence: {
         findUnique: jest.fn().mockResolvedValue({
           id: 'dd-1',
@@ -129,5 +135,29 @@ describe('DueDiligenceService', () => {
         data: expect.objectContaining({ status: 'approved' }),
       }),
     );
+  });
+
+  it('blocks approval for non-admin users', async () => {
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'user-2',
+          roles: [{ name: 'member' }],
+        }),
+      },
+      dueDiligence: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'dd-1',
+          title: 'Acme diligence',
+          creatorId: 'user-1',
+        }),
+      },
+    };
+
+    const service = new DueDiligenceService(prisma as any);
+
+    await expect(
+      service.approveOrReject('dd-1', 'approval-1', { status: 'approved', approvalNotes: 'Approve' }, 'user-2'),
+    ).rejects.toThrow('Only admins can approve due diligence cases');
   });
 });
