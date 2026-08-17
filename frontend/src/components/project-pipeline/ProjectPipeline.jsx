@@ -726,21 +726,37 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
       }
     };
 
-    // Listen for pipeline sync when approval is finalized from due diligence
-    const handlePipelineSync = () => {
+    const handleDiligenceApproved = (event) => {
+      const item = event?.detail?.project || event?.detail?.dueDiligence || event?.detail?.item;
+      if (item) {
+        const mapped = mapDueDiligenceToPipelineProject(item);
+        setProjects(prev => {
+          const next = prev.filter(project => project.dueDiligenceId !== mapped.dueDiligenceId);
+          return [mapped, ...next];
+        });
+      }
+      void syncApprovedPipelineProjects();
+    };
+
+    const handlePipelineSync = (event) => {
+      const item = event?.detail?.project || event?.detail?.dueDiligence || event?.detail?.item;
+      if (item) {
+        const mapped = mapDueDiligenceToPipelineProject(item);
+        setProjects(prev => {
+          const next = prev.filter(project => project.dueDiligenceId !== mapped.dueDiligenceId);
+          return [mapped, ...next];
+        });
+      }
       setTimeout(() => { void syncApprovedPipelineProjects(); }, 50);
     };
 
-    // Listen for in-app notifications and custom events
     window.addEventListener('tribes:notifications-update', refreshFromDiligenceEvents);
-    // Also listen for a lower-level event used by backend/dev tooling
-    window.addEventListener('tribes:due-diligence-approved', () => { void syncApprovedPipelineProjects(); });
-    // Listen for pipeline sync event from approval panel
+    window.addEventListener('tribes:due-diligence-approved', handleDiligenceApproved);
     window.addEventListener('tribes:pipeline-sync-approved', handlePipelineSync);
     window.addEventListener('tribes:project-pipeline-add', addApprovedProject);
     return () => {
       window.removeEventListener('tribes:notifications-update', refreshFromDiligenceEvents);
-      window.removeEventListener('tribes:due-diligence-approved', () => { void syncApprovedPipelineProjects(); });
+      window.removeEventListener('tribes:due-diligence-approved', handleDiligenceApproved);
       window.removeEventListener('tribes:pipeline-sync-approved', handlePipelineSync);
       window.removeEventListener('tribes:project-pipeline-add', addApprovedProject);
     };
