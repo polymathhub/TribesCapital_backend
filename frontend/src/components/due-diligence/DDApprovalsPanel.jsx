@@ -1,6 +1,57 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
 import Icon from '../Icon';
+import { getAuthState } from '../../utils/authSession';
+
+const normalizeRoleName = (value) => String(value ?? '').trim().toLowerCase();
+
+const getStoredUserRoles = (user) => {
+  if (!user) return [];
+
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+
+  return roles.flatMap((role) => {
+    if (typeof role === 'string') {
+      return [normalizeRoleName(role)];
+    }
+
+    if (role && typeof role === 'object') {
+      const name = normalizeRoleName(role.name ?? role.role ?? role.value ?? '');
+      return name ? [name] : [];
+    }
+
+    return [];
+  });
+};
+
+const isCurrentUserAdmin = () => {
+  try {
+    const authState = getAuthState();
+    const storedUser = authState?.user || (
+      typeof window !== 'undefined' && window.localStorage
+        ? JSON.parse(window.localStorage.getItem('user') || 'null')
+        : null
+    );
+
+    if (!storedUser) {
+      return false;
+    }
+
+    const roles = getStoredUserRoles(storedUser);
+    const normalizedRole = normalizeRoleName(storedUser?.role);
+    const normalizedPermissions = normalizeRoleName(storedUser?.permission ?? storedUser?.permissions);
+
+    return Boolean(
+      storedUser?.isAdmin ||
+      normalizedRole === 'admin' ||
+      normalizedPermissions === 'admin' ||
+      roles.includes('admin') ||
+      roles.includes('super-admin')
+    );
+  } catch (error) {
+    return false;
+  }
+};
 
 const notifyDiligenceRefresh = (detail = {}) => {
   try {
@@ -14,10 +65,28 @@ const notifyDiligenceRefresh = (detail = {}) => {
 
 const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => isCurrentUserAdmin());
   const [formData, setFormData] = useState({
-    approverRole: 'reviewer',
+    approverRole: 'admin',
     approvalNotes: '',
   });
+
+  useEffect(() => {
+    const updateAdminStatus = () => setIsAdmin(isCurrentUserAdmin());
+    updateAdminStatus();
+
+    window.addEventListener('storage', updateAdminStatus);
+    window.addEventListener('tribes:auth-updated', updateAdminStatus);
+
+    return () => {
+      window.removeEventListener('storage', updateAdminStatus);
+      window.removeEventListener('tribes:auth-updated', updateAdminStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, approverRole: isAdmin ? 'admin' : 'reviewer' }));
+  }, [isAdmin]);
 
   const statusColors = {
     'pending': { bg: '#FEF3C7', text: '#92400E', label: 'Pending' },
@@ -32,12 +101,16 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert('Only admins can approve due diligence');
+      return;
+    }
     try {
       await dueDiligenceAPI.createApproval(dueDiligenceId, {
-        approverRole: formData.approverRole || 'reviewer',
+        approverRole: 'admin',
         approvalNotes: formData.approvalNotes,
       });
-      setFormData({ approverRole: 'reviewer', approvalNotes: '' });
+      setFormData({ approverRole: 'admin', approvalNotes: '' });
       setShowForm(false);
       onRefresh();
       notifyDiligenceRefresh({ id: dueDiligenceId, action: 'approval-requested' });
@@ -51,7 +124,36 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
     try {
       await dueDiligenceAPI.approveOrReject(dueDiligenceId, approvalId, { status: decision, approvalNotes: notes });
       onRefresh();
+
+      // Notify all listeners of the approval decision
       notifyDiligenceRefresh({ id: dueDiligenceId, action: 'approval-decided', decision });
+
+      // If approved, push the actual approved record into the pipeline immediately
+      if (decision === 'approved') {
+        try {
+          const approvedCaseResponse = await dueDiligenceAPI.getById(dueDiligenceId).catch(() => null);
+          const approvedCase = approvedCaseResponse?.data || approvedCaseResponse || {
+            id: dueDiligenceId,
+            title: 'Approved diligence case',
+            status: 'approved',
+            targetMetadata: { tags: ['Approved'] },
+          };
+
+          window.dispatchEvent(new CustomEvent('tribes:project-pipeline-add', {
+            detail: { project: approvedCase, dueDiligence: approvedCase },
+          }));
+
+          window.dispatchEvent(new CustomEvent('tribes:due-diligence-approved', {
+            detail: { id: dueDiligenceId, dueDiligence: approvedCase },
+          }));
+
+          window.dispatchEvent(new CustomEvent('tribes:pipeline-sync-approved', {
+            detail: { dueDiligenceId, action: 'approval-approved', project: approvedCase },
+          }));
+        } catch (e) {
+          console.warn('Failed to dispatch pipeline sync', e);
+        }
+      }
     } catch (error) {
       console.error('Error updating approval:', error);
       alert('Failed to update approval');
@@ -60,7 +162,67 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
 
   return (
     <div>
-      {showForm ? (
+      {!isAdmin ? (
+        <div style={{ marginBottom: '16px', padding: '12px 14px', background: '#F9FAFB', borderRadius: '8px', color: '#374151', fontSize: '14px' }}>
+          Only admins can approve due diligence.
+        </div>
+      ) : (
+        <div style={{
+          marginBottom: '18px',
+          padding: '16px 18px',
+          borderRadius: '10px',
+          border: '1px solid #E5E7EB',
+          background: 'linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#5B21B6',
+              color: '#fff',
+            }}>
+              <Icon name="shield" size={16} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '15px', color: '#111827' }}>Admin approval</div>
+              <div style={{ fontSize: '12px', color: '#6B7280' }}>Review and approve this diligence record</div>
+            </div>
+          </div>
+
+          {!showForm ? (
+            <button
+              onClick={() => setShowForm(true)}
+              className="interactive-button"
+              style={{
+                padding: '9px 16px',
+                background: '#5B21B6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Icon name="plus" size={14} color="#fff" />
+              Request approval
+            </button>
+          ) : null}
+        </div>
+      )}
+
+      {isAdmin && showForm ? (
         <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '12px' }}>
@@ -71,8 +233,9 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
                 name="approverRole"
                 value={formData.approverRole}
                 onChange={handleChange}
-                placeholder="reviewer"
+                placeholder="admin"
                 required
+                readOnly={isAdmin}
                 style={{
                   width: '100%',
                   padding: '8px',
@@ -137,28 +300,7 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
             </div>
           </form>
         </div>
-      ) : (
-        <button
-          onClick={() => setShowForm(true)}
-          className="interactive-button"
-          style={{
-            marginBottom: '16px',
-            padding: '8px 16px',
-            background: '#5B21B6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 600,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Icon name="plus" size={14} color="#fff" />
-          Request Approval
-        </button>
-      )}
+      ) : null}
 
       {approvals && approvals.length > 0 ? (
         <div style={{ display: 'grid', gap: '12px' }}>
@@ -200,7 +342,7 @@ const DDApprovalsPanel = ({ dueDiligenceId, approvals = [], onRefresh }) => {
                     {approval.approvalNotes}
                   </p>
                 )}
-                {status === 'pending' && (
+                {isAdmin && status === 'pending' && (
                   <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                     <button
                       onClick={() => handleApproveOrReject(approval.id, 'approved', '')}
