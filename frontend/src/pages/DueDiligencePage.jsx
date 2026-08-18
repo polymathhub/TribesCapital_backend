@@ -1337,8 +1337,18 @@ export default function DueDiligenceVault() {
           priority: String(form.priority || 'medium').toLowerCase(),
           targetDeadline: form.deadline ? new Date(form.deadline.split('/').reverse().join('-')).toISOString() : undefined,
         };
-        const response = await dueDiligenceAPI.create(payload);
-        const createdItem = unwrapApiData(response);
+        
+        let createdItem;
+        try {
+          const response = await dueDiligenceAPI.create(payload);
+          createdItem = unwrapApiData(response);
+          if (!createdItem || !createdItem.id) {
+            throw new Error('Create response missing required fields');
+          }
+        } catch (createErr) {
+          console.error('Failed to create due diligence case:', createErr);
+          throw new Error(`Creation failed: ${createErr?.message || 'Unknown error'}`);
+        }
 
         let uploadFailed = false;
         if (form.file) {
@@ -1354,18 +1364,23 @@ export default function DueDiligenceVault() {
           }
         }
 
-        const created = normalizeDoc(createdItem);
-        setDocs(d => [created, ...d]);
+        try {
+          const created = normalizeDoc(createdItem);
+          setDocs(d => [created, ...d]);
+        } catch (normalizeErr) {
+          console.error('Failed to normalize created due diligence:', normalizeErr);
+          // Still show success even if normalization fails, as the backend was successful
+        }
+
         setCreating(false);
         setPage(1);
         setToast(uploadFailed ? 'Due diligence created, but document upload failed.' : 'Due diligence created');
         try {
           window.dispatchEvent(new CustomEvent('tribes:notifications-update', {
-            detail: { type: 'due-diligence-created', id: createdItem?.id || created?.id },
+            detail: { type: 'due-diligence-created', id: createdItem?.id },
           }));
-          // Also emit a dedicated event for pipeline listeners
           window.dispatchEvent(new CustomEvent('tribes:due-diligence-created', {
-            detail: { id: createdItem?.id || created?.id },
+            detail: { id: createdItem?.id },
           }));
         } catch (eventError) {
           console.warn('Failed to dispatch notification refresh event', eventError);
@@ -1374,7 +1389,8 @@ export default function DueDiligenceVault() {
       await loadDocs();
     } catch (err) {
       console.error('Failed to save due diligence record:', err);
-      setToast('We could not save this diligence case right now.');
+      const errorMsg = err?.message || err?.response?.data?.message || 'We could not save this diligence case right now.';
+      setToast(errorMsg);
     }
   };
 

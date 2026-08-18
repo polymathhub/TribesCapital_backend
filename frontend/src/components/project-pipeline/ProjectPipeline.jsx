@@ -134,7 +134,7 @@ const mapDueDiligenceToPipelineProject = (item) => {
     dueDiligenceId: item.id,
     name: item?.title || 'Untitled diligence',
     type: item?.type || 'investment',
-    stage: item?.status === 'approved' ? 'Approved' : 'Due Diligence',
+    stage: 'Due Diligence',
     country: typeof metadata.country === 'string' ? metadata.country : '',
     city: typeof metadata.city === 'string' ? metadata.city : '',
     capacity: typeof metadata.capacity === 'number' ? metadata.capacity : null,
