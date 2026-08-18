@@ -10,6 +10,7 @@ describe('DueDiligenceService', () => {
     };
     const notificationsService = {
       createForUser: jest.fn().mockResolvedValue({ id: 'notification-1' }),
+      createForAllUsers: jest.fn().mockResolvedValue({ count: 1 }),
     };
 
     const service = new DueDiligenceService(prisma as any, notificationsService as any);
@@ -31,53 +32,54 @@ describe('DueDiligenceService', () => {
         title: 'Due diligence case created',
       }),
     );
+    expect(notificationsService.createForAllUsers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'due_diligence_created',
+        title: 'New due diligence case created',
+        actorId: 'user-1',
+      }),
+    );
   });
 
-  it('falls back to in-memory storage when document upload database is unavailable', async () => {
-    const prisma = {
-      dueDiligence: {
-        findUnique: jest.fn().mockRejectedValue(new Error('P1001: Server is shutting down')),
-      },
-      dueDiligenceDocument: {
-        create: jest.fn().mockRejectedValue(new Error('P1001: Server is shutting down')),
-      },
-      dueDiligenceAuditLog: {
-        create: jest.fn().mockResolvedValue({}),
-      },
-    };
+  it('rejects document upload when the database is unavailable and fallback is disabled', async () => {
+    const original = process.env.ALLOW_IN_MEMORY_FALLBACK;
+    process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
 
-    const service = new DueDiligenceService(prisma as any);
-    const fallbackDd = inMemoryFallbackStore.createDueDiligence(
-      {
-        title: 'Fallback Case',
-        description: 'Fallback case',
-        type: 'investment',
-        targetName: 'FallbackCo',
-        targetType: 'company',
-      },
-      'user-1',
-    );
+    try {
+      const prisma = {
+        isDatabaseAvailable: jest.fn().mockReturnValue(false),
+        dueDiligence: {
+          findUnique: jest.fn().mockRejectedValue(new Error('P1001: Server is shutting down')),
+        },
+        dueDiligenceDocument: {
+          create: jest.fn().mockRejectedValue(new Error('P1001: Server is shutting down')),
+        },
+        dueDiligenceAuditLog: {
+          create: jest.fn().mockResolvedValue({}),
+        },
+      };
 
-    const createdDocument = await service.uploadDocument(
-      fallbackDd.id,
-      {
-        fileName: 'test.pdf',
-        fileUrl: 'http://localhost/test.pdf',
-        fileType: 'pdf',
-        fileSize: 1234,
-      } as any,
-      'user-1',
-    );
+      const service = new DueDiligenceService(prisma as any);
 
-    expect(createdDocument).toMatchObject({
-      fileName: 'test.pdf',
-      fileUrl: 'http://localhost/test.pdf',
-      fileType: 'pdf',
-      fileSize: 1234,
-      category: 'general',
-      uploadedById: 'user-1',
-    });
-    expect(prisma.dueDiligenceDocument.create).toHaveBeenCalled();
+      await expect(
+        service.uploadDocument(
+          'dd-1',
+          {
+            fileName: 'test.pdf',
+            fileUrl: 'http://localhost/test.pdf',
+            fileType: 'pdf',
+            fileSize: 1234,
+          } as any,
+          'user-1',
+        ),
+      ).rejects.toThrow('Database unavailable');
+    } finally {
+      if (original === undefined) {
+        delete process.env.ALLOW_IN_MEMORY_FALLBACK;
+      } else {
+        process.env.ALLOW_IN_MEMORY_FALLBACK = original;
+      }
+    }
   });
 
   it('lists every diligence case for the shared feed instead of filtering by owner', async () => {

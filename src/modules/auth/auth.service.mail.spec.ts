@@ -32,7 +32,7 @@ describe('AuthService (welcome email)', () => {
 
     configService = {
       get: jest.fn((key: string) => {
-        if (key === 'REQUIRE_EMAIL_VERIFICATION') return 'false';
+        if (key === 'REQUIRE_EMAIL_VERIFICATION') return 'true';
         if (key === 'FRONTEND_URL') return 'http://localhost:5173';
         return undefined;
       }),
@@ -81,9 +81,11 @@ describe('AuthService (welcome email)', () => {
     );
     expect(result).toEqual(expect.objectContaining({
       success: true,
-      message: 'Registration successful. Please verify your email address.',
-      accessToken: 'access',
-      refreshToken: 'refresh',
+      message: 'Authentication successful',
+      data: expect.objectContaining({
+        accessToken: 'access',
+        refreshToken: 'refresh',
+      }),
     }));
   });
 });

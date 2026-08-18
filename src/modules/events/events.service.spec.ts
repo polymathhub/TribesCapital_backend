@@ -29,7 +29,11 @@ describe('EventsService', () => {
       },
     };
 
-    const service = new EventsService(prisma as any);
+    const notificationsService = {
+      createForAllUsers: jest.fn().mockResolvedValue({ count: 1 }),
+    };
+
+    const service = new EventsService(prisma as any, notificationsService as any);
 
     await service.create('user-1', {
       title: 'Launch Session',
@@ -44,6 +48,13 @@ describe('EventsService', () => {
           isPublished: true,
           creatorId: 'user-1',
         }),
+      }),
+    );
+    expect(notificationsService.createForAllUsers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'event_created',
+        title: 'New office hours event created',
+        actorId: 'user-1',
       }),
     );
   });

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 import { inMemoryFallbackStore } from '@common/services/in-memory-fallback.store';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -57,6 +57,11 @@ export class DueDiligenceService {
     );
   }
 
+  private shouldUseInMemoryFallback(): boolean {
+    const enabledSetting = process.env.ALLOW_IN_MEMORY_FALLBACK;
+    return enabledSetting === 'true' || enabledSetting === '1' || enabledSetting === 'yes';
+  }
+
   async create(dto: CreateDueDiligenceDto, userId: string) {
     const payload = {
       title: dto.title,
@@ -101,27 +106,33 @@ export class DueDiligenceService {
           message: `A new diligence case named “${created.title}” was created for you.`,
           data: { dueDiligenceId: created.id },
         });
+
+        await this.notificationsService.createForAllUsers({
+          type: 'due_diligence_created',
+          title: 'New due diligence case created',
+          message: `A new diligence case named “${created.title}” has been submitted for review.`,
+          actorId: userId,
+          data: { dueDiligenceId: created.id },
+        });
       }
 
       return created;
     } catch (error) {
-      // If the Prisma client was not able to connect at startup, or the error
-      // indicates the database is unavailable, use the in-memory fallback so
-      // the API remains usable in dev/offline scenarios. Log the original
-      // error to aid debugging when running locally or in CI.
-      // Also fallback if the Prisma service reports the DB as unavailable.
-      if (!this.prisma.isDatabaseAvailable() || this.isDatabaseUnavailable(error)) {
+      const databaseUnavailable = !this.prisma.isDatabaseAvailable() || this.isDatabaseUnavailable(error);
+      if (databaseUnavailable && this.shouldUseInMemoryFallback()) {
         try {
           return inMemoryFallbackStore.createDueDiligence(payload, userId);
         } catch (memErr) {
-          // If even the in-memory store fails, surface the original error below.
-          // Log both for easier debugging.
           // eslint-disable-next-line no-console
           console.error('In-memory fallback create failed:', memErr);
         }
       }
-      // Log and rethrow the original error for upstream handling.
-      // eslint-disable-next-line no-console
+
+      if (databaseUnavailable) {
+        console.error('Prisma create due diligence failed because the database is unavailable:', error);
+        throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+      }
+
       console.error('Prisma create due diligence failed:', error);
       throw error;
     }
@@ -172,6 +183,9 @@ export class DueDiligenceService {
       return { data, total, page, limit };
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         const data = inMemoryFallbackStore.listDueDiligence();
         return { data, total: data.length, page, limit };
       }
@@ -232,6 +246,9 @@ export class DueDiligenceService {
       return dd;
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         const dd = inMemoryFallbackStore.getDueDiligence(id);
         if (!dd) {
           throw new NotFoundException('Due diligence not found');
@@ -375,6 +392,9 @@ export class DueDiligenceService {
       return doc;
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         const doc = inMemoryFallbackStore.createDueDiligenceDocument(dueDiligenceId, {
           fileName,
           fileUrl,
@@ -532,13 +552,21 @@ export class DueDiligenceService {
     if (dto.status === 'approved') {
       await this.update(dueDiligenceId, { status: DDStatus.APPROVED }, userId);
 
-      // Notify the original creator that their diligence case was approved.
+      // Notify the original creator and the broader team that the diligence case was approved.
       try {
         if (this.notificationsService) {
           await this.notificationsService.createForUser(dd.creatorId, {
             type: 'due_diligence_approved',
             title: 'Due diligence approved',
             message: `Your due diligence “${dd.title}” has been approved.`,
+            data: { dueDiligenceId },
+          });
+
+          await this.notificationsService.createForAllUsers({
+            type: 'due_diligence_approved',
+            title: 'Due diligence case approved',
+            message: `The due diligence case “${dd.title}” has been approved and moved into the project pipeline.`,
+            actorId: userId,
             data: { dueDiligenceId },
           });
         }

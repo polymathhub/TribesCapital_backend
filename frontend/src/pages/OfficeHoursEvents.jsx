@@ -876,6 +876,11 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
       } else {
         const response = await eventsAPI.create(payload);
         const created = formatEventForUi(response.data || response);
+
+        if (!created?.id) {
+          throw new Error('Server did not return a valid event payload.');
+        }
+
         setEvents(p => [created, ...p]);
         setCalEvDays(p => [...p, { day: created.calDay, month: created.calMonth, year: created.calYear }]);
         setCreate(false);

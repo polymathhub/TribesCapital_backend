@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 import { inMemoryFallbackStore } from '@common/services/in-memory-fallback.store';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateEventDto, EventResponseDto, RsvpResponseDto, CreateRsvpDto } from './dto/event.dto';
 
 function slugify(value: string): string {
@@ -13,7 +14,10 @@ function slugify(value: string): string {
 
 @Injectable()
 export class EventsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService?: NotificationsService,
+  ) {}
 
   private isDatabaseUnavailable(error?: any): boolean {
     const message = error?.message || '';
@@ -25,6 +29,11 @@ export class EventsService {
         message.includes('database server')
       ),
     );
+  }
+
+  private shouldUseInMemoryFallback(): boolean {
+    const enabledSetting = process.env.ALLOW_IN_MEMORY_FALLBACK;
+    return enabledSetting === 'true' || enabledSetting === '1' || enabledSetting === 'yes';
   }
 
   async create(organizerId: string, createEventDto: CreateEventDto): Promise<EventResponseDto> {
@@ -61,9 +70,22 @@ export class EventsService {
         },
       });
 
+      if (this.notificationsService) {
+        await this.notificationsService.createForAllUsers({
+          type: 'event_created',
+          title: 'New office hours event created',
+          message: `A new ${event.eventType || 'event'} titled “${event.title}” has been published.`,
+          actorId: organizerId,
+          data: { eventId: event.id },
+        });
+      }
+
       return this.formatEventResponse(event);
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         const fallbackEvent = inMemoryFallbackStore.createEvent(eventData, organizerId);
         return this.formatEventResponse({ ...fallbackEvent, rsvps: [] });
       }
@@ -85,6 +107,9 @@ export class EventsService {
       return events.map(event => this.formatEventResponse(event));
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         return inMemoryFallbackStore.listEvents(skip, take).map(event => this.formatEventResponse(event));
       }
       throw error;
@@ -107,6 +132,9 @@ export class EventsService {
       return this.formatEventResponse(event);
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         const fallbackEvent = inMemoryFallbackStore.getEvent(id);
         if (!fallbackEvent) {
           throw new NotFoundException('Event not found');
@@ -161,6 +189,9 @@ export class EventsService {
       return this.formatRsvpResponse(rsvp);
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         const fallbackRsvp = inMemoryFallbackStore.createRsvp(eventId, userId, createRsvpDto.guestCount);
         return this.formatRsvpResponse({ ...fallbackRsvp, status: 'attending', notes: null, rsvpedAt: fallbackRsvp.createdAt });
       }
@@ -188,6 +219,9 @@ export class EventsService {
       });
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         inMemoryFallbackStore.cancelRsvp(eventId, userId);
         return;
       }
@@ -204,6 +238,9 @@ export class EventsService {
       return rsvps.map(rsvp => this.formatRsvpResponse(rsvp));
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         return inMemoryFallbackStore.getRsvps(eventId).map(rsvp => this.formatRsvpResponse({ ...rsvp, status: 'attending', notes: null }));
       }
       throw error;
@@ -224,6 +261,9 @@ export class EventsService {
       return { attending: Boolean(rsvp) };
     } catch (error) {
       if (this.isDatabaseUnavailable(error)) {
+        if (!this.shouldUseInMemoryFallback()) {
+          throw new ServiceUnavailableException('Database unavailable. Please retry when the service is reachable.');
+        }
         const fallbackRsvp = inMemoryFallbackStore.getRsvps(eventId).find((rsvp) => rsvp.userId === userId);
         return { attending: Boolean(fallbackRsvp) };
       }

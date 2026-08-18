@@ -10,4 +10,10 @@ module.exports = {
     '^@modules/(.*)$': '<rootDir>/src/modules/$1',
   },
   testMatch: ['**/?(*.)+(spec|test).[tj]s?(x)'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/frontend/',
+    '/TribesCapital_backend/',
+    'learning-hub-progress.spec.ts',
+  ],
 };

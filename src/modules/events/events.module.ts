@@ -3,9 +3,10 @@ import { EventsService } from './events.service';
 import { EventsController } from './events.controller';
 import { DatabaseModule } from '@database/database.module';
 import { RolesModule } from '@modules/roles/roles.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [DatabaseModule, RolesModule],
+  imports: [DatabaseModule, RolesModule, NotificationsModule],
   controllers: [EventsController],
   providers: [EventsService],
   exports: [EventsService],

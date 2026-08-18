@@ -40,8 +40,17 @@ export class AuthService {
   ) {}
 
   private isEmailVerificationRequired(): boolean {
-    // Keep verification as a non-blocking courtesy step so signup is not blocked.
-    return false;
+    const raw = this.configService.get<string>('REQUIRE_EMAIL_VERIFICATION') ?? this.configService.get<string>('app.requireEmailVerification');
+    if (raw === undefined || raw === null || raw === '') {
+      return false;
+    }
+
+    if (typeof raw === 'boolean') {
+      return raw;
+    }
+
+    const normalized = raw.toString().trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes';
   }
 
   private getFrontendUrl(): string {
@@ -51,8 +60,12 @@ export class AuthService {
     ).toString().trim().replace(/\/+$/g, '');
   }
 
-  private buildVerificationUrl(): string {
-    return this.getFrontendUrl();
+  private buildVerificationUrl(token?: string): string {
+    const base = this.getFrontendUrl();
+    if (!token) {
+      return base;
+    }
+    return `${base}/verify-email?token=${encodeURIComponent(token)}`;
   }
 
   private async withDatabase<T>(operation: () => Promise<T>, context: string): Promise<T> {
@@ -145,7 +158,7 @@ export class AuthService {
       throw e;
     }
 
-    const requireEmailVerification = true;
+    const requireEmailVerification = this.isEmailVerificationRequired();
     const emailVerificationToken = randomBytes(32).toString('hex');
 
     this.logger.log(`${new Date().toISOString()} ${ctx}[8] Creating Prisma user record`);
@@ -190,7 +203,7 @@ export class AuthService {
     }
 
     if (requireEmailVerification) {
-      const verificationUrl = this.buildVerificationUrl();
+      const verificationUrl = this.buildVerificationUrl(emailVerificationToken);
       if (this.mailService) {
         void this.mailService
           .sendVerificationEmail(user.email, verificationUrl)
@@ -495,7 +508,7 @@ export class AuthService {
       data: { emailVerificationToken: verificationToken },
     });
 
-    const verificationUrl = this.buildVerificationUrl();
+    const verificationUrl = this.buildVerificationUrl(verificationToken);
     if (this.mailService) {
       this.mailService
         .sendVerificationEmail(normalizedEmail, verificationUrl)

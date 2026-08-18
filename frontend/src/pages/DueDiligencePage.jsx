@@ -1315,15 +1315,25 @@ export default function DueDiligenceVault() {
           priority: String(form.priority || 'low').toLowerCase(),
           targetDeadline: form.deadline ? new Date(form.deadline.split('/').reverse().join('-')).toISOString() : undefined,
         };
+
         await dueDiligenceAPI.update(editDoc.id, payload);
+
         if (form.file) {
-          const uploadData = new FormData();
-          uploadData.append('file', form.file);
-          uploadData.append('fileName', form.file.name);
-          await dueDiligenceAPI.uploadDocument(editDoc.id, uploadData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          try {
+            const uploadData = new FormData();
+            uploadData.append('file', form.file);
+            uploadData.append('fileName', form.file.name);
+            await dueDiligenceAPI.uploadDocument(editDoc.id, uploadData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+          } catch (uploadErr) {
+            console.error('Failed to upload replacement document for due diligence:', uploadErr);
+            setToast('Changes saved, but the new document upload failed. Please retry the upload.');
+            await loadDocs();
+            return;
+          }
         }
+
         setDetail(null);
         setEditDoc(null);
         setToast('Changes saved');
@@ -1337,20 +1347,14 @@ export default function DueDiligenceVault() {
           priority: String(form.priority || 'medium').toLowerCase(),
           targetDeadline: form.deadline ? new Date(form.deadline.split('/').reverse().join('-')).toISOString() : undefined,
         };
-        
-        let createdItem;
-        try {
-          const response = await dueDiligenceAPI.create(payload);
-          createdItem = unwrapApiData(response);
-          if (!createdItem || !createdItem.id) {
-            throw new Error('Create response missing required fields');
-          }
-        } catch (createErr) {
-          console.error('Failed to create due diligence case:', createErr);
-          throw new Error(`Creation failed: ${createErr?.message || 'Unknown error'}`);
+
+        const response = await dueDiligenceAPI.create(payload);
+        const createdItem = unwrapApiData(response);
+        if (!createdItem || !createdItem.id) {
+          throw new Error('Create response missing required fields');
         }
 
-        let uploadFailed = false;
+        let uploadError = null;
         if (form.file) {
           try {
             const uploadData = new FormData();
@@ -1359,22 +1363,20 @@ export default function DueDiligenceVault() {
             uploadData.append('category', form.category || 'general');
             await dueDiligenceAPI.uploadDocument(createdItem.id, uploadData);
           } catch (uploadErr) {
-            uploadFailed = true;
+            uploadError = uploadErr;
             console.error('Document upload failed after creating due diligence:', uploadErr);
           }
         }
 
-        try {
-          const created = normalizeDoc(createdItem);
-          setDocs(d => [created, ...d]);
-        } catch (normalizeErr) {
-          console.error('Failed to normalize created due diligence:', normalizeErr);
-          // Still show success even if normalization fails, as the backend was successful
-        }
-
         setCreating(false);
         setPage(1);
-        setToast(uploadFailed ? 'Due diligence created, but document upload failed.' : 'Due diligence created');
+
+        if (uploadError) {
+          setToast('Due diligence case created, but the document upload failed. Please upload the file again from the case details.');
+        } else {
+          setToast('Due diligence created');
+        }
+
         try {
           window.dispatchEvent(new CustomEvent('tribes:notifications-update', {
             detail: { type: 'due-diligence-created', id: createdItem?.id },
