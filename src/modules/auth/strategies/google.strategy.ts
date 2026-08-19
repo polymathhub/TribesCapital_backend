@@ -12,12 +12,20 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const clientId = configService.get<string>('google.clientId')?.trim();
     const clientSecret = configService.get<string>('google.clientSecret')?.trim();
     const configuredCallback = configService.get<string>('google.callbackUrl')?.trim();
+    const configuredFrontendUrl = configService.get<string>('app.frontendUrl')?.trim().replace(/\/+$/g, '');
     const apiPrefix = configService.get<string>('app.apiPrefix')?.trim() || process.env.API_PREFIX?.trim() || 'api';
     const appHost = configService.get<string>('app.host')?.trim() || process.env.APP_HOST || '0.0.0.0';
     const appPort = configService.get<number>('app.port') || Number(process.env.PORT) || 3000;
     const hostForCallback = appHost === '0.0.0.0' ? 'localhost' : appHost;
     const defaultCallback = `http://${hostForCallback}:${appPort}/${apiPrefix}/auth/google/callback`;
-    const callbackURL = configuredCallback || defaultCallback;
+    const isProductionLike = process.env.NODE_ENV === 'production' || configuredFrontendUrl?.startsWith('https://');
+    const configuredCallbackIsLocal = /^(https?:\/\/)(localhost|127\.0\.0\.1)(:\d+)?\//i.test(configuredCallback || '');
+    const publicCallback = isProductionLike
+      ? `${configuredFrontendUrl || 'https://community.tribes.capital'}/${apiPrefix}/auth/google/callback`
+      : undefined;
+    const callbackURL = configuredCallback && !(isProductionLike && configuredCallbackIsLocal)
+      ? configuredCallback
+      : publicCallback || defaultCallback;
 
     if (!clientId || !clientSecret) {
       // In development, allow the app to start even if Google OAuth is not configured.
