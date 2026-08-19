@@ -22,6 +22,9 @@ export enum DDType {
   COMPLIANCE = 'compliance',
   COMPANY = 'company',
   FUND = 'fund',
+  DILIGENCE = 'diligence',
+  RESEARCH = 'research',
+  LEGAL = 'legal',
 }
 
 export enum DDStatus {

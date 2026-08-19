@@ -3,6 +3,19 @@ import { validate } from 'class-validator';
 import { CreateDDDocumentDto, CreateDueDiligenceDto, QueryDDDto } from './due-diligence.dto';
 
 describe('CreateDueDiligenceDto', () => {
+  it('accepts the type values submitted by the create form', async () => {
+    const dto = plainToInstance(CreateDueDiligenceDto, {
+      title: 'Research diligence',
+      targetName: 'Acme',
+      type: 'research',
+      priority: 'medium',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(0);
+  });
+
   it('accepts target metadata as an object', async () => {
     const dto = plainToInstance(CreateDueDiligenceDto, {
       title: 'Acme diligence',
