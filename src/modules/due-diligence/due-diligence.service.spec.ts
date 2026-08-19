@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { DueDiligenceService } from './due-diligence.service';
 import { inMemoryFallbackStore } from '../../common/services/in-memory-fallback.store';
 

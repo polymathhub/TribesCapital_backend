@@ -27,17 +27,6 @@ import { authAPI } from '../api/endpoints';
  *    <script src="https://accounts.google.com/gsi/client" async defer></script>
  */
 
-interface GoogleSignInProps {
-  onSuccess?: (user: any) => void;
-  onError?: (error: string) => void;
-  autoRedirect?: boolean;
-  redirectPath?: string;
-  text?: 'signin_with' | 'signin' | 'signup_with' | 'signup';
-  theme?: 'outline' | 'filled_blue' | 'filled_black';
-  size?: 'large' | 'medium' | 'small';
-  width?: string;
-}
-
 export function GoogleSignIn({
   onSuccess,
   onError,
@@ -47,11 +36,11 @@ export function GoogleSignIn({
   theme = 'outline',
   size = 'large',
   width = '100%',
-}: GoogleSignInProps) {
+}) {
   const navigate = useNavigate();
-  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleButtonRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
   // Auto-clear error after 5 seconds
   useEffect(() => {
@@ -124,7 +113,7 @@ export function GoogleSignIn({
     };
   }, []);
 
-  const handleCredentialResponse = async (response: any) => {
+  const handleCredentialResponse = async (response) => {
     if (!response.credential) {
       const errorMsg = 'No credential received from Google';
       console.error(errorMsg);
@@ -164,7 +153,7 @@ export function GoogleSignIn({
       if (autoRedirect) {
         navigate(redirectPath);
       }
-    } catch (err: any) {
+    } catch (err) {
       const errorMsg =
         err.response?.data?.message ||
         err.message ||
