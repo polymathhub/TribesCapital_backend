@@ -424,6 +424,17 @@ function TopBar({ onMenu, isMobile, isTablet, sidebarOpen, search, setSearch }) 
 /* ═══ CREATE / EDIT PANEL ═══ */
 const BLANK = { title: '', targetName: '', type: '', targetType: '', priority: '', deadline: '', description: '', fileName: '' };
 
+function getRequestErrorMessage(error, fallback) {
+  const responseMessage = error?.response?.data?.message;
+  if (Array.isArray(responseMessage)) {
+    return responseMessage.join(', ');
+  }
+  if (typeof responseMessage === 'string' && responseMessage.trim()) {
+    return responseMessage;
+  }
+  return error?.message || fallback;
+}
+
 function toDeadlineISOString(value) {
   if (!value || typeof value !== 'string') return undefined;
 
@@ -1421,7 +1432,7 @@ export default function DueDiligenceVault() {
       await loadDocs();
     } catch (err) {
       console.error('Failed to save due diligence record:', err);
-      const errorMsg = err?.message || err?.response?.data?.message || 'We could not save this diligence case right now.';
+      const errorMsg = getRequestErrorMessage(err, 'We could not save this diligence case right now.');
       setToast(errorMsg);
     }
   };
