@@ -1,6 +1,20 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { CreateDDDocumentDto, QueryDDDto } from './due-diligence.dto';
+import { CreateDDDocumentDto, CreateDueDiligenceDto, QueryDDDto } from './due-diligence.dto';
+
+describe('CreateDueDiligenceDto', () => {
+  it('accepts target metadata as an object', async () => {
+    const dto = plainToInstance(CreateDueDiligenceDto, {
+      title: 'Acme diligence',
+      targetName: 'Acme',
+      targetMetadata: { tags: ['priority'] },
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(0);
+  });
+});
 
 describe('CreateDDDocumentDto', () => {
   it('allows document uploads without an explicit category', async () => {

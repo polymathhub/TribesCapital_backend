@@ -6,7 +6,7 @@ import {
   IsDateString,
   IsArray,
   ValidateNested,
-  IsJSON,
+  IsObject,
   Min,
   Max,
   IsUUID,
@@ -76,7 +76,7 @@ export class CreateDueDiligenceDto {
   targetType?: string;
 
   @IsOptional()
-  @IsJSON()
+  @IsObject()
   targetMetadata?: Record<string, any>;
 
   @IsOptional()
