@@ -470,6 +470,7 @@ function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
   const [f, setF] = useState(initial ? { ...BLANK, ...initial } : BLANK);
   const [err, setErr] = useState({});
   const [saving, setSaving] = useState(false);
+  const [savingLabel, setSavingLabel] = useState('Creating…');
   const [drag, setDrag] = useState(false);
   const [step, setStep] = useState('form');        // 'form' → 'preview'
   const fileRef = useRef(null);
@@ -508,8 +509,9 @@ function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
   const submit = async () => {
     if (!validate()) { setStep('form'); return; }
     setSaving(true);
+    setSavingLabel(editing ? 'Saving changes…' : 'Creating case…');
     try {
-      await onSave({ ...f, file: selectedFile });
+      await onSave({ ...f, file: selectedFile }, setSavingLabel);
     } finally {
       setSaving(false);
     }
@@ -764,14 +766,14 @@ function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
                 <I k="eye" s={16} c={T1} />Preview
               </Btn>
               <Btn onClick={submit} disabled={saving}>
-                {saving ? (editing ? 'Saving…' : 'Creating…') : (editing ? 'Save changes' : 'Create')}
+                {saving ? savingLabel : (editing ? 'Save changes' : 'Create')}
               </Btn>
             </>
           ) : (
             <>
               <Btn variant="ghost" onClick={() => setStep('form')}>Back to edit</Btn>
               <Btn onClick={submit} disabled={saving}>
-                {saving ? (editing ? 'Saving…' : 'Creating…') : (editing ? 'Save changes' : 'Create')}
+                {saving ? savingLabel : (editing ? 'Save changes' : 'Create')}
               </Btn>
             </>
           )}
@@ -1348,7 +1350,7 @@ export default function DueDiligenceVault() {
   };
 
   /* CREATE + EDIT */
-  const save = async (form) => {
+  const save = async (form, setProgress = () => {}) => {
     try {
       if (editDoc) {
         const payload = {
@@ -1361,6 +1363,7 @@ export default function DueDiligenceVault() {
         await dueDiligenceAPI.update(editDoc.id, payload);
 
         if (form.file) {
+          setProgress('Uploading document…');
           try {
             const uploadData = new FormData();
             uploadData.append('file', form.file);
@@ -1398,6 +1401,7 @@ export default function DueDiligenceVault() {
 
         let uploadError = null;
         if (form.file) {
+          setProgress('Uploading document…');
           try {
             const uploadData = new FormData();
             uploadData.append('file', form.file);

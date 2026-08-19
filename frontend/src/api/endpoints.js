@@ -120,8 +120,8 @@ export const dueDiligenceAPI = {
   uploadDocument: (dueDiligenceId, data, config) =>
     apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, {
       ...config,
+      timeout: config?.timeout || 30000,
       headers: {
-        'Content-Type': 'multipart/form-data',
         ...(config?.headers || {}),
       },
     }),
