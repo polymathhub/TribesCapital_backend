@@ -32,6 +32,10 @@ export function validateConfig(config: Record<string, unknown>): Record<string, 
   const callbackHost = appHost === '0.0.0.0' ? 'localhost' : appHost;
   let callbackUrl = typeof google?.callbackUrl === 'string' ? google.callbackUrl.trim() : '';
 
+  if (!callbackUrl && (environment === 'production' || frontendUrl.startsWith('https://'))) {
+    callbackUrl = `${frontendUrl.replace(/\/+$/g, '')}/api/auth/google/callback`;
+  }
+
   if (!callbackUrl) {
     callbackUrl = new URL(`/api/auth/google/callback`, `http://${callbackHost}:${appPort}`).toString();
   }
