@@ -113,6 +113,11 @@ const money = n => {
   return '$' + n;
 };
 
+const unwrapApiData = (response) => {
+  const body = response?.data ?? response;
+  return body?.data ?? body;
+};
+
 const mapDueDiligenceToPipelineProject = (item) => {
   const metadata = item?.targetMetadata && typeof item.targetMetadata === 'object' ? item.targetMetadata : {};
   const progress = typeof metadata.progress === 'number'
@@ -673,14 +678,11 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     setLoadingProjects(true);
     try {
       const response = await dueDiligenceAPI.list({ page: 1, limit: 100, status: 'approved' });
-      const payload = response?.data;
+      const payload = unwrapApiData(response);
       const items = Array.isArray(payload)
         ? payload
-        : Array.isArray(payload?.data)
-          ? payload.data
-          : Array.isArray(payload?.items)
-            ? payload.items
-            : [];
+        : Array.isArray(payload?.data) ? payload.data
+          : Array.isArray(payload?.items) ? payload.items : [];
       const approvedProjects = items.map(mapDueDiligenceToPipelineProject);
       setProjects(prev => {
         const manualProjects = prev.filter(project => !project.dueDiligenceId);

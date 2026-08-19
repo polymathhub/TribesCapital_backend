@@ -1315,7 +1315,8 @@ export default function DueDiligenceVault() {
         approverRole: 'admin',
         approvalNotes: 'Approved from due diligence vault',
       });
-      const approvalId = response?.data?.id || response?.id || null;
+      const approval = unwrapApiData(response);
+      const approvalId = approval?.id || null;
 
       if (approvalId) {
         await dueDiligenceAPI.approveOrReject(doc.id, approvalId, {
