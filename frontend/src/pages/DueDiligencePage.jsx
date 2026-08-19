@@ -424,6 +424,36 @@ function TopBar({ onMenu, isMobile, isTablet, sidebarOpen, search, setSearch }) 
 /* ═══ CREATE / EDIT PANEL ═══ */
 const BLANK = { title: '', targetName: '', type: '', targetType: '', priority: '', deadline: '', description: '', fileName: '' };
 
+function toDeadlineISOString(value) {
+  if (!value || typeof value !== 'string') return undefined;
+
+  const trimmed = value.trim();
+  let year;
+  let month;
+  let day;
+  const dayFirst = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+  const yearFirst = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+
+  if (dayFirst) {
+    [, day, month, year] = dayFirst;
+  } else if (yearFirst) {
+    [, year, month, day] = yearFirst;
+  } else {
+    return undefined;
+  }
+
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (
+    date.getUTCFullYear() !== Number(year)
+    || date.getUTCMonth() !== Number(month) - 1
+    || date.getUTCDate() !== Number(day)
+  ) {
+    return undefined;
+  }
+
+  return date.toISOString();
+}
+
 function DiligencePanel({ initial, onClose, onSave, isMobile, offset }) {
   const editing = !!initial;
   const [f, setF] = useState(initial ? { ...BLANK, ...initial } : BLANK);
@@ -1313,7 +1343,7 @@ export default function DueDiligenceVault() {
           title: form.title,
           description: form.description,
           priority: String(form.priority || 'low').toLowerCase(),
-          targetDeadline: form.deadline ? new Date(form.deadline.split('/').reverse().join('-')).toISOString() : undefined,
+          targetDeadline: toDeadlineISOString(form.deadline),
         };
 
         await dueDiligenceAPI.update(editDoc.id, payload);
@@ -1345,7 +1375,7 @@ export default function DueDiligenceVault() {
           targetName: form.targetName,
           targetType: form.targetType || 'company',
           priority: String(form.priority || 'medium').toLowerCase(),
-          targetDeadline: form.deadline ? new Date(form.deadline.split('/').reverse().join('-')).toISOString() : undefined,
+          targetDeadline: toDeadlineISOString(form.deadline),
         };
 
         const response = await dueDiligenceAPI.create(payload);
