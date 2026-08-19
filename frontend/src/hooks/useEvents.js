@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { eventsAPI } from '../api/endpoints';
 
+const unwrapApiData = (response) => {
+  const body = response?.data ?? response;
+  return body?.data ?? body;
+};
+
 export const useEvents = (options = {}) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +20,8 @@ export const useEvents = (options = {}) => {
           skip: options.skip || 0,
           take: options.take || 10,
         });
-        setEvents(response.data || []);
+        const eventItems = unwrapApiData(response);
+        setEvents(Array.isArray(eventItems) ? eventItems : []);
       } catch (err) {
         console.error('Failed to fetch events:', err);
         setError(err.response?.data?.message || err.message || 'Failed to load events');
@@ -48,7 +54,7 @@ export const useEventDetails = (eventId) => {
         setLoading(true);
         setError(null);
         const response = await eventsAPI.getById(eventId);
-        setEvent(response.data || null);
+        setEvent(unwrapApiData(response) || null);
       } catch (err) {
         console.error('Failed to fetch event details:', err);
         setError(err.response?.data?.message || err.message || 'Failed to load event');

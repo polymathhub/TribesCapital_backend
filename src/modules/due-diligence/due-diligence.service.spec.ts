@@ -162,4 +162,31 @@ describe('DueDiligenceService', () => {
       service.approveOrReject('dd-1', 'approval-1', { status: 'approved', approvalNotes: 'Approve' }, 'user-2'),
     ).rejects.toThrow('Only admins can approve due diligence cases');
   });
+
+  it('allows admins to delete another user\'s due diligence case', async () => {
+    const prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'admin-1',
+          roles: [{ name: 'admin' }],
+        }),
+      },
+      dueDiligence: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'dd-1',
+          title: 'Acme diligence',
+          creatorId: 'owner-1',
+        }),
+        delete: jest.fn().mockResolvedValue({ id: 'dd-1' }),
+      },
+      dueDiligenceAuditLog: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    const service = new DueDiligenceService(prisma as any);
+
+    await expect(service.delete('dd-1', 'admin-1')).resolves.toEqual({ id: 'dd-1' });
+    expect(prisma.dueDiligence.delete).toHaveBeenCalledWith({ where: { id: 'dd-1' } });
+  });
 });

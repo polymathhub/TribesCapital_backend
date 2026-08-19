@@ -278,7 +278,15 @@ export class DueDiligenceService {
 
   async delete(id: string, userId: string) {
     const dd = await this.findOne(id, userId);
-    this.assertOwner(dd, userId);
+
+    const actingUser = await this.prisma.user?.findUnique?.({
+      where: { id: userId },
+      include: { roles: { select: { name: true } } },
+    });
+    const isAdmin = actingUser?.roles?.some((role) => ['admin', 'super-admin'].includes(role.name));
+    if (dd.creatorId !== userId && !isAdmin) {
+      throw new ForbiddenException('Only the owner or an admin can delete due diligence cases');
+    }
 
     await this.logAudit(id, userId, 'DELETE', 'DueDiligence', id, dd, null);
 

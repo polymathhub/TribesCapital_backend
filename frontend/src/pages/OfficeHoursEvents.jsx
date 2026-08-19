@@ -704,6 +704,11 @@ function formatEventForUi(event) {
   };
 }
 
+function unwrapApiData(response) {
+  const body = response?.data ?? response;
+  return body?.data ?? body;
+}
+
 /* ═══════════════════════════════════════════
    MAIN
 ═══════════════════════════════════════════ */
@@ -734,7 +739,8 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
     const loadEvents = async () => {
       try {
         const response = await eventsAPI.list({ skip: 0, take: 20 });
-        const mapped = (response.data || []).map(formatEventForUi);
+        const eventItems = unwrapApiData(response);
+        const mapped = (Array.isArray(eventItems) ? eventItems : []).map(formatEventForUi);
 
         if (isMounted) {
           setEvents(mapped);
@@ -869,13 +875,13 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
     try {
       if (editEv) {
         const response = await eventsAPI.update(editEv.id, payload);
-        const updated = formatEventForUi(response.data || response);
+        const updated = formatEventForUi(unwrapApiData(response));
         setEvents(p => p.map(e => e.id === editEv.id ? { ...updated, rsvped: e.rsvped } : e));
         setEdit(null);
         showToast('Event updated successfully');
       } else {
         const response = await eventsAPI.create(payload);
-        const created = formatEventForUi(response.data || response);
+        const created = formatEventForUi(unwrapApiData(response));
 
         if (!created?.id) {
           throw new Error('Server did not return a valid event payload.');
@@ -1126,7 +1132,18 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
       {/* ── MODALS ── */}
       {showCreate && <EventFormModal title="Create event" onClose={()=>setCreate(false)} onSave={handleSave} isMobile={isMobile}/>}
       {editEv     && <EventFormModal title="Edit event" initial={editEv} onClose={()=>setEdit(null)} onSave={handleSave} isMobile={isMobile}/>}
-      {deleteEv   && <DeleteModal ev={deleteEv} isMobile={isMobile} onClose={()=>setDel(null)} onConfirm={()=>{setEvents(p=>p.filter(e=>e.id!==deleteEv.id));try{window.dispatchEvent(new CustomEvent('tribes:data-update',{detail:{type:'events-updated', id:deleteEv.id}}));}catch(e){} setDel(null);showToast('Event deleted successfully');}}/>}
+      {deleteEv   && <DeleteModal ev={deleteEv} isMobile={isMobile} onClose={()=>setDel(null)} onConfirm={async ()=>{
+        try {
+          await eventsAPI.delete(deleteEv.id);
+          setEvents(p=>p.filter(e=>e.id!==deleteEv.id));
+          setDel(null);
+          showToast('Event deleted successfully');
+          window.dispatchEvent(new CustomEvent('tribes:data-update',{detail:{type:'events-updated', id:deleteEv.id}}));
+        } catch (error) {
+          showToast(`Unable to delete event: ${error?.response?.data?.message || error?.message || 'Please try again.'}`);
+        }
+      }}/>
+      }
       {detailEv   && <DetailModal ev={detailEv} isMobile={isMobile} onClose={()=>setDetail(null)} onRsvp={handleRsvp}/>}
       {viewAll    && <ViewAllModal events={displayEvents} isMobile={isMobile} onClose={()=>setViewAll(false)} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onRsvp={handleRsvp}/>}
       {toast      && <Toast msg={toast} onDone={()=>setToast(null)}/>}
