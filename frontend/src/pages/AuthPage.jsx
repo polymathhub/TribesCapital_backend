@@ -536,6 +536,12 @@ function LoginPage({ onNavigate, onSuccess }) {
     if (!window.location.hash) return;
 
     const params = new URLSearchParams(window.location.hash.slice(1));
+    const authError = params.get('error');
+    if (authError) {
+      setError(decodeURIComponent(authError));
+      window.history.replaceState(null, '', window.location.pathname);
+      return;
+    }
     const accessToken = params.get('accessToken');
     const refreshToken = params.get('refreshToken');
     const userJson = params.get('user');

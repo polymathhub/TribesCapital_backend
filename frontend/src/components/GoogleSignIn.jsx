@@ -138,13 +138,13 @@ export function GoogleSignIn({
 
     try {
       // Send ID token to backend
-      const authResponse = await authAPI.post('/google', {
+      const googleResponse = await authAPI.googleAuth({
         idToken: response.credential,
-        accessToken: response.credential, // Google's library may not provide separate accessToken
       });
 
       // Store tokens
-      const { accessToken, refreshToken, user } = authResponse.data;
+      const payload = googleResponse?.data?.data || googleResponse?.data || googleResponse;
+      const { accessToken, refreshToken, user } = payload;
 
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
