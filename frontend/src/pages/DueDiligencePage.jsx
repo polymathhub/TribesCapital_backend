@@ -1406,6 +1406,7 @@ export default function DueDiligenceVault() {
           } catch (uploadErr) {
             uploadError = uploadErr;
             console.error('Document upload failed after creating due diligence:', uploadErr);
+            setToast(getRequestErrorMessage(uploadErr, 'Document upload failed. Please retry the upload.'));
           }
         }
 

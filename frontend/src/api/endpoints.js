@@ -118,7 +118,13 @@ export const dueDiligenceAPI = {
 
   // Documents
   uploadDocument: (dueDiligenceId, data, config) =>
-    apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, config),
+    apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, {
+      ...config,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(config?.headers || {}),
+      },
+    }),
   deleteDocument: (dueDiligenceId, docId) =>
     apiClient.delete(`/due-diligence/${dueDiligenceId}/documents/${docId}`),
   reviewDocument: (dueDiligenceId, docId, data) =>
