@@ -49,3 +49,4 @@ coverage/
 pids/
 *.pid
 *.seed
+.imported-user-credentials.csv

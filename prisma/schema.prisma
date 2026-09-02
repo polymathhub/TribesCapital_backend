@@ -13,6 +13,11 @@ model User {
   firstName             String
   lastName              String
   password              String
+  address               String?
+  phoneNumber           String?
+  occupation            String?
+  school                String?
+  department            String?
   avatar                String?
   bio                   String?
   isActive              Boolean     @default(true)
