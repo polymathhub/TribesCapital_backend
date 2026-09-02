@@ -71,7 +71,12 @@ function csvField(value: string): string {
 }
 
 async function importRegistrations(userRoleId: string) {
-  const csvPath = process.env.REGISTRATION_CSV_PATH || path.join(process.env.HOME || process.cwd(), 'Downloads', 'Registration form (Responses) - Form Responses 1.csv');
+  const csvFileName = 'Registration form (Responses) - Form Responses 1.csv';
+  const csvPath = process.env.REGISTRATION_CSV_PATH || [
+    path.join(process.env.HOME || '', 'Downloads', csvFileName),
+    path.join(process.cwd(), csvFileName),
+    path.join('/Users/user/Downloads', csvFileName),
+  ].find((candidate) => fs.existsSync(candidate)) || path.join(process.env.HOME || process.cwd(), 'Downloads', csvFileName);
   if (!fs.existsSync(csvPath)) {
     console.log(`Registration CSV not found at ${csvPath}; skipping registration import.`);
     return;
@@ -156,7 +161,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Admin role created/updated:', adminRole);
+  console.log('Admin role created/updated:', adminRole);
 
   // Create moderator role
   const moderatorRole = await prisma.role.upsert({
@@ -168,7 +173,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Moderator role created/updated:', moderatorRole);
+  console.log('Moderator role created/updated:', moderatorRole);
 
   // Create user role
   const userRole = await prisma.role.upsert({
