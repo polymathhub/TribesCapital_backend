@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Put, Body, Param, UseGuards, Query, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/user.dto';
@@ -22,6 +22,11 @@ export class UsersController {
     );
   }
 
+  @Patch('me')
+  async updateProfile(@Body() updateUserDto: UpdateUserDto, @CurrentUser() user: any) {
+    return this.usersService.updateUser(user.id, updateUserDto);
+  }
+
   @Get(':id')
   async getUserById(@Param('id') id: string) {
     return this.usersService.getUserById(id);
@@ -30,7 +35,7 @@ export class UsersController {
   @Put(':id')
   async updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @CurrentUser() user: any) {
     if (user.id !== id) {
-      throw new Error('Unauthorized');
+      throw new UnauthorizedException();
     }
     return this.usersService.updateUser(id, updateUserDto);
   }

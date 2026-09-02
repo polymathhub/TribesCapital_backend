@@ -22,6 +22,7 @@ import {
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
+import { videoUploadOptions } from '@common/services/upload-validation';
 
 @Controller('lessons')
 export class LessonsController {
@@ -29,7 +30,7 @@ export class LessonsController {
 
   @Post('courses/:courseId')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('video'))
+  @UseInterceptors(FileInterceptor('video', videoUploadOptions))
   async createLesson(
     @Param('courseId') courseId: string,
     @GetCurrentUser('id') userId: string,
@@ -66,7 +67,7 @@ export class LessonsController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('video'))
+  @UseInterceptors(FileInterceptor('video', videoUploadOptions))
   async updateLesson(
     @Param('id') id: string,
     @GetCurrentUser('id') userId: string,

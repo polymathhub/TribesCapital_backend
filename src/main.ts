@@ -99,7 +99,6 @@ async function bootstrap() {
   if (!existsSync(uploadsPath)) {
     mkdirSync(uploadsPath, { recursive: true });
   }
-  expressInstance.use('/uploads', express.static(uploadsPath));
 
   const spaIndexHandler = (
     req: express.Request,

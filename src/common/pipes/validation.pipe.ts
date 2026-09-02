@@ -44,7 +44,10 @@ export class ValidationPipe implements PipeTransform<any> {
     let errors: ValidationError[] = [];
     try {
       const validationStart = Date.now();
-      errors = await validate(object);
+      errors = await validate(object, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      });
       this.logger.log(`${new Date().toISOString()} ${ctx}[4] validate() completed (duration=${Date.now() - validationStart}ms)`);
     } catch (error) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Validation execution failed`, error instanceof Error ? error.stack : String(error));

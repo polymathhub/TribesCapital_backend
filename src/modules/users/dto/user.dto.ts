@@ -1,3 +1,5 @@
+import { IsOptional, IsString } from 'class-validator';
+
 export class CreateUserDto {
   email!: string;
   firstName!: string;
@@ -6,9 +8,17 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto {
+  @IsOptional()
+  @IsString()
   firstName?: string;
+  @IsOptional()
+  @IsString()
   lastName?: string;
+  @IsOptional()
+  @IsString()
   avatar?: string;
+  @IsOptional()
+  @IsString()
   bio?: string;
 }
 

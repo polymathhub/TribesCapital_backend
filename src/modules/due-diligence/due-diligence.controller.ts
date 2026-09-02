@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Delete,
+  Res,
   Body,
   Param,
   Query,
@@ -18,9 +19,11 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
+import { Response } from 'express';
 import { DueDiligenceService } from './due-diligence.service';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
+import { attachmentUploadOptions, documentUploadOptions, validateStoredFile } from '@common/services/upload-validation';
 import {
   CreateDueDiligenceDto,
   UpdateDueDiligenceDto,
@@ -144,6 +147,7 @@ export class DueDiligenceController {
   @HttpCode(201)
   @UseInterceptors(
     FileInterceptor('file', {
+      ...documentUploadOptions,
       storage: diskStorage({
         destination: () => getDueDiligenceUploadsDir(),
         filename: (_req: any, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
@@ -165,6 +169,7 @@ export class DueDiligenceController {
     }
 
     if (file) {
+      validateStoredFile(file);
       dto.fileUrl = `${UPLOADS_BASE_URL}/due-diligence/${file.filename}`;
       dto.fileName = dto.fileName || file.originalname;
       dto.fileType = dto.fileType || inferDocumentType(file.originalname, file.mimetype);
@@ -206,6 +211,7 @@ export class DueDiligenceController {
   @HttpCode(201)
   @UseInterceptors(
     FilesInterceptor('attachments', 5, {
+      ...attachmentUploadOptions,
       storage: diskStorage({
         destination: () => getDueDiligenceUploadsDir(),
         filename: (_req: any, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
@@ -225,11 +231,23 @@ export class DueDiligenceController {
     const attachments = Array.isArray(dto.attachments) ? [...dto.attachments] : [];
     if (files && files.length > 0) {
       files.forEach((file) => {
+        validateStoredFile(file);
         attachments.push(`${UPLOADS_BASE_URL}/due-diligence/${file.filename}`);
       });
       dto.attachments = attachments;
     }
     return this.service.addComment(dueDiligenceId, dto, userId);
+  }
+
+  @Get(':id/documents/:docId/download')
+  async downloadDocument(
+    @Param('id') dueDiligenceId: string,
+    @Param('docId') docId: string,
+    @GetCurrentUser('id') userId: string,
+    @Res() response: Response,
+  ) {
+    const download = await this.service.getDocumentDownload(dueDiligenceId, docId, userId);
+    return response.download(download.filePath, download.fileName);
   }
 
   @Delete(':id/comments/:commentId')

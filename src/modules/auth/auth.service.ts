@@ -8,7 +8,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import * as https from 'https';
 import { ConfigService } from '@nestjs/config';
@@ -529,7 +529,7 @@ export class AuthService {
       return { message: 'If the email exists, a reset code has been sent' };
     }
 
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetCode = randomInt(100000, 1000000).toString();
     const resetExpires = new Date(Date.now() + 30 * 60 * 1000);
 
     await this.prisma.user.update({
@@ -562,7 +562,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user || user.passwordResetToken !== verifyCodeDto.code) {
+    if (!user || user.passwordResetToken !== verifyCodeDto.code || !user.passwordResetExpires || user.passwordResetExpires <= new Date()) {
       return { valid: false, message: 'Invalid reset code' };
     }
 
@@ -576,7 +576,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user || user.passwordResetToken !== resetPasswordDto.code) {
+    if (!user || user.passwordResetToken !== resetPasswordDto.code || !user.passwordResetExpires || user.passwordResetExpires <= new Date()) {
       throw new BadRequestException('Invalid or expired reset code');
     }
 

@@ -437,6 +437,40 @@ export class DueDiligenceService {
     await this.prisma.dueDiligenceDocument.delete({ where: { id: docId } });
   }
 
+  async getDocumentDownload(dueDiligenceId: string, docId: string, userId: string) {
+    const [document, actingUser] = await Promise.all([
+      this.prisma.dueDiligenceDocument.findUnique({
+        where: { id: docId },
+        select: {
+          id: true,
+          fileName: true,
+          fileUrl: true,
+          dueDiligenceId: true,
+          uploadedById: true,
+          dueDiligence: { select: { creatorId: true, assignedToId: true } },
+        },
+      }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { roles: { select: { name: true } } } }),
+    ]);
+
+    if (!document || document.dueDiligenceId !== dueDiligenceId || !document.fileUrl?.startsWith('/uploads/')) {
+      throw new NotFoundException('Document not found');
+    }
+
+    const isAdmin = actingUser?.roles.some((role) => ['admin', 'super-admin'].includes(role.name));
+    const isMember = [document.uploadedById, document.dueDiligence.creatorId, document.dueDiligence.assignedToId].includes(userId);
+    if (!isAdmin && !isMember) {
+      throw new ForbiddenException('You are not authorized to download this document');
+    }
+
+    const filePath = join(process.cwd(), document.fileUrl.replace(/^[\\/]+/, ''));
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('Document file not found');
+    }
+
+    return { filePath, fileName: document.fileName };
+  }
+
   async reviewDocument(dueDiligenceId: string, docId: string, dto: ReviewDDDocumentDto, userId: string) {
     const dd = await this.findOne(dueDiligenceId, userId);
     const doc = await this.prisma.dueDiligenceDocument.findUnique({ where: { id: docId } });

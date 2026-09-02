@@ -107,9 +107,7 @@ export class AuthController {
       avatar: profile.avatar ?? null,
     });
 
-    const frontendUrl = redirect
-      ? decodeURIComponent(redirect)
-      : this.getFrontendUrl();
+    const frontendUrl = this.resolveSafeRedirect(redirect);
 
     const nextUrl = this.buildFrontendRedirect(frontendUrl, authResponse);
     res.redirect(nextUrl);
@@ -121,6 +119,21 @@ export class AuthController {
       process.env.FRONTEND_URL ??
       'https://community.tribes.capital'
     ).replace(/\/+$/g, '');
+  }
+
+  private resolveSafeRedirect(redirect?: string): string {
+    const configuredFrontendUrl = this.getFrontendUrl();
+    if (!redirect) {
+      return configuredFrontendUrl;
+    }
+
+    try {
+      const requestedUrl = new URL(decodeURIComponent(redirect));
+      const allowedUrl = new URL(configuredFrontendUrl);
+      return requestedUrl.origin === allowedUrl.origin ? requestedUrl.toString() : configuredFrontendUrl;
+    } catch {
+      return configuredFrontendUrl;
+    }
   }
 
   private buildFrontendRedirect(frontendUrl: string, authResponse: AuthTokenResponseDto): string {
