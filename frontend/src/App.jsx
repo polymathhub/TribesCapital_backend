@@ -3,7 +3,6 @@ import AuthPage from './pages/AuthPage';
 import HomePage from './pages/HomePage';
 import LoadingScreen from './components/LoadingScreen';
 import Sidebar from './components/Sidebar';
-import MobileNav from './components/MobileNav';
 import { usersAPI } from './api/endpoints';
 import { clearAuthSession } from './utils/authSession';
 import './App.css';
@@ -192,26 +191,16 @@ function App() {
     <>
       <LoadingScreen isVisible={isLoading && !hasBootstrapped} />
       <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out', display: 'flex', width: '100%', minHeight: '100dvh', height: '100dvh', overflow: 'hidden', background: '#f9fafb' }}>
-        {isDesktop && (
-          <Sidebar
-            user={user}
-            activePage={currentPage}
-            onNavigate={handleNavigate}
-            onClose={handleToggleSidebar}
-            onLogout={handleLogout}
-            collapsed={!isSidebarOpen}
-          />
-        )}
-        {(isMobile || isTablet) && (
-          <MobileNav
-            isOpen={isSidebarOpen}
-            onClose={handleToggleSidebar}
-            currentPage={currentPage}
-            onNavigate={handleNavigate}
-            user={user}
-            onLogout={handleLogout}
-          />
-        )}
+        <Sidebar
+          user={user}
+          activePage={currentPage}
+          onNavigate={handleNavigate}
+          onClose={handleToggleSidebar}
+          onLogout={handleLogout}
+          collapsed={isDesktop && !isSidebarOpen}
+          isOpen={isSidebarOpen}
+          isOverlay={isMobile || isTablet}
+        />
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
           <HomePage 
             user={user}

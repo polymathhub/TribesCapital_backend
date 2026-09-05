@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { label: 'Help', page: 'help', icon: 'help' },
 ];
 
-function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user, collapsed = false }) {
+function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user, collapsed = false, isOpen = true, isOverlay = false }) {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const displayName = user?.name || user?.email?.split('@')[0] || 'Member';
   const [storedAvatar, setStoredAvatar] = React.useState(null);
@@ -26,14 +26,20 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
   const avatarSrc = storedAvatar || user?.avatar || profilePlaceholderImage;
 
   return (
-    <div ref={sidebarRef} style={{
-      width: collapsed ? 64 : 220,
-      minWidth: collapsed ? 64 : 220,
+    <>
+      {isOverlay && isOpen && <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.35)', zIndex: 4 }} />}
+      <div ref={sidebarRef} style={{
+      position: isOverlay ? 'fixed' : 'relative',
+      inset: isOverlay ? '0 auto 0 0' : undefined,
+      width: isOverlay ? 280 : collapsed ? 64 : 220,
+      minWidth: isOverlay ? 280 : collapsed ? 64 : 220,
+      height: isOverlay ? '100dvh' : undefined,
       background: 'rgba(255,255,255,0.9)',
       backdropFilter: 'blur(14px) saturate(140%)', WebkitBackdropFilter: 'blur(14px) saturate(140%)',
       borderRight: `1px solid rgba(0,0,0,0.04)`, display: 'flex', flexDirection: 'column', overflowY: 'auto', flexShrink: 0, zIndex: 5,
-      boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255,255,255,0.7)',
-      transition: 'width 220ms cubic-bezier(0.2,0.9,0.2,1)',
+      boxShadow: isOverlay ? '8px 0 28px rgba(15, 23, 42, 0.16)' : '0 10px 30px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255,255,255,0.7)',
+      transform: isOverlay && !isOpen ? 'translateX(-100%)' : 'translateX(0)',
+      transition: isOverlay ? 'transform 220ms cubic-bezier(0.2,0.9,0.2,1)' : 'width 220ms cubic-bezier(0.2,0.9,0.2,1)',
     }}>
       <style>{`
         @keyframes slideInLeft {
@@ -216,7 +222,8 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
           {!collapsed && <span>Log out</span>}
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
