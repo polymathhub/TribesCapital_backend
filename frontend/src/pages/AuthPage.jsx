@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/endpoints';
 import { LogoFull } from '../components/Logo';
+import cardImageOne from '../assets/image.png';
+import cardImageTwo from '../assets/illustrations/Artist Woman (1).png';
+import cardImageThree from '../assets/illustrations/New-York-cuate.svg';
+import cardImageFour from '../assets/illustrations/Events-rafiki.svg';
 
 /* ─── DESIGN TOKENS ─────────────────────────────────── */
 const COLORS = {
@@ -494,16 +498,72 @@ function GoogleButton({ onClick, loading = false, disabled = false, isMobile = f
   );
 }
 
-function FormContainer({ children, isMobile }) {
+const SIGN_IN_CARD_IMAGES = [cardImageOne, cardImageTwo, cardImageThree, cardImageFour];
+
+function CyclingCardMedia({ isMobile }) {
+  const [activeImage, setActiveImage] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveImage((currentImage) => (currentImage + 1) % SIGN_IN_CARD_IMAGES.length);
+    }, 4200);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'relative',
+        height: isMobile ? 118 : 158,
+        overflow: 'hidden',
+        background: 'rgba(6, 39, 48, 0.72)',
+      }}
+    >
+      {SIGN_IN_CARD_IMAGES.map((image, index) => (
+        <img
+          key={image}
+          src={image}
+          alt=""
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: index === 0 ? 'center' : 'center 35%',
+            opacity: activeImage === index ? 1 : 0,
+            transform: activeImage === index ? 'scale(1)' : 'scale(1.04)',
+            transition: 'opacity 900ms ease, transform 5s ease',
+          }}
+        />
+      ))}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(120deg, rgba(4, 45, 52, 0.68), rgba(10, 121, 113, 0.18) 55%, rgba(5, 31, 43, 0.5))' }} />
+      <div style={{ position: 'absolute', left: 18, bottom: 14, color: '#fff', fontSize: isMobile ? 11 : 12, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', textShadow: '0 1px 8px rgba(0,0,0,0.25)' }}>
+        Powering the transition
+      </div>
+      <div style={{ position: 'absolute', right: 18, bottom: 16, display: 'flex', gap: 5 }}>
+        {SIGN_IN_CARD_IMAGES.map((image, index) => (
+          <span key={image} style={{ width: index === activeImage ? 18 : 5, height: 5, borderRadius: 999, background: '#fff', opacity: index === activeImage ? 1 : 0.55, transition: 'all 300ms ease' }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FormContainer({ children, isMobile, media = false }) {
   return (
     <div
       style={{
-        background: COLORS.surface,
+        background: 'rgba(255, 255, 255, 0.72)',
+        backdropFilter: 'blur(22px) saturate(135%)',
+        WebkitBackdropFilter: 'blur(22px) saturate(135%)',
         borderRadius: isMobile ? 12 : 16,
-        padding: isMobile ? '20px 16px 28px' : '40px 48px',
+        padding: media ? 0 : isMobile ? '20px 16px 28px' : '40px 48px',
         maxWidth: 460,
         width: '100%',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
+        border: '1px solid rgba(255, 255, 255, 0.7)',
+        boxShadow: '0 24px 80px rgba(6, 31, 44, 0.28), inset 0 1px 0 rgba(255,255,255,0.8)',
         display: 'flex',
         flexDirection: 'column',
         // On small screens, allow the form to scroll while keeping CTAs reachable
@@ -512,7 +572,10 @@ function FormContainer({ children, isMobile }) {
         WebkitOverflowScrolling: isMobile ? 'touch' : 'auto',
       }}
     >
-      {children}
+      {media && <CyclingCardMedia isMobile={isMobile} />}
+      <div style={{ padding: media ? (isMobile ? '20px 16px 28px' : '28px 48px 40px') : 0 }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -640,7 +703,7 @@ function LoginPage({ onNavigate, onSuccess }) {
   };
 
   return (
-    <FormContainer isMobile={isMobile}>
+    <FormContainer isMobile={isMobile} media>
       <div style={{ marginBottom: 28 }}>
         <LogoFull size="medium" />
       </div>
@@ -1775,12 +1838,35 @@ export default function AuthPage({ onLogin }) {
         alignItems: isMobile ? 'flex-start' : 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: COLORS.background,
+        position: 'relative',
+        isolation: 'isolate',
+        background: '#0b2730',
         padding: isMobile ? '20px 16px 40px' : '20px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         overflowX: 'hidden',
       }}
     >
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: -2,
+          backgroundImage: 'url("https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=2200&q=85")',
+          backgroundPosition: 'center',
+          backgroundSize: 'cover',
+          transform: 'scale(1.03)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: -1,
+          background: 'linear-gradient(120deg, rgba(6, 39, 48, 0.82), rgba(8, 71, 75, 0.48) 48%, rgba(6, 31, 44, 0.72))',
+        }}
+      />
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }

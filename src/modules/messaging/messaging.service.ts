@@ -28,11 +28,22 @@ type MessagingPrismaService = PrismaService & {
 @Injectable()
 export class MessagingService {
   private readonly logger = new Logger(MessagingService.name);
+  private readonly onlineUsers = new Set<string>();
 
   constructor(
     @Inject(PrismaService) private readonly prisma: MessagingPrismaService,
     @Optional() private readonly notificationsService?: NotificationsService,
   ) {}
+
+  trackUserOnline(userId: string) {
+    if (!userId) return;
+    this.onlineUsers.add(userId);
+  }
+
+  trackUserOffline(userId: string) {
+    if (!userId) return;
+    this.onlineUsers.delete(userId);
+  }
 
   async ensureUserAccess(userId: string, conversationId: string) {
     const conversation = await this.prisma.conversation.findUnique({
@@ -222,6 +233,30 @@ export class MessagingService {
           },
         },
       },
+    });
+  }
+
+  async listActiveUsers(userId: string) {
+    const onlineIds = [...this.onlineUsers].filter((id) => id !== userId);
+    if (!onlineIds.length) {
+      return [];
+    }
+
+    return this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        id: { in: onlineIds, not: userId },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        avatar: true,
+        isActive: true,
+        lastLogin: true,
+      },
+      orderBy: { firstName: 'asc' },
     });
   }
 

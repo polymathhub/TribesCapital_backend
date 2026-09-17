@@ -181,4 +181,20 @@ describe('MessagingService', () => {
       },
     }));
   });
+
+  it('lists active users for direct messaging using live presence and excluding the current user', async () => {
+    service.trackUserOnline('user-2');
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'user-2', firstName: 'Ava', lastName: 'Scott', avatar: null, isActive: true },
+    ]);
+
+    await expect(service.listActiveUsers('user-1')).resolves.toEqual([
+      expect.objectContaining({ id: 'user-2', firstName: 'Ava' }),
+    ]);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { isActive: true, id: { in: ['user-2'], not: 'user-1' } },
+      orderBy: { firstName: 'asc' },
+    }));
+  });
 });

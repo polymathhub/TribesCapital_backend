@@ -99,6 +99,7 @@ export const communityAPI = {
 
 export const messagingAPI = {
   listConversations: () => apiClient.get('/messaging/conversations'),
+  listActiveUsers: () => apiClient.get('/messaging/active-users'),
   createConversation: (data) => apiClient.post('/messaging/conversations', data),
   getConversation: (id) => apiClient.get(`/messaging/conversations/${id}`),
   getMessages: (id, params) => apiClient.get(`/messaging/conversations/${id}/messages`, { params }),

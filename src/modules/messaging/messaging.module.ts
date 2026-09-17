@@ -5,6 +5,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { MessagingService } from './messaging.service';
 import { MessagingController } from './messaging.controller';
 import { MessagingGateway } from './messaging.gateway';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
   imports: [DatabaseModule, AuthModule, NotificationsModule],

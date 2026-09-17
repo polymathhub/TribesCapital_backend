@@ -48,6 +48,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       }
       const userId = payload.sub ?? payload.id;
       client.data.userId = userId;
+      this.messagingService.trackUserOnline(userId);
       client.join(`user:${userId}`);
       this.server.emit('user:online', { userId });
     } catch {
@@ -58,6 +59,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
   handleDisconnect(client: Socket) {
     const userId = client.data.userId;
     if (userId) {
+      this.messagingService.trackUserOffline(userId);
       this.server.emit('user:offline', { userId });
     }
   }

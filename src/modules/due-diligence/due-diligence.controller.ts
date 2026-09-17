@@ -104,10 +104,7 @@ export class DueDiligenceController {
   async delete(@Param('id') id: string, @GetCurrentUser('id') userId: string) {
     return this.service.delete(id, userId);
   }
-
-  /* ═══════════════════════════════════════════════════════════ */
-  /*               ITEMS MANAGEMENT                              */
-  /* ═══════════════════════════════════════════════════════════ */
+ // item catalogue //
 
   @Post(':id/items')
   @HttpCode(201)
@@ -139,9 +136,7 @@ export class DueDiligenceController {
     return this.service.deleteItem(dueDiligenceId, itemId, userId);
   }
 
-  /* ═══════════════════════════════════════════════════════════ */
-  /*               DOCUMENTS                                      */
-  /* ═══════════════════════════════════════════════════════════ */
+ // DOcuments//
 
   @Post(':id/documents')
   @HttpCode(201)
@@ -165,7 +160,7 @@ export class DueDiligenceController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file && !dto.fileUrl) {
-      throw new BadRequestException('Either a file upload or a file URL is required.');
+      throw new BadRequestException('Either a file upload or a file URL is required here please .');
     }
 
     if (file) {
@@ -202,10 +197,7 @@ export class DueDiligenceController {
   ) {
     return this.service.reviewDocument(dueDiligenceId, docId, dto, userId);
   }
-
-  /* ═══════════════════════════════════════════════════════════ */
-  /*               COMMENTS                                       */
-  /* ═══════════════════════════════════════════════════════════ */
+// coomments //
 
   @Post(':id/comments')
   @HttpCode(201)
@@ -260,9 +252,7 @@ export class DueDiligenceController {
     return this.service.deleteComment(dueDiligenceId, commentId, userId);
   }
 
-  /* ═══════════════════════════════════════════════════════════ */
-  /*               APPROVALS                                      */
-  /* ═══════════════════════════════════════════════════════════ */
+  // admin approvals
 
   @Post(':id/approvals')
   @HttpCode(201)

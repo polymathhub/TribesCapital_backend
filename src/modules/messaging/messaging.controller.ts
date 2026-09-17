@@ -61,6 +61,11 @@ export class MessagingController {
     return this.messagingService.listConversations(user.id);
   }
 
+  @Get('active-users')
+  async listActiveUsers(@CurrentUser() user: any) {
+    return this.messagingService.listActiveUsers(user.id);
+  }
+
   @Get('conversations/:id')
   async getConversation(@CurrentUser() user: any, @Param('id') id: string) {
     return this.messagingService.getConversation(user.id, id);
