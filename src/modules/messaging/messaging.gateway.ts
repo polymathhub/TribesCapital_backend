@@ -89,6 +89,25 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       attachmentData: payload.attachments,
     });
     this.server.to(`conversation:${payload.conversationId}`).emit('message:new', message);
+    const members = await this.prisma.conversationMember.findMany({
+      where: { conversationId: payload.conversationId },
+      select: { userId: true },
+    });
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: payload.conversationId },
+      select: { type: true, channel: { select: { isPrivate: true } } },
+    });
+    const recipientIds = new Set(members.map((member) => member.userId));
+    if (conversation?.type === 'COMMUNITY_CHANNEL' && !conversation.channel?.isPrivate) {
+      const communityUsers = await this.prisma.user.findMany({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      communityUsers.forEach((member) => recipientIds.add(member.id));
+    }
+    for (const recipientId of recipientIds) {
+      this.server.to(`user:${recipientId}`).emit('message:new', message);
+    }
     return { ok: true, message };
   }
 

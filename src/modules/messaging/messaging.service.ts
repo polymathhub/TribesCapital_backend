@@ -53,7 +53,8 @@ export class MessagingService {
 
     const members = (conversation as any).members ?? (conversation as any).conversationMembers ?? [];
     const isMember = members.some((member: { userId: string }) => member.userId === userId);
-    if (!isMember) {
+    const isPublicCommunityChannel = conversation.type === 'COMMUNITY_CHANNEL' && conversation.channel && !conversation.channel.isPrivate;
+    if (!isMember && !isPublicCommunityChannel) {
       throw new ForbiddenException('You are not authorized to access this conversation');
     }
 
@@ -106,7 +107,14 @@ export class MessagingService {
     channelName?: string;
     isPrivateChannel?: boolean;
   }) {
-    const participantIds = Array.from(new Set((payload.participantIds ?? []).filter(Boolean)));
+    let participantIds = Array.from(new Set((payload.participantIds ?? []).filter(Boolean)));
+    if (payload.type === 'COMMUNITY_CHANNEL' && participantIds.length === 0) {
+      const communityMembers = await this.prisma.user.findMany({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      participantIds = communityMembers.map((member) => member.id);
+    }
     const members = [payload.userId, ...participantIds.filter((id) => id !== payload.userId)];
 
     if (payload.type === 'DIRECT' && members.length !== 2) {
@@ -196,7 +204,10 @@ export class MessagingService {
   async listConversations(userId: string) {
     return this.prisma.conversation.findMany({
       where: {
-        members: { some: { userId } },
+        OR: [
+          { members: { some: { userId } } },
+          { type: 'COMMUNITY_CHANNEL', channel: { is: { isPrivate: false } } },
+        ],
       },
       orderBy: { updatedAt: 'desc' },
       include: {

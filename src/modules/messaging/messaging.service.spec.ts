@@ -151,4 +151,34 @@ describe('MessagingService', () => {
     await expect(service.addReaction('user-1', 'message-1', 'heart')).rejects.toThrow('not authorized');
     expect(prisma.messageReaction.upsert).not.toHaveBeenCalled();
   });
+
+  it('allows every user to access a public community channel', async () => {
+    prisma.conversation.findUnique.mockResolvedValue({
+      id: 'channel-conversation',
+      type: 'COMMUNITY_CHANNEL',
+      projectId: null,
+      dueDiligenceId: null,
+      members: [],
+      channel: { id: 'channel-1', isPrivate: false },
+    });
+
+    await expect(service.ensureUserAccess('community-user', 'channel-conversation')).resolves.toEqual(
+      expect.objectContaining({ id: 'channel-conversation' }),
+    );
+  });
+
+  it('lists public community channels for users who are not stored members', async () => {
+    prisma.conversation.findMany.mockResolvedValue([]);
+
+    await service.listConversations('community-user');
+
+    expect(prisma.conversation.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        OR: [
+          { members: { some: { userId: 'community-user' } } },
+          { type: 'COMMUNITY_CHANNEL', channel: { is: { isPrivate: false } } },
+        ],
+      },
+    }));
+  });
 });
