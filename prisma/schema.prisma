@@ -44,6 +44,16 @@ model User {
   
   projectCreated        Project[]   @relation("ProjectCreator")
   projectTeam           Project[]   @relation("ProjectTeam")
+
+  conversationCreated   Conversation[] @relation("ConversationCreator")
+  conversationMembers   ConversationMember[]
+  sentMessages          Message[]   @relation("MessageSender")
+  messageReactions      MessageReaction[] @relation("ReactionUser")
+  messageReads          MessageRead[] @relation("ReadUser")
+  messageReports        MessageReport[] @relation("MessageReportReporter")
+  uploadedAttachments   MessageAttachment[] @relation("MessageAttachmentUploader")
+  createdChannels       CommunityChannel[] @relation("ChannelCreator")
+  channelMemberships    CommunityMembership[]
   
   documentCreated       Document[]  @relation("DocumentCreator")
   documentAuthor        Document[]  @relation("DocumentAuthor")
@@ -261,6 +271,7 @@ model Project {
   creator         User        @relation("ProjectCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   
   teamMembers     User[]      @relation("ProjectTeam")
+  conversations   Conversation[] @relation("ProjectConversations")
 
   stages          ProjectStage[]
   marketplaceItem MarketplaceItem?
@@ -385,6 +396,189 @@ model CommunityComment {
   @@index([creatorId])
 }
 
+enum ConversationType {
+  DIRECT
+  GROUP
+  COMMUNITY_CHANNEL
+  PROJECT_ROOM
+  INVESTMENT_ROOM
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+model Conversation {
+  id              String            @id @default(cuid())
+  type            ConversationType  @default(DIRECT)
+  title           String?
+  description     String?
+  avatar          String?
+  creatorId       String?
+  creator         User?             @relation("ConversationCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  projectId       String?
+  project         Project?          @relation("ProjectConversations", fields: [projectId], references: [id], onDelete: SetNull)
+  dueDiligenceId  String?
+  dueDiligence    DueDiligence?     @relation("DueDiligenceConversations", fields: [dueDiligenceId], references: [id], onDelete: SetNull)
+  lastMessageAt   DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  members         ConversationMember[]
+  messages        Message[]
+  channel         CommunityChannel?
+
+  @@index([type])
+  @@index([creatorId])
+  @@index([projectId])
+  @@index([dueDiligenceId])
+  @@index([lastMessageAt])
+}
+
+model ConversationMember {
+  id              String      @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            String      @default("member")
+  joinedAt        DateTime    @default(now())
+  mutedAt         DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+  @@index([role])
+}
+
+model Message {
+  id              String      @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  content         String?
+  messageType     MessageType @default(TEXT)
+  replyToId       String?
+  replyTo         Message?    @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         Message[]   @relation("MessageReplies")
+  mentions        Json?
+  isEdited        Boolean     @default(false)
+  isDeleted       Boolean     @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  attachments     MessageAttachment[]
+  reactions       MessageReaction[]
+  reads           MessageRead[]
+  reports         MessageReport[]
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([replyToId])
+  @@index([messageType])
+}
+
+model MessageReaction {
+  id              String      @id @default(cuid())
+  messageId       String
+  message         Message     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User        @relation("ReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+  reaction        String
+  createdAt       DateTime    @default(now())
+
+  @@unique([messageId, userId, reaction])
+  @@index([messageId])
+  @@index([userId])
+}
+
+model MessageRead {
+  id              String      @id @default(cuid())
+  messageId       String
+  message         Message     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User        @relation("ReadUser", fields: [userId], references: [id], onDelete: Cascade)
+  readAt          DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+  @@index([readAt])
+}
+
+model MessageAttachment {
+  id              String      @id @default(cuid())
+  messageId       String
+  message         Message     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  uploadedById    String
+  uploadedBy      User        @relation("MessageAttachmentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  fileName        String
+  mimeType        String
+  size            Int
+  storageKey      String
+  url             String
+  createdAt       DateTime    @default(now())
+
+  @@index([messageId])
+  @@index([uploadedById])
+}
+
+model CommunityChannel {
+  id              String      @id @default(cuid())
+  name            String
+  description     String?
+  isPrivate       Boolean     @default(false)
+  creatorId       String
+  creator         User        @relation("ChannelCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  conversationId  String      @unique
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  memberships     CommunityMembership[]
+
+  @@index([creatorId])
+  @@index([isPrivate])
+}
+
+model CommunityMembership {
+  id              String      @id @default(cuid())
+  channelId       String
+  channel         CommunityChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            String      @default("member")
+  joinedAt        DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([channelId, userId])
+  @@index([channelId])
+  @@index([userId])
+}
+
+model MessageReport {
+  id              String      @id @default(cuid())
+  messageId       String
+  message         Message     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reporterId      String
+  reporter        User        @relation("MessageReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reason          String
+  details         String?
+  createdAt       DateTime    @default(now())
+
+  @@index([messageId])
+  @@index([reporterId])
+}
+
 model Notification {
   id              String      @id @default(cuid())
   type            String
@@ -470,6 +664,7 @@ model DueDiligence {
   comments            DueDiligenceComment[]
   auditLogs           DueDiligenceAuditLog[]
   approvals           DueDiligenceApproval[]
+  conversations       Conversation[] @relation("DueDiligenceConversations")
 
   @@index([status])
   @@index([creatorId])

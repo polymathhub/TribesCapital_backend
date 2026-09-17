@@ -25,6 +25,7 @@ function Icon({ name, size = 15, color = COLORS.T3, strokeWidth = 1.5 }) {
     eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="3" stroke={color} strokeWidth={sw} fill="none"/></>,
     eyeOff: <><path d="M3 3l18 18" stroke={color} strokeWidth={sw} strokeLinecap="round"/><path d="M10.6 10.6A3 3 0 0 0 13.4 13.4" stroke={color} strokeWidth={sw} strokeLinecap="round"/><path d="M9.88 5.08A10.87 10.87 0 0 1 12 5c6.5 0 10 7 10 7a18.46 18.46 0 0 1-4.06 5.06" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round"/><path d="M6.61 6.61A18.8 18.8 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 4.39-1.01" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round"/></>,
     message: <><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 3V7a2 2 0 0 1 2-2Z" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,
+    list: <><line x1="4" y1="6" x2="20" y2="6" stroke={color} strokeWidth={sw} strokeLinecap="round"/><line x1="4" y1="12" x2="20" y2="12" stroke={color} strokeWidth={sw} strokeLinecap="round"/><line x1="4" y1="18" x2="20" y2="18" stroke={color} strokeWidth={sw} strokeLinecap="round"/></>,
     spark: <><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3Z" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,
   };
 

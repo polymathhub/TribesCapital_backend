@@ -97,6 +97,23 @@ export const communityAPI = {
   listMembers: (params) => apiClient.get('/community/members', { params }),
 };
 
+export const messagingAPI = {
+  listConversations: () => apiClient.get('/messaging/conversations'),
+  createConversation: (data) => apiClient.post('/messaging/conversations', data),
+  getConversation: (id) => apiClient.get(`/messaging/conversations/${id}`),
+  getMessages: (id, params) => apiClient.get(`/messaging/conversations/${id}/messages`, { params }),
+  sendMessage: (id, data) => apiClient.post(`/messaging/conversations/${id}/messages`, data),
+  editMessage: (id, data) => apiClient.patch(`/messaging/messages/${id}`, data),
+  deleteMessage: (id) => apiClient.delete(`/messaging/messages/${id}`),
+  addReaction: (id, reaction) => apiClient.post(`/messaging/messages/${id}/reactions`, { reaction }),
+  markRead: (id, messageIds) => apiClient.post(`/messaging/messages/${id}/read`, { messageIds }),
+  search: (query, limit = 25) => apiClient.get('/messaging/search', { params: { query, limit } }),
+  unread: () => apiClient.get('/messaging/unread'),
+  uploadAttachment: (conversationId, formData) => apiClient.post(`/messaging/conversations/${conversationId}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+};
+
 
 /* DUE DILIGENCE API CLIENT  */
 

@@ -5,6 +5,7 @@ import ProjectPipelinePage from './ProjectPipelinePage';
 import OfficeHoursEvents from './OfficeHoursEvents';
 import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
+import MessagingPage from './MessagingPage';
 import ProfileSettings from '../components/ProfileSettings';
 import { usersAPI, coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
 import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
@@ -1659,6 +1660,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {/* ── PROJECT PIPELINE PAGE ── */}
           {currentPage === 'pipeline' && (
             <ProjectPipelinePage user={user} onNavigate={onNavigate} isMobile={isMobile} isTablet={isTablet} />
+          )}
+
+          {currentPage === 'messages' && (
+            <MessagingPage user={user} />
           )}
 
           {/* ── OFFICE HOURS & EVENTS PAGE ── */}

@@ -25,6 +25,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module';
 import { HealthModule } from './modules/health/health.module';
+import { MessagingModule } from './modules/messaging/messaging.module';
 
 
 const frontendDistCandidates = [
@@ -73,6 +74,7 @@ const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(c
     AnalyticsModule,
     DueDiligenceModule,
     HealthModule,
+    MessagingModule,
   ],
   providers: [
     {
