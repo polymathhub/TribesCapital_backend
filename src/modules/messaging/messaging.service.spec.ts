@@ -5,6 +5,8 @@ import { PrismaService } from '../../database/prisma.service';
 describe('MessagingService', () => {
   let service: MessagingService;
   const prisma = {
+    $transaction: jest.fn(async (callback: (tx: any) => unknown) => callback(prisma)),
+    $executeRaw: jest.fn().mockResolvedValue(0),
     conversation: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), findMany: jest.fn(), update: jest.fn() },
     conversationMember: { createMany: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
     message: { findMany: jest.fn(), create: jest.fn(), count: jest.fn(), groupBy: jest.fn(), update: jest.fn(), findUnique: jest.fn() },
@@ -33,13 +35,9 @@ describe('MessagingService', () => {
     prisma.conversation.create.mockResolvedValue({ id: 'conv-1', type: 'DIRECT' });
     prisma.conversationMember.createMany.mockResolvedValue({ count: 2 });
     prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: 'DIRECT', members: [{ userId: 'user-1' }, { userId: 'user-2' }] });
-
     const result = await service.createConversation({ type: 'DIRECT', userId: 'user-1', participantIds: ['user-2'], title: 'Direct chat' });
-
-    expect(prisma.conversationMember.createMany).toHaveBeenCalledWith({ data: expect.arrayContaining([
-      expect.objectContaining({ conversationId: 'conv-1', userId: 'user-1' }),
-      expect.objectContaining({ conversationId: 'conv-1', userId: 'user-2' }),
-    ]) });
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(prisma.conversationMember.createMany).toHaveBeenCalledWith({ data: expect.arrayContaining([expect.objectContaining({ conversationId: 'conv-1', userId: 'user-1' }), expect.objectContaining({ conversationId: 'conv-1', userId: 'user-2' })]) });
     expect(result.type).toBe('DIRECT');
   });
 
@@ -60,9 +58,7 @@ describe('MessagingService', () => {
     prisma.communityChannel.create.mockResolvedValue({ id: 'channel-1' });
     prisma.communityMembership.createMany.mockResolvedValue({ count: 1 });
     prisma.conversation.findUnique.mockResolvedValue({ id: 'channel-conv', type: 'COMMUNITY_CHANNEL', members: [{ userId: 'creator-1' }] });
-
     await service.createConversation({ type: 'COMMUNITY_CHANNEL', userId: 'creator-1', title: 'General', channelName: 'general' });
-
     expect(prisma.user.findMany).not.toHaveBeenCalled();
     expect(prisma.conversationMember.createMany).toHaveBeenCalledWith({ data: [{ conversationId: 'channel-conv', userId: 'creator-1', role: 'owner' }] });
   });
@@ -91,7 +87,6 @@ describe('MessagingService', () => {
     prisma.messagingPresenceSession.count.mockResolvedValue(0);
     await expect(service.trackUserOnline('user-1', 'socket-1')).resolves.toEqual({ firstSession: true });
     expect(prisma.messagingPresenceSession.create).toHaveBeenCalledWith({ data: { userId: 'user-1', socketId: 'socket-1' } });
-
     prisma.messagingPresenceSession.findMany.mockResolvedValue([{ userId: 'user-1' }, { userId: 'user-2' }]);
     prisma.user.findMany.mockResolvedValue([{ id: 'user-1', firstName: 'Ava' }, { id: 'user-2', firstName: 'Noah' }]);
     await expect(service.listActiveUsers()).resolves.toEqual([expect.objectContaining({ id: 'user-1', presence: 'online' }), expect.objectContaining({ id: 'user-2', presence: 'online' })]);
@@ -103,6 +98,13 @@ describe('MessagingService', () => {
     await expect(service.trackUserOffline('user-1', 'socket-1')).resolves.toEqual({ lastSession: false });
   });
 
+  it('recreates a session when a stale cleanup removed the socket before its heartbeat', async () => {
+    prisma.messagingPresenceSession.updateMany.mockResolvedValue({ count: 0 });
+    prisma.messagingPresenceSession.create.mockResolvedValue({ id: 'presence-1', userId: 'user-1', socketId: 'socket-1' });
+    await expect(service.trackUserHeartbeat('user-1', 'socket-1')).resolves.toEqual({ firstSession: true });
+    expect(prisma.messagingPresenceSession.create).toHaveBeenCalledWith({ data: { userId: 'user-1', socketId: 'socket-1' } });
+  });
+
   it('toggles a reaction and returns the authoritative reaction set', async () => {
     prisma.message.findUnique.mockResolvedValue({ id: 'message-1', conversationId: 'conv-1' });
     prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: 'DIRECT', members: [{ userId: 'user-1' }] });
@@ -110,7 +112,6 @@ describe('MessagingService', () => {
     prisma.messageReaction.create.mockResolvedValue({ id: 'reaction-1' });
     prisma.messageReaction.findMany.mockResolvedValue([{ id: 'reaction-1', messageId: 'message-1', userId: 'user-1', reaction: '❤️' }]);
     await expect(service.toggleReaction('user-1', 'message-1', '❤️')).resolves.toEqual(expect.objectContaining({ action: 'added', messageId: 'message-1', reactions: expect.any(Array) }));
-
     prisma.messageReaction.findUnique.mockResolvedValue({ id: 'reaction-1' });
     prisma.messageReaction.delete.mockResolvedValue({ id: 'reaction-1' });
     prisma.messageReaction.findMany.mockResolvedValue([]);
