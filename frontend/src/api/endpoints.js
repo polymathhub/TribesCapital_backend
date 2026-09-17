@@ -40,17 +40,13 @@ export const lessonsAPI = {
     const formData = new FormData();
     Object.keys(data).forEach(key => formData.append(key, data[key]));
     if (file) formData.append('video', file);
-    return apiClient.post(`/lessons/courses/${courseId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return apiClient.post(`/lessons/courses/${courseId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
   update: (id, data, file) => {
     const formData = new FormData();
     Object.keys(data).forEach(key => formData.append(key, data[key]));
     if (file) formData.append('video', file);
-    return apiClient.put(`/lessons/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return apiClient.put(`/lessons/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
   delete: (id) => apiClient.delete(`/lessons/${id}`),
   markComplete: (lessonId) => apiClient.post(`/lessons/${lessonId}/complete`),
@@ -70,9 +66,7 @@ export const eventsAPI = {
 export const documentsAPI = {
   list: (params) => apiClient.get('/documents', { params }),
   getById: (id) => apiClient.get(`/documents/${id}`),
-  upload: (formData) => apiClient.post('/documents', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  upload: (formData) => apiClient.post('/documents', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
 export const notificationsAPI = {
@@ -107,57 +101,28 @@ export const messagingAPI = {
   editMessage: (id, data) => apiClient.patch(`/messaging/messages/${id}`, data),
   deleteMessage: (id) => apiClient.delete(`/messaging/messages/${id}`),
   addReaction: (id, reaction) => apiClient.post(`/messaging/messages/${id}/reactions`, { reaction }),
+  toggleReaction: (id, reaction) => apiClient.post(`/messaging/messages/${id}/reactions/toggle`, { reaction }),
+  removeReaction: (id, reaction) => apiClient.delete(`/messaging/messages/${id}/reactions/${encodeURIComponent(reaction)}`),
   markRead: (id, messageIds) => apiClient.post(`/messaging/messages/${id}/read`, { messageIds }),
   search: (query, limit = 25) => apiClient.get('/messaging/search', { params: { query, limit } }),
   unread: () => apiClient.get('/messaging/unread'),
-  uploadAttachment: (conversationId, formData) => apiClient.post(`/messaging/conversations/${conversationId}/attachments`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  uploadAttachment: (conversationId, formData) => apiClient.post(`/messaging/conversations/${conversationId}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
-
-/* DUE DILIGENCE API CLIENT  */
-
-
 export const dueDiligenceAPI = {
-  // Main CRUD
   list: (params) => apiClient.get('/due-diligence', { params }),
   getById: (id) => apiClient.get(`/due-diligence/${id}`),
   create: (data) => apiClient.post('/due-diligence', data),
   update: (id, data) => apiClient.put(`/due-diligence/${id}`, data),
   delete: (id) => apiClient.delete(`/due-diligence/${id}`),
-
-  // Items
   createItem: (dueDiligenceId, data) => apiClient.post(`/due-diligence/${dueDiligenceId}/items`, data),
-  updateItem: (dueDiligenceId, itemId, data) =>
-    apiClient.put(`/due-diligence/${dueDiligenceId}/items/${itemId}`, data),
-  deleteItem: (dueDiligenceId, itemId) =>
-    apiClient.delete(`/due-diligence/${dueDiligenceId}/items/${itemId}`),
-
-  // Documents
-  uploadDocument: (dueDiligenceId, data, config) =>
-    apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, {
-      ...config,
-      timeout: config?.timeout || 30000,
-      headers: {
-        ...(config?.headers || {}),
-      },
-    }),
-  deleteDocument: (dueDiligenceId, docId) =>
-    apiClient.delete(`/due-diligence/${dueDiligenceId}/documents/${docId}`),
-  reviewDocument: (dueDiligenceId, docId, data) =>
-    apiClient.put(`/due-diligence/${dueDiligenceId}/documents/${docId}/review`, data),
-
-  // Comments
-  addComment: (dueDiligenceId, data, config) =>
-    apiClient.post(`/due-diligence/${dueDiligenceId}/comments`, data, config),
-  deleteComment: (dueDiligenceId, commentId) =>
-    apiClient.delete(`/due-diligence/${dueDiligenceId}/comments/${commentId}`),
-
-  // Approvals
-  createApproval: (dueDiligenceId, data) =>
-    apiClient.post(`/due-diligence/${dueDiligenceId}/approvals`, data),
-  approveOrReject: (dueDiligenceId, approvalId, data) =>
-    apiClient.put(`/due-diligence/${dueDiligenceId}/approvals/${approvalId}`, data),
+  updateItem: (dueDiligenceId, itemId, data) => apiClient.put(`/due-diligence/${dueDiligenceId}/items/${itemId}`, data),
+  deleteItem: (dueDiligenceId, itemId) => apiClient.delete(`/due-diligence/${dueDiligenceId}/items/${itemId}`),
+  uploadDocument: (dueDiligenceId, data, config) => apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, { ...config, timeout: config?.timeout || 30000, headers: { ...(config?.headers || {}) } }),
+  deleteDocument: (dueDiligenceId, docId) => apiClient.delete(`/due-diligence/${dueDiligenceId}/documents/${docId}`),
+  reviewDocument: (dueDiligenceId, docId, data) => apiClient.put(`/due-diligence/${dueDiligenceId}/documents/${docId}/review`, data),
+  addComment: (dueDiligenceId, data, config) => apiClient.post(`/due-diligence/${dueDiligenceId}/comments`, data, config),
+  deleteComment: (dueDiligenceId, commentId) => apiClient.delete(`/due-diligence/${dueDiligenceId}/comments/${commentId}`),
+  createApproval: (dueDiligenceId, data) => apiClient.post(`/due-diligence/${dueDiligenceId}/approvals`, data),
+  approveOrReject: (dueDiligenceId, approvalId, data) => apiClient.put(`/due-diligence/${dueDiligenceId}/approvals/${approvalId}`, data),
 };
-

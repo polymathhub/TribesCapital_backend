@@ -43,7 +43,7 @@ model User {
   eventRsvps            RSVP[]
   
   projectCreated        Project[]   @relation("ProjectCreator")
-  projectTeam           Project[]   @relation("ProjectTeam")
+  projectTeam           User[]      @relation("ProjectTeam")
 
   conversationCreated   Conversation[] @relation("ConversationCreator")
   conversationMembers   ConversationMember[]
@@ -54,6 +54,7 @@ model User {
   uploadedAttachments   MessageAttachment[] @relation("MessageAttachmentUploader")
   createdChannels       CommunityChannel[] @relation("ChannelCreator")
   channelMemberships    CommunityMembership[]
+  presenceSessions      MessagingPresenceSession[]
   
   documentCreated       Document[]  @relation("DocumentCreator")
   documentAuthor        Document[]  @relation("DocumentAuthor")
@@ -80,6 +81,19 @@ model User {
   @@index([createdAt])
 }
 
+model MessagingPresenceSession {
+  id          String   @id @default(cuid())
+  userId      String
+  socketId    String   @unique
+  connectedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
 model Role {
   id          String      @id @default(cuid())
   name        String      @unique
@@ -94,16 +108,16 @@ model Role {
 }
 
 model Permission {
-  id          String      @id @default(cuid())
-  name        String      @unique
-  description String?
-  resource    String
-  action      String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id              String      @id @default(cuid())
+  name            String      @unique
+  description     String?
+  resource        String
+  action          String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  users       User[]      @relation("UserPermissions")
-  roles       Role[]      @relation("RolePermissions")
+  users           User[]      @relation("UserPermissions")
+  roles           Role[]      @relation("RolePermissions")
 
   @@unique([resource, action])
   @@index([resource])
@@ -790,24 +804,24 @@ model DueDiligenceApproval {
 }
 
 model DueDiligenceAuditLog {
-  id                  String      @id @default(cuid())
-  action              String
-  entity              String
-  entityId            String?
-  oldValue            Json?
-  newValue            Json?
-  reason              String?
+  id              String      @id @default(cuid())
+  action          String
+  entity          String
+  entityId        String?
+  oldValue        Json?
+  newValue        Json?
+  reason          String?
   
-  actor               User?       @relation("DDAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
-  actorId             String?
+  actor           User?       @relation("DDAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId         String?
   
-  ipAddress           String?
-  userAgent           String?
+  ipAddress       String?
+  userAgent       String?
   
-  createdAt           DateTime    @default(now())
+  createdAt       DateTime    @default(now())
 
-  dueDiligenceId      String
-  dueDiligence        DueDiligence @relation(fields: [dueDiligenceId], references: [id], onDelete: Cascade)
+  dueDiligenceId  String
+  dueDiligence    DueDiligence @relation(fields: [dueDiligenceId], references: [id], onDelete: Cascade)
 
   @@index([dueDiligenceId])
   @@index([action])
