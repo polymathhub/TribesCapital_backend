@@ -93,9 +93,10 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       if (!userId || !payload?.conversationId) return { ok: false, message: 'Unauthorized' };
       const conversationId = payload.conversationId;
       const content = typeof payload.content === 'string' ? payload.content.trim() : '';
+      const replyToId = typeof payload.replyToId === 'string' ? payload.replyToId : payload.replyToId?.id;
       if (!content && !payload.attachments?.length) return { ok: false, message: 'Message content is required' };
       await this.messagingService.ensureUserAccess(userId, conversationId);
-      const message = await this.messagingService.createMessage({ userId, conversationId, content, type: payload.type, replyToId: payload.replyToId, mentions: payload.mentions, attachmentData: payload.attachments });
+      const message = await this.messagingService.createMessage({ userId, conversationId, content, type: payload.type, replyToId, mentions: Array.isArray(payload.mentions) ? payload.mentions : undefined, attachmentData: Array.isArray(payload.attachments) ? payload.attachments : undefined });
       const realtimeMessage = payload.clientMessageId ? { ...message, clientMessageId: payload.clientMessageId } : message;
       this.server.to(`conversation:${conversationId}`).emit('message:new', realtimeMessage);
       return { ok: true, message: realtimeMessage };
