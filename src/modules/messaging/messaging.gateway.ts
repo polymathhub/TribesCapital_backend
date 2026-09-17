@@ -18,6 +18,8 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
   @WebSocketServer()
   server!: Server;
 
+  private readonly connectionCounts = new Map<string, number>();
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -33,7 +35,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         if (environment !== 'production') {
           client.data.userId = 'demo-user';
           client.join('user:demo-user');
-          this.server.emit('user:online', { userId: 'demo-user' });
+          this.trackSocketOnline('demo-user');
           return;
         }
         client.disconnect();
@@ -50,9 +52,8 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
 
       const userId = payload.sub ?? payload.id;
       client.data.userId = userId;
-      this.messagingService.trackUserOnline(userId);
       client.join(`user:${userId}`);
-      this.server.emit('user:online', { userId });
+      this.trackSocketOnline(userId);
     } catch {
       client.disconnect();
     }
@@ -60,9 +61,25 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   handleDisconnect(client: Socket) {
     const userId = client.data.userId;
-    if (userId) {
+    if (!userId) return;
+
+    const current = this.connectionCounts.get(userId) ?? 0;
+    if (current <= 1) {
+      this.connectionCounts.delete(userId);
       this.messagingService.trackUserOffline(userId);
       this.server.emit('user:offline', { userId });
+      return;
+    }
+
+    this.connectionCounts.set(userId, current - 1);
+  }
+
+  private trackSocketOnline(userId: string) {
+    const current = this.connectionCounts.get(userId) ?? 0;
+    this.connectionCounts.set(userId, current + 1);
+    if (current === 0) {
+      this.messagingService.trackUserOnline(userId);
+      this.server.emit('user:online', { userId });
     }
   }
 
@@ -104,9 +121,6 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       attachmentData: payload.attachments,
     });
 
-    // Conversation rooms are the source of truth for realtime message delivery.
-    // Avoid emitting the same message to every member's user room as well; that
-    // caused duplicate events and unnecessary fan-out for larger channels.
     this.server.to(`conversation:${conversationId}`).emit('message:new', message);
     return { ok: true, message };
   }
