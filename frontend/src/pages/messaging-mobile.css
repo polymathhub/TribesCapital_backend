@@ -1,0 +1,166 @@
+/* Mobile-first messaging layout. Desktop styles remain in messaging.css. */
+.messaging-page,
+.messaging-page * { box-sizing: border-box; }
+.messaging-page { min-width: 0; }
+.message-list { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.message-row { touch-action: pan-y; }
+.message-state { color: #667085; font-size: 10px; }
+.message-state.error { color: #b42318; font-weight: 700; }
+.message-retry { margin-top: 4px; border: 0; padding: 0; background: transparent; color: #5b21b6; font-size: 10px; font-weight: 700; cursor: pointer; }
+.message-row.send-failed .message-bubble { border-color: #fecdca; }
+.message-bubble { max-width: min(720px, 100%); overflow-wrap: anywhere; }
+.message-bubble p { overflow-wrap: anywhere; }
+.message-attachments { max-width: 100%; }
+.attachment-card { min-width: 0; max-width: 100%; }
+.attachment-card strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-card.pending { opacity: .65; pointer-events: none; }
+.thread-header-copy { min-width: 0; flex: 1; }
+.thread-header-copy h2,
+.thread-header-copy p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .messaging-page { padding: 18px; min-height: calc(100dvh - 18px); }
+  .messaging-layout { grid-template-columns: 280px minmax(0, 1fr); min-height: calc(100dvh - 150px); }
+}
+
+@media (max-width: 720px) {
+  .messaging-page { width: 100%; min-width: 0; height: 100dvh; min-height: 100dvh; padding: 0; overflow: hidden; background: #fff; }
+  .messaging-header { position: relative; z-index: 20; display: flex; align-items: center; min-height: 56px; height: 56px; margin: 0; padding: 8px 12px; gap: 10px; border-bottom: 1px solid #e7e9ef; background: rgba(255,255,255,.98); }
+  .messaging-title-row { min-width: 0; gap: 9px; }
+  .messaging-mark { display: none; }
+  .messaging-heading-copy { min-width: 0; }
+  .messaging-title-row h1 { font-size: 17px; line-height: 1.1; white-space: nowrap; }
+  .messaging-heading-copy p { display: none; }
+  .messaging-header-actions { margin-left: auto; gap: 6px; }
+  .workspace-status { padding: 6px 8px; font-size: 10px; }
+  .messaging-header-actions .messaging-primary-button { display: none; }
+  .messaging-alert { position: absolute; z-index: 30; top: 64px; left: 10px; right: 10px; margin: 0; box-shadow: 0 8px 24px rgba(16,24,40,.12); }
+
+  .messaging-layout { position: relative; display: block; width: 100%; height: calc(100dvh - 56px); min-height: 0; overflow: hidden; border: 0; border-radius: 0; box-shadow: none; background: #fff; }
+  .conversation-panel,
+  .thread-panel { position: absolute; inset: 0; width: 100%; min-width: 0; height: 100%; border: 0; overflow: hidden; background: #fff; transition: transform .22s cubic-bezier(.2,.8,.2,1); will-change: transform; }
+  .conversation-panel { display: flex; transform: translateX(0); z-index: 2; }
+  .thread-panel { display: flex; transform: translateX(100%); z-index: 4; }
+  .messaging-layout.mobile-thread .conversation-panel { transform: translateX(-100%); pointer-events: none; }
+  .messaging-layout.mobile-thread .thread-panel { transform: translateX(0); }
+
+  .conversation-heading { flex: 0 0 auto; min-height: 48px; padding: 12px 14px 7px; }
+  .conversation-heading .panel-title { font-size: 11px; }
+  .conversation-heading .panel-count { min-width: 19px; height: 19px; }
+  .conversation-heading .rail-action { width: 34px; height: 34px; }
+  .search-wrap { flex: 0 0 auto; min-height: 42px; margin: 0 12px 8px; padding: 9px 11px; border-radius: 10px; }
+  .search-wrap input { font-size: 14px; }
+  .conversation-filters { flex: 0 0 auto; gap: 5px; padding: 0 12px 8px; overflow-x: auto; scrollbar-width: none; }
+  .conversation-filters::-webkit-scrollbar { display: none; }
+  .conversation-filters button { flex: 0 0 auto; min-height: 36px; padding: 8px 12px; border-radius: 9px; font-size: 12px; }
+
+  .active-user-panel { order: 0; flex: 0 0 auto; width: 100%; margin: 0; padding: 8px 12px 10px; border-top: 0; border-bottom: 1px solid #e7e9ef; background: #fff; }
+  .active-user-panel .conversation-heading { min-height: 30px; padding: 0 2px 6px; }
+  .active-user-panel .conversation-heading > div { gap: 6px; }
+  .active-user-panel .panel-title { text-transform: none; letter-spacing: 0; font-size: 12px; }
+  .active-user-list { display: flex; width: 100%; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 1px 1px 4px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  .active-user-list::-webkit-scrollbar { height: 3px; }
+  .active-user-list::-webkit-scrollbar-thumb { background: #cfd4dc; border-radius: 999px; }
+  .active-user-item { flex: 0 0 72px; width: 72px; min-height: 74px; padding: 7px 5px 6px; border: 1px solid #e7e9ef; border-radius: 12px; background: #fff; align-items: center; justify-content: center; flex-direction: column; gap: 5px; }
+  .active-user-item:hover { transform: none; }
+  .active-user-item .conversation-avatar { width: 38px; height: 38px; border-radius: 50%; position: relative; }
+  .active-user-item.live::after { right: 13px; top: 6px; width: 9px; height: 9px; }
+  .active-user-item > span:not(.message-avatar) { width: 100%; display: block; }
+  .active-user-item strong,
+  .active-user-item small { display: block; width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .active-user-item strong { font-size: 10px; line-height: 1.2; }
+  .active-user-item small { font-size: 9px; color: #667085; }
+  .active-user-item > i { display: none; }
+
+  .conversation-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 8px max(10px, env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+  .conversation-item { min-height: 64px; margin: 2px 0; padding: 10px 9px; gap: 10px; border-radius: 11px; }
+  .conversation-avatar { width: 42px; height: 42px; border-radius: 12px; }
+  .conversation-copy strong { font-size: 13px; }
+  .conversation-copy span { font-size: 11px; }
+  .unread-badge { min-width: 22px; height: 22px; }
+
+  .thread-header { flex: 0 0 auto; min-height: 58px; height: 58px; padding: 8px 10px; gap: 8px; border-bottom: 1px solid #e7e9ef; background: rgba(255,255,255,.98); }
+  .mobile-back { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 10px; font-size: 21px; }
+  .thread-header .message-avatar { width: 36px; height: 36px; }
+  .thread-header-copy,
+  .thread-header-copy h2,
+  .thread-header-copy p { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .thread-header h2 { font-size: 14px; }
+  .thread-header p { font-size: 10px; }
+  .thread-header-actions { margin-left: auto; gap: 2px; }
+  .thread-header-actions button { width: 38px; height: 38px; border-radius: 9px; }
+
+  .message-list { flex: 1 1 auto; min-height: 0; width: 100%; overflow-x: hidden; overflow-y: auto; padding: 16px 12px 12px; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+  .message-row { width: 100%; max-width: none; gap: 7px; margin: 0 0 15px; }
+  .message-row .message-avatar { width: 30px; height: 30px; flex-basis: 30px; }
+  .message-content-wrap { max-width: calc(100% - 37px); }
+  .message-meta { gap: 5px; margin-bottom: 4px; flex-wrap: nowrap; min-width: 0; }
+  .message-meta strong { font-size: 11px; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .message-meta time, .message-edited, .message-state { font-size: 9px; white-space: nowrap; }
+  .message-bubble,
+  .message-row.mine .message-bubble { display: block; width: fit-content; max-width: 100%; padding: 9px 11px; border-radius: 5px 12px 12px 12px; }
+  .message-bubble p { font-size: 14px; line-height: 1.45; }
+  .reply-context { max-width: 100%; }
+  .attachment-card { max-width: 100%; width: min(100%, 300px); }
+
+  .message-actions { position: static; display: flex; align-self: flex-start; margin: 4px 0 0; padding: 0; border: 0; box-shadow: none; background: transparent; opacity: 1; transform: none; }
+  .message-actions > button { width: 34px; height: 34px; border: 1px solid #e4e7ec; border-radius: 9px; background: #fff; }
+  .message-menu { position: fixed; right: 10px; bottom: 70px; top: auto; z-index: 50; min-width: 150px; }
+  .reaction-picker { position: fixed; right: 10px; bottom: 70px; z-index: 50; }
+  .reaction-list { flex-wrap: wrap; }
+  .typing-indicator { width: 100%; margin: 2px 0 6px; }
+  .composer-context { flex: 0 0 auto; padding: 6px 10px 0; }
+  .file-preview { margin: 6px 10px 0; }
+
+  .message-composer { position: relative; z-index: 10; flex: 0 0 auto; width: 100%; display: flex; align-items: flex-end; gap: 6px; padding: 8px 10px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid #e7e9ef; background: rgba(255,255,255,.98); }
+  .composer-tool { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 10px; }
+  .message-composer textarea { flex: 1 1 auto; min-width: 0; min-height: 38px; max-height: 120px; padding: 9px 10px; font-size: 15px; line-height: 1.35; border-radius: 11px; }
+  .send-button { flex: 0 0 auto; min-width: 48px; min-height: 38px; padding: 0 10px; border-radius: 10px; }
+  .composer-hint { display: none; }
+
+  .messaging-modal-backdrop { align-items: flex-end; padding: 0; }
+  .messaging-modal { width: 100%; max-width: none; max-height: 88dvh; margin: 0; border-radius: 18px 18px 0 0; }
+}
+
+@media (max-width: 390px) {
+  .messaging-header { padding-inline: 10px; }
+  .workspace-status { display: none; }
+  .active-user-item { flex-basis: 68px; width: 68px; }
+  .message-list { padding-inline: 9px; }
+  .message-bubble p { font-size: 13px; }
+  .message-composer { gap: 4px; padding-inline: 7px; }
+  .composer-tool { flex-basis: 36px; width: 36px; }
+  .send-button { min-width: 44px; padding-inline: 8px; }
+}
+
+@media (orientation: landscape) and (max-width: 900px) {
+  .messaging-header { height: 50px; min-height: 50px; }
+  .messaging-layout { height: calc(100dvh - 50px); }
+  .active-user-panel { padding-block: 5px 7px; }
+  .active-user-item { min-height: 62px; }
+  .message-list { padding-block: 8px; }
+  .message-composer textarea { max-height: 76px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversation-panel,
+  .thread-panel { transition: none; }
+}
+
+@supports (height: 100svh) {
+  @media (max-width: 720px) {
+    .messaging-page { height: 100svh; min-height: 100svh; }
+    .messaging-layout { height: calc(100svh - 56px); }
+  }
+}
+
+@media (pointer: coarse) {
+  .conversation-item,
+  .conversation-filters button,
+  .thread-header-actions button,
+  .message-actions > button,
+  .composer-tool,
+  .send-button,
+  .mobile-back,
+  .active-user-item { min-height: 38px; }
+}
