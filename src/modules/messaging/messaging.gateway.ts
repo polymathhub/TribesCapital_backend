@@ -88,14 +88,21 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   @SubscribeMessage('message:send')
   async sendMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: Record<string, any>) {
-    const userId = client.data.userId;
-    if (!userId || !payload?.conversationId) return { ok: false, message: 'Unauthorized' };
-    const conversationId = payload.conversationId;
-    await this.messagingService.ensureUserAccess(userId, conversationId);
-    const message = await this.messagingService.createMessage({ userId, conversationId, content: payload.content, type: payload.type, replyToId: payload.replyToId, mentions: payload.mentions, attachmentData: payload.attachments });
-    const realtimeMessage = payload.clientMessageId ? { ...message, clientMessageId: payload.clientMessageId } : message;
-    this.server.to(`conversation:${conversationId}`).emit('message:new', realtimeMessage);
-    return { ok: true, message: realtimeMessage };
+    try {
+      const userId = client.data.userId;
+      if (!userId || !payload?.conversationId) return { ok: false, message: 'Unauthorized' };
+      const conversationId = payload.conversationId;
+      const content = typeof payload.content === 'string' ? payload.content.trim() : '';
+      if (!content && !payload.attachments?.length) return { ok: false, message: 'Message content is required' };
+      await this.messagingService.ensureUserAccess(userId, conversationId);
+      const message = await this.messagingService.createMessage({ userId, conversationId, content, type: payload.type, replyToId: payload.replyToId, mentions: payload.mentions, attachmentData: payload.attachments });
+      const realtimeMessage = payload.clientMessageId ? { ...message, clientMessageId: payload.clientMessageId } : message;
+      this.server.to(`conversation:${conversationId}`).emit('message:new', realtimeMessage);
+      return { ok: true, message: realtimeMessage };
+    } catch (error: any) {
+      const message = error?.response?.message ?? error?.message ?? 'Unable to send message';
+      return { ok: false, message: Array.isArray(message) ? message.join(', ') : String(message) };
+    }
   }
 
   @SubscribeMessage('typing:start')
