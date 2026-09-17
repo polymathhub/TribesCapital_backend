@@ -188,13 +188,56 @@ describe('MessagingService', () => {
       { id: 'user-2', firstName: 'Ava', lastName: 'Scott', avatar: null, isActive: true },
     ]);
 
-    await expect(service.listActiveUsers('user-1')).resolves.toEqual([
+    const result = await service.listActiveUsers('user-1');
+
+    expect(result).toEqual([
       expect.objectContaining({ id: 'user-2', firstName: 'Ava' }),
     ]);
 
     expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { isActive: true, id: { in: ['user-2'], not: 'user-1' } },
+      where: { isActive: true, id: { in: ['user-2'] } },
       orderBy: { firstName: 'asc' },
     }));
+    expect(result[0].id).toBe('user-2');
+  });
+
+  it('creates direct message notifications for conversation recipients other than the sender', async () => {
+    const createForUser = jest.fn().mockResolvedValue({ id: 'notification-1' });
+    const serviceWithNotifications = new MessagingService(prisma as any, { createForUser } as any);
+    prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-3', type: 'DIRECT', members: [{ userId: 'user-1' }] });
+    prisma.conversationMember.findFirst.mockResolvedValue({ userId: 'user-1' });
+    prisma.conversationMember.findMany.mockResolvedValue([
+      { userId: 'user-1' },
+      { userId: 'user-2' },
+      { userId: 'user-3' },
+    ]);
+    prisma.message.create.mockResolvedValue({
+      id: 'msg-9',
+      senderId: 'user-1',
+      sender: { id: 'user-1', firstName: 'Ava', lastName: 'Lee', avatar: null },
+      conversationId: 'conv-3',
+      content: 'hello',
+      attachments: [],
+      replyTo: null,
+      reactions: [],
+    });
+    prisma.message.findUnique.mockResolvedValue({
+      id: 'msg-9',
+      senderId: 'user-1',
+      sender: { id: 'user-1', firstName: 'Ava', lastName: 'Lee', avatar: null },
+      attachments: [],
+      replyTo: null,
+      reactions: [],
+    });
+
+    await serviceWithNotifications.createMessage({
+      userId: 'user-1',
+      conversationId: 'conv-3',
+      content: 'hello',
+    });
+
+    expect(createForUser).toHaveBeenCalledWith('user-2', expect.objectContaining({ type: 'new-message' }));
+    expect(createForUser).toHaveBeenCalledWith('user-3', expect.objectContaining({ type: 'new-message' }));
+    expect(createForUser).not.toHaveBeenCalledWith('user-1', expect.anything());
   });
 });

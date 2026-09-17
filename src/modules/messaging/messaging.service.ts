@@ -237,15 +237,15 @@ export class MessagingService {
   }
 
   async listActiveUsers(userId: string) {
-    const onlineIds = [...this.onlineUsers].filter((id) => id !== userId);
+    const onlineIds = [...this.onlineUsers].filter((id) => Boolean(id) && id !== userId);
     if (!onlineIds.length) {
       return [];
     }
 
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
         isActive: true,
-        id: { in: onlineIds, not: userId },
+        id: { in: onlineIds },
       },
       select: {
         id: true,
@@ -258,6 +258,8 @@ export class MessagingService {
       },
       orderBy: { firstName: 'asc' },
     });
+
+    return users.filter((user) => user.id !== userId);
   }
 
   async searchMessages(userId: string, searchTerm: string, limit = 25) {
@@ -408,6 +410,26 @@ export class MessagingService {
       where: { id: payload.conversationId },
       data: { lastMessageAt: new Date(), updatedAt: new Date() },
     });
+
+    const members = await this.prisma.conversationMember.findMany({
+      where: { conversationId: payload.conversationId },
+      select: { userId: true },
+    });
+
+    const recipientIds = Array.from(new Set(
+      (members as Array<{ userId: string }>).map((member) => member.userId).filter((id) => Boolean(id) && id !== payload.userId),
+    ));
+
+    for (const recipientId of recipientIds) {
+      if (this.notificationsService) {
+        await this.notificationsService.createForUser(recipientId, {
+          type: 'new-message',
+          title: 'New message',
+          message: `${message.sender.firstName ?? 'Someone'} sent a message in ${payload.conversationId}`,
+          data: { conversationId: payload.conversationId, messageId: message.id },
+        });
+      }
+    }
 
     const mentionedUserIds = Array.isArray(payload.mentions) ? payload.mentions : [];
     const uniqueMentionIds = Array.from(new Set(mentionedUserIds));

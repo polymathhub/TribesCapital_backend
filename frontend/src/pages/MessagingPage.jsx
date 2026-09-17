@@ -119,8 +119,16 @@ export default function MessagingPage({ user }) {
     nextSocket.on('user:online', () => { void loadActiveUsers(); });
     nextSocket.on('user:offline', () => { void loadActiveUsers(); });
     nextSocket.on('message:new', (message) => {
-      if (message.conversationId === selectedId) {
-        setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
+      const isMine = message.senderId === user?.id;
+      setMessages((current) => {
+        const exists = current.some((item) => item.id === message.id || item.tempId === message.id || item.tempId === message.tempId);
+        if (exists) {
+          return current.map((item) => item.id === message.id || item.tempId === message.id ? { ...item, ...message, tempId: item.tempId || message.tempId } : item);
+        }
+        return [...current, message];
+      });
+      if (!isMine) {
+        window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'messages-updated', conversationId: message.conversationId } }));
       }
       void loadConversations();
     });
@@ -180,6 +188,34 @@ export default function MessagingPage({ user }) {
   const sendMessage = async (event) => {
     event.preventDefault();
     if (!selectedId || (!draft.trim() && !pendingFile)) return;
+    const trimmedDraft = draft.trim();
+    const optimisticPayload = trimmedDraft || (pendingFile ? pendingFile.name : '');
+    const localMessageId = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const optimisticMessage = {
+      id: localMessageId,
+      tempId: localMessageId,
+      conversationId: selectedId,
+      senderId: user?.id,
+      content: optimisticPayload,
+      createdAt: new Date().toISOString(),
+      isOptimistic: true,
+      sender: {
+        id: user?.id,
+        firstName: user?.firstName || 'You',
+        lastName: user?.lastName || '',
+        avatar: user?.avatar || profilePlaceholderImage,
+      },
+      attachments: pendingFile ? [{ id: `${localMessageId}-file`, fileName: pendingFile.name, url: '#', mimeType: pendingFile.type || 'application/octet-stream' }] : [],
+    };
+
+    setMessages((current) => [...current.filter((item) => !item.isOptimistic), optimisticMessage]);
+    setConversations((current) => current.map((conversation) => conversation.id === selectedId
+      ? { ...conversation, messages: [{ ...optimisticMessage, sender: optimisticMessage.sender }], updatedAt: new Date().toISOString() }
+      : conversation));
+    setDraft('');
+    setPendingFile(null);
+    socket?.emit('typing:stop', { conversationId: selectedId });
+
     try {
       let attachments = [];
       if (pendingFile) {
@@ -187,16 +223,17 @@ export default function MessagingPage({ user }) {
         formData.append('file', pendingFile);
         attachments = [unwrap(await messagingAPI.uploadAttachment(selectedId, formData))];
       }
-      const payload = { content: draft.trim() || pendingFile.name, attachments };
-      if (socket?.connected) socket.emit('message:send', { conversationId: selectedId, ...payload });
-      else {
+      const payload = { content: trimmedDraft || pendingFile?.name || '', attachments };
+      if (socket?.connected) {
+        socket.emit('message:send', { conversationId: selectedId, ...payload });
+      } else {
         const response = await messagingAPI.sendMessage(selectedId, payload);
-        setMessages((current) => [...current, unwrap(response)]);
+        const sentMessage = unwrap(response);
+        setMessages((current) => current.map((message) => message.id === localMessageId ? { ...sentMessage, tempId: localMessageId } : message));
       }
-      setDraft('');
-      setPendingFile(null);
-      socket?.emit('typing:stop', { conversationId: selectedId });
+      window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'messages-updated', conversationId: selectedId } }));
     } catch (requestError) {
+      setMessages((current) => current.filter((message) => message.id !== localMessageId));
       setError(requestError.response?.data?.message || 'Unable to send message.');
     }
   };
