@@ -19,7 +19,6 @@ import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
-import { PrismaService } from '@database/prisma.service';
 import { MessagingService } from './messaging.service';
 import {
   CreateConversationDto,
@@ -55,10 +54,7 @@ const normalizeLimit = (value: string | undefined, fallback = 25, max = 100) => 
 @Controller('messaging')
 @UseGuards(JwtAuthGuard)
 export class MessagingController {
-  constructor(
-    private readonly messagingService: MessagingService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly messagingService: MessagingService) {}
 
   @Post('conversations')
   async createConversation(@CurrentUser() user: any, @Body() body: CreateConversationDto) {
@@ -72,21 +68,7 @@ export class MessagingController {
   async listConversations(@CurrentUser() user: any) { return this.messagingService.listConversations(user.id); }
 
   @Get('active-users')
-  async listActiveUsers(@CurrentUser() user: any) {
-    const [activeUsers, profile] = await Promise.all([
-      this.messagingService.listActiveUsers(),
-      this.prisma.user.findUnique({
-        where: { id: user.id },
-        select: { id: true, firstName: true, lastName: true, email: true, avatar: true, isActive: true, lastLogin: true },
-      }),
-    ]);
-
-    const currentUser = profile
-      ? { ...profile, presence: 'online' as const }
-      : { id: user.id, firstName: user.firstName ?? null, lastName: user.lastName ?? null, email: user.email ?? null, avatar: user.avatar ?? null, isActive: true, lastLogin: null, presence: 'online' as const };
-
-    return [currentUser, ...activeUsers.filter((member: any) => member.id !== user.id)];
-  }
+  async listActiveUsers() { return this.messagingService.listActiveUsers(); }
 
   @Get('conversations/:id')
   async getConversation(@CurrentUser() user: any, @Param('id') id: string) { return this.messagingService.getConversation(user.id, id); }
