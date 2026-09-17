@@ -39,6 +39,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         client.disconnect();
         return;
       }
+
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get('jwt.secret') ?? this.configService.get('JWT_SECRET'),
       });
@@ -46,6 +47,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         client.disconnect();
         return;
       }
+
       const userId = payload.sub ?? payload.id;
       client.data.userId = userId;
       this.messagingService.trackUserOnline(userId);
@@ -70,57 +72,54 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     if (!userId || !payload?.conversationId) {
       return { ok: false, message: 'Unauthorized' };
     }
+
     await this.messagingService.ensureUserAccess(userId, payload.conversationId);
     client.join(`conversation:${payload.conversationId}`);
+    return { ok: true, conversationId: payload.conversationId };
+  }
+
+  @SubscribeMessage('conversation:leave')
+  async leaveConversation(@ConnectedSocket() client: Socket, @MessageBody() payload: { conversationId: string }) {
+    if (!payload?.conversationId) return { ok: false, message: 'Conversation is required' };
+    client.leave(`conversation:${payload.conversationId}`);
     return { ok: true, conversationId: payload.conversationId };
   }
 
   @SubscribeMessage('message:send')
   async sendMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: Record<string, any>) {
     const userId = client.data.userId;
-    if (!userId) {
+    if (!userId || !payload?.conversationId) {
       return { ok: false, message: 'Unauthorized' };
     }
+
+    const conversationId = payload.conversationId;
+    await this.messagingService.ensureUserAccess(userId, conversationId);
     const message = await this.messagingService.createMessage({
       userId,
-      conversationId: payload.conversationId,
+      conversationId,
       content: payload.content,
       type: payload.type,
       replyToId: payload.replyToId,
       mentions: payload.mentions,
       attachmentData: payload.attachments,
     });
-    this.server.to(`conversation:${payload.conversationId}`).emit('message:new', message);
-    const members = await this.prisma.conversationMember.findMany({
-      where: { conversationId: payload.conversationId },
-      select: { userId: true },
-    });
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id: payload.conversationId },
-      select: { type: true, channel: { select: { isPrivate: true } } },
-    });
-    const recipientIds = new Set(members.map((member) => member.userId));
-    if (conversation?.type === 'COMMUNITY_CHANNEL' && !conversation.channel?.isPrivate) {
-      const communityUsers = await this.prisma.user.findMany({
-        where: { isActive: true },
-        select: { id: true },
-      });
-      communityUsers.forEach((member) => recipientIds.add(member.id));
-    }
-    for (const recipientId of recipientIds) {
-      this.server.to(`user:${recipientId}`).emit('message:new', message);
-    }
+
+    // Conversation rooms are the source of truth for realtime message delivery.
+    // Avoid emitting the same message to every member's user room as well; that
+    // caused duplicate events and unnecessary fan-out for larger channels.
+    this.server.to(`conversation:${conversationId}`).emit('message:new', message);
     return { ok: true, message };
   }
 
   @SubscribeMessage('typing:start')
   async typingStart(@ConnectedSocket() client: Socket, @MessageBody() payload: { conversationId: string }) {
     const userId = client.data.userId;
-    if (!userId || !payload?.conversationId) {
-      return;
-    }
+    if (!userId || !payload?.conversationId) return;
     await this.messagingService.ensureUserAccess(userId, payload.conversationId);
-    client.to(`conversation:${payload.conversationId}`).emit('user:typing', { userId, conversationId: payload.conversationId });
+    client.to(`conversation:${payload.conversationId}`).emit('user:typing', {
+      userId,
+      conversationId: payload.conversationId,
+    });
   }
 
   @SubscribeMessage('typing:stop')
@@ -128,34 +127,59 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     const userId = client.data.userId;
     if (!userId || !payload?.conversationId) return;
     await this.messagingService.ensureUserAccess(userId, payload.conversationId);
-    client.to(`conversation:${payload.conversationId}`).emit('user:typing:stop', { userId, conversationId: payload.conversationId });
+    client.to(`conversation:${payload.conversationId}`).emit('user:typing:stop', {
+      userId,
+      conversationId: payload.conversationId,
+    });
   }
 
   @SubscribeMessage('message:edit')
   async editMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: { messageId: string; content: string }) {
     const message = await this.messagingService.updateMessage(client.data.userId, payload.messageId, payload.content);
-    this.server.emit('message:updated', message);
+    this.server.to(`conversation:${message.conversationId}`).emit('message:updated', message);
     return { ok: true, message };
   }
 
   @SubscribeMessage('message:delete')
   async deleteMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: { messageId: string }) {
     const result = await this.messagingService.deleteMessage(client.data.userId, payload.messageId);
-    this.server.emit('message:deleted', result);
+    this.server.to(`conversation:${result.conversationId}`).emit('message:deleted', { id: result.id });
     return { ok: true, ...result };
   }
 
   @SubscribeMessage('message:react')
   async reactToMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: { messageId: string; reaction: string }) {
     const reaction = await this.messagingService.addReaction(client.data.userId, payload.messageId, payload.reaction);
-    this.server.emit('message:reaction', reaction);
+    const message = await this.prisma.message.findUnique({
+      where: { id: payload.messageId },
+      select: { conversationId: true },
+    });
+    if (message) {
+      this.server.to(`conversation:${message.conversationId}`).emit('message:reaction', reaction);
+    }
     return { ok: true, reaction };
   }
 
   @SubscribeMessage('message:read')
   async readMessages(@ConnectedSocket() client: Socket, @MessageBody() payload: { messageIds: string[] }) {
-    const result = await this.messagingService.markMessagesRead(client.data.userId, payload.messageIds ?? []);
-    this.server.emit('message:read', { userId: client.data.userId, messageIds: payload.messageIds ?? [] });
+    const messageIds = Array.from(new Set(payload?.messageIds ?? []));
+    const result = await this.messagingService.markMessagesRead(client.data.userId, messageIds);
+
+    if (messageIds.length) {
+      const messages = await this.prisma.message.findMany({
+        where: { id: { in: messageIds } },
+        select: { id: true, conversationId: true },
+      });
+      const conversationIds = new Set(messages.map((message) => message.conversationId));
+      for (const conversationId of conversationIds) {
+        const ids = messages.filter((message) => message.conversationId === conversationId).map((message) => message.id);
+        this.server.to(`conversation:${conversationId}`).emit('message:read', {
+          userId: client.data.userId,
+          messageIds: ids,
+        });
+      }
+    }
+
     return { ok: true, ...result };
   }
 }
