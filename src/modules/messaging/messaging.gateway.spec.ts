@@ -12,19 +12,10 @@ describe('MessagingGateway', () => {
     trackUserOffline: jest.fn().mockResolvedValue({ lastSession: true }),
     trackUserHeartbeat: jest.fn().mockResolvedValue(undefined),
   };
-
   const prisma = { message: { findUnique: jest.fn().mockResolvedValue({ conversationId: 'conversation-1' }), findMany: jest.fn().mockResolvedValue([{ id: 'message-1', conversationId: 'conversation-1' }]) } };
   const jwtService = { verifyAsync: jest.fn() };
-  const configService = { get: jest.fn() };
-
-  const makeGateway = () => {
-    const gateway = new MessagingGateway(jwtService as any, configService as any, prisma as any, messagingService as any);
-    const emit = jest.fn();
-    const room = jest.fn(() => ({ emit }));
-    (gateway as any).server = { to: room, emit };
-    return { gateway, emit, room };
-  };
-
+  const configService = { get: jest.fn().mockReturnValue('secret') };
+  const makeGateway = () => { const gateway = new MessagingGateway(jwtService as any, configService as any, prisma as any, messagingService as any); const emit = jest.fn(); const room = jest.fn(() => ({ emit })); (gateway as any).server = { to: room, emit }; return { gateway, emit, room }; };
   beforeEach(() => jest.clearAllMocks());
 
   it('sends new messages only to the conversation room', async () => {
@@ -50,9 +41,9 @@ describe('MessagingGateway', () => {
 
   it('tracks presence per socket and only broadcasts offline after the final socket closes', async () => {
     const { gateway, emit } = makeGateway();
+    jwtService.verifyAsync.mockResolvedValue({ sub: 'user-1' });
     await gateway.handleConnection({ id: 'socket-1', handshake: { auth: { token: 'token-1' } }, join: jest.fn() } as any);
-    expect(messagingService.trackUserOnline).toHaveBeenCalledWith(expect.any(String), 'socket-1');
-
+    expect(messagingService.trackUserOnline).toHaveBeenCalledWith('user-1', 'socket-1');
     await gateway.handleDisconnect({ id: 'socket-1', data: { userId: 'user-1' } } as any);
     expect(messagingService.trackUserOffline).toHaveBeenCalledWith('user-1', 'socket-1');
     expect(emit).toHaveBeenCalledWith('user:offline', { userId: 'user-1' });
