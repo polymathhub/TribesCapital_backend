@@ -19,6 +19,7 @@ import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
+import { PrismaService } from '@database/prisma.service';
 import { MessagingService } from './messaging.service';
 import {
   CreateConversationDto,
@@ -54,7 +55,10 @@ const normalizeLimit = (value: string | undefined, fallback = 25, max = 100) => 
 @Controller('messaging')
 @UseGuards(JwtAuthGuard)
 export class MessagingController {
-  constructor(private readonly messagingService: MessagingService) {}
+  constructor(
+    private readonly messagingService: MessagingService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post('conversations')
   async createConversation(@CurrentUser() user: any, @Body() body: CreateConversationDto) {
@@ -68,7 +72,21 @@ export class MessagingController {
   async listConversations(@CurrentUser() user: any) { return this.messagingService.listConversations(user.id); }
 
   @Get('active-users')
-  async listActiveUsers() { return this.messagingService.listActiveUsers(); }
+  async listActiveUsers(@CurrentUser() user: any) {
+    const [activeUsers, profile] = await Promise.all([
+      this.messagingService.listActiveUsers(),
+      this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, firstName: true, lastName: true, email: true, avatar: true, isActive: true, lastLogin: true },
+      }),
+    ]);
+
+    const currentUser = profile
+      ? { ...profile, presence: 'online' as const }
+      : { id: user.id, firstName: user.firstName ?? null, lastName: user.lastName ?? null, email: user.email ?? null, avatar: user.avatar ?? null, isActive: true, lastLogin: null, presence: 'online' as const };
+
+    return [currentUser, ...activeUsers.filter((member: any) => member.id !== user.id)];
+  }
 
   @Get('conversations/:id')
   async getConversation(@CurrentUser() user: any, @Param('id') id: string) { return this.messagingService.getConversation(user.id, id); }
@@ -97,38 +115,22 @@ export class MessagingController {
 
   @Post('conversations/:id/attachments')
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: messagingUploadDirectory,
-      filename: (_request: Express.Request, file: Express.Multer.File, callback: (error: Error | null, filename: string) => void) => {
-        const extension = mimeExtensions[file.mimetype] ?? extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
-        callback(null, `${randomUUID()}${extension}`);
-      },
-    }),
+    storage: diskStorage({ destination: messagingUploadDirectory, filename: (_request, file, callback) => { const extension = mimeExtensions[file.mimetype] ?? extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, ''); callback(null, `${randomUUID()}${extension}`); } }),
     limits: { fileSize: 25 * 1024 * 1024 },
-    fileFilter: (_request, file, callback) => {
-      if (!allowedAttachmentMimeTypes.has(file.mimetype)) return callback(new BadRequestException('Unsupported attachment type'), false);
-      callback(null, true);
-    },
+    fileFilter: (_request, file, callback) => { if (!allowedAttachmentMimeTypes.has(file.mimetype)) return callback(new BadRequestException('Unsupported attachment type'), false); callback(null, true); },
   }))
-  async uploadAttachment(@CurrentUser() user: any, @Param('id') conversationId: string, @UploadedFile() file?: Express.Multer.File) {
-    return this.messagingService.uploadAttachment(user.id, conversationId, file);
-  }
+  async uploadAttachment(@CurrentUser() user: any, @Param('id') conversationId: string, @UploadedFile() file?: Express.Multer.File) { return this.messagingService.uploadAttachment(user.id, conversationId, file); }
 
   @Delete('messages/:id')
   async deleteMessage(@CurrentUser() user: any, @Param('id') id: string) { return this.messagingService.deleteMessage(user.id, id); }
-
   @Post('messages/:id/reactions')
   async addReaction(@CurrentUser() user: any, @Param('id') id: string, @Body() body: ReactionDto) { return this.messagingService.addReaction(user.id, id, body.reaction); }
-
   @Post('messages/:id/reactions/toggle')
   async toggleReaction(@CurrentUser() user: any, @Param('id') id: string, @Body() body: ReactionDto) { return this.messagingService.toggleReaction(user.id, id, body.reaction); }
-
   @Delete('messages/:id/reactions/:reaction')
   async removeReaction(@CurrentUser() user: any, @Param('id') id: string, @Param('reaction') reaction: string) { return this.messagingService.removeReaction(user.id, id, reaction); }
-
   @Post('messages/:id/read')
   async markRead(@CurrentUser() user: any, @Param('id') id: string, @Body() body: ReadMessagesDto) { return this.messagingService.markMessagesRead(user.id, body?.messageIds?.length ? body.messageIds : [id]); }
-
   @Post('messages/:id/report')
   async reportMessage(@CurrentUser() user: any, @Param('id') id: string, @Body() body: ReportMessageDto) { return this.messagingService.reportMessage(user.id, id, body.reason, body.details); }
 }
