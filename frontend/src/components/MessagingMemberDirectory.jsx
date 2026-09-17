@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { messagingMembersAPI } from '../api/messagingMembers';
 import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
+import './messaging-member-directory.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
 const displayName = (person) => `${person?.firstName || ''} ${person?.lastName || ''}`.trim() || 'Member';
