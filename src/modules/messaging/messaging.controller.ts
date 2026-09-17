@@ -115,9 +115,18 @@ export class MessagingController {
 
   @Post('conversations/:id/attachments')
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({ destination: messagingUploadDirectory, filename: (_request, file, callback) => { const extension = mimeExtensions[file.mimetype] ?? extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, ''); callback(null, `${randomUUID()}${extension}`); } }),
+    storage: diskStorage({
+      destination: messagingUploadDirectory,
+      filename: (_request: Express.Request, file: Express.Multer.File, callback: (error: Error | null, filename: string) => void) => {
+        const extension = mimeExtensions[file.mimetype] ?? extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
+        callback(null, `${randomUUID()}${extension}`);
+      },
+    }),
     limits: { fileSize: 25 * 1024 * 1024 },
-    fileFilter: (_request, file, callback) => { if (!allowedAttachmentMimeTypes.has(file.mimetype)) return callback(new BadRequestException('Unsupported attachment type'), false); callback(null, true); },
+    fileFilter: (_request: Express.Request, file: Express.Multer.File, callback: (error: Error | null, acceptFile: boolean) => void) => {
+      if (!allowedAttachmentMimeTypes.has(file.mimetype)) return callback(new BadRequestException('Unsupported attachment type'), false);
+      callback(null, true);
+    },
   }))
   async uploadAttachment(@CurrentUser() user: any, @Param('id') conversationId: string, @UploadedFile() file?: Express.Multer.File) { return this.messagingService.uploadAttachment(user.id, conversationId, file); }
 
