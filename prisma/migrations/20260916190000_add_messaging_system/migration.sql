@@ -15,7 +15,7 @@ EXCEPTION
 END $$;
 
 -- CreateTable
-CREATE TABLE "Conversation" (
+CREATE TABLE IF NOT EXISTS "Conversation" (
     "id" TEXT NOT NULL,
     "type" "ConversationType" NOT NULL DEFAULT 'DIRECT',
     "title" TEXT,
@@ -32,7 +32,7 @@ CREATE TABLE "Conversation" (
 );
 
 -- CreateTable
-CREATE TABLE "ConversationMember" (
+CREATE TABLE IF NOT EXISTS "ConversationMember" (
     "id" TEXT NOT NULL,
     "conversationId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE "ConversationMember" (
 );
 
 -- CreateTable
-CREATE TABLE "Message" (
+CREATE TABLE IF NOT EXISTS "Message" (
     "id" TEXT NOT NULL,
     "conversationId" TEXT NOT NULL,
     "senderId" TEXT NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE "Message" (
 );
 
 -- CreateTable
-CREATE TABLE "MessageReaction" (
+CREATE TABLE IF NOT EXISTS "MessageReaction" (
     "id" TEXT NOT NULL,
     "messageId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -75,7 +75,7 @@ CREATE TABLE "MessageReaction" (
 );
 
 -- CreateTable
-CREATE TABLE "MessageRead" (
+CREATE TABLE IF NOT EXISTS "MessageRead" (
     "id" TEXT NOT NULL,
     "messageId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE "MessageRead" (
 );
 
 -- CreateTable
-CREATE TABLE "MessageAttachment" (
+CREATE TABLE IF NOT EXISTS "MessageAttachment" (
     "id" TEXT NOT NULL,
     "messageId" TEXT NOT NULL,
     "uploadedById" TEXT NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE "MessageAttachment" (
 );
 
 -- CreateTable
-CREATE TABLE "CommunityChannel" (
+CREATE TABLE IF NOT EXISTS "CommunityChannel" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -115,7 +115,7 @@ CREATE TABLE "CommunityChannel" (
 );
 
 -- CreateTable
-CREATE TABLE "CommunityMembership" (
+CREATE TABLE IF NOT EXISTS "CommunityMembership" (
     "id" TEXT NOT NULL,
     "channelId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE "CommunityMembership" (
 );
 
 -- CreateTable
-CREATE TABLE "MessageReport" (
+CREATE TABLE IF NOT EXISTS "MessageReport" (
     "id" TEXT NOT NULL,
     "messageId" TEXT NOT NULL,
     "reporterId" TEXT NOT NULL,
@@ -140,94 +140,94 @@ CREATE TABLE "MessageReport" (
 );
 
 -- CreateIndex
-CREATE INDEX "Conversation_type_idx" ON "Conversation"("type");
+CREATE INDEX IF NOT EXISTS "Conversation_type_idx" ON "Conversation"("type");
 
 -- CreateIndex
-CREATE INDEX "Conversation_creatorId_idx" ON "Conversation"("creatorId");
+CREATE INDEX IF NOT EXISTS "Conversation_creatorId_idx" ON "Conversation"("creatorId");
 
 -- CreateIndex
-CREATE INDEX "Conversation_projectId_idx" ON "Conversation"("projectId");
+CREATE INDEX IF NOT EXISTS "Conversation_projectId_idx" ON "Conversation"("projectId");
 
 -- CreateIndex
-CREATE INDEX "Conversation_dueDiligenceId_idx" ON "Conversation"("dueDiligenceId");
+CREATE INDEX IF NOT EXISTS "Conversation_dueDiligenceId_idx" ON "Conversation"("dueDiligenceId");
 
 -- CreateIndex
-CREATE INDEX "Conversation_lastMessageAt_idx" ON "Conversation"("lastMessageAt");
+CREATE INDEX IF NOT EXISTS "Conversation_lastMessageAt_idx" ON "Conversation"("lastMessageAt");
 
 -- CreateIndex
-CREATE INDEX "ConversationMember_conversationId_idx" ON "ConversationMember"("conversationId");
+CREATE INDEX IF NOT EXISTS "ConversationMember_conversationId_idx" ON "ConversationMember"("conversationId");
 
 -- CreateIndex
-CREATE INDEX "ConversationMember_userId_idx" ON "ConversationMember"("userId");
+CREATE INDEX IF NOT EXISTS "ConversationMember_userId_idx" ON "ConversationMember"("userId");
 
 -- CreateIndex
-CREATE INDEX "ConversationMember_role_idx" ON "ConversationMember"("role");
+CREATE INDEX IF NOT EXISTS "ConversationMember_role_idx" ON "ConversationMember"("role");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ConversationMember_conversationId_userId_key" ON "ConversationMember"("conversationId", "userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "ConversationMember_conversationId_userId_key" ON "ConversationMember"("conversationId", "userId");
 
 -- CreateIndex
-CREATE INDEX "Message_conversationId_createdAt_idx" ON "Message"("conversationId", "createdAt");
+CREATE INDEX IF NOT EXISTS "Message_conversationId_createdAt_idx" ON "Message"("conversationId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "Message_senderId_idx" ON "Message"("senderId");
+CREATE INDEX IF NOT EXISTS "Message_senderId_idx" ON "Message"("senderId");
 
 -- CreateIndex
-CREATE INDEX "Message_replyToId_idx" ON "Message"("replyToId");
+CREATE INDEX IF NOT EXISTS "Message_replyToId_idx" ON "Message"("replyToId");
 
 -- CreateIndex
-CREATE INDEX "Message_messageType_idx" ON "Message"("messageType");
+CREATE INDEX IF NOT EXISTS "Message_messageType_idx" ON "Message"("messageType");
 
 -- CreateIndex
-CREATE INDEX "MessageReaction_messageId_idx" ON "MessageReaction"("messageId");
+CREATE INDEX IF NOT EXISTS "MessageReaction_messageId_idx" ON "MessageReaction"("messageId");
 
 -- CreateIndex
-CREATE INDEX "MessageReaction_userId_idx" ON "MessageReaction"("userId");
+CREATE INDEX IF NOT EXISTS "MessageReaction_userId_idx" ON "MessageReaction"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "MessageReaction_messageId_userId_reaction_key" ON "MessageReaction"("messageId", "userId", "reaction");
+CREATE UNIQUE INDEX IF NOT EXISTS "MessageReaction_messageId_userId_reaction_key" ON "MessageReaction"("messageId", "userId", "reaction");
 
 -- CreateIndex
-CREATE INDEX "MessageRead_messageId_idx" ON "MessageRead"("messageId");
+CREATE INDEX IF NOT EXISTS "MessageRead_messageId_idx" ON "MessageRead"("messageId");
 
 -- CreateIndex
-CREATE INDEX "MessageRead_userId_idx" ON "MessageRead"("userId");
+CREATE INDEX IF NOT EXISTS "MessageRead_userId_idx" ON "MessageRead"("userId");
 
 -- CreateIndex
-CREATE INDEX "MessageRead_readAt_idx" ON "MessageRead"("readAt");
+CREATE INDEX IF NOT EXISTS "MessageRead_readAt_idx" ON "MessageRead"("readAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "MessageRead_messageId_userId_key" ON "MessageRead"("messageId", "userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "MessageRead_messageId_userId_key" ON "MessageRead"("messageId", "userId");
 
 -- CreateIndex
-CREATE INDEX "MessageAttachment_messageId_idx" ON "MessageAttachment"("messageId");
+CREATE INDEX IF NOT EXISTS "MessageAttachment_messageId_idx" ON "MessageAttachment"("messageId");
 
 -- CreateIndex
-CREATE INDEX "MessageAttachment_uploadedById_idx" ON "MessageAttachment"("uploadedById");
+CREATE INDEX IF NOT EXISTS "MessageAttachment_uploadedById_idx" ON "MessageAttachment"("uploadedById");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CommunityChannel_conversationId_key" ON "CommunityChannel"("conversationId");
+CREATE UNIQUE INDEX IF NOT EXISTS "CommunityChannel_conversationId_key" ON "CommunityChannel"("conversationId");
 
 -- CreateIndex
-CREATE INDEX "CommunityChannel_creatorId_idx" ON "CommunityChannel"("creatorId");
+CREATE INDEX IF NOT EXISTS "CommunityChannel_creatorId_idx" ON "CommunityChannel"("creatorId");
 
 -- CreateIndex
-CREATE INDEX "CommunityChannel_isPrivate_idx" ON "CommunityChannel"("isPrivate");
+CREATE INDEX IF NOT EXISTS "CommunityChannel_isPrivate_idx" ON "CommunityChannel"("isPrivate");
 
 -- CreateIndex
-CREATE INDEX "CommunityMembership_channelId_idx" ON "CommunityMembership"("channelId");
+CREATE INDEX IF NOT EXISTS "CommunityMembership_channelId_idx" ON "CommunityMembership"("channelId");
 
 -- CreateIndex
-CREATE INDEX "CommunityMembership_userId_idx" ON "CommunityMembership"("userId");
+CREATE INDEX IF NOT EXISTS "CommunityMembership_userId_idx" ON "CommunityMembership"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CommunityMembership_channelId_userId_key" ON "CommunityMembership"("channelId", "userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "CommunityMembership_channelId_userId_key" ON "CommunityMembership"("channelId", "userId");
 
 -- CreateIndex
-CREATE INDEX "MessageReport_messageId_idx" ON "MessageReport"("messageId");
+CREATE INDEX IF NOT EXISTS "MessageReport_messageId_idx" ON "MessageReport"("messageId");
 
 -- CreateIndex
-CREATE INDEX "MessageReport_reporterId_idx" ON "MessageReport"("reporterId");
+CREATE INDEX IF NOT EXISTS "MessageReport_reporterId_idx" ON "MessageReport"("reporterId");
 
 -- AddForeignKey
 ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
