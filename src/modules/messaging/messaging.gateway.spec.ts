@@ -6,19 +6,14 @@ describe('MessagingGateway', () => {
     createMessage: jest.fn().mockResolvedValue({ id: 'message-1', conversationId: 'conversation-1' }),
     updateMessage: jest.fn().mockResolvedValue({ id: 'message-1', conversationId: 'conversation-1' }),
     deleteMessage: jest.fn().mockResolvedValue({ success: true, id: 'message-1' }),
-    addReaction: jest.fn().mockResolvedValue({ id: 'reaction-1', messageId: 'message-1', userId: 'user-1', reaction: '👍' }),
+    toggleReaction: jest.fn().mockResolvedValue({ messageId: 'message-1', userId: 'user-1', reaction: '👍', action: 'added', reactions: [] }),
     markMessagesRead: jest.fn().mockResolvedValue({ count: 1 }),
-    trackUserOnline: jest.fn(),
-    trackUserOffline: jest.fn(),
+    trackUserOnline: jest.fn().mockResolvedValue({ firstSession: true }),
+    trackUserOffline: jest.fn().mockResolvedValue({ lastSession: true }),
+    trackUserHeartbeat: jest.fn().mockResolvedValue(undefined),
   };
 
-  const prisma = {
-    message: {
-      findUnique: jest.fn().mockResolvedValue({ conversationId: 'conversation-1' }),
-      findMany: jest.fn().mockResolvedValue([{ id: 'message-1', conversationId: 'conversation-1' }]),
-    },
-  };
-
+  const prisma = { message: { findUnique: jest.fn().mockResolvedValue({ conversationId: 'conversation-1' }), findMany: jest.fn().mockResolvedValue([{ id: 'message-1', conversationId: 'conversation-1' }]) } };
   const jwtService = { verifyAsync: jest.fn() };
   const configService = { get: jest.fn() };
 
@@ -34,29 +29,44 @@ describe('MessagingGateway', () => {
 
   it('sends new messages only to the conversation room', async () => {
     const { gateway, room } = makeGateway();
-    const client = { data: { userId: 'user-1' } } as any;
-
-    await gateway.sendMessage(client, { conversationId: 'conversation-1', content: 'Hello' });
-
+    await gateway.sendMessage({ data: { userId: 'user-1' } } as any, { conversationId: 'conversation-1', content: 'Hello' });
     expect(room).toHaveBeenCalledWith('conversation:conversation-1');
     expect((gateway as any).server.emit).not.toHaveBeenCalledWith('message:new', expect.anything());
   });
 
   it('scopes edits to the message conversation', async () => {
     const { gateway, room } = makeGateway();
-    const client = { data: { userId: 'user-1' } } as any;
-
-    await gateway.editMessage(client, { messageId: 'message-1', content: 'Updated' });
-
+    await gateway.editMessage({ data: { userId: 'user-1' } } as any, { messageId: 'message-1', content: 'Updated' });
     expect(room).toHaveBeenCalledWith('conversation:conversation-1');
+  });
+
+  it('toggles reactions and broadcasts the authoritative reaction state', async () => {
+    const { gateway, room } = makeGateway();
+    const result = await gateway.reactToMessage({ data: { userId: 'user-1' } } as any, { messageId: 'message-1', reaction: '👍' });
+    expect(messagingService.toggleReaction).toHaveBeenCalledWith('user-1', 'message-1', '👍');
+    expect(result.action).toBe('added');
+    expect(room).toHaveBeenCalledWith('conversation:conversation-1');
+  });
+
+  it('tracks presence per socket and only broadcasts offline after the final socket closes', async () => {
+    const { gateway, emit } = makeGateway();
+    await gateway.handleConnection({ id: 'socket-1', handshake: { auth: { token: 'token-1' } }, join: jest.fn() } as any);
+    expect(messagingService.trackUserOnline).toHaveBeenCalledWith(expect.any(String), 'socket-1');
+
+    await gateway.handleDisconnect({ id: 'socket-1', data: { userId: 'user-1' } } as any);
+    expect(messagingService.trackUserOffline).toHaveBeenCalledWith('user-1', 'socket-1');
+    expect(emit).toHaveBeenCalledWith('user:offline', { userId: 'user-1' });
+  });
+
+  it('accepts presence heartbeats', async () => {
+    const { gateway } = makeGateway();
+    await expect(gateway.presenceHeartbeat({ id: 'socket-1', data: { userId: 'user-1' } } as any)).resolves.toEqual({ ok: true });
+    expect(messagingService.trackUserHeartbeat).toHaveBeenCalledWith('user-1', 'socket-1');
   });
 
   it('groups read receipts by conversation before broadcasting', async () => {
     const { gateway, room } = makeGateway();
-    const client = { data: { userId: 'user-1' } } as any;
-
-    await gateway.readMessages(client, { messageIds: ['message-1', 'message-1'] });
-
+    await gateway.readMessages({ data: { userId: 'user-1' } } as any, { messageIds: ['message-1', 'message-1'] });
     expect(messagingService.markMessagesRead).toHaveBeenCalledWith('user-1', ['message-1']);
     expect(room).toHaveBeenCalledWith('conversation:conversation-1');
   });
