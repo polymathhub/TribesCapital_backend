@@ -4,13 +4,6 @@ CREATE TYPE "ConversationType" AS ENUM ('DIRECT', 'GROUP', 'COMMUNITY_CHANNEL', 
 -- CreateEnum
 CREATE TYPE "MessageType" AS ENUM ('TEXT', 'IMAGE', 'FILE', 'SYSTEM');
 
--- AlterTable
-ALTER TABLE "User" ADD COLUMN     "address" TEXT,
-ADD COLUMN     "department" TEXT,
-ADD COLUMN     "occupation" TEXT,
-ADD COLUMN     "phoneNumber" TEXT,
-ADD COLUMN     "school" TEXT;
-
 -- CreateTable
 CREATE TABLE "Conversation" (
     "id" TEXT NOT NULL,
