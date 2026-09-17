@@ -19,7 +19,6 @@ import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
-import { PrismaService } from '@database/prisma.service';
 import { MessagingService } from './messaging.service';
 import {
   CreateConversationDto,
@@ -35,37 +34,15 @@ const messagingUploadDirectory = join(process.cwd(), 'uploads', 'messaging');
 mkdirSync(messagingUploadDirectory, { recursive: true });
 
 const allowedAttachmentMimeTypes = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-  'text/plain',
-  'text/csv',
-  'application/zip',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/csv', 'application/zip',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]);
 
 const mimeExtensions: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/gif': '.gif',
-  'image/webp': '.webp',
-  'application/pdf': '.pdf',
-  'text/plain': '.txt',
-  'text/csv': '.csv',
-  'application/zip': '.zip',
-  'application/msword': '.doc',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-  'application/vnd.ms-excel': '.xls',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
-  'application/vnd.ms-powerpoint': '.ppt',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+  'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp', 'application/pdf': '.pdf', 'text/plain': '.txt', 'text/csv': '.csv', 'application/zip': '.zip',
+  'application/msword': '.doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx', 'application/vnd.ms-excel': '.xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'application/vnd.ms-powerpoint': '.ppt', 'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
 };
 
 const normalizeLimit = (value: string | undefined, fallback = 25, max = 100) => {
@@ -77,24 +54,13 @@ const normalizeLimit = (value: string | undefined, fallback = 25, max = 100) => 
 @Controller('messaging')
 @UseGuards(JwtAuthGuard)
 export class MessagingController {
-  constructor(
-    private readonly messagingService: MessagingService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly messagingService: MessagingService) {}
 
   @Post('conversations')
   async createConversation(@CurrentUser() user: any, @Body() body: CreateConversationDto) {
     return this.messagingService.createConversation({
-      type: body.type,
-      userId: user.id,
-      participantIds: body.participantIds ?? [],
-      title: body.title,
-      description: body.description,
-      avatar: body.avatar,
-      projectId: body.projectId,
-      dueDiligenceId: body.dueDiligenceId,
-      channelName: body.channelName,
-      isPrivateChannel: body.isPrivateChannel,
+      type: body.type, userId: user.id, participantIds: body.participantIds ?? [], title: body.title, description: body.description,
+      avatar: body.avatar, projectId: body.projectId, dueDiligenceId: body.dueDiligenceId, channelName: body.channelName, isPrivateChannel: body.isPrivateChannel,
     });
   }
 
@@ -102,28 +68,7 @@ export class MessagingController {
   async listConversations(@CurrentUser() user: any) { return this.messagingService.listConversations(user.id); }
 
   @Get('active-users')
-  async listActiveUsers(@CurrentUser() user: any) {
-    const [activeUsers, profile] = await Promise.all([
-      this.messagingService.listActiveUsers(user.id),
-      this.prisma.user.findUnique({
-        where: { id: user.id },
-        select: { id: true, firstName: true, lastName: true, avatar: true, isActive: true },
-      }),
-    ]);
-
-    const currentUser = profile
-      ? { ...profile, presence: 'online' as const }
-      : {
-          id: user.id,
-          firstName: user.firstName ?? null,
-          lastName: user.lastName ?? null,
-          avatar: user.avatar ?? null,
-          isActive: user.isActive ?? true,
-          presence: 'online' as const,
-        };
-
-    return [currentUser, ...activeUsers.filter((member: any) => member.id !== user.id)];
-  }
+  async listActiveUsers() { return this.messagingService.listActiveUsers(); }
 
   @Get('conversations/:id')
   async getConversation(@CurrentUser() user: any, @Param('id') id: string) { return this.messagingService.getConversation(user.id, id); }
@@ -161,9 +106,7 @@ export class MessagingController {
     }),
     limits: { fileSize: 25 * 1024 * 1024 },
     fileFilter: (_request, file, callback) => {
-      if (!allowedAttachmentMimeTypes.has(file.mimetype)) {
-        return callback(new BadRequestException('Unsupported attachment type'), false);
-      }
+      if (!allowedAttachmentMimeTypes.has(file.mimetype)) return callback(new BadRequestException('Unsupported attachment type'), false);
       callback(null, true);
     },
   }))
@@ -176,6 +119,9 @@ export class MessagingController {
 
   @Post('messages/:id/reactions')
   async addReaction(@CurrentUser() user: any, @Param('id') id: string, @Body() body: ReactionDto) { return this.messagingService.addReaction(user.id, id, body.reaction); }
+
+  @Post('messages/:id/reactions/toggle')
+  async toggleReaction(@CurrentUser() user: any, @Param('id') id: string, @Body() body: ReactionDto) { return this.messagingService.toggleReaction(user.id, id, body.reaction); }
 
   @Delete('messages/:id/reactions/:reaction')
   async removeReaction(@CurrentUser() user: any, @Param('id') id: string, @Param('reaction') reaction: string) { return this.messagingService.removeReaction(user.id, id, reaction); }
