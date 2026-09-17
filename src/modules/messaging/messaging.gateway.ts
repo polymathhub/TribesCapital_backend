@@ -40,15 +40,11 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         client.disconnect();
         return;
       }
-
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get('jwt.secret') ?? this.configService.get('JWT_SECRET'),
-      });
+      const payload = await this.jwtService.verifyAsync(token, { secret: this.configService.get('jwt.secret') ?? this.configService.get('JWT_SECRET') });
       if (!payload?.sub && !payload?.id) {
         client.disconnect();
         return;
       }
-
       const userId = payload.sub ?? payload.id;
       client.data.userId = userId;
       client.join(`user:${userId}`);
@@ -69,7 +65,8 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
   @SubscribeMessage('presence:heartbeat')
   async presenceHeartbeat(@ConnectedSocket() client: Socket) {
     if (!client.data.userId) return { ok: false };
-    await this.messagingService.trackUserHeartbeat(client.data.userId, client.id);
+    const presence = await this.messagingService.trackUserHeartbeat(client.data.userId, client.id);
+    if (presence.firstSession) this.server.emit('user:online', { userId: client.data.userId });
     return { ok: true };
   }
 
