@@ -18,8 +18,6 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
   @WebSocketServer()
   server!: Server;
 
-  private readonly connectionCounts = new Map<string, number>();
-
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -35,7 +33,8 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         if (environment !== 'production') {
           client.data.userId = 'demo-user';
           client.join('user:demo-user');
-          this.trackSocketOnline('demo-user');
+          const presence = await this.messagingService.trackUserOnline('demo-user', client.id);
+          if (presence.firstSession) this.server.emit('user:online', { userId: 'demo-user' });
           return;
         }
         client.disconnect();
@@ -53,43 +52,31 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       const userId = payload.sub ?? payload.id;
       client.data.userId = userId;
       client.join(`user:${userId}`);
-      this.trackSocketOnline(userId);
+      const presence = await this.messagingService.trackUserOnline(userId, client.id);
+      if (presence.firstSession) this.server.emit('user:online', { userId });
     } catch {
       client.disconnect();
     }
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     const userId = client.data.userId;
     if (!userId) return;
-
-    const current = this.connectionCounts.get(userId) ?? 0;
-    if (current <= 1) {
-      this.connectionCounts.delete(userId);
-      this.messagingService.trackUserOffline(userId);
-      this.server.emit('user:offline', { userId });
-      return;
-    }
-
-    this.connectionCounts.set(userId, current - 1);
+    const presence = await this.messagingService.trackUserOffline(userId, client.id);
+    if (presence.lastSession) this.server.emit('user:offline', { userId });
   }
 
-  private trackSocketOnline(userId: string) {
-    const current = this.connectionCounts.get(userId) ?? 0;
-    this.connectionCounts.set(userId, current + 1);
-    if (current === 0) {
-      this.messagingService.trackUserOnline(userId);
-      this.server.emit('user:online', { userId });
-    }
+  @SubscribeMessage('presence:heartbeat')
+  async presenceHeartbeat(@ConnectedSocket() client: Socket) {
+    if (!client.data.userId) return { ok: false };
+    await this.messagingService.trackUserHeartbeat(client.data.userId, client.id);
+    return { ok: true };
   }
 
   @SubscribeMessage('conversation:join')
   async joinConversation(@ConnectedSocket() client: Socket, @MessageBody() payload: { conversationId: string }) {
     const userId = client.data.userId;
-    if (!userId || !payload?.conversationId) {
-      return { ok: false, message: 'Unauthorized' };
-    }
-
+    if (!userId || !payload?.conversationId) return { ok: false, message: 'Unauthorized' };
     await this.messagingService.ensureUserAccess(userId, payload.conversationId);
     client.join(`conversation:${payload.conversationId}`);
     return { ok: true, conversationId: payload.conversationId };
@@ -105,22 +92,10 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
   @SubscribeMessage('message:send')
   async sendMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: Record<string, any>) {
     const userId = client.data.userId;
-    if (!userId || !payload?.conversationId) {
-      return { ok: false, message: 'Unauthorized' };
-    }
-
+    if (!userId || !payload?.conversationId) return { ok: false, message: 'Unauthorized' };
     const conversationId = payload.conversationId;
     await this.messagingService.ensureUserAccess(userId, conversationId);
-    const message = await this.messagingService.createMessage({
-      userId,
-      conversationId,
-      content: payload.content,
-      type: payload.type,
-      replyToId: payload.replyToId,
-      mentions: payload.mentions,
-      attachmentData: payload.attachments,
-    });
-
+    const message = await this.messagingService.createMessage({ userId, conversationId, content: payload.content, type: payload.type, replyToId: payload.replyToId, mentions: payload.mentions, attachmentData: payload.attachments });
     this.server.to(`conversation:${conversationId}`).emit('message:new', message);
     return { ok: true, message };
   }
@@ -130,10 +105,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     const userId = client.data.userId;
     if (!userId || !payload?.conversationId) return;
     await this.messagingService.ensureUserAccess(userId, payload.conversationId);
-    client.to(`conversation:${payload.conversationId}`).emit('user:typing', {
-      userId,
-      conversationId: payload.conversationId,
-    });
+    client.to(`conversation:${payload.conversationId}`).emit('user:typing', { userId, conversationId: payload.conversationId });
   }
 
   @SubscribeMessage('typing:stop')
@@ -141,10 +113,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     const userId = client.data.userId;
     if (!userId || !payload?.conversationId) return;
     await this.messagingService.ensureUserAccess(userId, payload.conversationId);
-    client.to(`conversation:${payload.conversationId}`).emit('user:typing:stop', {
-      userId,
-      conversationId: payload.conversationId,
-    });
+    client.to(`conversation:${payload.conversationId}`).emit('user:typing:stop', { userId, conversationId: payload.conversationId });
   }
 
   @SubscribeMessage('message:edit')
@@ -156,40 +125,26 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   @SubscribeMessage('message:delete')
   async deleteMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: { messageId: string }) {
-    const message = await this.prisma.message.findUnique({
-      where: { id: payload.messageId },
-      select: { conversationId: true },
-    });
+    const message = await this.prisma.message.findUnique({ where: { id: payload.messageId }, select: { conversationId: true } });
     const result = await this.messagingService.deleteMessage(client.data.userId, payload.messageId);
-    if (message) {
-      this.server.to(`conversation:${message.conversationId}`).emit('message:deleted', { id: result.id });
-    }
+    if (message) this.server.to(`conversation:${message.conversationId}`).emit('message:deleted', { id: result.id });
     return { ok: true, ...result };
   }
 
   @SubscribeMessage('message:react')
   async reactToMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: { messageId: string; reaction: string }) {
-    const reaction = await this.messagingService.addReaction(client.data.userId, payload.messageId, payload.reaction);
-    const message = await this.prisma.message.findUnique({
-      where: { id: payload.messageId },
-      select: { conversationId: true },
-    });
-    if (message) {
-      this.server.to(`conversation:${message.conversationId}`).emit('message:reaction', reaction);
-    }
-    return { ok: true, reaction };
+    const result = await this.messagingService.toggleReaction(client.data.userId, payload.messageId, payload.reaction);
+    const message = await this.prisma.message.findUnique({ where: { id: payload.messageId }, select: { conversationId: true } });
+    if (message) this.server.to(`conversation:${message.conversationId}`).emit('message:reaction', result);
+    return { ok: true, ...result };
   }
 
   @SubscribeMessage('message:read')
   async readMessages(@ConnectedSocket() client: Socket, @MessageBody() payload: { messageIds: string[] }) {
     const messageIds = Array.from(new Set(payload?.messageIds ?? []));
     const result = await this.messagingService.markMessagesRead(client.data.userId, messageIds);
-
     if (messageIds.length) {
-      const messages = await this.prisma.message.findMany({
-        where: { id: { in: messageIds } },
-        select: { id: true, conversationId: true },
-      });
+      const messages = await this.prisma.message.findMany({ where: { id: { in: messageIds } }, select: { id: true, conversationId: true } });
       const messagesByConversation = new Map<string, string[]>();
       for (const message of messages) {
         const ids = messagesByConversation.get(message.conversationId) ?? [];
@@ -197,13 +152,9 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         messagesByConversation.set(message.conversationId, ids);
       }
       for (const [conversationId, ids] of messagesByConversation) {
-        this.server.to(`conversation:${conversationId}`).emit('message:read', {
-          userId: client.data.userId,
-          messageIds: ids,
-        });
+        this.server.to(`conversation:${conversationId}`).emit('message:read', { userId: client.data.userId, messageIds: ids });
       }
     }
-
     return { ok: true, ...result };
   }
 }
