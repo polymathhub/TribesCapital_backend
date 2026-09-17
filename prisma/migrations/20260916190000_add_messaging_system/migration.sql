@@ -1,8 +1,18 @@
 -- CreateEnum
-CREATE TYPE "ConversationType" AS ENUM ('DIRECT', 'GROUP', 'COMMUNITY_CHANNEL', 'PROJECT_ROOM', 'INVESTMENT_ROOM');
+DO $$
+BEGIN
+    CREATE TYPE "ConversationType" AS ENUM ('DIRECT', 'GROUP', 'COMMUNITY_CHANNEL', 'PROJECT_ROOM', 'INVESTMENT_ROOM');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "MessageType" AS ENUM ('TEXT', 'IMAGE', 'FILE', 'SYSTEM');
+DO $$
+BEGIN
+    CREATE TYPE "MessageType" AS ENUM ('TEXT', 'IMAGE', 'FILE', 'SYSTEM');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 -- CreateTable
 CREATE TABLE "Conversation" (
