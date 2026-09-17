@@ -40,15 +40,11 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         client.disconnect();
         return;
       }
-
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get('jwt.secret') ?? this.configService.get('JWT_SECRET'),
-      });
+      const payload = await this.jwtService.verifyAsync(token, { secret: this.configService.get('jwt.secret') ?? this.configService.get('JWT_SECRET') });
       if (!payload?.sub && !payload?.id) {
         client.disconnect();
         return;
       }
-
       const userId = payload.sub ?? payload.id;
       client.data.userId = userId;
       client.join(`user:${userId}`);
@@ -69,7 +65,8 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
   @SubscribeMessage('presence:heartbeat')
   async presenceHeartbeat(@ConnectedSocket() client: Socket) {
     if (!client.data.userId) return { ok: false };
-    await this.messagingService.trackUserHeartbeat(client.data.userId, client.id);
+    const presence = await this.messagingService.trackUserHeartbeat(client.data.userId, client.id);
+    if (presence.firstSession) this.server.emit('user:online', { userId: client.data.userId });
     return { ok: true };
   }
 
@@ -96,8 +93,9 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     const conversationId = payload.conversationId;
     await this.messagingService.ensureUserAccess(userId, conversationId);
     const message = await this.messagingService.createMessage({ userId, conversationId, content: payload.content, type: payload.type, replyToId: payload.replyToId, mentions: payload.mentions, attachmentData: payload.attachments });
-    this.server.to(`conversation:${conversationId}`).emit('message:new', message);
-    return { ok: true, message };
+    const realtimeMessage = payload.clientMessageId ? { ...message, clientMessageId: payload.clientMessageId } : message;
+    this.server.to(`conversation:${conversationId}`).emit('message:new', realtimeMessage);
+    return { ok: true, message: realtimeMessage };
   }
 
   @SubscribeMessage('typing:start')
@@ -151,9 +149,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         ids.push(message.id);
         messagesByConversation.set(message.conversationId, ids);
       }
-      for (const [conversationId, ids] of messagesByConversation) {
-        this.server.to(`conversation:${conversationId}`).emit('message:read', { userId: client.data.userId, messageIds: ids });
-      }
+      for (const [conversationId, ids] of messagesByConversation) this.server.to(`conversation:${conversationId}`).emit('message:read', { userId: client.data.userId, messageIds: ids });
     }
     return { ok: true, ...result };
   }

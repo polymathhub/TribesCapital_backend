@@ -15,6 +15,18 @@ const EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👏', '💯', '🙏'
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
 const displayName = (person) => `${person?.firstName || ''} ${person?.lastName || ''}`.trim() || 'Member';
 const formatTime = (value) => value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+const emitWithAck = (socket, event, payload, timeout = 10000) => new Promise((resolve, reject) => {
+  if (!socket?.connected) { reject(new Error('Realtime connection is not available')); return; }
+  let settled = false;
+  const timer = window.setTimeout(() => { if (!settled) { settled = true; reject(new Error('Realtime request timed out')); } }, timeout);
+  socket.emit(event, payload, (response) => {
+    if (settled) return;
+    settled = true;
+    window.clearTimeout(timer);
+    if (!response?.ok) reject(new Error(response?.message || `Unable to complete ${event}`));
+    else resolve(response);
+  });
+});
 
 function Avatar({ person, size = 'md' }) {
   return <span className={`message-avatar message-avatar-${size}`} title={displayName(person)}><img src={person?.avatar || profilePlaceholderImage} alt={`${displayName(person)} profile`} onError={(event) => { event.currentTarget.src = profilePlaceholderImage; }} /></span>;
@@ -87,7 +99,40 @@ export default function MessagingPage({ user }) {
   const loadDirectory = useCallback(async (query = '') => { setMemberLoading(true); try { const response = await messagingMembersAPI.list({ query: query.trim() || undefined, limit: 50 }); const data = response?.data?.data ?? response?.data ?? []; setDirectoryMembers(Array.isArray(data) ? data : []); } catch { setDirectoryMembers([]); } finally { setMemberLoading(false); } }, []);
   useEffect(() => { void loadConversations(); void loadActiveUsers(); void refreshUnread(); }, [loadActiveUsers, loadConversations, refreshUnread]); useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
   useEffect(() => { if (!modalOpen) return; void loadDirectory(memberQuery); }, [loadDirectory, modalOpen, memberQuery]);
-  useEffect(() => { const token = localStorage.getItem('accessToken'); const socket = io(window.location.origin, { path: '/socket.io', auth: token ? { token } : undefined, transports: ['websocket', 'polling'] }); socketRef.current = socket; socket.on('connect', () => { setConnected(true); socket.emit('presence:heartbeat'); heartbeatRef.current = window.setInterval(() => socket.emit('presence:heartbeat'), 20000); void loadActiveUsers(); }); socket.on('disconnect', () => { setConnected(false); if (heartbeatRef.current) window.clearInterval(heartbeatRef.current); }); socket.on('connect_error', () => setConnected(false)); socket.on('user:online', () => void loadActiveUsers()); socket.on('user:offline', () => void loadActiveUsers()); socket.on('message:new', (message) => { if (message.conversationId !== selectedIdRef.current) { if (message.senderId !== user?.id) void refreshUnread(); return; } setMessages((current) => { const existing = current.find((item) => item.id === message.id || item.tempId === message.id); if (existing) return current.map((item) => item.id === existing.id ? { ...message, tempId: item.tempId } : item); return [...current, message]; }); if (message.senderId !== user?.id) void refreshUnread(); void loadConversations(); }); socket.on('message:updated', (message) => setMessages((current) => current.map((item) => item.id === message.id ? { ...item, ...message } : item))); socket.on('message:deleted', ({ id }) => setMessages((current) => current.map((item) => item.id === id ? { ...item, isDeleted: true, content: '[deleted]' } : item))); socket.on('message:reaction', (event) => setMessages((current) => current.map((item) => item.id === event.messageId ? { ...item, reactions: event.reactions || [] } : item))); socket.on('message:read', ({ userId, messageIds }) => { if (userId !== user?.id) return; setMessages((current) => current.map((item) => messageIds.includes(item.id) ? { ...item, isRead: true } : item)); }); socket.on('user:typing', ({ userId }) => { if (!userId || userId === user?.id) return; setTypingUsers((current) => new Set([...current, userId])); clearTimeout(typingTimers.current.get(userId)); typingTimers.current.set(userId, setTimeout(() => setTypingUsers((current) => { const next = new Set(current); next.delete(userId); return next; }), 1800)); }); socket.on('user:typing:stop', ({ userId }) => { clearTimeout(typingTimers.current.get(userId)); setTypingUsers((current) => { const next = new Set(current); next.delete(userId); return next; }); }); return () => { if (heartbeatRef.current) window.clearInterval(heartbeatRef.current); typingTimers.current.forEach((timer) => clearTimeout(timer)); socket.disconnect(); socketRef.current = null; }; }, [loadActiveUsers, loadConversations, refreshUnread, user?.id]);
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    const socket = io(window.location.origin, { path: '/socket.io', auth: token ? { token } : undefined, transports: ['websocket', 'polling'] });
+    socketRef.current = socket;
+    socket.on('connect', () => {
+      setConnected(true);
+      socket.emit('presence:heartbeat');
+      if (selectedIdRef.current) socket.emit('conversation:join', { conversationId: selectedIdRef.current });
+      heartbeatRef.current = window.setInterval(() => socket.emit('presence:heartbeat'), 20000);
+      void loadActiveUsers();
+      void loadConversations();
+      if (selectedIdRef.current) void loadMessages(selectedIdRef.current);
+    });
+    socket.on('disconnect', () => { setConnected(false); if (heartbeatRef.current) window.clearInterval(heartbeatRef.current); });
+    socket.on('connect_error', () => setConnected(false));
+    socket.on('user:online', () => void loadActiveUsers()); socket.on('user:offline', () => void loadActiveUsers());
+    socket.on('message:new', (message) => {
+      if (message.conversationId !== selectedIdRef.current) { if (message.senderId !== user?.id) void refreshUnread(); return; }
+      setMessages((current) => {
+        const existing = current.find((item) => item.id === message.id || item.tempId === message.id || (message.clientMessageId && item.clientMessageId === message.clientMessageId));
+        if (existing) return current.map((item) => item.id === existing.id ? { ...message, tempId: item.tempId, clientMessageId: item.clientMessageId || message.clientMessageId } : item);
+        return [...current, message];
+      });
+      if (message.senderId !== user?.id) void refreshUnread();
+      void loadConversations();
+    });
+    socket.on('message:updated', (message) => setMessages((current) => current.map((item) => item.id === message.id ? { ...item, ...message } : item)));
+    socket.on('message:deleted', ({ id }) => setMessages((current) => current.map((item) => item.id === id ? { ...item, isDeleted: true, content: '[deleted]' } : item)));
+    socket.on('message:reaction', (event) => setMessages((current) => current.map((item) => item.id === event.messageId ? { ...item, reactions: event.reactions || [] } : item)));
+    socket.on('message:read', ({ userId, messageIds }) => { if (userId !== user?.id) return; setMessages((current) => current.map((item) => messageIds.includes(item.id) ? { ...item, isRead: true } : item)); });
+    socket.on('user:typing', ({ userId }) => { if (!userId || userId === user?.id) return; setTypingUsers((current) => new Set([...current, userId])); clearTimeout(typingTimers.current.get(userId)); typingTimers.current.set(userId, setTimeout(() => setTypingUsers((current) => { const next = new Set(current); next.delete(userId); return next; }), 1800)); });
+    socket.on('user:typing:stop', ({ userId }) => { clearTimeout(typingTimers.current.get(userId)); setTypingUsers((current) => { const next = new Set(current); next.delete(userId); return next; }); });
+    return () => { if (heartbeatRef.current) window.clearInterval(heartbeatRef.current); typingTimers.current.forEach((timer) => clearTimeout(timer)); socket.disconnect(); socketRef.current = null; };
+  }, [loadActiveUsers, loadConversations, loadMessages, refreshUnread, user?.id]);
   useEffect(() => { if (!selectedId) return; void loadMessages(selectedId); const socket = socketRef.current; if (socket?.connected) socket.emit('conversation:join', { conversationId: selectedId }); setReplyingTo(null); setEditingMessage(null); setThreadRoot(null); setThreadDraft(''); setMobileView('thread'); }, [loadMessages, selectedId]);
   useEffect(() => { messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages.length]); useEffect(() => { threadEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [threadReplies.length]); useEffect(() => { if (composerRef.current) { composerRef.current.style.height = 'auto'; composerRef.current.style.height = `${Math.min(composerRef.current.scrollHeight, 140)}px`; } }, [draft]);
   const chooseConversation = (id) => { if (!id || id === selectedId) { if (id) setMobileView('thread'); return; } socketRef.current?.emit('conversation:leave', { conversationId: selectedId }); setSelectedId(id); };
@@ -96,11 +141,35 @@ export default function MessagingPage({ user }) {
   const openNewConversation = (mode = 'direct') => { setConversationMode(mode); setSelectedMemberIds([]); setGroupName(''); setMemberQuery(''); setModalOpen(true); };
   const startDirectMessage = async (person) => { if (!person || person.id === user?.id) return; try { const conversation = unwrap(await messagingAPI.createConversation({ type: 'DIRECT', participantIds: [person.id], title: displayName(person) })); setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]); setSelectedId(conversation.id); } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to start direct message.'); } };
   const uploadFile = async (conversationId, file) => { if (!file) return []; const formData = new FormData(); formData.append('file', file); return [unwrap(await messagingAPI.uploadAttachment(conversationId, formData))]; };
-  const sendMessage = async (event, explicitReplyTo = null, explicitContent = null) => { event?.preventDefault(); const file = pendingFile; const content = explicitContent ?? draft.trim(); const conversationId = selectedId; const replyTarget = explicitReplyTo || replyingTo; if (!conversationId || (!content && !file) || editingMessage) return; const optimistic = { id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`, tempId: `local-${Date.now()}`, conversationId, senderId: user?.id, content: content || file?.name || '', createdAt: new Date().toISOString(), isOptimistic: true, sender: user, attachments: file ? [{ id: `local-file-${Date.now()}`, fileName: file.name, mimeType: file.type, size: file.size, url: '#' }] : [], replyTo: replyTarget }; setMessages((current) => [...current, optimistic]); if (!explicitReplyTo) { setDraft(''); setPendingFile(null); setReplyingTo(null); } socketRef.current?.emit('typing:stop', { conversationId }); try { const attachments = file ? await uploadFile(conversationId, file) : []; const payload = { content, attachments, replyToId: replyTarget?.id }; if (socketRef.current?.connected) socketRef.current.emit('message:send', { conversationId, ...payload }); else { const sent = unwrap(await messagingAPI.sendMessage(conversationId, payload)); setMessages((current) => current.map((item) => item.id === optimistic.id ? { ...sent, tempId: item.tempId } : item)); } } catch (requestError) { setMessages((current) => current.map((item) => item.id === optimistic.id ? { ...item, isOptimistic: false, sendFailed: true, pendingFile: file } : item)); setError(requestError.response?.data?.message || 'Unable to send message. Try again.'); } };
+  const sendMessage = async (event, explicitReplyTo = null, explicitContent = null) => {
+    event?.preventDefault();
+    const file = pendingFile; const content = explicitContent ?? draft.trim(); const conversationId = selectedId; const replyTarget = explicitReplyTo || replyingTo;
+    if (!conversationId || (!content && !file) || editingMessage) return;
+    const clientMessageId = `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const optimistic = { id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`, tempId: clientMessageId, clientMessageId, conversationId, senderId: user?.id, content: content || file?.name || '', createdAt: new Date().toISOString(), isOptimistic: true, sender: user, attachments: file ? [{ id: `local-file-${Date.now()}`, fileName: file.name, mimeType: file.type, size: file.size, url: '#' }] : [], replyTo: replyTarget };
+    setMessages((current) => [...current, optimistic]);
+    if (!explicitReplyTo) { setDraft(''); setPendingFile(null); setReplyingTo(null); }
+    socketRef.current?.emit('typing:stop', { conversationId });
+    try {
+      const attachments = file ? await uploadFile(conversationId, file) : [];
+      const payload = { content, attachments, replyToId: replyTarget?.id, clientMessageId };
+      if (socketRef.current?.connected) {
+        const response = await emitWithAck(socketRef.current, 'message:send', { conversationId, ...payload });
+        const sent = response.message;
+        setMessages((current) => current.map((item) => item.clientMessageId === clientMessageId || item.id === sent.id ? { ...sent, tempId: clientMessageId, clientMessageId } : item));
+      } else {
+        const sent = unwrap(await messagingAPI.sendMessage(conversationId, payload));
+        setMessages((current) => current.map((item) => item.id === optimistic.id ? { ...sent, tempId: clientMessageId, clientMessageId } : item));
+      }
+    } catch (requestError) {
+      setMessages((current) => current.map((item) => item.id === optimistic.id || item.clientMessageId === clientMessageId ? { ...item, isOptimistic: false, sendFailed: true, pendingFile: file } : item));
+      setError(requestError.response?.data?.message || requestError.message || 'Unable to send message. Try again.');
+    }
+  };
   const sendThreadReply = async (event) => { event?.preventDefault(); const content = threadDraft.trim(); if (!threadRoot || !content) return; setThreadDraft(''); await sendMessage(null, threadRoot, content); };
   const submitEdit = (event) => { event?.preventDefault(); const content = draft.trim(); if (!editingMessage || !content) return; socketRef.current?.emit('message:edit', { messageId: editingMessage.id, content }); setMessages((current) => current.map((item) => item.id === editingMessage.id ? { ...item, content, isEdited: true } : item)); setEditingMessage(null); setDraft(''); };
   const deleteMessage = (message) => { if (!window.confirm('Delete this message?')) return; socketRef.current?.emit('message:delete', { messageId: message.id }); };
-  const reactToMessage = async (messageId, reaction) => { if (socketRef.current?.connected) { socketRef.current.emit('message:react', { messageId, reaction }); return; } try { const result = unwrap(await messagingAPI.toggleReaction(messageId, reaction)); if (result?.reactions) setMessages((current) => current.map((item) => item.id === messageId ? { ...item, reactions: result.reactions } : item)); } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to update reaction.'); } };
+  const reactToMessage = async (messageId, reaction) => { try { if (socketRef.current?.connected) { await emitWithAck(socketRef.current, 'message:react', { messageId, reaction }); return; } const result = unwrap(await messagingAPI.toggleReaction(messageId, reaction)); if (result?.reactions) setMessages((current) => current.map((item) => item.id === messageId ? { ...item, reactions: result.reactions } : item)); } catch (requestError) { setError(requestError.response?.data?.message || requestError.message || 'Unable to update reaction.'); } };
   const handleTyping = (event) => { const value = event.target.value; setDraft(value); if (!selectedId || !socketRef.current?.connected) return; socketRef.current.emit('typing:start', { conversationId: selectedId }); clearTimeout(typingTimers.current.get('self')); typingTimers.current.set('self', setTimeout(() => socketRef.current?.emit('typing:stop', { conversationId: selectedId }), 900)); };
   const handleComposerKeyDown = (event) => { if (event.key === 'Escape' && editingMessage) { setEditingMessage(null); setDraft(''); return; } if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); if (editingMessage) submitEdit(event); else void sendMessage(event); } };
   const acceptFile = (file) => { if (!file) return; if (file.size > 25 * 1024 * 1024) { setError('Attachments must be 25 MB or smaller.'); return; } setPendingFile(file); };
