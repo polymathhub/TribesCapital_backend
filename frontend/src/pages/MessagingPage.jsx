@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { BubbleChatIcon } from '@hugeicons/core-free-icons';
 import { messagingAPI } from '../api/endpoints';
+import MessagingMemberDirectory from '../components/MessagingMemberDirectory';
 import Icon from '../components/Icon';
 import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
 import './messaging.css';
@@ -136,7 +137,7 @@ export default function MessagingPage({ user }) {
     socket.on('message:reaction', (reaction) => setMessages((current) => current.map((item) => item.id === reaction.messageId ? { ...item, reactions: [...(item.reactions || []).filter((entry) => !(entry.userId === reaction.userId && entry.reaction === reaction.reaction)), reaction] } : item)));
     socket.on('message:read', ({ userId, messageIds }) => { if (userId !== user?.id) return; setMessages((current) => current.map((item) => messageIds.includes(item.id) ? { ...item, isRead: true } : item)); });
     socket.on('user:typing', ({ userId }) => { if (!userId || userId === user?.id) return; setTypingUsers((current) => new Set([...current, userId])); clearTimeout(typingTimers.current.get(userId)); typingTimers.current.set(userId, setTimeout(() => setTypingUsers((current) => { const next = new Set(current); next.delete(userId); return next; }), 1800)); });
-    socket.on('user:typing:stop', ({ userId }) => { clearTimeout(typingTimers.current.get(userId)); setTypingUsers((current) => { const next = new Set(current); next.delete(userId); return next; }); });
+    socket.on('user:typing:stop', ({ userId }) => { clearTimeout(typingTimers.current.get(userId)); setTypingUsers((current) => { const next = new Set(current); next.delete(userId); }); });
     return () => { typingTimers.current.forEach((timer) => clearTimeout(timer)); socket.disconnect(); socketRef.current = null; };
   }, [loadActiveUsers, loadConversations, refreshUnread, user?.id]);
 
@@ -204,7 +205,22 @@ export default function MessagingPage({ user }) {
         <div className="conversation-filters">{[['all', 'All'], ['unread', 'Unread'], ['channels', 'Channels']].map(([value, label]) => <button key={value} type="button" className={conversationFilter === value ? 'filter-active' : ''} onClick={() => setConversationFilter(value)}>{label}{value === 'unread' && totalUnread > 0 && <span>{totalUnread}</span>}</button>)}</div>
         {searchResults.length > 0 && <div className="search-results">{searchResults.map((result) => <button type="button" key={result.id} onClick={() => { chooseConversation(result.conversation?.id); setSearchTerm(''); setSearchResults([]); }}><strong>{result.conversation?.title || 'Conversation'}</strong><span>{result.content}</span></button>)}</div>}
         <div className="conversation-list">{loading ? <div className="empty-state">Loading conversations…</div> : visibleConversations.length === 0 ? <div className="empty-state rail-empty"><strong>{conversationFilter === 'unread' ? 'You are all caught up' : 'No conversations yet'}</strong><span>{conversationFilter === 'unread' ? 'Unread conversations will appear here.' : 'Start a conversation to get the discussion moving.'}</span></div> : visibleConversations.map((conversation) => { const count = unreadByConversation.get(conversation.id) || 0; const lastMessage = conversation.messages?.[0]; const title = getConversationTitle(conversation); return <button key={conversation.id} type="button" className={`conversation-item ${selectedId === conversation.id ? 'selected' : ''}`} onClick={() => chooseConversation(conversation.id)}><span className="conversation-avatar">{title.slice(0, 1).toUpperCase()}</span><span className="conversation-copy"><strong>{title}</strong><span>{lastMessage?.content || 'Start the conversation'}</span></span>{count > 0 && <span className="unread-badge">{count > 99 ? '99+' : count}</span>}</button>; })}</div>
-        <div className="active-user-panel"><div className="conversation-heading"><div><span className="panel-title">People online</span><span className="panel-count">{activeUsers.length}</span></div></div>{activeUsers.slice(0, 6).map((person) => <button className="active-user-item" key={person.id} type="button" onClick={() => void startDirectMessage(person)}><Avatar person={person} size="sm" /><span><strong>{displayName(person)}</strong><small>Available now</small></span><i /></button>)}</div>
+        <div className="active-user-panel">
+          <div className="people-panel-header">
+            <div><span className="panel-title">People</span><span className="panel-count">{activeUsers.length}</span></div>
+            <span className="people-live-label"><i /> {activeUsers.length ? 'Online now' : 'No one online'}</span>
+          </div>
+          <div className="people-online-strip" aria-label="People online">
+            {activeUsers.slice(0, 8).map((person) => <button className="people-online-avatar" key={person.id} type="button" onClick={() => void startDirectMessage(person)} title={`Message ${displayName(person)}`}>
+              <span className="people-avatar-wrap"><Avatar person={person} size="sm" /><i /></span>
+            </button>)}
+            {activeUsers.length === 0 && <span className="people-empty-copy">Your online teammates will appear here.</span>}
+          </div>
+          <div className="people-online-list">
+            {activeUsers.slice(0, 4).map((person) => <button className="active-user-item" key={person.id} type="button" onClick={() => void startDirectMessage(person)}><span className="people-row-avatar"><Avatar person={person} size="sm" /><i /></span><span><strong>{displayName(person)}</strong><small>Available to message</small></span><span className="people-dm-hint">DM</span></button>)}
+          </div>
+          <div className="people-directory-link"><span>Find someone in the workspace</span><span aria-hidden="true">→</span></div>
+        </div>
       </aside>
       <section className="thread-panel">
         {!selectedConversation ? <div className="thread-empty"><span className="empty-icon">✦</span><h2>Choose a conversation</h2><p>Select a conversation from your inbox or start a new one.</p></div> : <>
