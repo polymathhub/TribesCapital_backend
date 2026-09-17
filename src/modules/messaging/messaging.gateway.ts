@@ -142,8 +142,14 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   @SubscribeMessage('message:delete')
   async deleteMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: { messageId: string }) {
+    const message = await this.prisma.message.findUnique({
+      where: { id: payload.messageId },
+      select: { conversationId: true },
+    });
     const result = await this.messagingService.deleteMessage(client.data.userId, payload.messageId);
-    this.server.to(`conversation:${result.conversationId}`).emit('message:deleted', { id: result.id });
+    if (message) {
+      this.server.to(`conversation:${message.conversationId}`).emit('message:deleted', { id: result.id });
+    }
     return { ok: true, ...result };
   }
 
@@ -170,9 +176,13 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
         where: { id: { in: messageIds } },
         select: { id: true, conversationId: true },
       });
-      const conversationIds = new Set(messages.map((message) => message.conversationId));
-      for (const conversationId of conversationIds) {
-        const ids = messages.filter((message) => message.conversationId === conversationId).map((message) => message.id);
+      const messagesByConversation = new Map<string, string[]>();
+      for (const message of messages) {
+        const ids = messagesByConversation.get(message.conversationId) ?? [];
+        ids.push(message.id);
+        messagesByConversation.set(message.conversationId, ids);
+      }
+      for (const [conversationId, ids] of messagesByConversation) {
         this.server.to(`conversation:${conversationId}`).emit('message:read', {
           userId: client.data.userId,
           messageIds: ids,
