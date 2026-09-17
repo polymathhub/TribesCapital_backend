@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -14,7 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { mkdirSync } from 'fs';
-import { join } from 'path';
+import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
@@ -49,6 +50,29 @@ const allowedAttachmentMimeTypes = new Set([
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]);
 
+const mimeExtensions: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'application/pdf': '.pdf',
+  'text/plain': '.txt',
+  'text/csv': '.csv',
+  'application/zip': '.zip',
+  'application/msword': '.doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.ms-excel': '.xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'application/vnd.ms-powerpoint': '.ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+};
+
+const normalizeLimit = (value: string | undefined, fallback = 25, max = 100) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(Math.floor(parsed), 1), max);
+};
+
 @Controller('messaging')
 @UseGuards(JwtAuthGuard)
 export class MessagingController {
@@ -81,7 +105,7 @@ export class MessagingController {
 
   @Get('conversations/:id/messages')
   async getMessages(@CurrentUser() user: any, @Param('id') id: string, @Query('cursor') cursor?: string, @Query('limit') limit?: string) {
-    return this.messagingService.getMessages(user.id, id, cursor, Number(limit ?? 25));
+    return this.messagingService.getMessages(user.id, id, cursor, normalizeLimit(limit));
   }
 
   @Post('conversations/:id/messages')
@@ -90,26 +114,30 @@ export class MessagingController {
   }
 
   @Get('search')
-  async searchMessages(@CurrentUser() user: any, @Query() query: MessageSearchDto) { return this.messagingService.searchMessages(user.id, query.query, query.limit); }
+  async searchMessages(@CurrentUser() user: any, @Query() query: MessageSearchDto) { return this.messagingService.searchMessages(user.id, query.query, normalizeLimit(String(query.limit ?? 25))); }
 
   @Get('unread')
   async getUnreadCounts(@CurrentUser() user: any) { return this.messagingService.getUnreadCounts(user.id); }
 
   @Patch('messages/:id')
-  async updateMessage(@CurrentUser() user: any, @Param('id') id: string, @Body() body: UpdateMessageDto) { return this.messagingService.updateMessage(user.id, id, body.content); }
+  async updateMessage(@CurrentUser() user: any, @Param('id') id: string, @Body() body: UpdateMessageDto) {
+    if (!body.content?.trim()) throw new BadRequestException('Message content cannot be empty');
+    return this.messagingService.updateMessage(user.id, id, body.content.trim());
+  }
 
   @Post('conversations/:id/attachments')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: messagingUploadDirectory,
       filename: (_request: Express.Request, file: Express.Multer.File, callback: (error: Error | null, filename: string) => void) => {
-        callback(null, `${randomUUID()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
+        const extension = mimeExtensions[file.mimetype] ?? extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
+        callback(null, `${randomUUID()}${extension}`);
       },
     }),
     limits: { fileSize: 25 * 1024 * 1024 },
     fileFilter: (_request, file, callback) => {
       if (!allowedAttachmentMimeTypes.has(file.mimetype)) {
-        return callback(new Error('Unsupported attachment type'), false);
+        return callback(new BadRequestException('Unsupported attachment type'), false);
       }
       callback(null, true);
     },
