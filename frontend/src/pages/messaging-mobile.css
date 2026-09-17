@@ -1,17 +1,18 @@
-/* Responsive and touch-first refinements layered over the desktop messaging system. */
+/* Responsive, touch-first, and accessibility refinements layered over the desktop messaging system. */
 .messaging-page,
 .messaging-page * { box-sizing: border-box; }
-
 .messaging-page { min-width: 0; }
-.message-list { overscroll-behavior: contain; scrollbar-gutter: stable; }
+.message-list { overscroll-behavior: contain; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
 .message-row { touch-action: pan-y; }
 .message-state { color: #667085; font-size: 10px; }
 .message-state.error { color: #b42318; font-weight: 700; }
 .message-retry { margin-top: 4px; border: 0; padding: 0; background: transparent; color: #5b21b6; font-size: 10px; font-weight: 700; cursor: pointer; }
 .message-row.send-failed .message-bubble { border-color: #fecdca; }
-.message-bubble { max-width: min(720px, 100%); }
+.message-bubble { max-width: min(720px, 100%); overflow-wrap: anywhere; }
+.message-bubble p { overflow-wrap: anywhere; }
 .message-attachments { max-width: 100%; }
-.attachment-card { min-width: 0; }
+.attachment-card { min-width: 0; max-width: 100%; }
+.attachment-card strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attachment-card.pending { opacity: .65; pointer-events: none; }
 .thread-header-copy { min-width: 0; flex: 1; }
 .thread-header-copy h2,
@@ -48,11 +49,15 @@
   .messaging-layout.mobile-thread .thread-panel { transform: translateX(0); }
   .conversation-heading { padding: 14px 14px 9px; }
   .search-wrap { margin-inline: 12px; min-height: 40px; }
-  .conversation-filters { padding-inline: 12px; }
-  .conversation-filters button { min-height: 34px; }
+  .conversation-filters { padding-inline: 12px; overflow-x: auto; scrollbar-width: none; }
+  .conversation-filters::-webkit-scrollbar { display: none; }
+  .conversation-filters button { min-height: 34px; flex: 0 0 auto; }
   .conversation-list { padding: 0 8px 10px; }
   .conversation-item { min-height: 62px; padding: 10px 8px; border-radius: 10px; }
   .conversation-avatar { width: 40px; height: 40px; border-radius: 11px; }
+  .conversation-copy { min-width: 0; }
+  .conversation-copy strong,
+  .conversation-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .conversation-copy strong { font-size: 13px; }
   .conversation-copy span { font-size: 11px; }
   .active-user-panel { display: none; }
@@ -63,8 +68,9 @@
   .thread-header-actions button { width: 36px; height: 36px; }
   .message-list { padding: 14px 12px max(12px, env(safe-area-inset-bottom)); }
   .message-row { gap: 7px; margin-bottom: 14px; max-width: none; padding-right: 0; }
-  .message-row .message-avatar { width: 30px; height: 30px; }
-  .message-meta { gap: 5px; margin-bottom: 3px; }
+  .message-row .message-avatar { width: 30px; height: 30px; flex: 0 0 30px; }
+  .message-content-wrap { min-width: 0; }
+  .message-meta { gap: 5px; margin-bottom: 3px; flex-wrap: wrap; }
   .message-meta strong { font-size: 11px; }
   .message-meta time, .message-edited, .message-state { font-size: 9px; }
   .message-bubble { width: fit-content; max-width: calc(100vw - 70px); padding: 8px 10px; border-radius: 5px 11px 11px 11px; }
@@ -103,4 +109,38 @@
 @media (prefers-reduced-motion: reduce) {
   .conversation-panel,
   .thread-panel { transition: none; }
+}
+
+@supports (height: 100svh) {
+  @media (max-width: 720px) {
+    .messaging-layout { min-height: calc(100svh - 58px); height: calc(100svh - 58px); }
+  }
+}
+
+@media (orientation: landscape) and (max-width: 900px) {
+  .messaging-layout { min-height: calc(100dvh - 58px); height: calc(100dvh - 58px); }
+  .message-list { padding-block: 8px; }
+  .message-composer textarea { max-height: 90px; }
+}
+
+@media (min-width: 721px) and (max-height: 760px) {
+  .messaging-layout { min-height: calc(100dvh - 130px); }
+  .message-list { padding-block: 10px; }
+}
+
+@media (prefers-contrast: more) {
+  .conversation-item,
+  .message-bubble,
+  .message-actions > button,
+  .attachment-card { border-width: 2px; }
+}
+
+@media (pointer: coarse) {
+  .conversation-item,
+  .conversation-filters button,
+  .thread-header-actions button,
+  .message-actions > button,
+  .composer-tool,
+  .send-button,
+  .mobile-back { min-height: 38px; }
 }
