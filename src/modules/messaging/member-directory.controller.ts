@@ -41,7 +41,10 @@ export class MemberDirectoryController {
       ];
     }
 
-    const [total, users] = await Promise.all([
+    const cutoff = new Date(Date.now() - 60_000);
+    await this.prisma.messagingPresenceSession.deleteMany({ where: { updatedAt: { lt: cutoff } } });
+
+    const [total, users, sessions] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
         where,
@@ -49,6 +52,7 @@ export class MemberDirectoryController {
           id: true,
           firstName: true,
           lastName: true,
+          email: true,
           avatar: true,
           isActive: true,
           lastLogin: true,
@@ -57,13 +61,24 @@ export class MemberDirectoryController {
         skip: (currentPage - 1) * pageSize,
         take: pageSize,
       }),
+      this.prisma.messagingPresenceSession.findMany({
+        where: { updatedAt: { gte: cutoff } },
+        select: { userId: true },
+        distinct: ['userId'],
+      }),
     ]);
 
-    return {
-      data: users.map((member) => ({
+    const onlineIds = new Set(sessions.map((session: { userId: string }) => session.userId));
+    const data = users
+      .map((member) => ({
         ...member,
+        presence: onlineIds.has(member.id) ? 'online' : 'offline',
         lastSeenAt: member.lastLogin,
-      })),
+      }))
+      .sort((a, b) => Number(b.presence === 'online') - Number(a.presence === 'online'));
+
+    return {
+      data,
       meta: {
         page: currentPage,
         limit: pageSize,
