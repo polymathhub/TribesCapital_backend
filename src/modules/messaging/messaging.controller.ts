@@ -98,7 +98,18 @@ export class MessagingController {
   async listConversations(@CurrentUser() user: any) { return this.messagingService.listConversations(user.id); }
 
   @Get('active-users')
-  async listActiveUsers(@CurrentUser() user: any) { return this.messagingService.listActiveUsers(user.id); }
+  async listActiveUsers(@CurrentUser() user: any) {
+    const activeUsers = await this.messagingService.listActiveUsers(user.id);
+    const currentUser = {
+      id: user.id,
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      avatar: user.avatar ?? null,
+      isActive: user.isActive ?? true,
+      presence: 'online' as const,
+    };
+    return [currentUser, ...activeUsers.filter((member: any) => member.id !== user.id)];
+  }
 
   @Get('conversations/:id')
   async getConversation(@CurrentUser() user: any, @Param('id') id: string) { return this.messagingService.getConversation(user.id, id); }
