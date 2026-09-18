@@ -117,7 +117,7 @@ export default function MessagingPage({ user }) {
     const socket = io(resolveSocketUrl(), {
       path: '/socket.io',
       auth: token ? { token } : undefined,
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -183,7 +183,7 @@ export default function MessagingPage({ user }) {
   const closeModal = () => { setModalOpen(false); setMemberQuery(''); setSelectedMemberIds([]); setGroupName(''); };
   const createConversation = async () => { try { const payload = conversationMode === 'direct' ? { type: 'DIRECT', participantIds: selectedMemberIds } : { type: 'GROUP', participantIds: selectedMemberIds, title: groupName.trim() }; const conversation = unwrap(await messagingAPI.createConversation(payload)); setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]); setSelectedId(conversation.id); closeModal(); } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to create conversation.'); } };
   const openNewConversation = (mode = 'direct') => { setConversationMode(mode); setSelectedMemberIds([]); setGroupName(''); setMemberQuery(''); setModalOpen(true); };
-  const startDirectMessage = async (person) => { if (!person || person.id === user?.id) return; try { const conversation = unwrap(await messagingAPI.createConversation({ type: 'DIRECT', participantIds: [person.id], title: displayName(person) })); setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]); setSelectedId(conversation.id); } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to start direct message.'); } };
+  const startDirectMessage = async (person) => { if (!person || person.id === user?.id) return; const existing = conversations.find((conversation) => conversation.type === 'DIRECT' && conversation.members?.some((member) => member.userId === person.id)); if (existing) { setSelectedId(existing.id); setMobileView('thread'); return; } try { const conversation = unwrap(await messagingAPI.createConversation({ type: 'DIRECT', participantIds: [person.id], title: displayName(person) })); setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]); setSelectedId(conversation.id); setMobileView('thread'); } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to start direct message.'); } };
   const uploadFile = async (conversationId, file) => { if (!file) return []; const formData = new FormData(); formData.append('file', file); return [unwrap(await messagingAPI.uploadAttachment(conversationId, formData))]; };
   const sendMessage = async (event, explicitReplyTo = null, explicitContent = null) => {
     event?.preventDefault();
