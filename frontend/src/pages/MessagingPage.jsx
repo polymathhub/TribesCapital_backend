@@ -25,6 +25,19 @@ const displayName = (person) => {
   return fullName || source?.name || source?.email || person?.email || 'Member';
 };
 const formatTime = (value) => value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+const resolveAttachmentUrl = (url) => {
+  if (!url || url === '#') return '';
+  try {
+    if (/^[a-z][a-z\d+.-]*:/i.test(url)) return url;
+    const configured = (import.meta.env.VITE_API_URL || '').trim();
+    const base = configured ? new URL(configured).origin : window.location.origin;
+    return new URL(url, base).toString();
+  } catch {
+    return url;
+  }
+};
+const isImageAttachment = (attachment) => attachment?.mimeType?.startsWith('image/');
+const isPreviewableAttachment = (attachment) => isImageAttachment(attachment) || attachment?.mimeType === 'application/pdf' || attachment?.mimeType?.startsWith('text/');
 const resolveSocketUrl = () => {
   const configured = (import.meta.env.VITE_API_URL || '').trim();
   if (configured) {
@@ -57,6 +70,19 @@ function Avatar({ person, size = 'md' }) {
     : <InitialsAvatar person={person} className={`message-avatar message-avatar-${size}`} alt={`${displayName(person)} profile`} />;
 }
 
+function AttachmentPreview({ attachment, onClose }) {
+  const url = resolveAttachmentUrl(attachment.url);
+  const previewable = isPreviewableAttachment(attachment);
+  return <div className="attachment-preview-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="attachment-preview" role="dialog" aria-modal="true" aria-label={`Preview ${attachment.fileName}`}>
+      <header><div><strong>{attachment.fileName}</strong><small>{attachment.mimeType || 'Attachment'}</small></div><button type="button" onClick={onClose} aria-label="Close preview">×</button></header>
+      <div className="attachment-preview-body">
+        {!url ? <p className="attachment-unavailable">This attachment is still uploading.</p> : !previewable ? <div className="attachment-unavailable"><Icon name="file" size={28} /><p>Preview is not available for this file type.</p><a href={url} download={attachment.fileName}>Download file</a></div> : isImageAttachment(attachment) ? <img src={url} alt={attachment.fileName} onError={(event) => { event.currentTarget.replaceWith(Object.assign(document.createElement('p'), { className: 'attachment-unavailable', textContent: 'This attachment is no longer available.' })); }} /> : <iframe src={url} title={`Preview of ${attachment.fileName}`} />}
+      </div>
+    </section>
+  </div>;
+}
+
 function ActionIcon({ type }) {
   const paths = {
     reply: <path d="M7 9.5 3.5 13 7 16.5M4 13h7.5a5.5 5.5 0 0 0 0-11H8" />,
@@ -71,6 +97,7 @@ function ActionIcon({ type }) {
 function MessageRow({ message, user, onReply, onReact, onEdit, onDelete, onRetry }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reactionOpen, setReactionOpen] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState(null);
   const reactions = Array.isArray(message.reactions) ? message.reactions : [];
   const grouped = reactions.reduce((groups, item) => ({ ...groups, [item.reaction]: [...(groups[item.reaction] || []), item] }), {});
   const mine = message.senderId === user?.id;
@@ -79,7 +106,8 @@ function MessageRow({ message, user, onReply, onReact, onEdit, onDelete, onRetry
     <div className="message-content-wrap">
       <div className="message-meta"><strong>{mine ? 'You' : displayName(message.sender)}</strong><time>{formatTime(message.createdAt)}</time>{message.isOptimistic && <span className="message-state">Sending…</span>}{message.sendFailed && <span className="message-state error">Not sent</span>}{message.isEdited && <span className="message-edited">edited</span>}</div>
       {message.replyTo && <button className="reply-context" type="button" onClick={() => onReply(message.replyTo)}><span>Replying to {displayName(message.replyTo.sender)}</span><strong>{message.replyTo.content || '[attachment]'}</strong></button>}
-      <div className={`message-bubble ${message.isDeleted ? 'deleted' : ''}`}><p>{message.content || (message.attachments?.length ? '' : '[empty message]')}</p>{message.attachments?.length > 0 && <div className="message-attachments">{message.attachments.map((attachment) => <a key={attachment.id || attachment.url} href={attachment.url === '#' ? undefined : attachment.url} target="_blank" rel="noreferrer" className={`attachment-card ${attachment.url === '#' ? 'pending' : ''}`}><span className="attachment-icon"><Icon name="file" size={16} /></span><span><strong>{attachment.fileName}</strong><small>{attachment.mimeType || 'Attachment'}</small></span></a>)}</div>}</div>
+      <div className={`message-bubble ${message.isDeleted ? 'deleted' : ''}`}><p>{message.content || (message.attachments?.length ? '' : '[empty message]')}</p>{message.attachments?.length > 0 && <div className="message-attachments">{message.attachments.map((attachment) => <button key={attachment.id || attachment.url} type="button" className={`attachment-card ${isImageAttachment(attachment) ? 'image-attachment' : ''} ${attachment.url === '#' ? 'pending' : ''}`} onClick={() => setPreviewAttachment(attachment)}>{isImageAttachment(attachment) && attachment.url !== '#' ? <img src={resolveAttachmentUrl(attachment.url)} alt="" className="attachment-thumbnail" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : <span className="attachment-icon"><Icon name="file" size={16} /></span>}<span><strong>{attachment.fileName}</strong><small>{isPreviewableAttachment(attachment) ? 'Preview' : attachment.mimeType || 'Attachment'}</small></span></button>)}</div>}</div>
+      {previewAttachment && <AttachmentPreview attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />}
       {message.sendFailed && <button type="button" className="message-retry" onClick={() => onRetry(message)}>Retry sending</button>}
       {Object.keys(grouped).length > 0 && <div className="reaction-list">{Object.entries(grouped).map(([reaction, items]) => <button key={reaction} type="button" className={`reaction-chip ${items.some((item) => item.userId === user?.id) ? 'mine' : ''}`} onClick={() => onReact(message.id, reaction)}><span>{reaction}</span><small>{items.length}</small></button>)}</div>}
     </div>
