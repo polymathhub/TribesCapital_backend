@@ -5,6 +5,13 @@ import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 
+const normalizePagination = (value: number | string | undefined, fallback: number, maximum?: number) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const normalized = Math.max(Math.floor(parsed), 0);
+  return maximum === undefined ? normalized : Math.min(normalized, maximum);
+};
+
 @Controller('courses')
 export class CoursesController {
   constructor(private coursesService: CoursesService) {}
@@ -12,10 +19,10 @@ export class CoursesController {
   @Public()
   @Get()
   async findAll(
-    @Query('skip') skip: number = 0,
-    @Query('take') take: number = 10,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
   ): Promise<CourseResponseDto[]> {
-    return this.coursesService.findAll(skip, take);
+    return this.coursesService.findAll(normalizePagination(skip, 0), normalizePagination(take, 10, 100));
   }
 
   @Get('enrolled')

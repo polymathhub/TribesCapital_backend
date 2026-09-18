@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { coursesAPI } from '../api/endpoints';
 
+const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
+
 export const useCourses = (options = {}) => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +17,7 @@ export const useCourses = (options = {}) => {
           skip: options.skip || 0,
           take: options.take || 100,
         });
-        setCourses(response.data || []);
+        setCourses(unwrap(response));
       } catch (err) {
         console.error('Failed to fetch courses:', err);
         setError(err.response?.data?.message || err.message || 'Failed to load courses');
@@ -42,7 +44,7 @@ export const useEnrolledCourses = () => {
         setLoading(true);
         setError(null);
         const response = await coursesAPI.getEnrolled();
-        setCourses(response.data || []);
+        setCourses(unwrap(response));
       } catch (err) {
         console.error('Failed to fetch enrolled courses:', err);
         setError(err.response?.data?.message || err.message || 'Failed to load enrolled courses');
@@ -75,7 +77,7 @@ export const useCourseProgress = (courseId) => {
         setLoading(true);
         setError(null);
         const response = await coursesAPI.getProgress(courseId);
-        setProgress(response.data || null);
+        setProgress(response?.data?.data ?? response?.data ?? null);
       } catch (err) {
         console.error('Failed to fetch course progress:', err);
         setError(err.response?.data?.message || err.message || 'Failed to load progress');

@@ -39,8 +39,8 @@
 .conversation-filters button:last-child::after { content: 'Channels'; font-size: 10px; }
 
 /* Refined photographic workspace behind the conversation. */
-.message-list { position: relative; isolation: isolate; background: #f8fafc; }
-.message-list::before { content: ''; position: absolute; inset: 0; z-index: -1; background: #f8fafc; backdrop-filter: none; }
+.message-list { position: relative; isolation: isolate; background: #101114 url('/assets/messaging-background.png') center / cover no-repeat; }
+.message-list::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(8, 10, 14, .48); backdrop-filter: none; }
 .thread-panel { background: #fff; }
 .message-list > * { position: relative; z-index: 1; }
 

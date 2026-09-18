@@ -88,7 +88,7 @@ function App() {
           });
 
           const response = await Promise.race([profileRequest, timeoutPromise]);
-          const profile = response?.data || {};
+          const profile = response?.data?.data ?? response?.data ?? {};
           setUser({
             ...profile,
             email: profile.email || userEmail || '',
