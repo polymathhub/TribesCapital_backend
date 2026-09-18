@@ -27,6 +27,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   async handleConnection(client: Socket) {
     try {
+      client.data ??= {};
       const token = client.handshake.auth?.token ?? client.handshake.headers?.authorization?.toString()?.replace('Bearer ', '');
       if (!token) {
         const environment = this.configService.get<string>('app.environment') ?? process.env.NODE_ENV ?? 'development';
@@ -37,12 +38,12 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
           if (presence.firstSession) this.server.emit('user:online', { userId: 'demo-user' });
           return;
         }
-        client.disconnect();
+        client.disconnect?.();
         return;
       }
       const payload = await this.jwtService.verifyAsync(token, { secret: this.configService.get('jwt.secret') ?? this.configService.get('JWT_SECRET') });
       if (!payload?.sub && !payload?.id) {
-        client.disconnect();
+        client.disconnect?.();
         return;
       }
       const userId = payload.sub ?? payload.id;
@@ -51,7 +52,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       const presence = await this.messagingService.trackUserOnline(userId, client.id);
       if (presence.firstSession) this.server.emit('user:online', { userId });
     } catch {
-      client.disconnect();
+      client.disconnect?.();
     }
   }
 

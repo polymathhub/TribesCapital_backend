@@ -148,7 +148,9 @@ function App() {
       nextUser.name = nextUser.name || `${nextUser.firstName || ''} ${nextUser.lastName || ''}`.trim() || nextUser.email?.split('@')[0] || 'there';
       try {
         if (typeof window !== 'undefined') {
-          window.localStorage.setItem('user', JSON.stringify(nextUser));
+          const cachedUser = { ...nextUser };
+          delete cachedUser.avatar;
+          window.localStorage.setItem('user', JSON.stringify(cachedUser));
           if (nextUser.email) {
             window.localStorage.setItem('userEmail', nextUser.email);
           }

@@ -10,8 +10,8 @@
 .people-online-strip::-webkit-scrollbar { height: 5px; }
 .people-online-strip::-webkit-scrollbar-thumb { background: #c9ced8; border-radius: 999px; }
 .people-online-avatar { position: relative; flex: 0 0 62px; min-width: 62px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0; border: 0; background: transparent; color: #344054; cursor: pointer; scroll-snap-align: start; }
-.people-online-avatar::after { content: attr(title); display: block; width: 62px; overflow: hidden; color: #475467; font-size: 9px; font-weight: 700; line-height: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.people-online-avatar:hover::after, .people-online-avatar:focus-visible::after { color: #111827; }
+.people-online-name { display: block; width: 62px; overflow: hidden; color: #475467; font-size: 9px; font-weight: 700; line-height: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.people-online-avatar:hover .people-online-name, .people-online-avatar:focus-visible .people-online-name { color: #111827; }
 .people-avatar-wrap, .people-row-avatar { position: relative; display: block; }
 .people-avatar-wrap .message-avatar { width: 40px; height: 40px; border: 2px solid #fff; box-shadow: 0 1px 5px rgba(16,24,40,.14); }
 .people-avatar-wrap > i, .people-row-avatar > i { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; background: #12b76a; }

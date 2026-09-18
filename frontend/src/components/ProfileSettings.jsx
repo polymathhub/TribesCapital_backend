@@ -26,6 +26,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [avatarChanged, setAvatarChanged] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const fileRef = useRef(null);
@@ -45,8 +46,8 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
     const reader = new FileReader();
     reader.onload = () => {
       const url = reader.result;
-      try { window.localStorage.setItem('tribes-avatar', url); } catch {}
       setSelectedFile(f);
+      setAvatarChanged(true);
       onAvatarChange?.({ target: { files: [f] }, dataUrl: url });
     };
     reader.readAsDataURL(f);
@@ -58,18 +59,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
     try {
       const payload = { name: name || `${firstName || ''} ${lastName || ''}`.trim() || undefined, firstName: firstName || undefined, lastName: lastName || undefined, bio: bio || undefined };
 
-      // If a file was selected, attempt backend upload first and include returned URL
-      if (selectedFile) {
-        try {
-          const fd = new FormData();
-          fd.append('avatar', selectedFile);
-          const res = await usersAPI.uploadAvatar(fd).catch(() => null);
-          const avatarUrl = res?.data?.url || res?.data?.avatarUrl || res?.data?.avatar || null;
-          if (avatarUrl) payload.avatar = avatarUrl;
-        } catch (e) {
-          // ignore upload failure and continue with profile PATCH
-        }
-      }
+      if (avatarChanged) payload.avatar = avatarDataUrl || '';
 
       await usersAPI.updateProfile(payload);
       setMessage({ type: 'success', text: 'Profile saved.' });
@@ -98,7 +88,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
             <div style={{ display:'flex', gap:8 }}>
               <button type="button" onClick={onPickAvatar} style={{ ...btnStyle('none', P, W, 13), padding:'8px 12px', borderRadius:10 }}>Change</button>
               <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={(e) => { handleFile(e); onAvatarChange?.(e); }} />
-              <button type="button" onClick={() => { try { window.localStorage.removeItem('tribes-avatar'); onAvatarChange?.({ target:{ files:[] }, dataUrl: null }); } catch {} }} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 13), padding:'8px 12px', borderRadius:10 }}>Remove</button>
+              <button type="button" onClick={() => { setSelectedFile(null); setAvatarChanged(true); onAvatarChange?.({ target:{ files:[] }, dataUrl: null }); }} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 13), padding:'8px 12px', borderRadius:10 }}>Remove</button>
             </div>
           </div>
 

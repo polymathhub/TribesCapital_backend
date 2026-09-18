@@ -31,7 +31,7 @@ describe('MessagingService', () => {
   });
 
   it('creates a direct conversation for two users and adds both members', async () => {
-    prisma.conversation.findFirst.mockResolvedValue(undefined);
+    prisma.conversation.findMany.mockResolvedValue([]);
     prisma.conversation.create.mockResolvedValue({ id: 'conv-1', type: 'DIRECT' });
     prisma.conversationMember.createMany.mockResolvedValue({ count: 2 });
     prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: 'DIRECT', members: [{ userId: 'user-1' }, { userId: 'user-2' }] });
@@ -42,7 +42,7 @@ describe('MessagingService', () => {
   });
 
   it('reuses an existing direct conversation instead of creating duplicate DMs', async () => {
-    prisma.conversation.findFirst.mockResolvedValue({ id: 'existing', type: 'DIRECT', members: [{ userId: 'user-1' }, { userId: 'user-2' }] });
+    prisma.conversation.findMany.mockResolvedValue([{ id: 'existing', type: 'DIRECT', members: [{ userId: 'user-1' }, { userId: 'user-2' }] }]);
     await expect(service.createConversation({ type: 'DIRECT', userId: 'user-1', participantIds: ['user-2'] })).resolves.toEqual(expect.objectContaining({ id: 'existing' }));
     expect(prisma.conversation.create).not.toHaveBeenCalled();
   });

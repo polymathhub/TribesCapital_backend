@@ -13,7 +13,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 export type ConversationType = 'DIRECT' | 'GROUP' | 'COMMUNITY_CHANNEL' | 'PROJECT_ROOM' | 'INVESTMENT_ROOM';
 
 type MessagingPrismaService = PrismaService & {
-  conversation: any;
   conversationMember: any;
   message: any;
   messageReaction: any;
@@ -49,13 +48,6 @@ export class MessagingService {
     if (!userId) return { firstSession: false, lastSession: false };
     this.onlineUsers.add(userId);
 
-    if (this.prisma?.user?.update && userId) {
-      void this.prisma.user.update({
-        where: { id: userId },
-        data: { isActive: true, lastLogin: new Date() },
-      }).catch(() => undefined);
-    }
-
     if (this.prisma?.messagingPresenceSession && socketId) {
       const existing = await this.prisma.messagingPresenceSession.count({ where: { userId, socketId } });
       const totalSessions = await this.prisma.messagingPresenceSession.count({ where: { userId } });
@@ -71,13 +63,6 @@ export class MessagingService {
   async trackUserOffline(userId: string, socketId?: string) {
     if (!userId) return { firstSession: false, lastSession: false };
     this.onlineUsers.delete(userId);
-
-    if (this.prisma?.user?.update && userId) {
-      void this.prisma.user.update({
-        where: { id: userId },
-        data: { isActive: false },
-      }).catch(() => undefined);
-    }
 
     if (this.prisma?.messagingPresenceSession && socketId) {
       await this.prisma.messagingPresenceSession.deleteMany({ where: { userId, socketId } });
@@ -213,8 +198,8 @@ export class MessagingService {
     }
 
     return this.withAdvisoryLock(`conversation:${payload.type}:${members.slice().sort().join(':')}`, async (tx: any) => {
-      if (payload.type === 'DIRECT' && tx.conversation?.findFirst) {
-        const existingConversation = await tx.conversation.findFirst({
+      if (payload.type === 'DIRECT' && tx.conversation?.findMany) {
+        const existingConversations = await tx.conversation.findMany({
           where: {
             type: 'DIRECT',
             members: {
@@ -223,8 +208,9 @@ export class MessagingService {
               },
             },
           },
-          include: { members: true },
+          include: { members: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true } } } } },
         });
+        const existingConversation = existingConversations.find((conversation: any) => conversation.members?.length === members.length);
         if (existingConversation) {
           return existingConversation;
         }
@@ -271,7 +257,10 @@ export class MessagingService {
         });
       }
 
-      return conversation;
+      return tx.conversation.findUnique({
+        where: { id: conversation.id },
+        include: { members: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true } } } } },
+      });
     });
   }
 
@@ -285,7 +274,7 @@ export class MessagingService {
       },
       orderBy: { updatedAt: 'desc' },
       include: {
-        members: { select: { userId: true, role: true } },
+        members: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true } } } },
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1,
@@ -336,7 +325,11 @@ export class MessagingService {
 
       const users = Array.isArray(usersResult) ? usersResult : [];
       if (users.length > 0) {
-        return users.map((user: any) => ({ ...user, presence: 'online' as const }));
+        return users.map((user: any) => ({
+          ...user,
+          displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+          presence: 'online' as const,
+        }));
       }
     }
 
@@ -346,6 +339,7 @@ export class MessagingService {
       id,
       firstName: '',
       lastName: '',
+      displayName: '',
       email: '',
       avatar: null,
       isActive: true,
@@ -457,6 +451,19 @@ export class MessagingService {
       throw new BadRequestException('Message content or an attachment is required');
     }
 
+    const attachments = payload.attachmentData ?? [];
+    if (attachments.length > 10) {
+      throw new BadRequestException('A message can contain at most 10 attachments');
+    }
+    for (const attachment of attachments) {
+      if (!attachment.fileName?.trim() || !attachment.mimeType?.trim() || !Number.isInteger(attachment.size) || attachment.size < 0 || attachment.size > 25 * 1024 * 1024) {
+        throw new BadRequestException('Invalid attachment metadata');
+      }
+      if (!/^messaging\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(attachment.storageKey) || !/^\/uploads\/messaging\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(attachment.url)) {
+        throw new BadRequestException('Invalid attachment location');
+      }
+    }
+
     if (payload.replyToId) {
       const reply = await this.prisma.message.findUnique({ where: { id: payload.replyToId }, select: { id: true, conversationId: true } });
       if (!reply || reply.conversationId !== payload.conversationId) {
@@ -483,9 +490,9 @@ export class MessagingService {
       },
     });
 
-    if (payload.attachmentData?.length) {
+    if (attachments.length) {
       await this.prisma.messageAttachment.createMany({
-        data: payload.attachmentData.map((attachment) => ({
+        data: attachments.map((attachment) => ({
           messageId: message.id,
           uploadedById: payload.userId,
           fileName: attachment.fileName,

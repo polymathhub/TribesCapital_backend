@@ -364,18 +364,12 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   };
   const profileAvatar = getProfileAvatar(user);
 
-  // editable avatar (data URL persisted to localStorage)
-  const [avatarDataUrl, setAvatarDataUrl] = useState(null);
+  // The avatar is persisted on the authenticated user record.
+  const [avatarDataUrl, setAvatarDataUrl] = useState(user?.avatar || null);
   const avatarInputRef = useRef(null);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const stored = window.localStorage.getItem('tribes-avatar');
-      if (stored) setAvatarDataUrl(stored);
-    } catch {
-      // ignore
-    }
-  }, []);
+    setAvatarDataUrl(user?.avatar || null);
+  }, [user?.id, user?.avatar]);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const handleAvatarClick = () => { setShowProfileModal(true); };
   const handleAvatarChange = (e) => {
@@ -385,7 +379,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     reader.onload = () => {
       const url = reader.result;
       setAvatarDataUrl(url);
-      try { window.localStorage.setItem('tribes-avatar', url); } catch {}
     };
     reader.readAsDataURL(f);
   };
