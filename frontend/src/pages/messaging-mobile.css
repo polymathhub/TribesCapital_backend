@@ -93,7 +93,9 @@
   .message-list { flex: 1 1 auto; min-height: 0; width: 100%; overflow-x: hidden; overflow-y: auto; padding: 16px 12px 12px; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
   .message-row { width: 100%; max-width: none; gap: 7px; margin: 0 0 15px; }
   .message-row .message-avatar { width: 30px; height: 30px; flex-basis: 30px; }
-  .message-content-wrap { max-width: calc(100% - 37px); }
+  .message-content-wrap { flex: 0 1 auto; max-width: calc(100% - 37px); }
+  .message-row:not(.mine) .message-content-wrap { margin-right: auto; align-items: flex-start; }
+  .message-row.mine .message-content-wrap { margin-left: auto; align-items: flex-end; }
   .message-meta { gap: 5px; margin-bottom: 4px; flex-wrap: nowrap; min-width: 0; }
   .message-meta strong { font-size: 11px; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .message-meta time, .message-edited, .message-state { font-size: 9px; white-space: nowrap; }
@@ -109,7 +111,7 @@
   .message-menu { position: fixed; right: 10px; bottom: 70px; top: auto; z-index: 50; min-width: 150px; }
   .reaction-picker { position: fixed; right: 10px; bottom: 70px; z-index: 50; }
   .reaction-list { flex-wrap: wrap; }
-  .typing-indicator { width: 100%; margin: 2px 0 6px; }
+  .typing-indicator { width: fit-content; max-width: calc(100% - 24px); margin: 2px 0 8px; padding: 6px 9px; }
   .composer-context { flex: 0 0 auto; padding: 6px 10px 0; }
   .file-preview { margin: 6px 10px 0; }
 
