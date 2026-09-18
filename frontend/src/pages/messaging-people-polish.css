@@ -24,7 +24,8 @@
 
 /* Refined photographic workspace behind the conversation. */
 .message-list { position: relative; isolation: isolate; background: #f5f7fa url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=88') center / cover no-repeat; }
-.message-list::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(248,250,252,.82); backdrop-filter: blur(2px); }
+.message-list::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(248,250,252,.58); backdrop-filter: blur(1.6px); }
+.thread-panel { background: rgba(255,255,255,.2); }
 .message-list > * { position: relative; z-index: 1; }
 
 /* Keep the no-conversation state clean: no TribesCapital brand mark in the empty workspace. */

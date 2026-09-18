@@ -561,6 +561,7 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
   const meta = { background: BG, borderRadius: 8, padding: '9px 11px' };
   const ml   = { fontSize: 11, color: T3, marginBottom: 3 };
   const mv   = { fontSize: 13, fontWeight: 500, color: T1 };
+  const documentPreview = p.documentPreview ? (p.documentPreview.startsWith('http') || p.documentPreview.startsWith('data:') ? p.documentPreview : `${window.location.origin}${p.documentPreview}`) : null;
   return (
     <div onClick={() => onOpen(p)}
       style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12, padding: 16, cursor: 'pointer' }}>
@@ -602,10 +603,10 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
       <div style={{ fontSize: 15, fontWeight: 600, color: T1, lineHeight: 1.35, marginBottom: 5 }}>{p.name}</div>
       
       {/* Document preview for approved diligence */}
-      {p.dueDiligenceId && p.documentPreview && (
+      {p.dueDiligenceId && documentPreview && (
         <div style={{ marginBottom: 12, height: 120, borderRadius: 8, overflow: 'hidden', border: `1px solid ${BD}`, background: '#F3F4F6' }}>
-          {/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(p.documentPreview) ? (
-            <img src={p.documentPreview} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(documentPreview) ? (
+            <img src={documentPreview} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'linear-gradient(135deg, #F5EDFC 0%, #F9F5FF 100%)', flexDirection: 'column', gap: 6 }}>

@@ -109,6 +109,14 @@ export const messagingAPI = {
   uploadAttachment: (conversationId, formData) => apiClient.post(`/messaging/conversations/${conversationId}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
+const buildFormDataHeaders = (data, config = {}) => {
+  const headers = { ...(config.headers || {}) };
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    headers['Content-Type'] = 'multipart/form-data';
+  }
+  return headers;
+};
+
 export const dueDiligenceAPI = {
   list: (params) => apiClient.get('/due-diligence', { params }),
   getById: (id) => apiClient.get(`/due-diligence/${id}`),
@@ -118,7 +126,11 @@ export const dueDiligenceAPI = {
   createItem: (dueDiligenceId, data) => apiClient.post(`/due-diligence/${dueDiligenceId}/items`, data),
   updateItem: (dueDiligenceId, itemId, data) => apiClient.put(`/due-diligence/${dueDiligenceId}/items/${itemId}`, data),
   deleteItem: (dueDiligenceId, itemId) => apiClient.delete(`/due-diligence/${dueDiligenceId}/items/${itemId}`),
-  uploadDocument: (dueDiligenceId, data, config) => apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, { ...config, timeout: config?.timeout || 30000, headers: { ...(config?.headers || {}) } }),
+  uploadDocument: (dueDiligenceId, data, config = {}) => apiClient.post(`/due-diligence/${dueDiligenceId}/documents`, data, {
+    ...config,
+    timeout: config?.timeout || 30000,
+    headers: buildFormDataHeaders(data, config),
+  }),
   deleteDocument: (dueDiligenceId, docId) => apiClient.delete(`/due-diligence/${dueDiligenceId}/documents/${docId}`),
   reviewDocument: (dueDiligenceId, docId, data) => apiClient.put(`/due-diligence/${dueDiligenceId}/documents/${docId}/review`, data),
   addComment: (dueDiligenceId, data, config) => apiClient.post(`/due-diligence/${dueDiligenceId}/comments`, data, config),

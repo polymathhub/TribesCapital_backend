@@ -792,7 +792,7 @@ function DetailPanel({ doc, perms, onClose, onEdit, onDelete, onDownload, isMobi
   const ext = (doc.fileName || doc.fileType || '').split('.').pop()?.toLowerCase();
   const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext || '');
   const isPdf = ext === 'pdf';
-  const previewUrl = doc.fileUrl || '';
+  const previewUrl = doc.fileUrl ? (doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('data:') ? doc.fileUrl : `${window.location.origin}${doc.fileUrl}`) : '';
   const canEdit = Boolean(perms?.canEdit);
   const canDelete = Boolean(perms?.canDelete);
 
