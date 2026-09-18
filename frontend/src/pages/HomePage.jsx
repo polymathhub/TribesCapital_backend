@@ -1166,21 +1166,18 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       </div>
 
       {showAnnouncementPopup && announcementPopup && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(17,24,39,0.58)', display:'flex', alignItems:'center', justifyContent:'center', padding:16, zIndex:1200 }}>
-          <div style={{ width:'min(520px, 100%)', background:W, borderRadius:22, boxShadow:'0 24px 70px rgba(15,23,42,0.18)', overflow:'hidden', border:`1px solid rgba(226,232,240,0.9)` }}>
-            <div style={{ padding:'16px 18px', borderBottom:`1px solid rgba(226,232,240,0.9)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:PF }}>
-              <div style={{ fontSize:11, fontWeight:800, letterSpacing:'0.16em', textTransform:'uppercase', color:P }}>Community update</div>
-              <button type="button" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }} style={{ border:'none', background:'rgba(17,24,39,0.06)', color:T3, cursor:'pointer', fontSize:16, width:30, height:30, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>
-            </div>
-            <div style={{ padding:'18px 20px 20px' }}>
-              <div style={{ fontSize:20, fontWeight:800, color:T1, marginBottom:8 }}>{announcementPopup.title}</div>
-              <div style={{ fontSize:13.5, color:T2, lineHeight:1.7, marginBottom:14 }}>{announcementPopup.detail}</div>
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                <button type="button" onClick={() => { void markNotificationRead(announcementPopup); setShowAnnouncementPopup(false); setAnnouncementPopup(null); onNavigate('announcements'); }} style={{ ...btnStyle('none', P, W, 13), padding:'9px 14px', borderRadius:10, fontWeight:700 }}>Open notification</button>
-                <button type="button" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }} style={{ ...btnStyle(`1px solid rgba(103,0,166,0.14)`, 'rgba(255,255,255,0.95)', T2, 13), padding:'9px 14px', borderRadius:10, fontWeight:700 }}>Close</button>
-              </div>
+        <div className="notification-toast" role="status" aria-live="polite">
+          <div className="notification-toast-icon"><Icon name="bell2" size={18} color="#fff" /></div>
+          <div className="notification-toast-content">
+            <div className="notification-toast-label"><span>New notification</span><i /></div>
+            <strong>{announcementPopup.title}</strong>
+            <p>{announcementPopup.detail}</p>
+            <div className="notification-toast-actions">
+              <button type="button" onClick={() => { void markNotificationRead(announcementPopup); setShowAnnouncementPopup(false); setAnnouncementPopup(null); onNavigate('announcements'); }}>View notification</button>
+              <button type="button" className="notification-toast-dismiss" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }}>Dismiss</button>
             </div>
           </div>
+          <button type="button" className="notification-toast-close" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }} aria-label="Close notification">×</button>
         </div>
       )}
 
@@ -1699,6 +1696,22 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         .notification-item:hover{background:#F8FAFF;}
         .notification-item-unread{border-left:2px solid #7C3AED;background:rgba(124,58,237,0.1);}
         .notification-item-read{background:transparent;}
+        .notification-toast{position:fixed;top:24px;right:24px;z-index:1200;display:flex;align-items:flex-start;gap:12px;width:min(410px,calc(100vw - 32px));padding:16px 16px 15px 14px;border:1px solid rgba(226,232,240,.96);border-radius:16px;background:rgba(255,255,255,.98);box-shadow:0 18px 48px rgba(15,23,42,.16),0 3px 10px rgba(15,23,42,.06);animation:notification-toast-in .3s cubic-bezier(.22,1,.36,1);}
+        .notification-toast::before{content:'';position:absolute;left:-1px;top:14px;bottom:14px;width:3px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,#7C3AED,#EC4899);}
+        .notification-toast-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#7C3AED,#5B21B6);box-shadow:0 6px 14px rgba(124,58,237,.24);}
+        .notification-toast-content{min-width:0;flex:1;padding-right:14px;}
+        .notification-toast-label{display:flex;align-items:center;gap:6px;margin-bottom:5px;color:#7C3AED;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
+        .notification-toast-label i{width:6px;height:6px;border-radius:50%;background:#EC4899;box-shadow:0 0 0 3px rgba(236,72,153,.12);}
+        .notification-toast-content strong{display:block;overflow:hidden;color:#172033;font-size:14px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap;}
+        .notification-toast-content p{display:-webkit-box;overflow:hidden;margin:5px 0 11px;color:#667085;font-size:12px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2;}
+        .notification-toast-actions{display:flex;align-items:center;gap:12px;}
+        .notification-toast-actions button{padding:0;border:0;background:transparent;color:#6D28D9;font-size:11px;font-weight:800;cursor:pointer;}
+        .notification-toast-actions button:hover{text-decoration:underline;}
+        .notification-toast-actions .notification-toast-dismiss{color:#667085;font-weight:600;}
+        .notification-toast-close{position:absolute;top:9px;right:9px;width:24px;height:24px;padding:0;border:0;border-radius:7px;background:transparent;color:#98A2B3;font-size:18px;line-height:1;cursor:pointer;}
+        .notification-toast-close:hover{background:#F2F4F7;color:#344054;}
+        @keyframes notification-toast-in{from{opacity:0;transform:translate3d(20px,-10px,0) scale(.97)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+        @media (max-width:600px){.notification-toast{top:12px;right:16px;width:calc(100vw - 32px);}.notification-toast-content strong{white-space:normal;}}
         @keyframes softDrift { 0%, 100% { transform: translate(0,0) scale(1); opacity:1; } 50% { transform: translate(6px,-4px) scale(1.01); opacity:0.94; } }
         @keyframes floatPulse { 0%, 100% { transform: translate(0,0) scale(1); opacity:1; } 30% { transform: translate(0,-4px) scale(1.04); opacity:0.88; } 60% { transform: translate(0,2px) scale(1.02); opacity:0.92; } }
         @keyframes wave { 0% { transform: rotate(0deg) scale(0.96); } 15% { transform: rotate(12deg) scale(1.04); } 30% { transform: rotate(-8deg) scale(1.02); } 45% { transform: rotate(10deg) scale(1.06); } 60% { transform: rotate(-4deg) scale(1.03); } 75% { transform: rotate(6deg) scale(1.05); } 100% { transform: rotate(0deg) scale(0.96); } }
