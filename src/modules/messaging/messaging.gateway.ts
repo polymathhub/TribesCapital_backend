@@ -100,6 +100,17 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       const message = await this.messagingService.createMessage({ userId, conversationId, content, type: payload.type, replyToId, mentions: Array.isArray(payload.mentions) ? payload.mentions : undefined, attachmentData: Array.isArray(payload.attachments) ? payload.attachments : undefined });
       const realtimeMessage = payload.clientMessageId ? { ...message, clientMessageId: payload.clientMessageId } : message;
       this.server.to(`conversation:${conversationId}`).emit('message:new', realtimeMessage);
+      if (this.prisma?.conversationMember?.findMany) {
+        const recipients = await this.prisma.conversationMember.findMany({ where: { conversationId, userId: { not: userId } }, select: { userId: true } });
+        for (const recipient of recipients) {
+          this.server.to(`user:${recipient.userId}`).emit('notification:new', {
+            type: 'new-message',
+            title: `New message from ${[message.sender?.firstName, message.sender?.lastName].filter(Boolean).join(' ') || 'Someone'}`,
+            message: content || 'Sent an attachment',
+            data: { conversationId, messageId: message.id },
+          });
+        }
+      }
       return { ok: true, message: realtimeMessage };
     } catch (error: any) {
       const message = error?.response?.message ?? error?.message ?? 'Unable to send message';

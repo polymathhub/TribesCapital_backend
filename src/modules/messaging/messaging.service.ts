@@ -62,14 +62,15 @@ export class MessagingService {
 
   async trackUserOffline(userId: string, socketId?: string) {
     if (!userId) return { firstSession: false, lastSession: false };
-    this.onlineUsers.delete(userId);
 
     if (this.prisma?.messagingPresenceSession && socketId) {
       await this.prisma.messagingPresenceSession.deleteMany({ where: { userId, socketId } });
       const remaining = await this.prisma.messagingPresenceSession.count({ where: { userId } });
+      if (remaining === 0) this.onlineUsers.delete(userId);
       return { firstSession: false, lastSession: remaining === 0 };
     }
 
+    this.onlineUsers.delete(userId);
     return { firstSession: false, lastSession: true };
   }
 
@@ -517,14 +518,14 @@ export class MessagingService {
       await Promise.allSettled([
         ...recipientIds.map((recipientId) => this.notifySafely(recipientId, {
           type: 'new-message',
-          title: 'New message',
-          message: `${message.sender.firstName ?? 'Someone'} sent a message`,
+          title: `New message from ${[message.sender.firstName, message.sender.lastName].filter(Boolean).join(' ') || 'Someone'}`,
+          message: content || 'Sent an attachment',
           data: { conversationId: payload.conversationId, messageId: message.id },
         })),
         ...mentionedUserIds.map((recipientId) => this.notifySafely(recipientId, {
           type: 'message-mention',
-          title: 'You were mentioned',
-          message: `${message.sender.firstName ?? 'Someone'} mentioned you in conversation`,
+          title: `${[message.sender.firstName, message.sender.lastName].filter(Boolean).join(' ') || 'Someone'} mentioned you`,
+          message: content || 'You were mentioned in an attachment message',
           data: { conversationId: payload.conversationId, messageId: message.id },
         })),
       ]);

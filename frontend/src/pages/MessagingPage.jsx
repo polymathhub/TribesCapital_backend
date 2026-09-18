@@ -154,6 +154,7 @@ export default function MessagingPage({ user }) {
       if (selectedIdRef.current) void loadMessages(selectedIdRef.current);
     });
     socket.on('user:online', () => void loadActiveUsers()); socket.on('user:offline', () => void loadActiveUsers());
+    socket.on('notification:new', () => window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'notifications-updated' } })));
     socket.on('message:new', (message) => {
       if (message.conversationId !== selectedIdRef.current) { if (message.senderId !== user?.id) void refreshUnread(); return; }
       setMessages((current) => {
