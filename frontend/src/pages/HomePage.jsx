@@ -66,15 +66,6 @@ const STEPS = [
 /* ─── SMALL ICON SVGs ────────────────────────────────── */
 const TOUR_VISITS_KEY = 'tribescapital_welcome_tour_visits';
 const COURSE_PROGRESS_STORAGE_PREFIX = 'tribes-course-progress';
-const ANNOUNCEMENT_SEEN_KEY = 'tribes-community-announcement-seen';
-const COMMUNITY_ANNOUNCEMENT = {
-  id: 'community-announcement',
-  title: 'We are building with the community',
-  detail: 'We are looking for people who want to help shape the Learning Hub and strengthen the wider community experience through content, events, and thoughtful contribution.',
-  time: 'Today',
-  read: false,
-  kind: 'announcement',
-};
 
 const getTourVisitCount = () => {
   if (typeof window === 'undefined') return 0;
@@ -331,6 +322,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [watchedVideos, setWatchedVideos] = useState([]);
   const [activeMetricIndex, setActiveMetricIndex] = useState(0);
   const notifRef = useRef(null);
+  const lastNotificationIdRef = useRef(null);
   const searchRef = useRef(null);
   const searchInputRef = useRef(null);
   const unreadNotificationCount = notifications.filter((item) => !item.read).length;
@@ -664,64 +656,40 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         read: Boolean(item.isRead ?? item.read),
       }));
 
-      const seededAnnouncement = {
-        id: 'community-announcement',
-        title: 'We are building with the community',
-        detail: 'We are inviting people who want to help shape the Learning Hub and the wider community experience.',
-        time: 'Now',
-        read: false,
-        kind: 'announcement',
-      };
-
-      const displayNotifications = [seededAnnouncement, ...normalized].filter(Boolean);
-      const fallbackEventNotifications = dashboardEvents.slice(0, 2).map((event) => ({
-        id: event.id,
-        title: event.title,
-        detail: event.description || 'New session available',
-        time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-        read: false,
-      }));
-
-      setNotifications(displayNotifications.length > 0 ? displayNotifications : fallbackEventNotifications);
-
-      const nextAnnouncement = displayNotifications.find((item) => (!item.read) && (item.kind === 'announcement' || item.title?.toLowerCase().includes('announcement') || item.title?.toLowerCase().includes('diligence') || item.detail?.toLowerCase().includes('diligence')));
-      const hasSeenAnnouncement = typeof window !== 'undefined' && window.sessionStorage.getItem(ANNOUNCEMENT_SEEN_KEY);
-      if (nextAnnouncement && !isNotificationsOpen && !hasSeenAnnouncement) {
-        setAnnouncementPopup(nextAnnouncement);
+      setNotifications(normalized);
+      const nextUnread = normalized.find((item) => !item.read);
+      if (nextUnread && nextUnread.id !== lastNotificationIdRef.current) {
+        lastNotificationIdRef.current = nextUnread.id;
+        setAnnouncementPopup(nextUnread);
         setShowAnnouncementPopup(true);
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.setItem(ANNOUNCEMENT_SEEN_KEY, 'true');
-        }
       }
     } catch {
-      const seededAnnouncement = {
-        id: 'community-announcement',
-        title: 'We are building with the community',
-        detail: 'We are inviting people who want to help shape the Learning Hub and the wider community experience.',
-        time: 'Now',
-        read: false,
-        kind: 'announcement',
-      };
-
-      setNotifications([seededAnnouncement, ...dashboardEvents.slice(0, 2).map((event) => ({
-        id: event.id,
-        title: event.title,
-        detail: event.description || 'New session available',
-        time: event.startDate ? new Date(event.startDate).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
-        read: false,
-      }))]);
-      const hasSeenAnnouncement = typeof window !== 'undefined' && window.sessionStorage.getItem(ANNOUNCEMENT_SEEN_KEY);
-      if (!isNotificationsOpen && !hasSeenAnnouncement) {
-        setAnnouncementPopup({ ...seededAnnouncement });
-        setShowAnnouncementPopup(true);
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.setItem(ANNOUNCEMENT_SEEN_KEY, 'true');
-        }
-      }
+      setNotifications([]);
     } finally {
       setNotificationsLoading(false);
     }
-  }, [dashboardEvents, isNotificationsOpen]);
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    try {
+      await notificationsAPI.markAllAsRead();
+      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+      setShowAnnouncementPopup(false);
+      setAnnouncementPopup(null);
+    } catch {
+      // Keep the unread state when the server could not confirm the update.
+    }
+  }, []);
+
+  const markNotificationRead = useCallback(async (notification) => {
+    if (!notification?.id || notification.read) return;
+    try {
+      await notificationsAPI.markAsRead(notification.id);
+      setNotifications((prev) => prev.map((item) => item.id === notification.id ? { ...item, read: true } : item));
+    } catch {
+      // Keep the notification unread when the server could not confirm the update.
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -745,39 +713,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     window.addEventListener('tribes:notifications-update', handleNotificationsEvent);
     return () => window.removeEventListener('tribes:notifications-update', handleNotificationsEvent);
   }, [loadNotifications]);
-
-  useEffect(() => {
-    if (!isNotificationsOpen || notificationsLoading) return;
-
-    const markViewedNotifications = async () => {
-      try {
-        await notificationsAPI.markAllAsRead();
-      } catch {
-        // Silently ignore backend failure, local state will still update.
-      }
-      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
-    };
-
-    markViewedNotifications();
-  }, [isNotificationsOpen, notificationsLoading]);
-
-  useEffect(() => {
-    if (!showAnnouncementPopup) return;
-    const timer = window.setTimeout(() => {
-      setShowAnnouncementPopup(false);
-      setAnnouncementPopup(null);
-    }, 4200);
-    return () => window.clearTimeout(timer);
-  }, [showAnnouncementPopup]);
-
-  useEffect(() => {
-    if (!user?.id || typeof window === 'undefined') return;
-    const hasSeenAnnouncement = window.sessionStorage.getItem('tribes-community-announcement-seen');
-    if (hasSeenAnnouncement) return;
-    window.sessionStorage.setItem('tribes-community-announcement-seen', 'true');
-    setAnnouncementPopup(COMMUNITY_ANNOUNCEMENT);
-    setShowAnnouncementPopup(true);
-  }, [user?.id]);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
@@ -1163,7 +1098,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               <Icon name="bell2" size={22} color={T2}/>
               <div style={{ minWidth:20, height:20, padding:'0 5px', background: unreadNotificationCount > 0 ? '#EF4444' : '#6B7280', color:'#fff', borderRadius:999, border:'2px solid #fff',
                 position:'absolute', top:2, right:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, lineHeight:1 }}>
-                {notificationsLoading ? '…' : unreadNotificationCount > 0 ? unreadNotificationCount : 'None'}
+                {notificationsLoading ? '…' : unreadNotificationCount}
               </div>
             </button>
             {isNotificationsOpen && (
@@ -1189,10 +1124,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      void notificationsAPI.markAllAsRead().catch(() => {});
-                      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
-                    }}
+                    onClick={() => { void markAllNotificationsRead(); }}
                     className="notification-action"
                   >
                     Mark all read
@@ -1202,15 +1134,17 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   {notificationsLoading ? (
                     <div className="notification-empty" style={{ padding:'18px 16px', color:T2, fontSize:13, textAlign:'center', background:W }}>Loading notifications…</div>
                   ) : notifications.length > 0 ? notifications.map((item) => (
-                    <div
+                    <button
                       key={item.id || item.title}
+                      type="button"
+                      onClick={() => { void markNotificationRead(item); }}
                       className={`notification-item ${item.read ? 'notification-item-read' : 'notification-item-unread'}`}
-                      style={{ borderRadius:0, border:'none', padding:'16px', display:'block' }}
+                      style={{ width:'100%', borderRadius:0, border:'none', padding:'16px', display:'block', textAlign:'left', cursor:item.read ? 'default' : 'pointer' }}
                     >
                       <div style={{ fontSize:13.5, fontWeight:700, color:T1, marginBottom:4 }}>{item.title}</div>
                       <div style={{ fontSize:12.5, color:T2, lineHeight:1.5, marginBottom:6 }}>{item.detail}</div>
                       <div style={{ fontSize:11.5, color:T3 }}>{item.time}</div>
-                    </div>
+                    </button>
                   )) : (
                     <div className="notification-empty" style={{ padding:'18px 16px', color:T2, fontSize:13, textAlign:'center', background:W }}>No notifications yet.</div>
                   )}
@@ -1236,14 +1170,14 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           <div style={{ width:'min(520px, 100%)', background:W, borderRadius:22, boxShadow:'0 24px 70px rgba(15,23,42,0.18)', overflow:'hidden', border:`1px solid rgba(226,232,240,0.9)` }}>
             <div style={{ padding:'16px 18px', borderBottom:`1px solid rgba(226,232,240,0.9)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:PF }}>
               <div style={{ fontSize:11, fontWeight:800, letterSpacing:'0.16em', textTransform:'uppercase', color:P }}>Community update</div>
-              <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ border:'none', background:'rgba(17,24,39,0.06)', color:T3, cursor:'pointer', fontSize:16, width:30, height:30, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>
+              <button type="button" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }} style={{ border:'none', background:'rgba(17,24,39,0.06)', color:T3, cursor:'pointer', fontSize:16, width:30, height:30, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>×</button>
             </div>
             <div style={{ padding:'18px 20px 20px' }}>
               <div style={{ fontSize:20, fontWeight:800, color:T1, marginBottom:8 }}>{announcementPopup.title}</div>
               <div style={{ fontSize:13.5, color:T2, lineHeight:1.7, marginBottom:14 }}>{announcementPopup.detail}</div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                <button type="button" onClick={() => { setShowAnnouncementPopup(false); onNavigate('announcements'); }} style={{ ...btnStyle('none', P, W, 13), padding:'9px 14px', borderRadius:10, fontWeight:700 }}>Open announcement</button>
-                <button type="button" onClick={() => setShowAnnouncementPopup(false)} style={{ ...btnStyle(`1px solid rgba(103,0,166,0.14)`, 'rgba(255,255,255,0.95)', T2, 13), padding:'9px 14px', borderRadius:10, fontWeight:700 }}>Close</button>
+                <button type="button" onClick={() => { void markNotificationRead(announcementPopup); setShowAnnouncementPopup(false); setAnnouncementPopup(null); onNavigate('announcements'); }} style={{ ...btnStyle('none', P, W, 13), padding:'9px 14px', borderRadius:10, fontWeight:700 }}>Open notification</button>
+                <button type="button" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }} style={{ ...btnStyle(`1px solid rgba(103,0,166,0.14)`, 'rgba(255,255,255,0.95)', T2, 13), padding:'9px 14px', borderRadius:10, fontWeight:700 }}>Close</button>
               </div>
             </div>
           </div>
