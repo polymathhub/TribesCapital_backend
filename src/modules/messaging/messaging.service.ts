@@ -307,7 +307,8 @@ export class MessagingService {
       ? sessions.map((session: { userId: string }) => session.userId).filter(Boolean)
       : [];
 
-    const onlineIds = [...new Set([...sessionIds, ...Array.from(this.onlineUsers ?? [])])].filter(
+    const presenceIsPersistent = Boolean(presenceSessionModel?.findMany);
+    const onlineIds = [...new Set(presenceIsPersistent ? sessionIds : [...sessionIds, ...Array.from(this.onlineUsers ?? [])])].filter(
       (id: string) => Boolean(id) && (!userId || id !== userId),
     );
 

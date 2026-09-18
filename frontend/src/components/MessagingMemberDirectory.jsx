@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { messagingMembersAPI } from '../api/messagingMembers';
-import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
+import InitialsAvatar from './InitialsAvatar';
 import './messaging-member-directory.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
@@ -61,7 +61,7 @@ export default function MessagingMemberDirectory({ activeUserIds = [], onStartDi
       {loading ? <div className="member-directory-empty">Loading members…</div> : sortedMembers.length === 0 ? <div className="member-directory-empty">No members found.</div> : sortedMembers.map((member) => {
         const online = activeSet.has(member.id);
         return <button key={member.id} type="button" className="member-directory-item" onClick={() => onStartDirectMessage?.(member)}>
-          <span className="member-directory-avatar"><img src={member.avatar || profilePlaceholderImage} alt="" onError={(event) => { event.currentTarget.src = profilePlaceholderImage; }} /><i className={online ? 'online' : ''} /></span>
+          <span className="member-directory-avatar">{member.avatar ? <img src={member.avatar} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : <InitialsAvatar person={member} alt={`${displayName(member)} profile`} /> }<i className={online ? 'online' : ''} /></span>
           <span className="member-directory-copy"><strong>{displayName(member)}</strong><small>{online ? 'Online now' : formatLastSeen(member.lastSeenAt)}</small></span>
           <span className="member-directory-arrow" aria-hidden="true">→</span>
         </button>;

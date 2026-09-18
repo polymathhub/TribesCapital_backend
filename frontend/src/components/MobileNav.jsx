@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Icon from './Icon';
 import logoPng from '../assets/image.png';
-import profilePlaceholderImage from '../assets/illustrations/Artist Woman (1).png';
+import InitialsAvatar from './InitialsAvatar';
 
 const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout }) => {
   const NAV_ITEMS = [
@@ -29,11 +29,6 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
     }
     return () => clearTimeout(rackTimerRef.current);
   }, [isOpen, showRack]);
-  const [storedAvatar, setStoredAvatar] = React.useState(null);
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try { const s = window.localStorage.getItem('tribes-avatar'); if (s) setStoredAvatar(s); } catch {}
-  }, []);
 
   return (
     <>
@@ -140,18 +135,7 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
                 backdropFilter: 'blur(4px)',
               }}
             >
-              <img
-                src={storedAvatar || user?.avatar || profilePlaceholderImage}
-                alt={user?.name || user?.email?.split('@')[0] || 'Profile'}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  flexShrink: 0,
-                  border: '1px solid rgba(124, 58, 237, 0.16)',
-                }}
-              />
+              {user?.avatar ? <img src={user.avatar} alt={user?.name || user?.email?.split('@')[0] || 'Profile'} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(124, 58, 237, 0.16)' }} /> : <InitialsAvatar person={user} alt={user?.name || user?.email?.split('@')[0] || 'Profile'} style={{ width: '32px', height: '32px', border: '1px solid rgba(124, 58, 237, 0.16)' }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{

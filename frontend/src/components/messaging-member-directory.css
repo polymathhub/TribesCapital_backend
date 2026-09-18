@@ -11,6 +11,7 @@
 .member-directory-item:hover { background: #f8f9fc; }
 .member-directory-avatar { position: relative; flex: 0 0 38px; width: 38px; height: 38px; }
 .member-directory-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; filter: none; transition: filter .15s ease, opacity .15s ease; }
+.member-directory-avatar > span { width: 100%; height: 100%; }
 .member-directory-avatar i { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; background: #98a2b3; box-shadow: 0 0 0 1px rgba(16, 24, 40, .06); }
 .member-directory-avatar i.online { background: #12b76a; box-shadow: 0 0 0 2px #ecfdf3; }
 .member-directory-avatar:not(:has(i.online)) img { opacity: .72; filter: grayscale(.2); }

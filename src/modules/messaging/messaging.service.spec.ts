@@ -92,6 +92,14 @@ describe('MessagingService', () => {
     await expect(service.listActiveUsers('user-1')).resolves.toEqual([expect.objectContaining({ id: 'user-2' })]);
   });
 
+  it('does not expose stale in-memory users when persistent presence has no active sessions', async () => {
+    prisma.messagingPresenceSession.findMany.mockResolvedValue([]);
+    prisma.user.findMany.mockResolvedValue([]);
+    (service as any).onlineUsers.add('user-2');
+
+    await expect(service.listActiveUsers('user-1')).resolves.toEqual([]);
+  });
+
   it('does not emit last-offline state while another socket for the same user remains', async () => {
     prisma.messagingPresenceSession.deleteMany.mockResolvedValue({ count: 1 });
     prisma.messagingPresenceSession.count.mockResolvedValue(1);
