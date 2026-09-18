@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
@@ -30,8 +30,12 @@ export class MemberDirectoryController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    if (!user?.id) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
     const prisma = this.prisma as PrismaService & {
-      messagingPresenceSession: MessagingPresenceSessionPrisma;
+      messagingPresenceSession?: MessagingPresenceSessionPrisma;
     };
     const currentPage = normalizePage(page);
     const pageSize = normalizeLimit(limit);
@@ -50,7 +54,10 @@ export class MemberDirectoryController {
     }
 
     const cutoff = new Date(Date.now() - 60_000);
-    await prisma.messagingPresenceSession.deleteMany({ where: { updatedAt: { lt: cutoff } } });
+    const presenceModel = prisma.messagingPresenceSession;
+    if (presenceModel?.deleteMany) {
+      await Promise.resolve(presenceModel.deleteMany({ where: { updatedAt: { lt: cutoff } } })).catch(() => undefined);
+    }
 
     const [total, users, sessions] = await Promise.all([
       this.prisma.user.count({ where }),
@@ -69,14 +76,18 @@ export class MemberDirectoryController {
         skip: (currentPage - 1) * pageSize,
         take: pageSize,
       }),
-      prisma.messagingPresenceSession.findMany({
-        where: { updatedAt: { gte: cutoff } },
-        select: { userId: true },
-        distinct: ['userId'],
-      }),
+      presenceModel?.findMany
+        ? Promise.resolve(
+            presenceModel.findMany({
+              where: { updatedAt: { gte: cutoff } },
+              select: { userId: true },
+              distinct: ['userId'],
+            }),
+          ).catch(() => [])
+        : Promise.resolve([]),
     ]);
 
-    const onlineIds = new Set<string>(sessions.map((session: { userId: string }) => session.userId));
+    const onlineIds = new Set<string>((Array.isArray(sessions) ? sessions : []).map((session: { userId: string }) => session.userId).filter(Boolean));
     const data = users
       .map((member: any) => ({
         ...member,

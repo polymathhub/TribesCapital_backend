@@ -41,4 +41,21 @@ describe('MemberDirectoryController', () => {
     expect(result.meta.limit).toBe(50);
     expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 50, skip: 0 }));
   });
+
+  it('does not crash when the presence session model is unavailable', async () => {
+    const prismaWithoutPresence = {
+      user: {
+        count: jest.fn().mockResolvedValue(1),
+        findMany: jest.fn().mockResolvedValue([
+          { id: 'user-2', firstName: 'Ava', lastName: 'Scott', avatar: null, isActive: true, lastLogin: new Date('2026-09-17T10:00:00Z') },
+        ]),
+      },
+    } as any;
+
+    const controller = new MemberDirectoryController(prismaWithoutPresence);
+    const result = await controller.listMembers({ id: 'user-1' }, 'ava', '1', '24');
+
+    expect(result.data[0]).toEqual(expect.objectContaining({ id: 'user-2', presence: 'offline' }));
+    expect(result.meta.total).toBe(1);
+  });
 });
