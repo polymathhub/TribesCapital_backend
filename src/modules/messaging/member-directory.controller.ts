@@ -13,13 +13,13 @@ const normalizeLimit = (value: string | undefined) => {
   return Number.isFinite(parsed) ? Math.min(Math.max(Math.floor(parsed), 1), 50) : 24;
 };
 
-@Controller('messaging/members')
-@UseGuards(JwtAuthGuard)
 type MessagingPresenceSessionPrisma = {
   deleteMany: (args: any) => Promise<any>;
   findMany: (args: any) => Promise<Array<{ userId: string }>>;
 };
 
+@Controller('messaging/members')
+@UseGuards(JwtAuthGuard)
 export class MemberDirectoryController {
   constructor(private readonly prisma: PrismaService) {}
 
