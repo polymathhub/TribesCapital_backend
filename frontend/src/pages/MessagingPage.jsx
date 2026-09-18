@@ -15,6 +15,19 @@ const EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👏', '💯', '🙏'
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
 const displayName = (person) => `${person?.firstName || ''} ${person?.lastName || ''}`.trim() || 'Member';
 const formatTime = (value) => value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+const resolveSocketUrl = () => {
+  const configured = (import.meta.env.VITE_API_URL || '').trim();
+  if (configured) {
+    try {
+      const parsed = new URL(configured);
+      return `${parsed.protocol === 'https:' ? 'https' : 'http'}://${parsed.host}`;
+    } catch {
+      return window.location.origin;
+    }
+  }
+  return window.location.origin;
+};
+
 const emitWithAck = (socket, event, payload, timeout = 10000) => new Promise((resolve, reject) => {
   if (!socket?.connected) { reject(new Error('Realtime connection is not available')); return; }
   let settled = false;
@@ -101,7 +114,16 @@ export default function MessagingPage({ user }) {
   useEffect(() => { if (!modalOpen) return; void loadDirectory(memberQuery); }, [loadDirectory, modalOpen, memberQuery]);
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    const socket = io(window.location.origin, { path: '/socket.io', auth: token ? { token } : undefined, transports: ['websocket', 'polling'] });
+    const socket = io(resolveSocketUrl(), {
+      path: '/socket.io',
+      auth: token ? { token } : undefined,
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+    });
     socketRef.current = socket;
     socket.on('connect', () => {
       setConnected(true);
@@ -113,7 +135,19 @@ export default function MessagingPage({ user }) {
       if (selectedIdRef.current) void loadMessages(selectedIdRef.current);
     });
     socket.on('disconnect', () => { setConnected(false); if (heartbeatRef.current) window.clearInterval(heartbeatRef.current); });
-    socket.on('connect_error', () => setConnected(false));
+    socket.on('connect_error', (error) => {
+      console.error('Messaging socket connection error:', error);
+      setConnected(false);
+      void loadActiveUsers();
+      void loadConversations();
+    });
+    socket.on('reconnect', () => {
+      setConnected(true);
+      socket.emit('presence:heartbeat');
+      if (selectedIdRef.current) socket.emit('conversation:join', { conversationId: selectedIdRef.current });
+      void loadActiveUsers();
+      if (selectedIdRef.current) void loadMessages(selectedIdRef.current);
+    });
     socket.on('user:online', () => void loadActiveUsers()); socket.on('user:offline', () => void loadActiveUsers());
     socket.on('message:new', (message) => {
       if (message.conversationId !== selectedIdRef.current) { if (message.senderId !== user?.id) void refreshUnread(); return; }

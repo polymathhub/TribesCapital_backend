@@ -15,6 +15,11 @@ const normalizeLimit = (value: string | undefined) => {
 
 @Controller('messaging/members')
 @UseGuards(JwtAuthGuard)
+type MessagingPresenceSessionPrisma = {
+  deleteMany: (args: any) => Promise<any>;
+  findMany: (args: any) => Promise<Array<{ userId: string }>>;
+};
+
 export class MemberDirectoryController {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -25,6 +30,9 @@ export class MemberDirectoryController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    const prisma = this.prisma as PrismaService & {
+      messagingPresenceSession: MessagingPresenceSessionPrisma;
+    };
     const currentPage = normalizePage(page);
     const pageSize = normalizeLimit(limit);
     const search = query?.trim();
@@ -42,7 +50,7 @@ export class MemberDirectoryController {
     }
 
     const cutoff = new Date(Date.now() - 60_000);
-    await this.prisma.messagingPresenceSession.deleteMany({ where: { updatedAt: { lt: cutoff } } });
+    await prisma.messagingPresenceSession.deleteMany({ where: { updatedAt: { lt: cutoff } } });
 
     const [total, users, sessions] = await Promise.all([
       this.prisma.user.count({ where }),
@@ -61,21 +69,21 @@ export class MemberDirectoryController {
         skip: (currentPage - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.messagingPresenceSession.findMany({
+      prisma.messagingPresenceSession.findMany({
         where: { updatedAt: { gte: cutoff } },
         select: { userId: true },
         distinct: ['userId'],
       }),
     ]);
 
-    const onlineIds = new Set(sessions.map((session: { userId: string }) => session.userId));
+    const onlineIds = new Set<string>(sessions.map((session: { userId: string }) => session.userId));
     const data = users
-      .map((member) => ({
+      .map((member: any) => ({
         ...member,
         presence: onlineIds.has(member.id) ? 'online' : 'offline',
         lastSeenAt: member.lastLogin,
       }))
-      .sort((a, b) => Number(b.presence === 'online') - Number(a.presence === 'online'));
+      .sort((a: any, b: any) => Number(b.presence === 'online') - Number(a.presence === 'online'));
 
     return {
       data,

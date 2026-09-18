@@ -83,25 +83,25 @@ describe('MessagingService', () => {
     expect(prisma.message.count).not.toHaveBeenCalled();
   });
 
-  it('persists a socket session and exposes every currently online user, including self', async () => {
+  it('persists a socket session and exposes every currently online user, excluding the current user', async () => {
     prisma.messagingPresenceSession.count.mockResolvedValue(0);
-    await expect(service.trackUserOnline('user-1', 'socket-1')).resolves.toEqual({ firstSession: true });
+    prisma.user.findMany.mockResolvedValue([{ id: 'user-2', firstName: 'Noah', lastName: 'King', avatar: null, isActive: true, lastLogin: new Date() }]);
+    service.trackUserOnline('user-1');
+    await expect(service.trackUserOnline('user-1', 'socket-1')).resolves.toEqual({ firstSession: true, lastSession: false });
     expect(prisma.messagingPresenceSession.create).toHaveBeenCalledWith({ data: { userId: 'user-1', socketId: 'socket-1' } });
-    prisma.messagingPresenceSession.findMany.mockResolvedValue([{ userId: 'user-1' }, { userId: 'user-2' }]);
-    prisma.user.findMany.mockResolvedValue([{ id: 'user-1', firstName: 'Ava' }, { id: 'user-2', firstName: 'Noah' }]);
-    await expect(service.listActiveUsers()).resolves.toEqual([expect.objectContaining({ id: 'user-1', presence: 'online' }), expect.objectContaining({ id: 'user-2', presence: 'online' })]);
+    await expect(service.listActiveUsers('user-1')).resolves.toEqual([expect.objectContaining({ id: 'user-2' })]);
   });
 
   it('does not emit last-offline state while another socket for the same user remains', async () => {
     prisma.messagingPresenceSession.deleteMany.mockResolvedValue({ count: 1 });
     prisma.messagingPresenceSession.count.mockResolvedValue(1);
-    await expect(service.trackUserOffline('user-1', 'socket-1')).resolves.toEqual({ lastSession: false });
+    await expect(service.trackUserOffline('user-1', 'socket-1')).resolves.toEqual({ firstSession: false, lastSession: false });
   });
 
   it('recreates a session when a stale cleanup removed the socket before its heartbeat', async () => {
     prisma.messagingPresenceSession.updateMany.mockResolvedValue({ count: 0 });
     prisma.messagingPresenceSession.create.mockResolvedValue({ id: 'presence-1', userId: 'user-1', socketId: 'socket-1' });
-    await expect(service.trackUserHeartbeat('user-1', 'socket-1')).resolves.toEqual({ firstSession: true });
+    await expect(service.trackUserHeartbeat('user-1', 'socket-1')).resolves.toEqual({ firstSession: true, lastSession: false });
     expect(prisma.messagingPresenceSession.create).toHaveBeenCalledWith({ data: { userId: 'user-1', socketId: 'socket-1' } });
   });
 

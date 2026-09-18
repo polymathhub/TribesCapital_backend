@@ -43,7 +43,7 @@ model User {
   eventRsvps            RSVP[]
   
   projectCreated        Project[]   @relation("ProjectCreator")
-  projectTeam           User[]      @relation("ProjectTeam")
+  projectTeam           Project[]   @relation("ProjectTeam")
 
   conversationCreated   Conversation[] @relation("ConversationCreator")
   conversationMembers   ConversationMember[]
