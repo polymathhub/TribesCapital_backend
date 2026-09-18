@@ -180,6 +180,7 @@ export default function MessagingPage({ user }) {
     socket.on('user:online', () => void loadActiveUsers()); socket.on('user:offline', () => void loadActiveUsers());
     socket.on('notification:new', () => window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'notifications-updated' } })));
     socket.on('message:new', (message) => {
+      if (message.senderId !== user?.id) window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'notifications-updated' } }));
       if (message.conversationId !== selectedIdRef.current) { if (message.senderId !== user?.id) void refreshUnread(); return; }
       setMessages((current) => {
         const existing = current.find((item) => item.id === message.id || item.tempId === message.id || (message.clientMessageId && item.clientMessageId === message.clientMessageId));

@@ -654,7 +654,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     try {
       setNotificationsLoading(true);
       const response = await notificationsAPI.list().catch(() => ({ data: [] }));
-      const apiNotifications = Array.isArray(response?.data) ? response.data : [];
+      const notificationPayload = response?.data?.data ?? response?.data ?? [];
+      const apiNotifications = Array.isArray(notificationPayload) ? notificationPayload : [];
       const normalized = apiNotifications.map((item) => ({
         id: item.id,
         title: item.title || item.type || 'Notification',
