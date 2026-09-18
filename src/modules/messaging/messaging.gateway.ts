@@ -8,10 +8,10 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@database/prisma.service';
 import { MessagingService } from './messaging.service';
+import { JwtTokenService } from '../auth/jwt-token.service';
 
 @WebSocketGateway({ cors: { origin: true, credentials: true } })
 export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -19,15 +19,15 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
   server!: Server;
 
   constructor(
-    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly messagingService: MessagingService,
+    private readonly jwtTokenService: JwtTokenService,
   ) {}
 
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake.auth?.token ?? client.handshake.headers?.authorization?.toString()?.replace('Bearer ', '');
+      const token = client.handshake.auth?.token ?? client.handshake.headers?.authorization?.toString()?.replace(/^Bearer\s+/i, '');
       if (!token) {
         const environment = this.configService.get<string>('app.environment') ?? process.env.NODE_ENV ?? 'development';
         if (environment !== 'production') {
@@ -35,23 +35,30 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
           client.join('user:demo-user');
           const presence = await this.messagingService.trackUserOnline('demo-user', client.id);
           if (presence.firstSession) this.server.emit('user:online', { userId: 'demo-user' });
+          this.server.to(client.id).emit('presence:snapshot', await this.messagingService.listActiveUsers());
           return;
         }
-        client.disconnect();
+        client.disconnect(true);
         return;
       }
-      const payload = await this.jwtService.verifyAsync(token, { secret: this.configService.get('jwt.secret') ?? this.configService.get('JWT_SECRET') });
-      if (!payload?.sub && !payload?.id) {
-        client.disconnect();
+
+      // Use the same JWT configuration as HTTP authentication. The previous
+      // gateway verified tokens directly with jwt.secret, which could diverge
+      // from the access-token signing/verification key (especially RS256).
+      const payload = await this.jwtTokenService.verifyAccessToken(token) as { sub?: string; id?: string };
+      const userId = payload?.sub ?? payload?.id;
+      if (!userId) {
+        client.disconnect(true);
         return;
       }
-      const userId = payload.sub ?? payload.id;
+
       client.data.userId = userId;
       client.join(`user:${userId}`);
       const presence = await this.messagingService.trackUserOnline(userId, client.id);
       if (presence.firstSession) this.server.emit('user:online', { userId });
+      this.server.to(client.id).emit('presence:snapshot', await this.messagingService.listActiveUsers());
     } catch {
-      client.disconnect();
+      client.disconnect(true);
     }
   }
 
@@ -64,7 +71,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   @SubscribeMessage('presence:heartbeat')
   async presenceHeartbeat(@ConnectedSocket() client: Socket) {
-    if (!client.data.userId) return { ok: false };
+    if (!client.data.userId) return { ok: false, message: 'Unauthorized' };
     const presence = await this.messagingService.trackUserHeartbeat(client.data.userId, client.id);
     if (presence.firstSession) this.server.emit('user:online', { userId: client.data.userId });
     return { ok: true };
@@ -94,11 +101,33 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       const conversationId = payload.conversationId;
       const content = typeof payload.content === 'string' ? payload.content.trim() : '';
       const replyToId = typeof payload.replyToId === 'string' ? payload.replyToId : payload.replyToId?.id;
-      if (!content && !payload.attachments?.length) return { ok: false, message: 'Message content is required' };
+      const attachments = Array.isArray(payload.attachments) ? payload.attachments : undefined;
+      if (!content && !attachments?.length) return { ok: false, message: 'Message content is required' };
+
       await this.messagingService.ensureUserAccess(userId, conversationId);
-      const message = await this.messagingService.createMessage({ userId, conversationId, content, type: payload.type, replyToId, mentions: Array.isArray(payload.mentions) ? payload.mentions : undefined, attachmentData: Array.isArray(payload.attachments) ? payload.attachments : undefined });
+      const message = await this.messagingService.createMessage({
+        userId,
+        conversationId,
+        content,
+        type: payload.type,
+        replyToId,
+        mentions: Array.isArray(payload.mentions) ? payload.mentions : undefined,
+        attachmentData: attachments,
+      });
       const realtimeMessage = payload.clientMessageId ? { ...message, clientMessageId: payload.clientMessageId } : message;
+
+      // Deliver to the conversation room for users who have it open and also
+      // to every member's personal room so a recipient can receive a DM while
+      // browsing another conversation, just like a modern chat app.
       this.server.to(`conversation:${conversationId}`).emit('message:new', realtimeMessage);
+      const members = await this.prisma.conversationMember.findMany({
+        where: { conversationId, userId: { not: userId } },
+        select: { userId: true },
+      });
+      for (const member of members) {
+        this.server.to(`user:${member.userId}`).emit('message:new', realtimeMessage);
+      }
+
       return { ok: true, message: realtimeMessage };
     } catch (error: any) {
       const message = error?.response?.message ?? error?.message ?? 'Unable to send message';
