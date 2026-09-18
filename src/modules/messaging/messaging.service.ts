@@ -417,6 +417,7 @@ export class MessagingService {
         sender: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true } },
         replyTo: { include: { sender: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
         attachments: true,
+        reads: { select: { userId: true, readAt: true } },
         reactions: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
       },
       take: safeLimit,

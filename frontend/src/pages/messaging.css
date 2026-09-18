@@ -224,6 +224,9 @@
 .message-meta { display: flex; align-items: baseline; gap: 7px; margin-bottom: 4px; }
 .message-meta strong { font-size: 12px; color: #1d2939; }
 .message-meta time, .message-edited { color: #98a2b3; font-size: 10px; }
+.message-receipt { display: inline-flex; align-items: center; gap: 3px; color: #98a2b3; font-size: 9px; font-weight: 600; }
+.message-receipt > span { color: #98a2b3; font-size: 11px; letter-spacing: -2px; }
+.message-receipt.read, .message-receipt.read > span { color: #5b8def; }
 .message-bubble { display: inline-block; max-width: min(720px, 85%); padding: 9px 11px; border: 1px solid #eaecf0; border-radius: 4px 12px 12px 12px; background: #f8f9fb; }
 .message-bubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #344054; font-size: 13px; line-height: 1.5; }
 .message-row.mine .message-bubble { border-color: #ded5ff; background: var(--msg-accent-soft); }
