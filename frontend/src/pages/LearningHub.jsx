@@ -729,7 +729,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   }
 
   async function flushLessonWatch(isCompleted = false, forceLesson = null, startedAt = lessonWatchStart) {
-    if (!startedAt) return;
+    if (!startedAt || !localStorage.getItem('accessToken')) return;
     const targetLesson = forceLesson || activeLesson;
     if (!targetLesson) {
       setLessonWatchStart(null);
@@ -859,15 +859,17 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
     };
 
     loadVideo();
-    lessonsAPI.trackWatch({
-      videoId: selectedVideoId,
-      courseId: String(course?.id || '1'),
-      lessonId: activeLesson?.id || '1',
-      watchDuration: 0,
-      totalDuration: 0,
-      percentageWatched: 0,
-      isCompleted: false,
-    }).catch(() => undefined);
+    if (localStorage.getItem('accessToken')) {
+      lessonsAPI.trackWatch({
+        videoId: selectedVideoId,
+        courseId: String(course?.id || '1'),
+        lessonId: activeLesson?.id || '1',
+        watchDuration: 0,
+        totalDuration: 0,
+        percentageWatched: 0,
+        isCompleted: false,
+      }).catch(() => undefined);
+    }
 
     return () => {
       isMounted = false;
@@ -1290,6 +1292,36 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
   const SORTS   = [{id:'progress',label:'Progress'},{id:'newest',label:'Newest'},{id:'az',label:'A–Z'}];
   const FILTER_CAT = { energyFinance:'Energy Finance', solarStorage:'Solar & Storage', riskFX:'Risk & FX', policyESG:'Policy & ESG' };
   const channelCourseVideos = [
+    {
+      id: 'channel-9',
+      title: "Africa's Energy Challenge Is Bigger Than the Grid | Tribes Capital",
+      subtitle: 'A Tribes Capital perspective on the wider energy access challenge across Africa',
+      videoId: 'I9DBUsKJ-eI',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: 'Video',
+      lessons: 1,
+    },
+    {
+      id: 'channel-10',
+      title: 'Join the Tribes Capital Community | Africa\'s Clean Energy Network',
+      subtitle: 'An introduction to the Tribes Capital community and its clean energy network',
+      videoId: '6R9E5kuwEl4',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: 'Video',
+      lessons: 1,
+    },
+    {
+      id: 'channel-11',
+      title: 'Tribes Capital: Making Sustainable Energy Accessible Through Innovative Finance',
+      subtitle: 'How innovative finance can expand sustainable energy access',
+      videoId: 'wtEb_1Pf0aU',
+      cat: 'Course',
+      level: 'Intermediate',
+      dur: 'Video',
+      lessons: 1,
+    },
     {
       id: 'channel-1',
       title: 'How Clean Energy Is Transforming Schools & Communities in Africa',
