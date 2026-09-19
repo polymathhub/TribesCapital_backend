@@ -29,12 +29,72 @@
 }
 
 .message-bubble {
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
-  backdrop-filter: blur(8px);
+  overflow: hidden;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255,255,255,.82);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+@keyframes message-arrive {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bubble-sheen {
+  from { transform: translateX(-125%) rotate(18deg); }
+  to { transform: translateX(225%) rotate(18deg); }
+}
+
+.message-row {
+  animation: message-arrive .36s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.message-row:nth-last-child(2) { animation-delay: .04s; }
+.message-row:nth-last-child(3) { animation-delay: .08s; }
+
+.message-bubble::after {
+  content: '';
+  position: absolute;
+  inset: -45% auto -45% -25%;
+  width: 22%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.62), transparent);
+  pointer-events: none;
+  transform: translateX(-125%) rotate(18deg);
+  opacity: 0;
+}
+
+.message-row:hover .message-bubble {
+  transform: translateY(-2px) scale(1.012);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, .14), inset 0 1px 0 rgba(255,255,255,.92);
+}
+
+.message-row:hover .message-bubble::after {
+  opacity: 1;
+  animation: bubble-sheen .72s ease-out;
+}
+
+.message-composer:focus-within {
+  border-color: rgba(124,58,237,.38);
+  box-shadow: 0 8px 24px rgba(91,33,182,.12), 0 0 0 4px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.9);
+  transform: translateY(-1px);
+}
+
+.send-button {
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+.send-button:not(:disabled):hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 16px rgba(91,33,182,.22);
+  filter: brightness(1.06);
+}
+
+.send-button:not(:disabled):active {
+  transform: translateY(0) scale(.96);
 }
 
 .message-row.mine .message-bubble {
-  box-shadow: 0 3px 16px rgba(91, 33, 182, 0.08);
+  box-shadow: 0 14px 32px rgba(91, 33, 182, 0.13), inset 0 1px 0 rgba(255,255,255,.9);
 }
 
 .thread-empty {
@@ -73,4 +133,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .message-bubble { backdrop-filter: none; }
+  .message-row,
+  .message-row:hover .message-bubble,
+  .message-composer:focus-within,
+  .send-button:not(:disabled):hover,
+  .send-button:not(:disabled):active { animation: none; transform: none; transition: none; }
+  .message-bubble::after { display: none; }
 }
