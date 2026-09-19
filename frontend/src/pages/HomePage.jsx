@@ -1220,7 +1220,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       )}
 
       {/* SCROLLABLE CONTENT */}
-      <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:isMobile?'16px 14px 60px':'24px 28px 60px' }}>
+      <div style={{ flex:1, minHeight:0, overflowY:currentPage === 'messages' ? 'hidden' : 'auto', WebkitOverflowScrolling:'touch', padding:currentPage === 'messages' ? 0 : (isMobile?'16px 14px 60px':'24px 28px 60px') }}>
 
           {/* ── HOME PAGE ── */}
           {currentPage === 'home' && (

@@ -11,16 +11,16 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: calc(100dvh - 32px);
-  max-height: 960px;
-  min-height: 700px;
-  padding: 24px 20px 32px;
+  height: 100%;
+  min-height: 0;
+  padding: 24px 20px;
   background: var(--msg-bg);
   color: var(--msg-text);
   overflow: hidden;
 }
 
 .messaging-header {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -98,6 +98,7 @@
 .messaging-primary-button:hover { filter: brightness(.96); }
 
 .messaging-alert {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
