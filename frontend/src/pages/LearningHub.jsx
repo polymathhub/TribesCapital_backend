@@ -1099,11 +1099,11 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
                 <div style={{fontSize:13,color:T2,lineHeight:1.6}}>
                   {loadingLessons ? 'Loading course lessons…' : `${activeLesson?.title || 'Lesson'} · ${activeLesson?.duration || 'Self-paced'}${completedLessonIds.includes(activeLesson?.id) ? ' · completed' : ''}`}
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:10,marginTop:14}}>
+                <div style={{display:'grid',gridTemplateColumns:isMobile?'minmax(0,1fr)':'repeat(2,minmax(0,1fr))',gap:isMobile?8:10,marginTop:14,minWidth:0}}>
                   {prevLesson && (
-                    <button onClick={() => goToLesson(activeLessonIndex - 1)} style={{width:'100%',minHeight:84,textAlign:'left',padding:'14px 16px',border:`1px solid ${BD}`,borderRadius:14,background:W,color:T1,cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',flexDirection:'column',gap:8,boxShadow:'0 8px 20px rgba(15,23,42,0.04)'}}>
+                    <button onClick={() => goToLesson(activeLessonIndex - 1)} style={{width:'100%',minWidth:0,minHeight:68,textAlign:'left',padding:isMobile?'10px 12px':'11px 13px',border:`1px solid ${BD}`,borderRadius:10,background:W,color:T1,cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',flexDirection:'column',gap:5,boxShadow:'0 6px 14px rgba(15,23,42,0.04)'}}>
                       <span style={{fontSize:11,color:T3,textTransform:'uppercase',letterSpacing:0.8}}>Previous lesson</span>
-                      <span style={{fontSize:14,fontWeight:700,color:T1,lineHeight:1.35,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prevLesson.title}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:T1,lineHeight:1.3,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',overflowWrap:'anywhere'}}>{prevLesson.title}</span>
                       <div style={{display:'flex',alignItems:'center',gap:8,color:T3,fontSize:12}}>
                         <Ico name="arrow" size={14} color={T3} sw={1.5} style={{transform:'rotate(180deg)'}} />
                         <span>Go back</span>
@@ -1111,9 +1111,9 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
                     </button>
                   )}
                   {nextLesson && (
-                    <button onClick={() => goToLesson(activeLessonIndex + 1)} style={{width:'100%',minHeight:84,textAlign:'left',padding:'14px 16px',border:'none',borderRadius:14,background:'linear-gradient(135deg, #7C3AED, #A855F7)',color:W,cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',flexDirection:'column',gap:8,boxShadow:'0 12px 30px rgba(124,58,237,0.18)'}}>
+                    <button onClick={() => goToLesson(activeLessonIndex + 1)} style={{width:'100%',minWidth:0,minHeight:68,textAlign:'left',padding:isMobile?'10px 12px':'11px 13px',border:'none',borderRadius:10,background:'linear-gradient(135deg, #7C3AED, #A855F7)',color:W,cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',flexDirection:'column',gap:5,boxShadow:'0 8px 18px rgba(124,58,237,0.16)'}}>
                       <span style={{fontSize:11,color:'rgba(255,255,255,0.8)',textTransform:'uppercase',letterSpacing:0.8}}>Next lesson</span>
-                      <span style={{fontSize:14,fontWeight:700,lineHeight:1.35,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nextLesson.title}</span>
+                      <span style={{fontSize:13,fontWeight:700,lineHeight:1.3,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',overflowWrap:'anywhere'}}>{nextLesson.title}</span>
                       <div style={{display:'flex',alignItems:'center',gap:8,color:'rgba(255,255,255,0.9)',fontSize:12}}>
                         <span>Continue</span>
                         <Ico name="arrow" size={14} color={W} sw={1.5} />
