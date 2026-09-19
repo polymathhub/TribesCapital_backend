@@ -8,7 +8,7 @@
 .message-list {
   position: relative;
   isolation: isolate;
-  background-image: url('/assets/messaging-background.png');
+  background-image: url('/assets/dm-message-background.jpeg');
   background-size: cover;
   background-position: center;
   background-attachment: local;
@@ -20,7 +20,7 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: rgba(8, 10, 14, .48);
+  background: rgba(255, 255, 255, .18);
 }
 
 .message-row,
@@ -41,7 +41,7 @@
 .thread-empty {
   position: relative;
   overflow: hidden;
-  background-image: url('/assets/messaging-background.png');
+  background-image: url('/assets/dm-message-background.jpeg');
   background-size: cover;
   background-position: center;
 }
@@ -55,7 +55,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(8, 10, 14, .48);
+  background: rgba(255, 255, 255, .18);
 }
 
 .message-actions > button {
@@ -68,7 +68,7 @@
 
 @media (max-width: 720px) {
   .message-list {
-    background-image: url('/assets/messaging-background.png');
+    background-image: url('/assets/dm-message-background.jpeg');
   }
 }
 
