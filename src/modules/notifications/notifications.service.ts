@@ -8,6 +8,16 @@ const CONTRIBUTOR_ANNOUNCEMENT = {
   message: 'Tribes Capital is inviting contributors to help build the Learning Hub experience. Open the announcement page to see the update and how to get involved.',
 };
 
+const LEARNING_HUB_VIDEO_ANNOUNCEMENT = {
+  type: 'learning-video-update',
+  title: 'New videos added to the Learning Hub',
+  message: 'Three new Tribes Capital videos are now available in the Learning Hub. Open Learning Hub to watch them.',
+  data: {
+    page: 'learning',
+    videoIds: ['I9DBUsKJ-eI', '6R9E5kuwEl4', 'wtEb_1Pf0aU'],
+  },
+};
+
 export interface CreateBroadcastNotificationInput {
   type: string;
   title: string;
@@ -85,6 +95,15 @@ export class NotificationsService {
   async listForUser(userId: string) {
     if (!this.prisma.isDatabaseAvailable()) {
       return [];
+    }
+
+    const existingVideoUpdate = await this.prisma.notification.findFirst({
+      where: { userId, type: LEARNING_HUB_VIDEO_ANNOUNCEMENT.type },
+      select: { id: true },
+    });
+
+    if (!existingVideoUpdate) {
+      await this.createForUser(userId, LEARNING_HUB_VIDEO_ANNOUNCEMENT);
     }
 
     return this.prisma.notification.findMany({

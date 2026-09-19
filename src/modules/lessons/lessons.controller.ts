@@ -97,6 +97,7 @@ export class LessonsController {
   }
 
   @Post('youtube-proxy/:videoId')
+  @Public()
   async getYouTubeProxy(
     @Param('videoId') videoId: string,
     @Res() res: Response,

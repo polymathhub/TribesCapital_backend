@@ -1137,10 +1137,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
               aria-label="Open notifications"
             >
               <Icon name="bell2" size={22} color={T2}/>
-              <div style={{ minWidth:20, height:20, padding:'0 5px', background: unreadNotificationCount > 0 ? '#EF4444' : '#6B7280', color:'#fff', borderRadius:999, border:'2px solid #fff',
-                position:'absolute', top:2, right:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800, lineHeight:1 }}>
-                {notificationsLoading ? '…' : unreadNotificationCount}
-              </div>
             </button>
             {isNotificationsOpen && (
               <div style={{
@@ -1210,7 +1206,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         <div className="notification-toast" role="status" aria-live="polite">
           <div className="notification-toast-icon"><Icon name="bell2" size={20} color="#7C3AED" /></div>
           <div className="notification-toast-content">
-            <div className="notification-toast-label"><span>New notification</span><i /></div>
+            <div className="notification-toast-label"><span>New notification</span></div>
             <strong>{announcementPopup.title}</strong>
             <p>{announcementPopup.detail}</p>
             <div className="notification-toast-actions">
@@ -1741,8 +1737,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         .notification-toast::before{content:'';position:absolute;left:-1px;top:14px;bottom:14px;width:3px;border-radius:0 4px 4px 0;background:#CBD5E1;}
         .notification-toast-icon{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;margin-top:1px;border-radius:0;background:transparent;box-shadow:none;}
         .notification-toast-content{min-width:0;flex:1;padding-right:14px;}
-        .notification-toast-label{display:flex;align-items:center;gap:6px;margin-bottom:5px;color:#7C3AED;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
-        .notification-toast-label i{width:6px;height:6px;border-radius:50%;background:#EC4899;box-shadow:0 0 0 3px rgba(236,72,153,.12);}
+        .notification-toast-label{display:flex;align-items:center;margin-bottom:5px;color:#7C3AED;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
         .notification-toast-content strong{display:block;overflow:hidden;color:#172033;font-size:14px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap;}
         .notification-toast-content p{display:-webkit-box;overflow:hidden;margin:5px 0 11px;color:#667085;font-size:12px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2;}
         .notification-toast-actions{display:flex;align-items:center;gap:12px;}
