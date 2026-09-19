@@ -21,6 +21,20 @@ export class EventsController {
     return this.eventsService.findAll(skip, take);
   }
 
+  @Get('admin/pending')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async findPending(): Promise<EventResponseDto[]> {
+    return this.eventsService.findPending();
+  }
+
+  @Put(':id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async approve(@Param('id') id: string): Promise<EventResponseDto> {
+    return this.eventsService.approve(id);
+  }
+
   @Public()
   @Get(':id')
   async findById(@Param('id') id: string): Promise<EventResponseDto> {

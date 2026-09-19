@@ -54,9 +54,11 @@ export const lessonsAPI = {
 
 export const eventsAPI = {
   list: (params) => apiClient.get('/events', { params }),
+  listPending: () => apiClient.get('/events/admin/pending'),
   getById: (id) => apiClient.get(`/events/${id}`),
   create: (data) => apiClient.post('/events', data),
   update: (id, data) => apiClient.put(`/events/${id}`, data),
+  approve: (id) => apiClient.put(`/events/${id}/approve`),
   delete: (id) => apiClient.delete(`/events/${id}`),
   getRSVPStatus: (eventId) => apiClient.get(`/events/${eventId}/rsvp-status`),
   rsvp: (eventId, guestCount = 1) => apiClient.post(`/events/${eventId}/rsvp`, { guestCount }),

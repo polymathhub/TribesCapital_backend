@@ -37,6 +37,11 @@ export class EventsService {
   }
 
   async create(organizerId: string, createEventDto: CreateEventDto): Promise<EventResponseDto> {
+    const normalizedCapacity = Number(createEventDto.capacity ?? 100);
+    if (!Number.isInteger(normalizedCapacity) || normalizedCapacity < 1 || normalizedCapacity > 1000) {
+      throw new BadRequestException('Event capacity must be a whole number between 1 and 1000');
+    }
+
     const eventData: any = {
       title: createEventDto.title,
       slug: createEventDto.slug || slugify(createEventDto.title),
@@ -49,8 +54,8 @@ export class EventsService {
       meetingInstructions: createEventDto.meetingInstructions || null,
       startDate: new Date(createEventDto.startDate),
       endDate: new Date(createEventDto.endDate),
-      capacity: createEventDto.capacity || 100,
-      isPublished: true,
+      capacity: normalizedCapacity,
+      isPublished: false,
       creatorId: organizerId,
     };
 
@@ -116,6 +121,35 @@ export class EventsService {
     }
   }
 
+  async findPending(): Promise<EventResponseDto[]> {
+    const events = await this.prisma.event.findMany({
+      where: { isPublished: false },
+      orderBy: { createdAt: 'desc' },
+      include: { rsvps: true },
+    });
+
+    return events.map(event => this.formatEventResponse(event));
+  }
+
+  async approve(id: string): Promise<EventResponseDto> {
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+      include: { rsvps: true },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    const approvedEvent = await this.prisma.event.update({
+      where: { id },
+      data: { isPublished: true },
+      include: { rsvps: true },
+    });
+
+    return this.formatEventResponse(approvedEvent);
+  }
+
   async findById(id: string): Promise<EventResponseDto> {
     try {
       const event = await this.prisma.event.findUnique({
@@ -156,6 +190,11 @@ export class EventsService {
         throw new NotFoundException('Event not found');
       }
 
+      const guestCount = Number(createRsvpDto?.guestCount ?? 1);
+      if (!Number.isInteger(guestCount) || guestCount < 1 || guestCount > 10) {
+        throw new BadRequestException('Guest count must be between 1 and 10');
+      }
+
       const existingRsvp = await this.prisma.rSVP.findUnique({
         where: {
           userId_eventId: {
@@ -169,7 +208,6 @@ export class EventsService {
         throw new ConflictException('Already RSVP\'d to this event');
       }
 
-      const guestCount = createRsvpDto.guestCount || 1;
       if (event.capacity) {
         const totalRsvps = event.rsvps.reduce((sum, r) => sum + r.guestCount, 0);
 
@@ -280,6 +318,11 @@ export class EventsService {
       throw new NotFoundException('Event not found');
     }
 
+    const nextCapacity = Number(updateEventDto.capacity ?? event.capacity ?? 100);
+    if (!Number.isInteger(nextCapacity) || nextCapacity < 1 || nextCapacity > 1000) {
+      throw new BadRequestException('Event capacity must be a whole number between 1 and 1000');
+    }
+
     // Only allow admin or event creator to update
     if (event.creatorId !== userId) {
       const user = await this.prisma.user.findUnique({
@@ -297,6 +340,7 @@ export class EventsService {
       where: { id },
       data: {
         ...updateEventDto,
+        capacity: nextCapacity,
         slug: updateEventDto.slug || slugify(updateEventDto.title || event.title),
         meetingPlatform: updateEventDto.meetingPlatform,
         meetingLink: updateEventDto.meetingLink,

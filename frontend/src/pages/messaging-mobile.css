@@ -95,7 +95,7 @@
   .message-row:not(.mine) { justify-content: flex-start; }
   .message-row.mine { justify-content: flex-start; }
   .message-row .message-avatar { width: 30px; height: 30px; flex-basis: 30px; }
-  .message-content-wrap { flex: 0 1 auto; max-width: calc(100% - 37px); }
+  .message-content-wrap { flex: 0 1 auto; max-width: min(78%, calc(100% - 37px)); }
   .message-row:not(.mine) .message-content-wrap { margin-right: auto; align-items: flex-start; }
   .message-row.mine .message-content-wrap { margin-left: auto; align-items: flex-end; }
   .message-meta { gap: 5px; margin-bottom: 4px; flex-wrap: nowrap; min-width: 0; }

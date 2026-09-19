@@ -293,6 +293,19 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false
   );
 }
 
+function getNotificationPage(notification) {
+  const type = String(notification?.type || '').toLowerCase();
+  const data = notification?.data && typeof notification.data === 'object' ? notification.data : {};
+
+  if (data.conversationId || type.includes('message') || type.includes('mention')) return 'messages';
+  if (data.dueDiligenceId || type.includes('diligence')) return 'vault';
+  if (data.eventId || type.includes('event') || type.includes('office')) return 'events';
+  if (data.courseId || data.lessonId || type.includes('course') || type.includes('lesson')) return 'learning';
+  if (data.projectId || type.includes('project') || type.includes('pipeline')) return 'pipeline';
+  if (type.includes('announcement') || type.includes('feedback')) return 'announcements';
+  return 'announcements';
+}
+
 /* ─── MAIN APP ───────────────────────────────────────── */
 export default function HomePage({ user, currentPage = 'home', onNavigate = () => {}, onLogout = () => {}, onUpdateUser = () => {}, onToggleSidebar = () => {}, isMobile = false, isTablet = false, isSidebarOpen = true }) {
   const [tourStep,   setTourStep]   = useState(0);
@@ -654,6 +667,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         detail: item.message || item.body || item.description || 'You have a new update',
         time: item.createdAt ? new Date(item.createdAt).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
         read: Boolean(item.isRead ?? item.read),
+        type: item.type || '',
+        data: item.data && typeof item.data === 'object' ? item.data : {},
       }));
 
       setNotifications(normalized);
@@ -690,6 +705,14 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       // Keep the notification unread when the server could not confirm the update.
     }
   }, []);
+
+  const openNotification = useCallback(async (notification) => {
+    await markNotificationRead(notification);
+    setIsNotificationsOpen(false);
+    setShowAnnouncementPopup(false);
+    setAnnouncementPopup(null);
+    onNavigate(getNotificationPage(notification));
+  }, [markNotificationRead, onNavigate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1137,9 +1160,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                     <button
                       key={item.id || item.title}
                       type="button"
-                      onClick={() => { void markNotificationRead(item); }}
+                      onClick={() => { void openNotification(item); }}
                       className={`notification-item ${item.read ? 'notification-item-read' : 'notification-item-unread'}`}
-                      style={{ width:'100%', borderRadius:0, border:'none', padding:'16px', display:'block', textAlign:'left', cursor:item.read ? 'default' : 'pointer' }}
+                      style={{ width:'100%', borderRadius:0, border:'none', padding:'16px', display:'block', textAlign:'left', cursor:'pointer' }}
                     >
                       <div style={{ fontSize:13.5, fontWeight:700, color:T1, marginBottom:4 }}>{item.title}</div>
                       <div style={{ fontSize:12.5, color:T2, lineHeight:1.5, marginBottom:6 }}>{item.detail}</div>
@@ -1167,13 +1190,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
       {showAnnouncementPopup && announcementPopup && (
         <div className="notification-toast" role="status" aria-live="polite">
-          <div className="notification-toast-icon"><Icon name="bell2" size={18} color="#fff" /></div>
+          <div className="notification-toast-icon"><Icon name="bell2" size={20} color="#7C3AED" /></div>
           <div className="notification-toast-content">
             <div className="notification-toast-label"><span>New notification</span><i /></div>
             <strong>{announcementPopup.title}</strong>
             <p>{announcementPopup.detail}</p>
             <div className="notification-toast-actions">
-              <button type="button" onClick={() => { void markNotificationRead(announcementPopup); setShowAnnouncementPopup(false); setAnnouncementPopup(null); onNavigate('announcements'); }}>View notification</button>
+              <button type="button" onClick={() => { void openNotification(announcementPopup); }}>View notification</button>
               <button type="button" className="notification-toast-dismiss" onClick={() => { setShowAnnouncementPopup(false); setAnnouncementPopup(null); }}>Dismiss</button>
             </div>
           </div>
@@ -1694,11 +1717,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         .notification-list{max-height:min(360px, calc(100vh - 160px));overflow-y:auto;scrollbar-color:#CBD5E1 transparent;scrollbar-width:thin;}
         .notification-item{transition:background .2s ease;color:#111827;}
         .notification-item:hover{background:#F8FAFF;}
-        .notification-item-unread{border-left:2px solid #7C3AED;background:rgba(124,58,237,0.1);}
+        .notification-item-unread{border-left:2px solid #CBD5E1;background:#FCFCFD;}
         .notification-item-read{background:transparent;}
-        .notification-toast{position:fixed;top:24px;right:24px;z-index:1200;display:flex;align-items:flex-start;gap:12px;width:min(410px,calc(100vw - 32px));padding:16px 16px 15px 14px;border:1px solid rgba(226,232,240,.96);border-radius:16px;background:rgba(255,255,255,.98);box-shadow:0 18px 48px rgba(15,23,42,.16),0 3px 10px rgba(15,23,42,.06);animation:notification-toast-in .3s cubic-bezier(.22,1,.36,1);}
-        .notification-toast::before{content:'';position:absolute;left:-1px;top:14px;bottom:14px;width:3px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,#7C3AED,#EC4899);}
-        .notification-toast-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#7C3AED,#5B21B6);box-shadow:0 6px 14px rgba(124,58,237,.24);}
+        .notification-toast{position:fixed;top:24px;right:24px;z-index:1200;display:flex;align-items:flex-start;gap:12px;width:min(410px,calc(100vw - 32px));padding:16px 16px 15px 14px;border:1px solid rgba(226,232,240,.96);border-radius:16px;background:#FFFFFF;box-shadow:0 18px 48px rgba(15,23,42,.13),0 3px 10px rgba(15,23,42,.05);animation:notification-toast-in .3s cubic-bezier(.22,1,.36,1);}
+        .notification-toast::before{content:'';position:absolute;left:-1px;top:14px;bottom:14px;width:3px;border-radius:0 4px 4px 0;background:#CBD5E1;}
+        .notification-toast-icon{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;margin-top:1px;border-radius:0;background:transparent;box-shadow:none;}
         .notification-toast-content{min-width:0;flex:1;padding-right:14px;}
         .notification-toast-label{display:flex;align-items:center;gap:6px;margin-bottom:5px;color:#7C3AED;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
         .notification-toast-label i{width:6px;height:6px;border-radius:50%;background:#EC4899;box-shadow:0 0 0 3px rgba(236,72,153,.12);}

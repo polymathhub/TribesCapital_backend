@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsDateString, IsNumber, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsNumber, IsBoolean, Min, Max } from 'class-validator';
 
 export class CreateEventDto {
   @IsString()
@@ -28,6 +28,8 @@ export class CreateEventDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(1)
+  @Max(1000)
   capacity?: number;
 
   @IsOptional()
@@ -58,6 +60,8 @@ export class CreateEventDto {
 export class CreateRsvpDto {
   @IsOptional()
   @IsNumber()
+  @Min(1)
+  @Max(10)
   guestCount?: number;
 
   @IsOptional()
