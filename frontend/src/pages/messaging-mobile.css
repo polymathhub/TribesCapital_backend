@@ -102,7 +102,7 @@
   .message-meta strong { font-size: 11px; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .message-meta time, .message-edited, .message-state { font-size: 9px; white-space: nowrap; }
   .message-bubble,
-  .message-row.mine .message-bubble { display: block; width: fit-content; max-width: 100%; padding: 9px 11px; border-radius: 5px 12px 12px 12px; }
+  .message-row.mine .message-bubble { display: block; min-height: 46px; width: fit-content; max-width: 100%; padding: 11px 12px; border-radius: 5px 12px 12px 12px; }
   .message-row.mine .message-bubble { border-radius: 12px 5px 12px 12px; }
   .message-bubble p { font-size: 14px; line-height: 1.45; }
   .reply-context { max-width: 100%; }
