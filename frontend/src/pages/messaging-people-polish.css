@@ -38,9 +38,7 @@
 .conversation-filters button:last-child { font-size: 0; }
 .conversation-filters button:last-child::after { content: 'Channels'; font-size: 10px; }
 
-/* Refined photographic workspace behind the conversation. */
-.message-list { position: relative; isolation: isolate; background: #101114 url('/assets/messaging-background.png') center / cover no-repeat; }
-.message-list::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(8, 10, 14, .48); backdrop-filter: none; }
+/* Conversation background is owned by messaging-premium-visual.css. */
 .thread-panel { background: #fff; }
 .message-list > * { position: relative; z-index: 1; }
 

@@ -1,10 +1,9 @@
 :root {
   --msg-icon-muted: #667085;
   --msg-icon-strong: #344054;
-  --msg-backdrop-photo: url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80');
 }
 
-/* Modern conversation canvas with a real editorial photo and a clean translucent overlay. */
+/* Direct-message canvas background. */
 .message-list {
   position: relative;
   isolation: isolate;
