@@ -293,9 +293,27 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = P, isMobile = false
   );
 }
 
+function getNotificationData(value) {
+  if (value && typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 function getNotificationPage(notification) {
   const type = String(notification?.type || '').toLowerCase();
-  const data = notification?.data && typeof notification.data === 'object' ? notification.data : {};
+  const data = getNotificationData(notification?.data);
+  const explicitPage = String(data.page || data.sourcePage || '').toLowerCase();
+
+  if (['messages', 'learning', 'vault', 'pipeline', 'events', 'announcements', 'help'].includes(explicitPage)) {
+    return explicitPage;
+  }
 
   if (data.conversationId || type.includes('message') || type.includes('mention')) return 'messages';
   if (data.dueDiligenceId || type.includes('diligence')) return 'vault';
@@ -668,7 +686,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         time: item.createdAt ? new Date(item.createdAt).toLocaleString('en', { month: 'short', day: 'numeric' }) : 'Now',
         read: Boolean(item.isRead ?? item.read),
         type: item.type || '',
-        data: item.data && typeof item.data === 'object' ? item.data : {},
+        data: getNotificationData(item.data),
       }));
 
       setNotifications(normalized);
@@ -707,7 +725,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   }, []);
 
   const openNotification = useCallback(async (notification) => {
-    await markNotificationRead(notification);
+    void markNotificationRead(notification);
     setIsNotificationsOpen(false);
     setShowAnnouncementPopup(false);
     setAnnouncementPopup(null);
