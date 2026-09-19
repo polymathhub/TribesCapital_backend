@@ -102,8 +102,11 @@
   .message-meta strong { font-size: 11px; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .message-meta time, .message-edited, .message-state { font-size: 9px; white-space: nowrap; }
   .message-bubble,
-  .message-row.mine .message-bubble { display: block; min-height: 46px; width: fit-content; max-width: 100%; padding: 11px 12px; border-radius: 5px 12px 12px 12px; }
-  .message-row.mine .message-bubble { border-radius: 12px 5px 12px 12px; }
+  .message-row.mine .message-bubble { display: block; min-height: 50px; width: fit-content; max-width: 100%; padding: 12px 13px; border-radius: 7px 17px 17px 17px; }
+  .message-row.mine .message-bubble { border-radius: 17px 7px 17px 17px; }
+  .message-footer { min-height: 18px; margin-top: 5px; font-size: 10px; }
+  .message-footer time, .message-receipt { font-size: 10px; }
+  .message-receipt > span { font-size: 13px; }
   .message-bubble p { font-size: 14px; line-height: 1.45; }
   .reply-context { max-width: 100%; }
   .attachment-card { max-width: 100%; width: min(100%, 300px); }
