@@ -3,6 +3,7 @@ import LearningHub from './LearningHub';
 import DueDiligencePage from './DueDiligencePage';
 import ProjectPipelinePage from './ProjectPipelinePage';
 import OfficeHoursEvents from './OfficeHoursEvents';
+import AdminEventRequests from './AdminEventRequests';
 import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
 import MessagingPage from './MessagingPage';
@@ -1631,6 +1632,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {/* ── OFFICE HOURS & EVENTS PAGE ── */}
           {currentPage === 'events' && (
             <OfficeHoursEvents user={user} isMobile={isMobile} isTablet={isTablet}/>
+          )}
+
+          {currentPage === 'admin-events' && (
+            <AdminEventRequests user={user} isMobile={isMobile} />
           )}
 
           {/* ── ANNOUNCEMENTS PAGE ── */}

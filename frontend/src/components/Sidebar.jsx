@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: 'Project Pipeline', page: 'pipeline', icon: 'chart' },
   { label: 'Messages', page: 'messages', icon: 'message' },
   { label: 'Office Hours & Events', page: 'events', icon: 'calendar' },
+  { label: 'Event requests', page: 'admin-events', icon: 'calendar', adminOnly: true },
   null,
   { label: 'Announcements & Feedback', page: 'announcements', icon: 'bell' },
   { label: 'Help', page: 'help', icon: 'help' },
@@ -19,6 +20,8 @@ const NAV_ITEMS = [
 function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user, collapsed = false, isOpen = true, isOverlay = false }) {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const displayName = user?.name || user?.email?.split('@')[0] || 'Member';
+  const roles = Array.isArray(user?.roles) ? user.roles : [];
+  const isAdmin = Boolean(user?.isAdmin || user?.role === 'admin' || roles.includes('admin') || roles.includes('super-admin'));
 
   return (
     <>
@@ -136,6 +139,7 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
       <div style={{ flex: 1, padding: collapsed ? '8px 0' : '8px 0' }}>
         {NAV_ITEMS.map((item, i) => {
           if (!item) return <div key={i} style={{ height: 1, background: COLORS.BD, margin: '6px 14px' }}/>
+          if (item.adminOnly && !isAdmin) return null;
           const isActive = activePage === item.page;
           const isHovered = hoveredIndex === i;
           return (
