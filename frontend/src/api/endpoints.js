@@ -83,6 +83,7 @@ export const notificationsAPI = {
 export const analyticsAPI = {
   getDashboard: () => apiClient.get('/analytics/dashboard'),
   getUserStats: () => apiClient.get('/analytics/user-stats'),
+  getAdminOverview: () => apiClient.get('/analytics/admin/overview'),
 };
 
 export const projectsAPI = {
