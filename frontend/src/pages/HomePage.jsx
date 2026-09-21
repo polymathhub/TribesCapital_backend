@@ -5,6 +5,7 @@ import ProjectPipelinePage from './ProjectPipelinePage';
 import OfficeHoursEvents from './OfficeHoursEvents';
 import AdminEventRequests from './AdminEventRequests';
 import AnnouncementsPage from './AnnouncementsPage';
+import HelpPage from './HelpPage';
 import MessagingPage from './MessagingPage';
 import ProfileSettings from '../components/ProfileSettings';
 import InitialsAvatar from '../components/InitialsAvatar';
@@ -318,7 +319,7 @@ function getNotificationPage(notification) {
   const data = getNotificationData(notification?.data);
   const explicitPage = String(data.page || data.sourcePage || '').toLowerCase();
 
-  if (['messages', 'learning', 'vault', 'pipeline', 'events', 'announcements'].includes(explicitPage)) {
+  if (['messages', 'learning', 'vault', 'pipeline', 'events', 'announcements', 'help'].includes(explicitPage)) {
     return explicitPage;
   }
 
@@ -988,6 +989,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       { type: 'page', key: 'events', label: 'Office Hours & Events', description: 'Sessions and community events' },
       { type: 'page', key: 'vault', label: 'Due Diligence Vault', description: 'Documents and deal materials' },
       { type: 'page', key: 'announcements', label: 'Announcements', description: 'Updates and community messages' },
+      { type: 'page', key: 'help', label: 'Help', description: 'Support and guidance' },
     ].filter((item) => `${item.label} ${item.description}`.toLowerCase().includes(normalizedSearch));
 
     const courseMatches = dashboardCourses.filter((course) => {
@@ -1652,6 +1654,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {/* ── ANNOUNCEMENTS PAGE ── */}
           {currentPage === 'announcements' && (
             <AnnouncementsPage user={user} onToggleSidebar={onToggleSidebar} isMobile={isMobile} isTablet={isTablet}/>
+          )}
+
+          {currentPage === 'help' && (
+            <HelpPage user={user} onToggleSidebar={onToggleSidebar} isMobile={isMobile} isTablet={isTablet}/>
           )}
 
           {/* ── PROFILE SETTINGS PAGE ── */}

@@ -29,14 +29,14 @@ export class NotificationsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   async broadcast(
-    @CurrentUser('id') actorId: string,
+    @CurrentUser() user: { id: string },
     @Body() body: { type?: string; title: string; message: string; data?: Record<string, unknown> },
   ) {
     return this.notificationsService.createForAllUsers({
       type: body.type || 'announcement',
       title: body.title,
       message: body.message,
-      actorId,
+      actorId: user.id,
       data: body.data || {},
     });
   }
