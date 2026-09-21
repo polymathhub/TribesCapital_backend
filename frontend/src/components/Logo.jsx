@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import logoPng from '../assets/image.png';
+import logoSvg from '../assets/logo.svg';
 
 /**
  * Logo component with optional vibration animation on mount
@@ -20,7 +20,7 @@ function LogoMark({ size = 28, animate = true, style = {} }) {
 
   return (
     <img
-      src={logoPng}
+      src={logoSvg}
       alt="Tribes Capital Logo"
       style={{
         width: size,
@@ -62,7 +62,7 @@ function LogoFull({ size = 'medium', variant = 'dark', animate = true }) {
       }}
     >
       <img
-        src={logoPng}
+        src={logoSvg}
         alt="Tribes Capital Logo"
         style={{
           width: s.mark,
