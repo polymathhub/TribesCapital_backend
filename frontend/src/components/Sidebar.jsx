@@ -15,7 +15,6 @@ const NAV_ITEMS = [
   { label: 'Event requests', page: 'admin-events', icon: 'calendar', adminOnly: true },
   null,
   { label: 'Announcements & Feedback', page: 'announcements', icon: 'bell' },
-  { label: 'Help', page: 'help', icon: 'help' },
 ];
 
 function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user, collapsed = false, isOpen = true, isOverlay = false }) {

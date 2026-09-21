@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { analyticsAPI } from '../api/endpoints';
+import { COLORS } from '../constants/colors';
 
-const COLORS = { ink: '#172033', muted: '#64748B', line: '#E2E8F0', paper: '#FFFFFF', bg: '#F8FAFC', violet: '#5B21B6', teal: '#0F766E', amber: '#B45309', blue: '#1D4ED8' };
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
 
 function Metric({ label, value, note, color }) {
-  return <article style={{ background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 18, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}>
-    <div style={{ color: COLORS.muted, fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
-    <div style={{ color: COLORS.ink, fontSize: 32, lineHeight: 1.1, fontWeight: 800, margin: '8px 0 6px' }}>{value}</div>
-    <div style={{ color: COLORS.muted, fontSize: 12 }}>{note}</div>
+  return <article style={{ background: COLORS.W, border: `1px solid ${COLORS.BD}`, borderTop: `3px solid ${color}`, borderRadius: 12, padding: 18, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}>
+    <div style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
+    <div style={{ color: COLORS.T1, fontSize: 32, lineHeight: 1.1, fontWeight: 800, margin: '8px 0 6px' }}>{value}</div>
+    <div style={{ color: COLORS.T2, fontSize: 12 }}>{note}</div>
   </article>;
 }
 
@@ -31,20 +31,21 @@ export default function AdminOverview({ isMobile = false, onNavigate = () => {} 
   }, []);
 
   const cards = [
-    ['Community members', metrics.members, 'All registered accounts', COLORS.violet],
-    ['New signups', metrics.newSignups, `Last ${metrics.periodDays} days`, COLORS.teal],
-    ['Published videos', metrics.publishedVideos, 'YouTube lessons live', COLORS.blue],
-    ['Announcement updates', metrics.announcementUpdates, `Broadcasts in ${metrics.periodDays} days`, COLORS.amber],
+    ['Community members', metrics.members, 'All registered accounts', COLORS.P],
+    ['New signups', metrics.newSignups, `Last ${metrics.periodDays} days`, COLORS.TL],
+    ['Published videos', metrics.publishedVideos, 'YouTube lessons live', COLORS.BLU],
+    ['Announcement updates', metrics.announcementUpdates, `Broadcasts in ${metrics.periodDays} days`, COLORS.AM],
   ];
 
-  return <main style={{ minHeight: '100%', overflowY: 'auto', background: COLORS.bg, color: COLORS.ink, padding: isMobile ? 16 : 30, fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+  return <main style={{ minHeight: '100%', overflowY: 'auto', background: COLORS.BG, color: COLORS.T1, padding: isMobile ? 16 : 30, fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+    <style>{`.overview-action { transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease; } .overview-action:hover, .overview-action:focus-visible { transform: translateY(-2px); border-color: ${COLORS.PL} !important; background: ${COLORS.PF} !important; box-shadow: 0 10px 22px rgba(91, 33, 182, .12); outline: none; }`}</style>
     <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-      <header style={{ marginBottom: 26 }}><div style={{ color: COLORS.violet, fontSize: 11, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Admin control room</div><h1 style={{ margin: 0, fontSize: isMobile ? 26 : 38, letterSpacing: '-.04em' }}>What is happening across Tribes</h1><p style={{ margin: '10px 0 0', color: COLORS.muted, maxWidth: 620, lineHeight: 1.6 }}>A live view of the community, learning content, events, and review queues.</p></header>
-      {metrics.error && <div role="status" style={{ marginBottom: 18, padding: 11, borderRadius: 8, background: '#FFF7ED', border: '1px solid #FED7AA', color: COLORS.amber, fontSize: 13 }}>{metrics.error}</div>}
+      <header style={{ marginBottom: 26 }}><div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Admin control room</div><h1 style={{ margin: 0, fontSize: isMobile ? 26 : 38, letterSpacing: '-.04em' }}>What is happening across Tribes</h1><p style={{ margin: '10px 0 0', color: COLORS.T2, maxWidth: 620, lineHeight: 1.6 }}>A live view of the community, learning content, events, and review queues.</p></header>
+      {metrics.error && <div role="status" style={{ marginBottom: 18, padding: 11, borderRadius: 8, background: COLORS.AMB, border: '1px solid #FCD34D', color: COLORS.AM, fontSize: 13 }}>{metrics.error}</div>}
       <section style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 22 }}>{cards.map(([label, value, note, color]) => <Metric key={label} label={label} value={metrics.loading ? '—' : value} note={note} color={color} />)}</section>
       <section style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr .9fr', gap: 16 }}>
-        <div style={{ background: COLORS.paper, color: COLORS.ink, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: isMobile ? 20 : 28, minHeight: 240, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}><div style={{ color: COLORS.violet, fontSize: 11, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase' }}>Live activity</div><h2 style={{ margin: '12px 0 10px', fontSize: 24, maxWidth: 430 }}>Stay close to the community pulse.</h2><p style={{ color: COLORS.muted, lineHeight: 1.6, fontSize: 13, maxWidth: 470 }}>There are {metrics.loading ? '—' : metrics.publishedCourses} published courses, {metrics.loading ? '—' : metrics.publishedEvents} live events, and {metrics.loading ? '—' : metrics.pendingEvents} pending event reviews in the platform.</p></div>
-        <div style={{ background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 20 }}><div style={{ fontSize: 12, color: COLORS.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>Quick actions</div><div style={{ display: 'grid', gap: 10 }}>{[['learning', 'Manage Learning Hub', 'Add courses and YouTube lessons'], ['announcements', 'Broadcast announcement', 'Reach every member at once'], ['vault', 'Review diligence', 'Keep the existing approval flow']].map(([page, title, note]) => <button key={page} onClick={() => onNavigate(page)} style={{ textAlign: 'left', border: `1px solid ${COLORS.line}`, borderRadius: 9, background: '#F8FAFC', padding: 13, cursor: 'pointer', color: COLORS.ink }}><strong>{title}</strong><span style={{ display: 'block', color: COLORS.muted, fontSize: 12, marginTop: 3 }}>{note}</span></button>)}</div></div>
+        <div style={{ background: COLORS.W, color: COLORS.T1, border: `1px solid ${COLORS.BD}`, borderRadius: 14, padding: isMobile ? 20 : 28, minHeight: 240, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}><div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase' }}>Live activity</div><h2 style={{ margin: '12px 0 10px', fontSize: 24, maxWidth: 430 }}>Stay close to the community pulse.</h2><p style={{ color: COLORS.T2, lineHeight: 1.6, fontSize: 13, maxWidth: 470 }}>There are {metrics.loading ? '—' : metrics.publishedCourses} published courses, {metrics.loading ? '—' : metrics.publishedEvents} live events, and {metrics.loading ? '—' : metrics.pendingEvents} pending event reviews in the platform.</p></div>
+        <div style={{ background: COLORS.W, border: `1px solid ${COLORS.BD}`, borderRadius: 14, padding: 20 }}><div style={{ fontSize: 12, color: COLORS.T2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>Quick actions</div><div style={{ display: 'grid', gap: 10 }}>{[['learning', 'Manage Learning Hub', 'Add courses and YouTube lessons'], ['announcements', 'Broadcast announcement', 'Reach every member at once'], ['vault', 'Review diligence', 'Keep the existing approval flow'], ['admin-events', 'Event requests', 'Review pending community events']].map(([page, title, note]) => <button className="overview-action" key={page} onClick={() => onNavigate(page)} style={{ textAlign: 'left', border: `1px solid ${COLORS.BD}`, borderRadius: 9, background: COLORS.BG, padding: 13, cursor: 'pointer', color: COLORS.T1 }}><strong>{title}</strong><span style={{ display: 'block', color: COLORS.T2, fontSize: 12, marginTop: 3 }}>{note}</span></button>)}</div></div>
       </section>
     </div>
   </main>;

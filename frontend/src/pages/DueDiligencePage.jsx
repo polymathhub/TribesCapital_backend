@@ -288,7 +288,6 @@ const NAV = [
   { id: 'events',   label: 'Office Hours & Events',    icon: 'cal' },
   null,
   { id: 'announce', label: 'Announcements & Feedback', icon: 'bell' },
-  { id: 'help',     label: 'Help',                     icon: 'help' },
 ];
 
 const SIDEBAR_W = 260;

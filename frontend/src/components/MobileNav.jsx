@@ -11,7 +11,6 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
     { label: 'Project Pipeline', key: 'pipeline', icon: 'chart' },
     { label: 'Office Hours & Events', key: 'events', icon: 'calendar' },
     { label: 'Announcements & Feedback', key: 'announcements', icon: 'bell' },
-    { label: 'Help', key: 'help', icon: 'help' },
   ];
 
   const handleNavClick = (key) => {
