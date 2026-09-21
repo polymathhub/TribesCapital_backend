@@ -27,8 +27,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const isDevelopment = (this.configService.get<string>('app.environment') || 'development') !== 'production';
+    const authorization = String(request.headers?.authorization || '');
+    const isDemoToken = authorization === 'Bearer demo-access-token';
 
-    if (isDevelopment && !request.headers?.authorization) {
+    if (isDevelopment && (!authorization || isDemoToken)) {
       const demoEmail = 'demo@tribes.capital';
       let demoUser: any = null;
 
