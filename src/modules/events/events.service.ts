@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ServiceUnavailableException, Logger } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 import { inMemoryFallbackStore } from '@common/services/in-memory-fallback.store';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -14,6 +14,8 @@ function slugify(value: string): string {
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService?: NotificationsService,
@@ -76,13 +78,17 @@ export class EventsService {
       });
 
       if (this.notificationsService) {
-        await this.notificationsService.createForAllUsers({
-          type: 'event_created',
-          title: 'New office hours event created',
-          message: `A new ${event.eventType || 'event'} titled “${event.title}” has been published.`,
-          actorId: organizerId,
-          data: { eventId: event.id },
-        });
+        try {
+          await this.notificationsService.createForAllUsers({
+            type: 'event_created',
+            title: 'New office hours event created',
+            message: `A new ${event.eventType || 'event'} titled “${event.title}” has been published.`,
+            actorId: organizerId,
+            data: { eventId: event.id },
+          });
+        } catch (notificationError) {
+          this.logger.warn(`Event ${event.id} was created, but notifications could not be sent: ${notificationError instanceof Error ? notificationError.message : String(notificationError)}`);
+        }
       }
 
       return this.formatEventResponse(event);

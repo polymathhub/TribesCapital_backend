@@ -62,6 +62,38 @@ describe('EventsService', () => {
     );
   });
 
+  it('returns the created event when notification delivery fails', async () => {
+    const prisma = {
+      event: {
+        create: jest.fn().mockResolvedValue({
+          id: 'event-2',
+          title: 'Office Hours',
+          slug: 'office-hours',
+          startDate: new Date('2026-01-01T10:00:00.000Z'),
+          endDate: new Date('2026-01-01T11:00:00.000Z'),
+          capacity: 100,
+          isPublished: false,
+          creatorId: 'user-1',
+          rsvps: [],
+        }),
+      },
+    };
+    const notificationsService = {
+      createForAllUsers: jest.fn().mockRejectedValue(new Error('notification database unavailable')),
+    };
+
+    const service = new EventsService(prisma as any, notificationsService as any);
+
+    await expect(service.create('user-1', {
+      title: 'Office Hours',
+      startDate: '2026-01-01T10:00:00.000Z',
+      endDate: '2026-01-01T11:00:00.000Z',
+    } as any)).resolves.toEqual(expect.objectContaining({
+      id: 'event-2',
+      title: 'Office Hours',
+    }));
+  });
+
   it('approves a pending event by publishing it', async () => {
     const prisma = {
       event: {
