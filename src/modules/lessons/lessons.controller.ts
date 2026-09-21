@@ -20,6 +20,8 @@ import {
   LessonResponseDto,
 } from './dto/lesson.dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
+import { RolesGuard } from '@common/guards/roles.guard';
+import { Roles } from '@common/decorators/roles.decorator';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { videoUploadOptions } from '@common/services/upload-validation';
@@ -29,7 +31,8 @@ export class LessonsController {
   constructor(private lessonsService: LessonsService) {}
 
   @Post('courses/:courseId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @UseInterceptors(FileInterceptor('video', videoUploadOptions))
   async createLesson(
     @Param('courseId') courseId: string,

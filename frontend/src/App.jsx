@@ -7,6 +7,11 @@ import { usersAPI } from './api/endpoints';
 import { clearAuthSession } from './utils/authSession';
 import './App.css';
 
+const isAdminUser = (candidate) => {
+  const roles = Array.isArray(candidate?.roles) ? candidate.roles : [];
+  return Boolean(candidate?.isAdmin || candidate?.role === 'admin' || roles.includes('admin') || roles.includes('super-admin'));
+};
+
 function App() {
   const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
   const [width, setWidth] = useState(initialWidth);
@@ -36,7 +41,7 @@ function App() {
 
     return null;
   });
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState(() => isAdminUser(user) ? 'admin-dashboard' : 'home');
   const [isLoading, setIsLoading] = useState(true);
   const [hasBootstrapped, setHasBootstrapped] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(initialWidth >= 1024);
@@ -89,11 +94,13 @@ function App() {
 
           const response = await Promise.race([profileRequest, timeoutPromise]);
           const profile = response?.data?.data ?? response?.data ?? {};
-          setUser({
+          const nextUser = {
             ...profile,
             email: profile.email || userEmail || '',
             name: profile.name || profile.firstName || profile.email?.split('@')[0] || userEmail?.split('@')[0] || 'there',
-          });
+          };
+          setUser(nextUser);
+          if (isAdminUser(nextUser)) setCurrentPage('admin-dashboard');
           setIsAuthenticated(true);
         } else if (userEmail) {
           setUser({ email: userEmail, name: userEmail.split('@')[0] });
@@ -131,7 +138,7 @@ function App() {
     localStorage.setItem('userName', normalizedUser.firstName || normalizedUser.name || normalizedUser.email?.split('@')[0] || 'there');
     setUser(normalizedUser);
     setIsAuthenticated(true);
-    setCurrentPage('home');
+    setCurrentPage(isAdminUser(normalizedUser) ? 'admin-dashboard' : 'home');
     try {
       window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'announcement-updated' } }));
     } catch (error) {

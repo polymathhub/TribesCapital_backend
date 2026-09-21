@@ -15,6 +15,8 @@ import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
 import wavingHandIllustration from '../assets/illustrations/waving-hand-skin-4-svgrepo-com.svg';
 import { formatRelativeTime } from '../utils/learningHubProgress';
 import { buildDashboardStats } from '../utils/dashboardMetrics';
+import AdminOverview from './AdminOverview';
+import AdminLearningHub from './AdminLearningHub';
 
 /* ─── DESIGN TOKENS ─── */
 const P   = '#5B21B6';
@@ -35,6 +37,11 @@ const T3  = '#9CA3AF';
 const BD  = '#E5E7EB';
 const BG  = '#F8FAFC';
 const W   = '#FFFFFF';
+
+const isAdminUser = (candidate) => {
+  const roles = Array.isArray(candidate?.roles) ? candidate.roles : [];
+  return Boolean(candidate?.isAdmin || candidate?.role === 'admin' || roles.includes('admin') || roles.includes('super-admin'));
+};
 
 const glassCardStyle = (radius = 16, padding = '16px 18px') => ({
   background: W,
@@ -1223,7 +1230,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       <div style={{ flex:1, minHeight:0, overflowY:currentPage === 'messages' ? 'hidden' : 'auto', WebkitOverflowScrolling:'touch', padding:currentPage === 'messages' ? 0 : (isMobile?'16px 14px 60px':'24px 28px 60px') }}>
 
           {/* ── HOME PAGE ── */}
-          {currentPage === 'home' && (
+          {currentPage === 'admin-dashboard' && isAdminUser(user) && (
+            <AdminOverview isMobile={isMobile} onNavigate={onNavigate} />
+          )}
+
+          {currentPage === 'home' && !isAdminUser(user) && (
           <>
           <div ref={bannerRef} className="soft-card" style={{
             background: W,
@@ -1612,7 +1623,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
           {/* ── LEARNING HUB PAGE ── */}
           {currentPage === 'learning' && (
-            <LearningHub user={user} isMobile={isMobile} isTablet={isTablet}/>
+            isAdminUser(user)
+              ? <AdminLearningHub isMobile={isMobile} />
+              : <LearningHub user={user} isMobile={isMobile} isTablet={isTablet}/>
           )}
 
           {/* ── DUE DILIGENCE PAGE ── */}

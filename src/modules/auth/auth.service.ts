@@ -416,6 +416,7 @@ export class AuthService {
         lastName: true,
         isActive: true,
         emailVerified: true,
+        roles: { select: { name: true } },
       },
     });
 
@@ -423,7 +424,7 @@ export class AuthService {
       return null;
     }
 
-    return user;
+    return { ...user, roles: user.roles.map((role) => role.name) };
   }
 
   async refreshTokens(refreshTokenDto: RefreshTokenDto): Promise<AuthTokenResponseDto> {

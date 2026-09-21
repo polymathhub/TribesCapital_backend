@@ -24,6 +24,7 @@ export const usersAPI = {
 export const coursesAPI = {
   list: (params) => apiClient.get('/courses', { params }),
   getById: (id) => apiClient.get(`/courses/${id}`),
+  create: (data) => apiClient.post('/courses', data),
   getEnrolled: () => apiClient.get('/courses/enrolled'),
   enroll: (courseId) => apiClient.post(`/courses/${courseId}/enroll`),
   getProgress: (courseId) => apiClient.get(`/courses/${courseId}/progress`),
@@ -74,6 +75,7 @@ export const documentsAPI = {
 export const notificationsAPI = {
   list: () => apiClient.get('/notifications'),
   create: (data) => apiClient.post('/notifications', data),
+  broadcast: (data) => apiClient.post('/notifications/broadcast', data),
   markAsRead: (id) => apiClient.patch(`/notifications/${id}/read`),
   markAllAsRead: () => apiClient.patch('/notifications/mark-all-read'),
 };

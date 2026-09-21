@@ -5,13 +5,14 @@ import logoPng from '../assets/image.png';
 import InitialsAvatar from './InitialsAvatar';
 
 const NAV_ITEMS = [
-  { label: 'Home', page: 'home', icon: 'home' },
+  { label: 'Admin overview', page: 'admin-dashboard', icon: 'chart', adminOnly: true },
+  { label: 'Home', page: 'home', icon: 'home', hideForAdmin: true },
   { label: 'Learning Hub', page: 'learning', icon: 'book' },
   { label: 'Due Diligence Vault', page: 'vault', icon: 'folder' },
   { label: 'Project Pipeline', page: 'pipeline', icon: 'chart' },
   { label: 'Messages', page: 'messages', icon: 'message' },
-  { label: 'Office Hours & Events', page: 'events', icon: 'calendar' },
-  { label: 'Event requests', page: 'admin-events', icon: 'calendar', adminOnly: true },
+  { label: 'Office Hours & Events', page: 'events', icon: 'calendar', hideForAdmin: true },
+  { label: 'Event requests', page: 'admin-events', icon: 'calendar', adminOnly: true, hideForAdmin: true },
   null,
   { label: 'Announcements & Feedback', page: 'announcements', icon: 'bell' },
   { label: 'Help', page: 'help', icon: 'help' },
@@ -140,6 +141,7 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
         {NAV_ITEMS.map((item, i) => {
           if (!item) return <div key={i} style={{ height: 1, background: COLORS.BD, margin: '6px 14px' }}/>
           if (item.adminOnly && !isAdmin) return null;
+          if (item.hideForAdmin && isAdmin) return null;
           const isActive = activePage === item.page;
           const isHovered = hoveredIndex === i;
           return (

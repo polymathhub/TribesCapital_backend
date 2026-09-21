@@ -26,7 +26,7 @@ export class LessonsService {
       throw new NotFoundException('Course not found or unauthorized');
     }
 
-    let videoUrl: string | null = null;
+    let videoUrl: string | null = createLessonDto.videoUrl || null;
     if (videoFile) {
       videoUrl = await this.videoService.uploadVideo(videoFile, courseId);
     }

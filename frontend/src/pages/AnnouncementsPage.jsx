@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { notificationsAPI } from '../api/endpoints';
 
 const P = '#5B21B6';
 const PF = '#EDE9FE';
@@ -7,6 +8,11 @@ const T2 = '#6B7280';
 const BG = '#F9FAFB';
 const PAGE_SURFACE = 'radial-gradient(circle at top left, rgba(124,58,237,0.16), transparent 34%), linear-gradient(135deg, #f8f5ff 0%, #f9fafb 100%)';
 const FEEDBACK_URL = 'https://forms.gle/taaDeFNGVxmp7gcn6';
+
+const isAdminUser = (user) => {
+  const roles = Array.isArray(user?.roles) ? user.roles : [];
+  return Boolean(user?.isAdmin || user?.role === 'admin' || roles.includes('admin') || roles.includes('super-admin'));
+};
 
 const roles = [
   {
@@ -41,8 +47,22 @@ const invitationPoints = [
   'You do not need a formal title to contribute — thoughtful participation matters.'
 ];
 
-export default function AnnouncementsPage({ onBack, onToggleSidebar, isMobile, isTablet }) {
+export default function AnnouncementsPage({ user, onBack, onToggleSidebar, isMobile, isTablet }) {
   const isMobileLocal = isMobile !== undefined ? isMobile : (typeof window !== 'undefined' ? window.innerWidth < 640 : false);
+  const [broadcast, setBroadcast] = useState({ title: '', message: '' });
+  const [broadcastState, setBroadcastState] = useState({ busy: false, notice: '', error: '' });
+
+  const submitBroadcast = async (event) => {
+    event.preventDefault();
+    setBroadcastState({ busy: true, notice: '', error: '' });
+    try {
+      await notificationsAPI.broadcast({ type: 'announcement', title: broadcast.title.trim(), message: broadcast.message.trim() });
+      setBroadcast({ title: '', message: '' });
+      setBroadcastState({ busy: false, notice: 'Announcement sent to every member.', error: '' });
+    } catch (error) {
+      setBroadcastState({ busy: false, notice: '', error: error?.response?.data?.message || 'Unable to send this announcement.' });
+    }
+  };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', fontSize: 14, color: T1, background: PAGE_SURFACE }}>
@@ -55,6 +75,16 @@ export default function AnnouncementsPage({ onBack, onToggleSidebar, isMobile, i
 
       <div style={{ flex: 1, overflowY: 'auto', padding: isMobileLocal ? '16px' : '24px', background: BG }}>
         <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gap: 16 }}>
+          {isAdminUser(user) && <form onSubmit={submitBroadcast} style={{ padding: isMobileLocal ? 18 : 22, borderRadius: 16, background: '#172033', color: '#fff', boxShadow: '0 18px 38px rgba(15,23,42,.16)' }}>
+            <div style={{ color: '#A7F3D0', fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 8 }}>Admin broadcast</div>
+            <h2 style={{ margin: '0 0 6px', fontSize: 20 }}>Send an announcement to everyone</h2>
+            <p style={{ color: '#CBD5E1', fontSize: 13, margin: '0 0 16px' }}>This message will appear in every member's notification feed.</p>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <input required placeholder="Announcement title" value={broadcast.title} onChange={(event) => setBroadcast({ ...broadcast, title: event.target.value })} style={{ border: '1px solid rgba(255,255,255,.2)', borderRadius: 8, padding: '10px 12px', font: 'inherit', color: T1 }} />
+              <textarea required rows={4} placeholder="Write the announcement..." value={broadcast.message} onChange={(event) => setBroadcast({ ...broadcast, message: event.target.value })} style={{ border: '1px solid rgba(255,255,255,.2)', borderRadius: 8, padding: '10px 12px', font: 'inherit', color: T1, resize: 'vertical' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}><span style={{ color: broadcastState.error ? '#FCA5A5' : '#A7F3D0', fontSize: 12 }}>{broadcastState.error || broadcastState.notice}</span><button disabled={broadcastState.busy} style={{ border: 0, borderRadius: 8, background: '#A7F3D0', color: '#172033', padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}>{broadcastState.busy ? 'Sending...' : 'Broadcast announcement'}</button></div>
+            </div>
+          </form>}
           <div style={{ padding: isMobileLocal ? '20px 18px' : '28px 30px', borderRadius: 24, background: '#ffffff', border: '1px solid rgba(124, 58, 237, 0.16)', boxShadow: '0 20px 50px rgba(15, 23, 42, 0.06)' }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: P, marginBottom: 8 }}>Community announcement</div>
             <h2 style={{ fontSize: isMobileLocal ? 22 : 28, fontWeight: 800, color: T1, margin: '0 0 8px' }}>We are building with the community</h2>

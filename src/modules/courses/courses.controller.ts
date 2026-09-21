@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, Param, Put, Query, UseGuards } from '@nest
 import { CoursesService } from './courses.service';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, EnrollmentDto, EnrollmentResponseDto } from './dto/course.dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
+import { RolesGuard } from '@common/guards/roles.guard';
+import { Roles } from '@common/decorators/roles.decorator';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 
@@ -47,7 +49,8 @@ export class CoursesController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   async create(
     @GetCurrentUser('id') userId: string,
     @Body() createCourseDto: CreateCourseDto,

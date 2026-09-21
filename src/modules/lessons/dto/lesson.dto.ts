@@ -15,6 +15,10 @@ export class CreateLessonDto {
   @IsOptional()
   @IsNumber()
   order?: number;
+
+  @IsOptional()
+  @IsString()
+  videoUrl?: string;
 }
 
 export class UpdateLessonDto {

@@ -43,7 +43,7 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    const userRoles = user.roles?.map((r: any) => r.name) || [];
+    const userRoles = user.roles?.map((role: any) => typeof role === 'string' ? role : role.name).filter(Boolean) || [];
 
     // If specific permission metadata is present, check it via rolesService
     if (requiredPermission && requiredPermission.resource && requiredPermission.action) {
