@@ -7,7 +7,6 @@ const list = (value) => Array.isArray(value) ? value : [];
 
 function Metric({ label, value, note, color }) {
   return <article style={{ background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: 18, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}>
-    <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, marginBottom: 16 }} />
     <div style={{ color: COLORS.muted, fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
     <div style={{ color: COLORS.ink, fontSize: 32, lineHeight: 1.1, fontWeight: 800, margin: '8px 0 6px' }}>{value}</div>
     <div style={{ color: COLORS.muted, fontSize: 12 }}>{note}</div>

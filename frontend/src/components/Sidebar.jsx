@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { label: 'Project Pipeline', page: 'pipeline', icon: 'chart' },
   { label: 'Messages', page: 'messages', icon: 'message' },
   { label: 'Office Hours & Events', page: 'events', icon: 'calendar', hideForAdmin: true },
-  { label: 'Event requests', page: 'admin-events', icon: 'calendar', adminOnly: true, hideForAdmin: true },
+  { label: 'Event requests', page: 'admin-events', icon: 'calendar', adminOnly: true },
   null,
   { label: 'Announcements & Feedback', page: 'announcements', icon: 'bell' },
   { label: 'Help', page: 'help', icon: 'help' },
