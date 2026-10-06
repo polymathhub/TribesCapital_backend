@@ -4023,6 +4023,108 @@ function initialCourseProgress() {
   return init;
 }
 
+const TOUR_STEPS = [
+  { icon: 'wave', title: 'Welcome to Tribes Capital', desc: "You're now part of a community for people building and investing in clean energy. Let's show you around in 6 quick steps.", navKey: null },
+  { icon: 'home', title: 'Your home', desc: "Your starting point. Tell us your goal here and we'll take you straight to the right place — contractors, learning, community and more.", navKey: 'home' },
+  { icon: 'book', title: 'Your learning', desc: 'Build your knowledge of renewable energy at your own pace, from the basics through to advanced topics.', navKey: 'learning' },
+  { icon: 'users', title: 'Community', desc: 'Ask questions, join discussions and share what you know with other members across the network.', navKey: 'community' },
+  { icon: 'grid', title: 'Contractors', desc: 'Find and compare verified energy professionals, filtered by location and the service you need.', navKey: 'contractors' },
+  { icon: 'message', title: 'Messaging', desc: "Message members directly once you've made a connection — introduce yourself and take it from there.", navKey: 'messaging' },
+  { icon: 'shield', title: 'Due Diligence Vault', desc: 'Investor tool — access verified project documentation, audits and compliance materials to support your investment decisions.', navKey: 'vault' },
+  { icon: 'briefcase', title: 'Project Pipeline', desc: 'Investor tool — track clean energy projects seeking investment, from early stage through to fully funded.', navKey: 'pipeline' },
+  { icon: 'calendar', title: 'Office Hours & Events', desc: 'Investor tool — book time with the team, or join upcoming webinars and community events.', navKey: 'events' },
+];
+
+const SIDEBAR_WIDTH = 260;
+const TOPBAR_HEIGHT = 65;
+const TOUR_BREAKPOINT = 1024;
+
+function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
+  const [pos, setPos] = useState({ centered: true, top: 0, left: 0, dimLeft: 0, dimTop: 0 });
+  const cardRef = useRef(null);
+
+  useLayoutEffect(() => {
+    function compute() {
+      const isNarrow = window.innerWidth < TOUR_BREAKPOINT;
+      const data = TOUR_STEPS[step - 1];
+      const cardH = cardRef.current ? cardRef.current.offsetHeight : 300;
+      const sb = document.querySelector('.dash-sidebar');
+      const tb = document.querySelector('.dash-topbar');
+      const sbRight = sb ? Math.round(sb.getBoundingClientRect().right) : SIDEBAR_WIDTH;
+      const tbBottom = tb ? Math.round(tb.getBoundingClientRect().bottom) : TOPBAR_HEIGHT;
+      const dimLeft = sbRight;
+      const dimTop = tbBottom;
+
+      if (!data.navKey || isNarrow) {
+        const contentLeft = isNarrow ? 0 : sbRight;
+        const centerX = contentLeft + (window.innerWidth - contentLeft) / 2;
+        const wantTop = Math.max(tbBottom + 24, window.innerHeight / 2 - cardH / 2);
+        setPos({ centered: true, top: Math.max(8, Math.min(wantTop, window.innerHeight - cardH - 8)), left: centerX, dimLeft: isNarrow ? 0 : dimLeft, dimTop });
+        return;
+      }
+
+      const navEl = navRefs.current[data.navKey];
+      if (!navEl) {
+        setPos({ centered: true, top: window.innerHeight / 2 - cardH / 2, left: dimLeft + (window.innerWidth - dimLeft) / 2, dimLeft, dimTop });
+        return;
+      }
+
+      const navRect = navEl.getBoundingClientRect();
+      let left = sbRight + 24;
+      let top = navRect.top - 18;
+      const maxTop = window.innerHeight - cardH - 16;
+      if (top > maxTop) top = maxTop;
+      if (top < tbBottom + 12) top = tbBottom + 12;
+      const pointerTop = Math.max(24, Math.min(navRect.top + navRect.height / 2 - top, cardH - 24));
+      setPos({ centered: false, top, left, pointerTop, dimLeft, dimTop });
+    }
+
+    compute();
+    const id = setTimeout(compute, 0);
+    window.addEventListener('resize', compute);
+    return () => {
+      window.removeEventListener('resize', compute);
+      clearTimeout(id);
+    };
+  }, [step, navRefs]);
+
+  const data = TOUR_STEPS[step - 1];
+  const isLast = step === TOUR_STEPS.length;
+  const isFirst = step === 1;
+  const cardStyle = pos.centered
+    ? { top: pos.top, left: pos.left, transform: 'translateX(-50%)' }
+    : { top: pos.top, left: pos.left };
+
+  return (
+    <>
+      <div className="tour-click-block" />
+      <div className="tour-dim" style={{ top: pos.dimTop || TOPBAR_HEIGHT, left: pos.dimLeft || 0, right: 0, bottom: 0 }} />
+      <div className="tour-card" style={cardStyle} ref={cardRef}>
+        {!pos.centered && <span className="tour-pointer" style={{ top: pos.pointerTop }} />}
+        <button className="tour-close" onClick={onClose} aria-label="Close tour"><X size={13} color="#fff" strokeWidth={2.6} /></button>
+        <div className="tour-top-row">
+          <span className="tour-step-label">Step {step} of {TOUR_STEPS.length}</span>
+          <button className="tour-skip" onClick={onSkip}>Skip tour</button>
+        </div>
+        <div className={`tour-icon${data.icon === 'wave' ? ' emoji' : ''}`}>
+          {data.icon === 'wave' ? '👋' : <Icon name={data.icon} size={20} color="#5B21B6" />}
+        </div>
+        <h3 className="tour-title">{data.title}</h3>
+        <p className="tour-desc">{data.desc}</p>
+        <div className="tour-bottom-row">
+          <div className="tour-dots">
+            {TOUR_STEPS.map((_, i) => (<span key={i} className={`tour-dot${i + 1 === step ? ' active' : ''}`} />))}
+          </div>
+          <div className="tour-btns">
+            {!isFirst && <button className="tour-back-btn" onClick={onBack}><ArrowLeft size={13} color="#374151" /> Back</button>}
+            <button className="tour-next-btn" onClick={onNext}>{isLast ? 'Get started' : 'Next'} <ArrowRight size={13} color="#fff" /></button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function TribesCapitalApp({ initialScreen = 'signin', user: authenticatedUser, onLogout: onAuthenticatedLogout, onUpdateUser = () => {} } = {}) {
   const [screen, setScreen] = useState(initialScreen);
   const [toastMsg, setToastMsg] = useState(null);

@@ -171,6 +171,23 @@ const NAV_ITEMS = [
   {label:'Help',                    icon:'help'},
 ];
 
+const FALLBACK_COURSES = [
+  { id: 'demo-solar-101', title: 'Solar Finance Fundamentals', desc: 'Understand how solar projects are funded, structured, and de-risked for investment.', dur: '32 min', lessons: 5, level: 'Beginner', category: 'Solar & Storage', progress: 45, status: 'inProgress', videoId: '5p2e-6QXBnw', thumbnail: 'https://img.youtube.com/vi/5p2e-6QXBnw/hqdefault.jpg' },
+  { id: 'demo-grid-201', title: 'Grid Modernisation & Distribution', desc: 'Learn how modern grids integrate utility-scale renewables and storage.', dur: '41 min', lessons: 6, level: 'Intermediate', category: 'Energy Finance', progress: 28, status: 'inProgress', videoId: 'YQHsXMglC9A', thumbnail: 'https://img.youtube.com/vi/YQHsXMglC9A/hqdefault.jpg' },
+  { id: 'demo-policy-301', title: 'Policy & ESG for Clean Energy', desc: 'Map the regulatory and ESG factors that shape project risk and returns.', dur: '36 min', lessons: 4, level: 'Intermediate', category: 'Policy & ESG', progress: 72, status: 'inProgress', videoId: 'XqZXxkpg0Q4', thumbnail: 'https://img.youtube.com/vi/XqZXxkpg0Q4/hqdefault.jpg' },
+  { id: 'demo-risk-401', title: 'Risk & FX in Emerging Markets', desc: 'Review currency exposure, debt structuring and risk controls for developers and investors.', dur: '28 min', lessons: 3, level: 'Advanced', category: 'Risk & FX', progress: 10, status: 'notStarted', videoId: 'TzJfepzF_6g', thumbnail: 'https://img.youtube.com/vi/TzJfepzF_6g/hqdefault.jpg' },
+];
+
+function buildFallbackLessons(course = {}) {
+  const baseTitle = course.title || 'Energy learning session';
+  return [
+    { id: 'demo-lesson-1', title: `Intro: ${baseTitle}`, description: 'Start with the fundamentals and the core investment rationale behind the topic.', duration: '8 min', videoUrl: `https://www.youtube.com/watch?v=${course.videoId || '5p2e-6QXBnw'}`, videoId: course.videoId || '5p2e-6QXBnw' },
+    { id: 'demo-lesson-2', title: 'Key drivers and market signals', description: 'Break down the commercial, technical and policy drivers shaping the market.', duration: '9 min', videoUrl: `https://www.youtube.com/watch?v=${course.videoId || '5p2e-6QXBnw'}`, videoId: course.videoId || '5p2e-6QXBnw' },
+    { id: 'demo-lesson-3', title: 'Risk framing and project quality', description: 'A practical view on risk, diligence and execution priorities.', duration: '7 min', videoUrl: `https://www.youtube.com/watch?v=${course.videoId || '5p2e-6QXBnw'}`, videoId: course.videoId || '5p2e-6QXBnw' },
+    { id: 'demo-lesson-4', title: 'Actions to take next', description: 'Close with the next steps for applying the concepts to real opportunities.', duration: '6 min', videoUrl: `https://www.youtube.com/watch?v=${course.videoId || '5p2e-6QXBnw'}`, videoId: course.videoId || '5p2e-6QXBnw' },
+  ];
+}
+
 function buildYouTubeEmbedUrl(videoId) {
   return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&modestbranding=1&controls=1&rel=0&fs=1`;
 }
@@ -917,11 +934,11 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
           videoId: extractYouTubeVideoId(lesson.videoUrl),
         }));
         if (isMounted) {
-          setLessons(normalized);
+          setLessons(normalized.length ? normalized : buildFallbackLessons(course));
         }
       } catch (error) {
         if (isMounted) {
-          setLessons([]);
+          setLessons(buildFallbackLessons(course));
         }
       } finally {
         if (isMounted) {
@@ -1317,11 +1334,11 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
         }));
 
         if (isMounted) {
-          setCourses(transformed);
+          setCourses(transformed.length ? transformed : FALLBACK_COURSES);
         }
       } catch (error) {
         if (isMounted) {
-          setCourses([]);
+          setCourses(FALLBACK_COURSES);
         }
       } finally {
         if (isMounted) {

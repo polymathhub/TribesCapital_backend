@@ -10,14 +10,14 @@ function CourseCard({ cat, title, meta, pct, btn, catColor = COLORS.P, isMobile 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.86) 0%, rgba(248,250,252,0.74) 100%)',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.76)',
-        borderRadius: 14,
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(247,249,252,0.85) 100%)',
+        backdropFilter: 'blur(22px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+        border: '1px solid rgba(148, 163, 184, 0.18)',
+        borderRadius: 20,
         marginBottom: isMobile ? 10 : 12,
         overflow: 'hidden',
-        boxShadow: isHovered ? '0 24px 50px rgba(17,24,39,0.10), inset 0 1px 0 rgba(255,255,255,0.8)' : '0 16px 36px rgba(17,24,39,0.06), inset 0 1px 0 rgba(255,255,255,0.72)',
+        boxShadow: isHovered ? '0 20px 42px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255,255,255,0.9)' : '0 12px 28px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255,255,255,0.72)',
         transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
         transition: 'all 0.2s ease',
       }}
