@@ -2700,7 +2700,7 @@ function ContractorProfilePage({ pc, onBack, onContact, onMessage, onReview, bac
                 <div className="cp-name"><h1>{pc.n}</h1>{pc.v ? <span className="cp-ver"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>Verified</span> : null}</div>
                 <p className="cp-role">{pc.t.join(' · ') || 'Clean energy services'}</p>
                 <div className="cp-meta">
-                  <span><I d={P.pin} s={12} />{pc.location || 'Location not provided'}</span>
+                  <span><Icon name="mapPin" size={12} />{pc.location || 'Location not provided'}</span>
                   <span className="rt">{pc.rv ? `${pc.r.toFixed(1)} (${pc.rv} reviews)` : 'No reviews yet'}</span>
                   <span>Listed {new Date(pc.createdAt).toLocaleDateString()}</span>
                 </div>
@@ -3020,7 +3020,7 @@ function Contractors({ initQ, go, initProf = null, fromEvent = null }) {
       {list.map((contractor) => <div className="card" key={contractor.id} style={{ display: 'flex', flexDirection: 'column' }}>
         <div className="row" style={{ alignItems: 'flex-start', marginBottom: 10 }}><Ava c={contractor.c} t={contractor.n[0]} s={38} />
           <div className="sp"><div className="row" style={{ justifyContent: 'space-between' }}><b style={{ fontSize: 14.5 }}>{contractor.n}</b>{contractor.v && <span className="ver">✓ Verified</span>}</div><div style={{ color: 'var(--p6)', fontSize: 12.5, fontWeight: 600 }}>{contractor.t.join(' · ')}</div></div></div>
-        <div className="mut row" style={{ gap: 5, margin: '0 0 10px' }}><I d={P.pin} s={13} />{contractor.location || 'Location not provided'}</div>
+        <div className="mut row" style={{ gap: 5, margin: '0 0 10px' }}><Icon name="mapPin" size={13} />{contractor.location || 'Location not provided'}</div>
         <p className="sub sp" style={{ marginBottom: 12 }}>{contractor.d}</p>
         <div className="row wrap" style={{ gap: 6, marginBottom: 14 }}>{contractor.t.map((service) => <span className="tag" key={service}>{service}</span>)}</div>
         <div className="row" style={{ borderTop: '1px solid var(--ln)', paddingTop: 14 }}><button className="btn bo sm sp" onClick={() => { setSelectedProfile(contractor); setProf(contractor.id); }}>View profile</button><button className="btn bp sm sp" onClick={() => setContact(contractor)}>Contact</button></div>
@@ -3774,7 +3774,7 @@ function Pipeline({ toast, go }) {
     <div className="card stats">{[[ps.length, "Visible projects"], [ps.filter(x => x.s === 1 || x.s === 2).length, "In development"], [ps.filter(x => x.s === 3).length, "Operational"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([v, l]) => <div key={l}><b>{v}</b><span className="sub">{l}</span></div>)}</div>
     {loading && <p role="status" className="sub">Loading projects…</p>}
     <div className="board">{STG.map(([k, l, c], i) => <div className="col" key={k}><div className="row"><span style={{ width: 3, height: 16, background: c, borderRadius: 2 }} /><h3 className="sp" style={{ fontSize: 13.5 }}>{l}</h3><span className="tag">{ps.filter(x => x.s === i).length}</span></div>
-      {ps.filter(x => x.s === i).map(x => <div className="pc" key={x.id} onClick={() => setSel(x.id)}><div className="row" style={{ marginBottom: 9 }}><Ty t={x.t} />{i === 3 && <span style={{ color: "var(--mt)", fontSize: 11, fontWeight: 600 }}>● Live</span>}</div><b style={{ fontSize: 13.8 }}>{x.n}</b><div className="mut row" style={{ gap: 5, margin: "6px 0 10px" }}><I d={P.pin} s={12} />{x.l}</div><p style={{ fontSize: 13, marginBottom: 12 }}><b style={{ color: "var(--p7)" }}>{x.c || 0} kWp</b> <span className="mut">capacity</span></p><div className="row" style={{ borderTop: "1px solid var(--ln)", paddingTop: 11 }}><Ava c="#6B7280" t={(x.k || 'P')[0]} s={22} /><span className="sub" style={{ fontSize: 12.5 }}>{x.k}</span></div></div>)}
+      {ps.filter(x => x.s === i).map(x => <div className="pc" key={x.id} onClick={() => setSel(x.id)}><div className="row" style={{ marginBottom: 9 }}><Ty t={x.t} />{i === 3 && <span style={{ color: "var(--mt)", fontSize: 11, fontWeight: 600 }}>● Live</span>}</div><b style={{ fontSize: 13.8 }}>{x.n}</b><div className="mut row" style={{ gap: 5, margin: "6px 0 10px" }}><Icon name="mapPin" size={12} />{x.l}</div><p style={{ fontSize: 13, marginBottom: 12 }}><b style={{ color: "var(--p7)" }}>{x.c || 0} kWp</b> <span className="mut">capacity</span></p><div className="row" style={{ borderTop: "1px solid var(--ln)", paddingTop: 11 }}><Ava c="#6B7280" t={(x.k || 'P')[0]} s={22} /><span className="sub" style={{ fontSize: 12.5 }}>{x.k}</span></div></div>)}
       {!loading && !error && ps.filter(x => x.s === i).length === 0 && <p className="sub" style={{ padding: 12 }}>No projects in this stage.</p>}
       </div>)}</div>
     {p && <ProjectDetailModal p={p} onClose={() => setSel(null)} onAdvance={adv} onViewContractor={() => go("contractors", p.k)} onViewVault={() => go("vault")} />}
