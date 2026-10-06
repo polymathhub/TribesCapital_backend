@@ -18,7 +18,7 @@ function App() {
 
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
-    return Boolean(token || userEmail || import.meta.env.DEV);
+    return Boolean(token || import.meta.env.DEV);
   });
   const [user, setUser] = useState(() => {
     if (typeof window === 'undefined') return null;
@@ -67,7 +67,7 @@ function App() {
     const fallbackTimer = setTimeout(() => {
       console.warn('Session bootstrap timed out; continuing with the app shell.');
       finishBootstrap();
-    }, 2500);
+    }, 5000);
 
     const loadSession = async () => {
       try {
@@ -86,17 +86,21 @@ function App() {
           };
           setUser(nextUser);
           setIsAuthenticated(true);
-        } else if (userEmail) {
-          setUser({ email: userEmail, name: userEmail.split('@')[0] });
-          setIsAuthenticated(true);
         }
       } catch (error) {
+        if (error.response?.status === 401) {
+          clearAuthSession();
+          setUser(null);
+          setIsAuthenticated(false);
+          return;
+        }
         console.warn('Session bootstrap failed:', error);
-        if (userEmail) {
+        if (token && userEmail) {
           setUser({ email: userEmail, name: userEmail.split('@')[0] });
           setIsAuthenticated(true);
         }
       } finally {
+        clearTimeout(fallbackTimer);
         finishBootstrap();
       }
     };
@@ -150,6 +154,10 @@ function App() {
       return nextUser;
     });
   };
+
+  if (isLoading || !hasBootstrapped) {
+    return <LoadingScreen isVisible />;
+  }
 
   if (!isAuthenticated) {
     return (

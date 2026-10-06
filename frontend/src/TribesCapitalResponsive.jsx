@@ -2382,8 +2382,13 @@ function NotificationsMenu({ onOpenMessaging, onNavigate }) {
   useEffect(() => {
     void loadNotifications(open);
     const handleNotificationsUpdate = () => { void loadNotifications(false); };
+    const handleOpenNotifications = () => setOpen(true);
     window.addEventListener('tribes:notifications-update', handleNotificationsUpdate);
-    return () => window.removeEventListener('tribes:notifications-update', handleNotificationsUpdate);
+    window.addEventListener('tribes:open-notifications', handleOpenNotifications);
+    return () => {
+      window.removeEventListener('tribes:notifications-update', handleNotificationsUpdate);
+      window.removeEventListener('tribes:open-notifications', handleOpenNotifications);
+    };
   }, [loadNotifications, open]);
   useEffect(() => {
     if (!open) return undefined;
@@ -3788,7 +3793,40 @@ function Pipeline({ toast, go }) {
   </>;
 }
 
-/* ---------- Settings ---------- */
+function SettingsPage({ user, onOpenProfile, onOpenNotifications, onLogout }) {
+  const accountTypes = {
+    COMMUNITY_MEMBER: 'Community Member',
+    INVESTOR: 'Investor',
+    FACILITY_OPERATOR: 'Facility Operator',
+    GUEST: 'Read-only Guest',
+  };
+
+  return <>
+    <div className="ph"><div><h1>Settings</h1></div></div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 16, maxWidth: 960 }}>
+      <section className="card" aria-labelledby="settings-account-title">
+        <h2 id="settings-account-title" style={{ fontSize: 16, marginBottom: 14 }}>Account</h2>
+        <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
+          <div><span className="sub">Name</span><strong style={{ display: 'block', marginTop: 3 }}>{user?.displayName || user?.name || 'Member'}</strong></div>
+          <div><span className="sub">Email</span><strong style={{ display: 'block', marginTop: 3, overflowWrap: 'anywhere' }}>{user?.email || 'No email on file'}</strong></div>
+          <div><span className="sub">Account type</span><strong style={{ display: 'block', marginTop: 3 }}>{accountTypes[user?.accountType] || accountTypes.COMMUNITY_MEMBER}</strong></div>
+        </div>
+        <button type="button" className="btn bo" onClick={onOpenProfile}>View profile</button>
+      </section>
+      <section className="card" aria-labelledby="settings-notifications-title">
+        <h2 id="settings-notifications-title" style={{ fontSize: 16, marginBottom: 6 }}>Notifications</h2>
+        <p className="sub" style={{ marginBottom: 16 }}>Review recent messages, community activity, and account updates.</p>
+        <button type="button" className="btn bo" onClick={onOpenNotifications}>Open notifications</button>
+      </section>
+      <section className="card" aria-labelledby="settings-security-title">
+        <h2 id="settings-security-title" style={{ fontSize: 16, marginBottom: 6 }}>Access and security</h2>
+        <p className="sub" style={{ marginBottom: 16 }}>Sign out of Tribes Capital on this device.</p>
+        <button type="button" className="btn bo" onClick={onLogout}>Sign out</button>
+      </section>
+    </div>
+  </>;
+}
+
 /* ---------- Help & support ---------- */
 const HELP_CATS = [
   { k: 'Getting started', icon: 'home', d: 'What the platform is and how to begin' },
@@ -4597,7 +4635,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'settings') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="settings" onNavigate={handleSidebarNav} {...shellProps}>
-        <div className="tcx"><ProfileSettings user={user} avatarDataUrl={avatarDataUrl} onAvatarChange={(event) => setAvatarDataUrl(event?.dataUrl || null)} onSaved={onUpdateUser} onMessage={() => handleSidebarNav('messaging')} /></div>
+        <div className="tcx"><SettingsPage user={user} onOpenProfile={() => navigate('profile')} onOpenNotifications={() => window.dispatchEvent(new CustomEvent('tribes:open-notifications'))} onLogout={logOut} /></div>
       </AppShell>
     );
   } else if (screen === 'help') {
