@@ -6,6 +6,12 @@ import { usersAPI } from './api/endpoints';
 import { clearAuthSession } from './utils/authSession';
 import './App.css';
 
+const omitEmbeddedProfileImages = (user) => ({
+  ...user,
+  ...(typeof user?.avatar === 'string' && user.avatar.startsWith('data:') ? { avatar: '' } : {}),
+  ...(typeof user?.coverPhoto === 'string' && user.coverPhoto.startsWith('data:') ? { coverPhoto: '' } : {}),
+});
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -20,7 +26,7 @@ function App() {
     try {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
-        return JSON.parse(storedUser);
+        return omitEmbeddedProfileImages(JSON.parse(storedUser));
       }
     } catch {
     // this is to ignore invalid stored data
@@ -106,10 +112,10 @@ function App() {
   }, []);
 
   const handleLogin = (userData) => {
-    const normalizedUser = {
+    const normalizedUser = omitEmbeddedProfileImages({
       ...userData,
       name: userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email?.split('@')[0] || 'there',
-    };
+    });
 
     localStorage.setItem('user', JSON.stringify(normalizedUser));
     localStorage.setItem('userEmail', normalizedUser.email);
@@ -133,7 +139,7 @@ function App() {
     setUser((currentUser) => {
       const nextUser = {
         ...currentUser,
-        ...updatedUser,
+        ...omitEmbeddedProfileImages(updatedUser),
         name: updatedUser.displayName || updatedUser.name || `${updatedUser.firstName || currentUser?.firstName || ''} ${updatedUser.lastName || currentUser?.lastName || ''}`.trim() || currentUser?.email?.split('@')[0] || 'Member',
       };
       try {

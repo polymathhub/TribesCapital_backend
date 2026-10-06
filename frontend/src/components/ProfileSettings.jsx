@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { InstagramIcon, LinkedinIcon } from '@hugeicons/core-free-icons';
-import { Globe, Pencil, Plus, X } from 'lucide-react';
+import { Globe, MessageCircle, MoreHorizontal, Pencil, Plus, X } from 'lucide-react';
 import { usersAPI } from '../api/endpoints';
 import { uploadFileInChunks } from '../utils/chunkedUpload';
 import './ProfileSettings.css';
@@ -47,7 +47,7 @@ const glassCardStyle = (radius = 12, padding = '14px') => ({
   padding,
 });
 
-function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () => {}, onClose = () => {}, onSaved = () => {} }) {
+function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () => {}, onClose = () => {}, onSaved = () => {}, onMessage = () => {}, readOnly = false }) {
   const initialName = user?.displayName || user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' ');
   const [name, setName] = useState(initialName);
   const [accountType, setAccountType] = useState(user?.accountType || 'COMMUNITY_MEMBER');
@@ -63,7 +63,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
   const [editingSection, setEditingSection] = useState(null);
   const [sectionSaving, setSectionSaving] = useState(false);
   const [socialConnecting, setSocialConnecting] = useState(false);
-  const [avatar, setAvatar] = useState(avatarDataUrl || user?.avatar || null);
+  const [avatar, setAvatar] = useState(user?.avatar || null);
   const [coverPhoto, setCoverPhoto] = useState(user?.coverPhoto || null);
   const [editOpen, setEditOpen] = useState(false);
   const [avatarChanged, setAvatarChanged] = useState(false);
@@ -93,9 +93,9 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
   }, [user?.id, user?.displayName, user?.name, user?.firstName, user?.lastName, user?.accountType, user?.occupation, user?.address, user?.location, user?.bio, user?.interests, user?.socialLink, user?.socialLinks]);
 
   useEffect(() => {
-    setAvatar(avatarDataUrl || user?.avatar || null);
+    setAvatar(user?.avatar || null);
     setCoverPhoto(user?.coverPhoto || null);
-  }, [avatarDataUrl, user?.avatar, user?.coverPhoto]);
+  }, [user?.avatar, user?.coverPhoto]);
 
   useEffect(() => {
     const handleSocialProfileConnected = async (event) => {
@@ -308,40 +308,45 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
   ];
 
   return (
-    <main className="profile-settings-page">
-      <header className="profile-settings-heading"><div><span className="profile-eyebrow">Your account</span><h1>Profile</h1><p>Manage how you appear to other Tribes Capital members.</p></div><button type="button" className="profile-edit-button" onClick={() => setEditOpen(true)}>Edit profile</button></header>
+    <main className={`profile-settings-page${readOnly ? ' read-only' : ''}`}>
       {message && <div className={`profile-save-notice ${message.type}`} role={message.type === 'error' ? 'alert' : 'status'}>{message.text}</div>}
       <section className="profile-hero-card">
         <div className="profile-cover" style={coverPhoto ? { backgroundImage: `url("${coverPhoto}")` } : undefined}>
-          <button type="button" className="profile-cover-edit" aria-label="Edit cover photo" title="Edit cover photo" onClick={() => coverFileRef.current?.click()}><Pencil size={15} /></button>
+          {!readOnly && <button type="button" className="profile-cover-edit" aria-label="Edit cover photo" title="Edit cover photo" onClick={() => coverFileRef.current?.click()}><Pencil size={15} /></button>}
           <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden onChange={handleCoverFile} />
         </div>
         <div className="profile-identity">
-          <div className="profile-photo-wrap"><div className="profile-photo">{avatar ? <img src={avatar} alt={`${name || 'Member'} profile`} /> : <span>{initials}</span>}</div><button type="button" className="profile-photo-edit" aria-label="Edit profile photo" title="Edit profile photo" onClick={() => { setEditOpen(true); window.setTimeout(() => fileRef.current?.click(), 0); }}><Pencil size={13} /></button></div>
-          <div className="profile-identity-copy"><h2>{name || 'Your name'}</h2><div className="profile-headline-row"><p>{headline || 'Add a professional headline'}</p><button type="button" className="profile-headline-edit" aria-label="Edit professional headline" title="Edit professional headline" onClick={() => { setEditOpen(true); window.setTimeout(() => headlineInputRef.current?.focus(), 0); }}><Pencil size={13} /></button></div><div className="profile-meta"><span className="profile-account-type">{ACCOUNT_TYPES.find(([value]) => value === accountType)?.[1] || 'Community Member'}</span>{location && <span>{location}</span>}{user?.createdAt && <span>Member since {new Date(user.createdAt).getFullYear()}</span>}</div></div>
+          <div className="profile-identity-main">
+            <div className="profile-photo-wrap"><div className="profile-photo">{avatar ? <img src={avatar} alt={`${name || 'Member'} profile`} /> : <span>{initials}</span>}</div><button type="button" className="profile-photo-edit" aria-label="Edit profile photo" title="Edit profile photo" onClick={() => { setEditOpen(true); window.setTimeout(() => fileRef.current?.click(), 0); }}><Pencil size={13} /></button></div>
+            <div className="profile-identity-copy"><div className="profile-name-row"><h1>{name || 'Your name'}</h1></div>{headline && <div className="profile-headline-row"><p>{headline}</p></div>}<div className="profile-meta">{location && <span>{location}</span>}{user?.createdAt && <span>Member since {new Date(user.createdAt).getFullYear()}</span>}</div>{!readOnly && <div className="profile-hero-actions"><button type="button" className="profile-message-button" onClick={onMessage}><MessageCircle size={15} />Message</button>{socialLinks[0] ? <a className="profile-website-button" href={/^https?:\/\//i.test(socialLinks[0]) ? socialLinks[0] : `https://${socialLinks[0]}`} target="_blank" rel="noreferrer"><Globe size={15} />Visit my website</a> : <button type="button" className="profile-website-button" onClick={() => setEditOpen(true)} title="Add a professional link to enable this action"><Globe size={15} />Visit my website</button>}<button type="button" className="profile-more-button" onClick={() => setEditOpen(true)}><MoreHorizontal size={17} />More</button></div>}{readOnly && socialLinks[0] && <div className="profile-hero-actions"><a className="profile-website-button" href={/^https?:\/\//i.test(socialLinks[0]) ? socialLinks[0] : `https://${socialLinks[0]}`} target="_blank" rel="noreferrer"><Globe size={15} />Visit my website</a></div>}</div>
+          </div>
+          <aside className="profile-affiliations" aria-label="Profile details">
+            <div><img className="profile-detail-mark profile-brand-mark" src="/image.png" alt="" aria-hidden="true" /><span><strong>Community Member</strong><small>Account type</small></span></div>
+            {location && <div><span className="profile-detail-mark">⌖</span><span><strong>{location}</strong><small>Location</small></span></div>}
+          </aside>
         </div>
       </section>
 
       <div className="profile-settings-grid">
         <div className="profile-settings-main">
-          <section className={`profile-section${editingSection === 'about' ? ' editing' : ''}`} onClick={() => { if (!editingSection) setEditingSection('about'); }} onKeyDown={(event) => { if (!editingSection && ['Enter', ' '].includes(event.key)) setEditingSection('about'); }} tabIndex={0}>
-            <header><h3>About</h3><button type="button" className="profile-section-edit" onClick={(event) => { event.stopPropagation(); setEditingSection('about'); }}>Edit</button></header>
-            {editingSection === 'about' ? <><textarea className="profile-inline-editor" value={bio} maxLength={BIO_MAX} onClick={(event) => event.stopPropagation()} onChange={(event) => setBio(event.target.value)} placeholder="Share your experience and what you are working on." /><div className="profile-inline-actions"><button type="button" className="profile-text-button" onClick={(event) => { event.stopPropagation(); setBio(user?.bio || ''); setEditingSection(null); }}>Cancel</button><button type="button" className="profile-inline-save" disabled={sectionSaving} onClick={(event) => { event.stopPropagation(); void saveSection('about'); }}>{sectionSaving ? 'Saving…' : 'Save'}</button></div></> : <p>{bio || 'Add a short introduction so other members can learn about you.'}</p>}
+          <section className={`profile-section${editingSection === 'about' ? ' editing' : ''}`} onClick={() => { if (!readOnly && !editingSection) setEditingSection('about'); }} onKeyDown={(event) => { if (!readOnly && !editingSection && ['Enter', ' '].includes(event.key)) setEditingSection('about'); }} tabIndex={readOnly ? -1 : 0}>
+            <header><h3>About</h3>{!readOnly && <button type="button" className="profile-section-edit" onClick={(event) => { event.stopPropagation(); setEditingSection('about'); }}>Edit</button>}</header>
+            {editingSection === 'about' && !readOnly ? <><textarea className="profile-inline-editor" value={bio} maxLength={BIO_MAX} onClick={(event) => event.stopPropagation()} onChange={(event) => setBio(event.target.value)} placeholder="Share your experience and what you are working on." /><div className="profile-inline-actions"><button type="button" className="profile-text-button" onClick={(event) => { event.stopPropagation(); setBio(user?.bio || ''); setEditingSection(null); }}>Cancel</button><button type="button" className="profile-inline-save" disabled={sectionSaving} onClick={(event) => { event.stopPropagation(); void saveSection('about'); }}>{sectionSaving ? 'Saving…' : 'Save'}</button></div></> : <p>{bio || (readOnly ? 'No introduction added.' : 'Add a short introduction so other members can learn about you.')}</p>}
           </section>
-          <section className={`profile-section${editingSection === 'interests' ? ' editing' : ''}`} onClick={() => { if (!editingSection) setEditingSection('interests'); }} onKeyDown={(event) => { if (!editingSection && ['Enter', ' '].includes(event.key)) setEditingSection('interests'); }} tabIndex={0}>
-            <header><h3>Energy interests</h3><button type="button" className="profile-section-edit" onClick={(event) => { event.stopPropagation(); setEditingSection('interests'); }}>Edit</button></header>
-            {editingSection === 'interests' ? <><div className="profile-interest-list">{INTEREST_OPTIONS.map((interest) => { const selected = interests.includes(interest); return <button type="button" key={interest} aria-pressed={selected} className={`profile-interest-option${selected ? ' selected' : ''}`} onClick={(event) => { event.stopPropagation(); toggleInterest(interest); }}>{interest}</button>; })}</div><div className="profile-inline-actions"><button type="button" className="profile-text-button" onClick={(event) => { event.stopPropagation(); setInterests(Array.isArray(user?.interests) ? user.interests : []); setEditingSection(null); }}>Cancel</button><button type="button" className="profile-inline-save" disabled={sectionSaving} onClick={(event) => { event.stopPropagation(); void saveSection('interests'); }}>{sectionSaving ? 'Saving…' : 'Save'}</button></div></> : interests.length ? <div className="profile-interest-list">{interests.map((interest) => <span className="profile-interest" key={interest}>{interest}</span>)}</div> : <p>Choose the topics you follow across clean energy and sustainability.</p>}
+          <section className={`profile-section${editingSection === 'interests' ? ' editing' : ''}`} onClick={() => { if (!readOnly && !editingSection) setEditingSection('interests'); }} onKeyDown={(event) => { if (!readOnly && !editingSection && ['Enter', ' '].includes(event.key)) setEditingSection('interests'); }} tabIndex={readOnly ? -1 : 0}>
+            <header><h3>Energy interests</h3>{!readOnly && <button type="button" className="profile-section-edit" onClick={(event) => { event.stopPropagation(); setEditingSection('interests'); }}>Edit</button>}</header>
+            {editingSection === 'interests' && !readOnly ? <><div className="profile-interest-list">{INTEREST_OPTIONS.map((interest) => { const selected = interests.includes(interest); return <button type="button" key={interest} aria-pressed={selected} className={`profile-interest-option${selected ? ' selected' : ''}`} onClick={(event) => { event.stopPropagation(); toggleInterest(interest); }}>{interest}</button>; })}</div><div className="profile-inline-actions"><button type="button" className="profile-text-button" onClick={(event) => { event.stopPropagation(); setInterests(Array.isArray(user?.interests) ? user.interests : []); setEditingSection(null); }}>Cancel</button><button type="button" className="profile-inline-save" disabled={sectionSaving} onClick={(event) => { event.stopPropagation(); void saveSection('interests'); }}>{sectionSaving ? 'Saving…' : 'Save'}</button></div></> : interests.length ? <div className="profile-interest-list">{interests.map((interest) => <span className="profile-interest" key={interest}>{interest}</span>)}</div> : <p>{readOnly ? 'No interests shared yet.' : 'Choose the topics you follow across clean energy and sustainability.'}</p>}
           </section>
-          <section className="profile-section profile-social-section"><header><h3>Professional profiles</h3></header>
-            <div className="profile-social-links">{socialLinks.map((url) => { const PlatformIcon = socialIcon(url); return <div className="profile-social-item" key={url}><a href={/^https?:\/\//i.test(url) ? url : `https://${url}`} target="_blank" rel="noreferrer" aria-label={`Open ${url}`} title={url}>{PlatformIcon === 'x' ? <X size={17} /> : PlatformIcon ? <HugeiconsIcon icon={PlatformIcon} size={17} color="currentColor" strokeWidth={2} /> : <Globe size={17} />}<span>{url.includes('linkedin.com') ? 'LinkedIn' : url.includes('instagram.com') ? 'Instagram' : url.includes('x.com') || url.includes('twitter.com') ? 'X' : 'Website'}</span></a><button type="button" onClick={() => void removeSocialLink(url)} disabled={sectionSaving} aria-label={`Remove ${url}`} title="Remove profile"><X size={13} /></button></div>; })}</div>
-            {showSocialForm && <div className="profile-social-add-form"><label><span>Professional platform</span><select value={newSocialPlatform} onChange={(event) => setNewSocialPlatform(event.target.value)}>{SOCIAL_PLATFORMS.map(([provider, label]) => <option key={provider} value={provider}>{label}</option>)}</select></label><button type="button" className="profile-inline-save" disabled={socialConnecting} onClick={() => void connectSocialProfile()}>{socialConnecting ? 'Waiting for authorization…' : 'Connect and import'}</button><label><span>Or add profile URL</span><input value={newSocialLink} onChange={(event) => setNewSocialLink(event.target.value)} placeholder="Profile URL or username" /></label><button type="button" className="profile-inline-save" disabled={sectionSaving || !newSocialLink.trim()} onClick={() => void addSocialLink()}>{sectionSaving ? 'Saving…' : 'Add manually'}</button></div>}
-            <button type="button" className="profile-social-add" aria-label="Add professional profile" title="Add professional profile" onClick={() => setShowSocialForm((visible) => !visible)}><Plus size={17} /><span>Add profile</span></button>
+          <section id="profile-social-section" className="profile-section profile-social-section"><header><h3>Professional profiles</h3></header>
+            <div className="profile-social-links">{socialLinks.map((url) => { const PlatformIcon = socialIcon(url); return <div className="profile-social-item" key={url}><a href={/^https?:\/\//i.test(url) ? url : `https://${url}`} target="_blank" rel="noreferrer" aria-label={`Open ${url}`} title={url}>{PlatformIcon === 'x' ? <X size={17} /> : PlatformIcon ? <HugeiconsIcon icon={PlatformIcon} size={17} color="currentColor" strokeWidth={2} /> : <Globe size={17} />}<span>{url.includes('linkedin.com') ? 'LinkedIn' : url.includes('instagram.com') ? 'Instagram' : url.includes('x.com') || url.includes('twitter.com') ? 'X' : 'Website'}</span></a>{!readOnly && <button type="button" onClick={() => void removeSocialLink(url)} disabled={sectionSaving} aria-label={`Remove ${url}`} title="Remove profile"><X size={13} /></button>}</div>; })}</div>
+            {!readOnly && showSocialForm && <div className="profile-social-add-form"><label><span>Professional platform</span><select value={newSocialPlatform} onChange={(event) => setNewSocialPlatform(event.target.value)}>{SOCIAL_PLATFORMS.map(([provider, label]) => <option key={provider} value={provider}>{label}</option>)}</select></label><button type="button" className="profile-inline-save" disabled={socialConnecting} onClick={() => void connectSocialProfile()}>{socialConnecting ? 'Waiting for authorization…' : 'Connect and import'}</button><label><span>Or add profile URL</span><input value={newSocialLink} onChange={(event) => setNewSocialLink(event.target.value)} placeholder="Profile URL or username" /></label><button type="button" className="profile-inline-save" disabled={sectionSaving || !newSocialLink.trim()} onClick={() => void addSocialLink()}>{sectionSaving ? 'Saving…' : 'Add manually'}</button></div>}
+            {!readOnly && <button type="button" className="profile-social-add" aria-label="Add professional profile" title="Add professional profile" onClick={() => setShowSocialForm((visible) => !visible)}><Plus size={17} /><span>Add profile</span></button>}
           </section>
         </div>
-        <aside className="profile-completion-card"><div className="profile-completion-header"><div><span className="profile-eyebrow">Profile strength</span><h3>{completionPercent}% complete</h3></div><span className="profile-completion-number">{completedCount}/{completion.length}</span></div><div className="profile-progress"><span style={{ width: `${completionPercent}%` }} /></div><div className="profile-completion-list">{profileSections.map(([label, done]) => <div className={`profile-completion-item${done ? ' done' : ''}`} key={label}><span aria-hidden="true">{done ? '✓' : ''}</span>{label}</div>)}</div></aside>
+        {!readOnly && <aside className="profile-completion-card"><div className="profile-completion-header"><div><span className="profile-eyebrow">Profile strength</span><h3>{completionPercent}% complete</h3></div><span className="profile-completion-number">{completedCount}/{completion.length}</span></div><div className="profile-progress"><span style={{ width: `${completionPercent}%` }} /></div><div className="profile-completion-list">{profileSections.map(([label, done]) => <div className={`profile-completion-item${done ? ' done' : ''}`} key={label}><span aria-hidden="true">{done ? '✓' : ''}</span>{label}</div>)}</div></aside>}
       </div>
 
-      {editOpen && <div className="profile-edit-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setEditOpen(false); }}>
+      {editOpen && !readOnly && <div className="profile-edit-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setEditOpen(false); }}>
         <section className="profile-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
           <header><div><span className="profile-eyebrow">Profile details</span><h2 id="profile-edit-title">Edit profile</h2></div><button type="button" className="profile-dialog-close" onClick={() => setEditOpen(false)} aria-label="Close edit profile">×</button></header>
           <div className="profile-edit-body">
@@ -362,6 +367,26 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
       {onClose && <button type="button" className="profile-back-button" onClick={onClose}>Back</button>}
     </main>
   );
+}
+
+export function PublicProfilePage({ userId, onClose }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    usersAPI.getById(userId)
+      .then((response) => { if (!cancelled) setProfile(response?.data?.data ?? response?.data ?? null); })
+      .catch((requestError) => { if (!cancelled) setError(requestError?.response?.data?.message || 'Unable to load this profile.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  if (loading) return <main className="profile-settings-page" role="status">Loading profile…</main>;
+  if (error || !profile) return <main className="profile-settings-page"><p role="alert">{error || 'This profile could not be found.'}</p><button type="button" className="profile-secondary-button" onClick={onClose}>Back to messages</button></main>;
+  return <ProfileSettings key={profile.id} user={profile} readOnly onClose={onClose} />;
 }
 
 export default ProfileSettings;

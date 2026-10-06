@@ -13,7 +13,7 @@ import LearningHub from './pages/LearningHub.jsx';
 import OfficeHoursEvents from './pages/OfficeHoursEvents.jsx';
 import MessagingPage from './pages/MessagingPage.jsx';
 import DueDiligenceVault from './pages/DueDiligencePage.jsx';
-import ProfileSettings from './components/ProfileSettings.jsx';
+import ProfileSettings, { PublicProfilePage } from './components/ProfileSettings.jsx';
 import homepageHeroImage from './assets/homepage-community-hero.png';
 import { 
   Eye,
@@ -101,6 +101,18 @@ const STYLES = `
 .tca-google-btn:hover{ background:var(--bg); }
 
 .tca-footer-text{ text-align:center; font-size:13.8px; color:var(--ink-600); margin-top:24px; }
+
+.tca-not-found{ min-height:100vh; display:grid; place-items:center; padding:24px; background:radial-gradient(circle at top, rgba(167,139,250,.20), rgba(255,255,255,0) 38%), linear-gradient(180deg, #F8F5FF 0%, #F5F7FB 100%); }
+.tca-not-found-card{ width:min(100%, 620px); background:rgba(255,255,255,.82); border:1px solid #E9D5FF; border-radius:28px; padding:28px 24px 32px; text-align:center; box-shadow:0 24px 60px rgba(109,40,217,.10); }
+.tca-not-found-illustration{ display:block; width:min(100%, 360px); height:auto; margin:0 auto 20px; }
+.tca-not-found-card h1{ margin:0 0 10px; font-size:clamp(28px, 5vw, 44px); line-height:1.1; color:#1F2937; }
+.tca-not-found-card p{ margin:0 auto 22px; max-width:480px; font-size:14px; line-height:1.6; color:#4B5563; }
+.tca-empty-state-wrap{ display:flex; align-items:center; justify-content:center; grid-column:1/-1; padding:28px 20px 16px; }
+.tca-empty-state-content{ width:min(100%, 520px); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:28px 18px 20px; }
+.tca-empty-state-illustration{ display:block; width:min(100%, 280px); height:auto; margin:0 auto 18px; animation:tca-float 3s ease-in-out infinite; }
+.tca-empty-state-content h3{ margin:0 0 8px; color:var(--i9); font-size:clamp(20px, 2vw, 26px); }
+.tca-empty-state-content p{ margin:0; color:var(--p6); font-size:14px; line-height:1.6; }
+@keyframes tca-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-8px); } }
 
 .tca-backlink-row{ display:flex; justify-content:center; margin-top:24px; }
 .tca-backlink{ display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-size:13.8px; font-weight:600; color:var(--purple-700); }
@@ -226,7 +238,8 @@ const STYLES = `
 @media (max-width:640px){ .dash-topbar{ padding:16px; } }
 .dash-searchbar{ flex:1; max-width:460px; display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 14px; color:var(--ink-400); font-size:13.5px; }
 .dash-topbar-right{ display:flex; align-items:center; gap:16px; flex-shrink:0; }
-.dash-avatar{ width:30px; height:30px; border-radius:50%; background:var(--purple-700); color:#fff; font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+.dash-avatar{ width:30px; height:30px; border-radius:50%; background:var(--purple-700); color:#fff; font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.dash-avatar img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
 .dash-bell-wrap{ position:relative; display:inline-flex; }
 .dash-bell-count{ position:absolute; top:-8px; right:-11px; min-width:17px; height:17px; padding:0 4px; border:2px solid #fff; border-radius:999px; background:#B42318; color:#fff; display:grid; place-items:center; font-size:9px; font-weight:800; line-height:1; }
 
@@ -1125,11 +1138,13 @@ const STYLES = `
 
 /* ---- Notifications dropdown ---- */
 .dash-notif-wrap{position:relative}
-.dash-bell-btn{background:none;border:0;padding:6px;margin:-6px;border-radius:8px;cursor:pointer;display:flex;color:#6B7280}
+.dash-bell-btn{display:grid;place-items:center;width:48px;height:48px;padding:0;margin:-2px;border:0;border-radius:10px;background:transparent;color:#6B7280;cursor:pointer;transition:background .15s ease,color .15s ease}
 .dash-bell-btn:hover{background:var(--bg)}
 .dash-notif-panel{position:fixed;top:calc(75px + env(safe-area-inset-top));right:16px;left:auto;width:min(360px,calc(100vw - 32px));max-height:calc(100dvh - 88px);background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(17,17,20,.18);border:1px solid var(--line);z-index:95;overflow:hidden}
-.dash-notif-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
-.dash-notif-head h4{font-size:14.5px;font-weight:700;color:var(--ink-900);margin:0}
+.dash-notif-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#fbfaff)}
+.dash-notif-heading{display:grid;gap:4px}
+.dash-notif-head h4{margin:0;font-size:15px;font-weight:750;color:var(--ink-900)}
+.dash-notif-unread-count{color:var(--ink-400);font-size:11px;line-height:1.3}
 .dash-notif-mark{background:none;border:0;color:var(--purple-600);font-size:12.5px;font-weight:600;cursor:pointer;padding:0}
 .dash-notif-list{max-height:360px;overflow-y:auto}
 .dash-notif-empty{padding:22px 18px;margin:0;color:var(--ink-400);font-size:12.5px;line-height:1.5;text-align:center}
@@ -1138,13 +1153,16 @@ const STYLES = `
 .dash-notif-error-card p{margin:0;color:#667085;font-size:11px;line-height:1.45}
 .dash-notif-error-card button{flex:0 0 auto;border:1px solid #D0D5DD;border-radius:999px;background:#fff;padding:6px 11px;color:#475467;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
 .dash-notif-error-card button:disabled{cursor:wait;opacity:.6}
-.dash-notif-item{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border-bottom:1px solid var(--line);cursor:default}
+.dash-notif-item{position:relative;display:flex;align-items:flex-start;gap:12px;width:100%;padding:14px 16px;border:0;border-left:3px solid transparent;border-bottom:1px solid #f0edf5;background:#fff;text-align:left;cursor:pointer;transition:background .14s ease,border-color .14s ease}
+.dash-notif-item:hover{background:#f9f6ff}
 .dash-notif-item:last-child{border-bottom:0}
-.dash-notif-item.unread{background:var(--purple-50)}
-.dash-notif-dot{width:8px;height:8px;border-radius:50%;background:var(--purple-600);flex-shrink:0;margin-top:6px}
-.dash-notif-item .ic{width:34px;height:34px;border-radius:9px;background:transparent;color:var(--purple-700);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.dash-notif-item p{font-size:13.2px;color:var(--ink-900);line-height:1.5;margin:0 0 3px}
-.dash-notif-item span{font-size:11.8px;color:var(--ink-400)}
+.dash-notif-item.unread{border-left-color:var(--purple-600);background:#faf7ff}
+.dash-notif-item .ic{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:44px;height:44px;border:1px solid #e5d6f5;border-radius:12px;background:#f2eafb;color:var(--purple-700)}
+.dash-notif-item .ic svg{width:22px;height:22px}
+.dash-notif-item .sp{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.dash-notif-title{display:block;color:var(--ink-900);font-size:13px;font-weight:700;line-height:1.45}
+.dash-notif-meta{display:block;color:var(--ink-400);font-size:11px;line-height:1.4}
+.dash-notif-dot{width:8px;height:8px;border-radius:50%;background:var(--purple-600);flex-shrink:0;margin-top:7px;box-shadow:0 0 0 3px #eee5f8}
 .dash-notif-foot{padding:12px 18px;text-align:center;border-top:1px solid var(--line)}
 .dash-notif-foot button{background:none;border:0;color:var(--purple-600);font-size:12.8px;font-weight:600;cursor:pointer}
 .dash-notif-foot button:disabled{color:var(--ink-400);cursor:default}
@@ -1415,7 +1433,7 @@ button.lb-control{cursor:pointer;justify-content:space-between;gap:10px}
 .lb-drop .fname{max-width:100%;font-size:13.5px;line-height:20px;font-weight:500;color:var(--lb-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb-drop .fsub{margin-top:4px;font-size:11.5px;line-height:16px;color:var(--lb-mut)}
 /* Upload success state (design "success") */
-.lb-ov.center{align-items:center;justify-content:center;padding:24px}
+.lb-ov.center{inset:0;align-items:center;justify-content:center;padding:24px;background:rgba(17,17,20,.34);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .lb-modal.ok{width:412px;padding:21px}
 .lb-modal.ok .lb-close{top:22px;right:22px}
 .lb-modal.ok .lb-done{padding:0;text-align:center}
@@ -1994,7 +2012,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .homepage-hero-dot{width:8px;height:8px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.62);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.24)}
 .homepage-hero-dot.active{width:20px;border-radius:999px;background:#fff}
 .homepage-hero-dot:focus-visible{outline:2px solid #fff;outline-offset:3px}
-@media (max-width:640px){.dash-banner.homepage-hero{aspect-ratio:16/9}.homepage-hero-caption{padding:20px 18px 54px}.homepage-hero-caption h2{max-width:260px;font-size:21px}.homepage-hero-dots{right:12px;bottom:12px}}
+@media (max-width:640px){.dash-banner.homepage-hero{aspect-ratio:2.94/1}.homepage-hero-slide.intro-slide img{object-fit:contain;background:#f7f7f8}.homepage-hero-caption{padding:12px 14px 34px}.homepage-hero-caption h2{max-width:260px;font-size:17px}.homepage-hero-dots{right:12px;bottom:10px}}
 @media print{.dash-sidebar,.dash-topbar,.tca-toast,.tour-card,.tour-dim,.tour-click-block{display:none!important}.dash-content{max-width:none;padding:0}}
 `;
 
@@ -2379,12 +2397,13 @@ function NotificationsMenu({ onOpenMessaging, onNavigate }) {
   return (
     <div className="dash-notif-wrap" ref={wrapRef}>
       <button className="dash-bell-btn" aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <span className="dash-bell-wrap"><Bell size={20} color="#344054" strokeWidth={2.2} />{unreadCount > 0 && <span className="dash-bell-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}</span>
+            <span className="dash-bell-wrap"><Bell size={28} color="#344054" strokeWidth={2.2} />{unreadCount > 0 && <span className="dash-bell-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}</span>
       </button>
       {open && (
         <div className="dash-notif-panel" role="menu">
           <div className="dash-notif-head">
-            <h4>Notifications</h4>
+            <div className="dash-notif-heading"><h4>Notifications</h4><span className="dash-notif-unread-count">{loading ? 'Checking for updates…' : `${unreadCount} unread`}</span></div>
+            <button type="button" className="dash-notif-mark" disabled={!unreadCount} onClick={() => void markAllRead()}>Mark all read</button>
           </div>
           <div className="dash-notif-list">
             {loading && <p role="status" className="dash-notif-empty">Loading notifications…</p>}
@@ -2393,12 +2412,14 @@ function NotificationsMenu({ onOpenMessaging, onNavigate }) {
             {items.map((notification) => (
               <button type="button" className={`dash-notif-item${notification.isRead ? '' : ' unread'}`} key={notification.id} onClick={() => void openNotification(notification)}>
                 <span className="ic"><Icon name={notificationIcon(notification.type)} size={15} /></span>
-                <span className="sp"><span className="dash-notif-text">{notification.message || notification.title}</span><span>{notificationTime(notification.createdAt)}</span></span>
+                <span className="sp">
+                  <span className="dash-notif-title">{notification.message || notification.title}</span>
+                  <span className="dash-notif-meta">{notificationTime(notification.createdAt)}</span>
+                </span>
                 {!notification.isRead && <span className="dash-notif-dot" />}
               </button>
             ))}
           </div>
-          <div className="dash-notif-foot"><button type="button" disabled={!unreadCount} onClick={() => void markAllRead()}>{unreadCount ? 'Mark all as read' : 'All caught up'}</button></div>
         </div>
       )}
     </div>
@@ -2458,7 +2479,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
           </form>
           <div className="dash-topbar-right">
             <NotificationsMenu onOpenMessaging={() => go('messaging')} onNavigate={go} />
-            <button className="dash-user" title={user.name} onClick={onOpenProfile}><span className="dash-avatar">{user.initial}</span><span className="dash-user-name">{user.name.split(' ')[0]}</span></button>
+            <button className="dash-user" title={user.name} onClick={onOpenProfile}><span className="dash-avatar">{user.avatar ? <img src={user.avatar} alt="" /> : user.initial}</span><span className="dash-user-name">{user.name.split(' ')[0]}</span></button>
           </div>
         </header>
         <main className="dash-content">{children}</main>
@@ -2552,7 +2573,7 @@ function DashboardHomeContent({ onGo }) {
     <>
       <div className="dash-banner homepage-hero" role="region" aria-roledescription="carousel" aria-label="Clean energy highlights">
         <div className="homepage-hero-track" style={{ transform: `translateX(-${heroIndex * 100}%)` }}>
-          {HOMEPAGE_HERO_SLIDES.map((slide, index) => <div className={`homepage-hero-slide${slide.title ? ' photo-slide' : ''}`} key={slide.src} aria-hidden={heroIndex !== index}>
+          {HOMEPAGE_HERO_SLIDES.map((slide, index) => <div className={`homepage-hero-slide${slide.title ? ' photo-slide' : ''}${index === 0 ? ' intro-slide' : ''}`} key={slide.src} aria-hidden={heroIndex !== index}>
             <img src={slide.src} alt={slide.alt} />
             {slide.title && <div className="homepage-hero-caption"><h2>{slide.title}</h2></div>}
           </div>)}
@@ -2568,7 +2589,6 @@ function DashboardHomeContent({ onGo }) {
           <div className="dash-stat-card" key={label}>
             <div className="label">{label}</div>
             <div className="value">{stats ? Number(value || 0).toLocaleString() : '—'}</div>
-            <span className="dash-tag-mint">{stats ? 'Live data' : 'Loading'}</span>
           </div>
         ))}
       </div>
@@ -2577,7 +2597,7 @@ function DashboardHomeContent({ onGo }) {
       <div className="dash-cards-grid">
         {ACTION_CARDS.map((c) => (
           <div className="dash-action-card" key={c.title}>
-            <div className="chip"><Icon name={c.icon} size={17} color="#5B21B6" /></div>
+            <div className="chip"><Icon name={c.icon} size={24} color="#5B21B6" /></div>
             <h3>{c.title}</h3>
             <p>{c.desc}</p>
             <button type="button" onClick={() => c.nav && onGo(c.nav)}>{c.cta} <ArrowRight size={13} color="#7C3AED" /></button>
@@ -2963,7 +2983,15 @@ function Contractors({ initQ, go, initProf = null, fromEvent = null }) {
     <div className="row wrap sub" style={{ marginBottom: 16 }}><span><b style={{ color: 'var(--i9)' }}>{total}</b> contractors</span>{error && <span role="alert">{error}</span>}{(q || svc !== 'all' || loc !== 'all') && <button className="lk" onClick={clear}>Clear filters</button>}</div>
     {loading && <p role="status" className="sub">Loading contractors…</p>}
     <div className="g3">
-      {!loading && list.length === 0 && <div className="sub" style={{ gridColumn: '1/-1', textAlign: 'center', padding: 50 }}><h3 style={{ color: 'var(--i9)', marginBottom: 6 }}>{filtered ? 'No contractors match your filters' : 'No contractor listings yet'}</h3>{filtered ? 'Try a different service, location or search term.' : 'List your business to create the first listing.'}</div>}
+      {!loading && list.length === 0 && (
+        <div className="tca-empty-state-wrap">
+          <div className="tca-empty-state-content">
+            <img className="tca-empty-state-illustration" src="/illustrations/business-partnership-deal-illustration.svg" alt="No contractors found illustration" />
+            <h3>{filtered ? 'No contractors match your filters' : 'No contractor listings yet'}</h3>
+            <p>{filtered ? 'Try a different service, location or search term.' : 'List your business to create the first listing.'}</p>
+          </div>
+        </div>
+      )}
       {list.map((contractor) => <div className="card" key={contractor.id} style={{ display: 'flex', flexDirection: 'column' }}>
         <div className="row" style={{ alignItems: 'flex-start', marginBottom: 10 }}><Ava c={contractor.c} t={contractor.n[0]} s={38} />
           <div className="sp"><div className="row" style={{ justifyContent: 'space-between' }}><b style={{ fontSize: 14.5 }}>{contractor.n}</b>{contractor.v && <span className="ver">✓ Verified</span>}</div><div style={{ color: 'var(--p6)', fontSize: 12.5, fontWeight: 600 }}>{contractor.t.join(' · ')}</div></div></div>
@@ -3144,7 +3172,7 @@ function AskQuestionModal({ categories, onClose, onSubmit }) {
   };
 
   return (
-    <div className={`lb-ov${sent ? " center" : ""}`} style={{ left: box.left, top: box.top }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="lb-ov center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="lb-modal ask" role="dialog" aria-modal="true" aria-labelledby="ask-title">
         <button className="lb-close" onClick={onClose} aria-label="Close"><Icon name="close" size={17} strokeWidth={3} /></button>
         {sent ? (
@@ -3238,7 +3266,7 @@ function StartDiscussionModal({ categories, onClose, onSubmit }) {
   };
 
   return (
-    <div className={`lb-ov${sent ? " center" : ""}`} style={{ left: box.left, top: box.top }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="lb-ov center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="lb-modal ask disc" role="dialog" aria-modal="true" aria-labelledby="disc-title">
         <button className="lb-close" onClick={onClose} aria-label="Close"><Icon name="close" size={17} strokeWidth={3} /></button>
         {sent ? (
@@ -4125,8 +4153,22 @@ function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
   );
 }
 
+class RouteErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return <div role="alert" style={{ maxWidth: 640, margin: '12vh auto', padding: 24, color: '#172033', textAlign: 'center' }}><h1>Page couldn’t load</h1><p>Something went wrong while opening this page. Return home and try again.</p><button type="button" className="tca-btn-primary" onClick={this.props.onRecover}>Return home</button></div>;
+  }
+}
+
 export default function TribesCapitalApp({ initialScreen = 'signin', user: authenticatedUser, onLogout: onAuthenticatedLogout, onUpdateUser = () => {} } = {}) {
   const [screen, setScreen] = useState(initialScreen);
+  const [viewedProfileId, setViewedProfileId] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
   const [avatarDataUrl, setAvatarDataUrl] = useState(authenticatedUser?.avatar || null);
   const toastTimer = useRef(null);
@@ -4512,7 +4554,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'messaging') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="messaging" onNavigate={handleSidebarNav} {...shellProps}>
-        <div className="tcx"><MessagingPage user={user} /></div>
+        <div className="tcx"><MessagingPage user={user} onViewProfile={(person) => { setViewedProfileId(person.id); navigate('member-profile'); }} /></div>
       </AppShell>
     );
   } else if (screen === 'vault') {
@@ -4530,7 +4572,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'settings') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="settings" onNavigate={handleSidebarNav} {...shellProps}>
-        <div className="tcx"><ProfileSettings user={user} avatarDataUrl={avatarDataUrl} onAvatarChange={(event) => setAvatarDataUrl(event?.dataUrl || null)} onSaved={onUpdateUser} /></div>
+        <div className="tcx"><ProfileSettings user={user} avatarDataUrl={avatarDataUrl} onAvatarChange={(event) => setAvatarDataUrl(event?.dataUrl || null)} onSaved={onUpdateUser} onMessage={() => handleSidebarNav('messaging')} /></div>
       </AppShell>
     );
   } else if (screen === 'help') {
@@ -4542,7 +4584,30 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'profile') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="" onNavigate={handleSidebarNav} {...shellProps}>
-        <div className="tcx"><ProfileSettings user={user} avatarDataUrl={avatarDataUrl} onAvatarChange={(event) => setAvatarDataUrl(event?.dataUrl || null)} onClose={closeProfile} onSaved={onUpdateUser} /></div>
+        <div className="tcx"><ProfileSettings user={user} avatarDataUrl={avatarDataUrl} onAvatarChange={(event) => setAvatarDataUrl(event?.dataUrl || null)} onClose={closeProfile} onSaved={onUpdateUser} onMessage={() => handleSidebarNav('messaging')} /></div>
+      </AppShell>
+    );
+  } else if (screen === 'member-profile' && viewedProfileId) {
+    bodyEl = (
+      <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="messaging" onNavigate={handleSidebarNav} {...shellProps}>
+        <div className="tcx"><PublicProfilePage userId={viewedProfileId} onClose={() => navigate('messaging')} /></div>
+      </AppShell>
+    );
+  }
+
+  if (!bodyEl) {
+    bodyEl = (
+      <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="" onNavigate={handleSidebarNav} {...shellProps}>
+        <div className="tcx">
+          <div className="tca-not-found">
+            <div className="tca-not-found-card">
+              <img className="tca-not-found-illustration" src="/illustrations/404-error-black-hole-page-not-found-illustrations.svg" alt="Page not found illustration" />
+              <h1>Page not found</h1>
+              <p>The page you’re looking for may have moved, been removed, or never existed.</p>
+              <button type="button" className="tca-btn-primary" onClick={() => navigate('dashboard')}>Back to home</button>
+            </div>
+          </div>
+        </div>
       </AppShell>
     );
   }
@@ -4550,7 +4615,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   return (
     <div className="tca">
       <style>{STYLES}</style>
-      {bodyEl}
+      <RouteErrorBoundary key={screen} onRecover={() => navigate('dashboard')}>{bodyEl}</RouteErrorBoundary>
       {tourOpen && (
         <TourOverlay
           step={tourStep}

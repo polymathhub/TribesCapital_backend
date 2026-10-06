@@ -45,7 +45,8 @@ function uploadPart(url, blob, onProgress) {
 
 export async function uploadFileInChunks(file, purpose, onProgress = () => {}) {
   const localKey = sessionKey(file, purpose);
-  const previous = readSession(localKey);
+  const canResumeFromLocalStorage = !purpose.startsWith('profile-');
+  const previous = canResumeFromLocalStorage ? readSession(localKey) : null;
   const { data: session } = await uploadsAPI.initiate({
     purpose,
     fileName: file.name,
@@ -54,7 +55,7 @@ export async function uploadFileInChunks(file, purpose, onProgress = () => {}) {
     key: previous?.key,
     uploadId: previous?.uploadId,
   });
-  saveSession(localKey, session);
+  if (canResumeFromLocalStorage) saveSession(localKey, session);
 
   const partCount = Math.ceil(file.size / session.partSize);
   const completed = new Map((session.completedParts || []).map((part) => [part.partNumber, part.eTag]));
@@ -75,7 +76,7 @@ export async function uploadFileInChunks(file, purpose, onProgress = () => {}) {
         });
         completed.set(partNumber, eTag);
         uploadedBytes += chunk.size;
-        saveSession(localKey, { ...session, completedParts: [...completed].map(([number, tag]) => ({ partNumber: number, eTag: tag })) });
+        if (canResumeFromLocalStorage) saveSession(localKey, { ...session, completedParts: [...completed].map(([number, tag]) => ({ partNumber: number, eTag: tag })) });
         onProgress({ loaded: uploadedBytes, total: file.size, percent: Math.min(99, Math.round(uploadedBytes / file.size * 100)) });
         lastError = null;
         break;
@@ -93,7 +94,9 @@ export async function uploadFileInChunks(file, purpose, onProgress = () => {}) {
     mimeType: file.type || 'application/octet-stream',
     size: file.size,
   });
-  try { localStorage.removeItem(localKey); } catch {}
+  if (canResumeFromLocalStorage) {
+    try { localStorage.removeItem(localKey); } catch {}
+  }
   onProgress({ loaded: file.size, total: file.size, percent: 100 });
   return result;
 }

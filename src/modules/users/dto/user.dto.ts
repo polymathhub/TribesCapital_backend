@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
@@ -25,13 +25,17 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   lastName?: string;
-  @ApiPropertyOptional({ description: 'Profile image data URL or stored image URL.' })
+  @ApiPropertyOptional({ description: 'Stored profile image URL. Upload image files to S3 before updating this field.' })
   @IsOptional()
   @IsString()
+  @MaxLength(2048)
+  @Matches(/^(https?:\/\/|\/|$)/)
   avatar?: string;
-  @ApiPropertyOptional({ description: 'Cover image data URL or stored image URL. Image uploads are limited to 5 MB.' })
+  @ApiPropertyOptional({ description: 'Stored cover image URL. Upload image files to S3 before updating this field.' })
   @IsOptional()
   @IsString()
+  @MaxLength(2048)
+  @Matches(/^(https?:\/\/|\/|$)/)
   coverPhoto?: string | null;
   @ApiPropertyOptional()
   @IsOptional()

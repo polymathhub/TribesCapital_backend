@@ -171,34 +171,12 @@ const NAV_ITEMS = [
   {label:'Help',                    icon:'help'},
 ];
 
-const FALLBACK_COURSES = [
-  { id: 'demo-solar-101', title: 'Solar Finance Fundamentals', desc: 'Understand how solar projects are funded, structured, and de-risked for investment.', dur: '32 min', lessons: 5, level: 'Beginner', category: 'Solar & Storage', progress: 45, status: 'inProgress', videoId: '5p2e-6QXBnw', thumbnail: 'https://img.youtube.com/vi/5p2e-6QXBnw/hqdefault.jpg' },
-  { id: 'demo-grid-201', title: 'Grid Modernisation & Distribution', desc: 'Learn how modern grids integrate utility-scale renewables and storage.', dur: '41 min', lessons: 6, level: 'Intermediate', category: 'Energy Finance', progress: 28, status: 'inProgress', videoId: 'YQHsXMglC9A', thumbnail: 'https://img.youtube.com/vi/YQHsXMglC9A/hqdefault.jpg' },
-  { id: 'demo-policy-301', title: 'Policy & ESG for Clean Energy', desc: 'Map the regulatory and ESG factors that shape project risk and returns.', dur: '36 min', lessons: 4, level: 'Intermediate', category: 'Policy & ESG', progress: 72, status: 'inProgress', videoId: 'XqZXxkpg0Q4', thumbnail: 'https://img.youtube.com/vi/XqZXxkpg0Q4/hqdefault.jpg' },
-  { id: 'demo-risk-401', title: 'Risk & FX in Emerging Markets', desc: 'Review currency exposure, debt structuring and risk controls for developers and investors.', dur: '28 min', lessons: 3, level: 'Advanced', category: 'Risk & FX', progress: 10, status: 'notStarted', videoId: 'TzJfepzF_6g', thumbnail: 'https://img.youtube.com/vi/TzJfepzF_6g/hqdefault.jpg' },
-];
-
-function buildFallbackLessons(course = {}) {
-  const baseTitle = course.title || 'Energy learning session';
-  return [
-    { id: 'demo-lesson-1', title: `Intro: ${baseTitle}`, description: 'Start with the fundamentals and the core investment rationale behind the topic.', duration: '8 min', videoUrl: `https://www.youtube.com/watch?v=${course.videoId || '5p2e-6QXBnw'}`, videoId: course.videoId || '5p2e-6QXBnw' },
-    { id: 'demo-lesson-2', title: 'Key drivers and market signals', description: 'Break down the commercial, technical and policy drivers shaping the market.', duration: '9 min', videoUrl: `https://www.youtube.com/watch?v=${course.videoId || '5p2e-6QXBnw'}`, videoId: course.videoId || '5p2e-6QXBnw' },
-    { id: 'demo-lesson-3', title: 'Risk framing and project quality', description: 'A practical view on risk, diligence and execution priorities.', duration: '7 min', videoUrl: `https://www.youtube.com/watch?v=${course.videoId || '5p2e-6QXBnw'}`, videoId: course.videoId || '5p2e-6QXBnw' },
-    { id: 'demo-lesson-4', title: 'Actions to take next', description: 'Close with the next steps for applying the concepts to real opportunities.', duration: '6 min', videoUrl: `https://www.youtube.com/watch?v=${course.videoId || '5p2e-6QXBnw'}`, videoId: course.videoId || '5p2e-6QXBnw' },
-  ];
-}
-
 function buildYouTubeEmbedUrl(videoId) {
   return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&modestbranding=1&controls=1&rel=0&fs=1`;
 }
 
 function buildYouTubeThumbnailUrl(videoId) {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-}
-
-function extractYouTubeVideoId(value) {
-  if (!value || typeof value !== 'string') return null;
-  return value.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([^&\n?#/]+)/)?.[1] || null;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -451,7 +429,21 @@ function CourseCard({ course, onAction, onOpenModal, saved, onBookmark }) {
                     </div>
                     <div style={{fontSize:11,color:T3,marginTop:5}}>{lessonsDone} of {course.lessons} lessons complete</div>
                   </div>
-                  <div style={{fontSize:12,color:T2,padding:'10px 0'}}>{lessonsDone} of {course.lessons || 0} lessons complete</div>
+                  {LESSONS.map((l,i) => {
+                    const lDone = i < lessonsDone;
+                    return (
+                      <div key={l.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 14px',borderTop:`1px solid ${BD}`}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          {lDone
+                            ? <div style={{width:16,height:16,borderRadius:'50%',background:done?GRB:PUF,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ico name="check" size={10} color={done?GR:PU} sw={2.5}/></div>
+                            : <div style={{width:16,height:16,borderRadius:'50%',border:`1.5px solid ${BD}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:9,color:T3}}>{l.id}</div>
+                          }
+                          <span style={{fontSize:12,color:lDone?T1:T3}}>{l.title}</span>
+                        </div>
+                        <span style={{fontSize:11,color:T3,flexShrink:0,marginLeft:8}}>{l.dur}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -577,22 +569,6 @@ function CourseTable({ courses, onOpenModal }) {
    COURSE MODAL — right slide panel (Image 5)
 ═══════════════════════════════════════════════════════ */
 function CourseModal({ course, onClose, onContinue, isMobile }) {
-  const [lessons, setLessons] = useState([]);
-  const [loadingLessons, setLoadingLessons] = useState(true);
-  const [lessonsError, setLessonsError] = useState('');
-  useEffect(() => {
-    if (!course?.id) return undefined;
-    let isCurrent = true;
-    setLoadingLessons(true);
-    lessonsAPI.getByCourse(course.id)
-      .then((response) => {
-        const payload = response?.data?.data ?? response?.data ?? [];
-        if (isCurrent) setLessons(Array.isArray(payload) ? payload : []);
-      })
-      .catch((error) => { if (isCurrent) setLessonsError(error.response?.data?.message || 'Unable to load course lessons.'); })
-      .finally(() => { if (isCurrent) setLoadingLessons(false); });
-    return () => { isCurrent = false; };
-  }, [course?.id]);
   if (!course) return null;
   const cs = CAT[course.cat] || { c:T2, b:BG };
   const modalW = isMobile ? '100%' : 420;
@@ -613,7 +589,7 @@ function CourseModal({ course, onClose, onContinue, isMobile }) {
           <p style={{fontSize:13,color:T2,margin:'0 0 20px',lineHeight:1.65}}>{course.desc}</p>
           {/* 4 stat boxes */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
-            {[{v:String(course.lessons || 0),l:'Lessons'},{v:course.dur || 'Self-paced',l:'Duration'},{v:course.level || '—',l:'Level'},{v:`${course.progress || 0}%`,l:'Progress'}].map(s => (
+            {[{v:'7',l:'Lessons'},{v:'3h 20m',l:'Duration'},{v:'Beginner',l:'Level'},{v:`${course.progress}%`,l:'Progress'}].map(s => (
               <div key={s.l} style={{border:`1px solid ${BD}`,borderRadius:8,padding:'10px 6px',textAlign:'center'}}>
                 <div style={{fontSize:13,fontWeight:700,color:T1,marginBottom:2}}>{s.v}</div>
                 <div style={{fontSize:10,color:T3}}>{s.l}</div>
@@ -623,16 +599,13 @@ function CourseModal({ course, onClose, onContinue, isMobile }) {
         </div>
         {/* Lesson list */}
         <div style={{flex:1,overflowY:'auto',padding:'8px 24px 16px'}}>
-          {loadingLessons && <p style={{fontSize:13,color:T2}}>Loading published lessons…</p>}
-          {lessonsError && <p role="alert" style={{fontSize:13,color:'#B91C1C'}}>{lessonsError}</p>}
-          {!loadingLessons && !lessonsError && lessons.length === 0 && <p style={{fontSize:13,color:T2}}>No published lessons are available for this course yet.</p>}
-          {lessons.map((l) => (
+          {LESSONS.map(l => (
             <div key={l.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0',borderBottom:`1px solid ${BD}`}}>
               <div style={{display:'flex',alignItems:'center',gap:10}}>
                 <Ico name="check" size={15} color={PU} sw={2.5}/>
                 <span style={{fontSize:13,color:T1}}>{l.title}</span>
               </div>
-              <span style={{fontSize:12,color:T3,flexShrink:0,marginLeft:8}}>{l.duration ? `${Math.round(l.duration)} min` : ''}</span>
+              <span style={{fontSize:12,color:T3,flexShrink:0,marginLeft:8}}>{l.dur}</span>
             </div>
           ))}
         </div>
@@ -673,13 +646,24 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
   const [quizRetakeRequired, setQuizRetakeRequired] = useState(false);
   const [hasInitializedLesson, setHasInitializedLesson] = useState(false);
 
-  const lessonItems = lessons;
-  const activeLesson = lessonItems[activeLessonIndex] || null;
-  const lessonCount = lessonItems.length;
+  const fallbackLessonCount = Math.max(1, Math.min(4, Number(course?.lessons) || 4));
+  const fallbackLessons = Array.from({ length: fallbackLessonCount }, (_, index) => ({
+    id: `${course?.id || 'course'}-${index + 1}`,
+    title: index === 0 ? `${course?.title || 'Course'} overview` : `${course?.title || 'Course'} lesson ${index + 1}`,
+    description: index === 0 ? 'Start with the overview to understand the course.' : 'Continue through the lesson flow.',
+    duration: `${Math.max(8, 10 + index * 4)} min`,
+    order: index + 1,
+    videoId: course?.videoId || 'wMQDsjS9WC4',
+  }));
+
+  const seededLessonItems = course?.lessonItems?.length ? course.lessonItems : fallbackLessons;
+  const lessonItems = lessons.length ? lessons : seededLessonItems;
+  const activeLesson = lessonItems[activeLessonIndex] || lessonItems[0];
+  const lessonCount = lessonItems.length || 1;
   const completedCount = completedLessonIds.length;
   const progress = lessonCount > 0 ? Math.round((completedCount / lessonCount) * 100) : 0;
-  const currentLessonNumber = lessonCount ? Math.min(activeLessonIndex + 1, lessonCount) : 0;
-  const selectedVideoId = activeLesson?.videoId || extractYouTubeVideoId(activeLesson?.videoUrl) || extractYouTubeVideoId(course?.videoUrl) || null;
+  const currentLessonNumber = Math.min(activeLessonIndex + 1, lessonCount);
+  const selectedVideoId = activeLesson?.videoId || course?.videoId || 'wMQDsjS9WC4';
   const isCompleted = progress >= 100;
   const prevLesson = activeLessonIndex > 0 ? lessonItems[activeLessonIndex - 1] : null;
   const nextLesson = activeLessonIndex < lessonCount - 1 ? lessonItems[activeLessonIndex + 1] : null;
@@ -920,25 +904,40 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
         return;
       }
 
+      const isDemoCourse = String(course.id).startsWith('demo-');
+      if (isDemoCourse) {
+        const demoLessonsForCourse = (course.lessonItems || seededLessonItems).map((lesson, index) => ({
+          id: lesson.id || `${course.id}-${index + 1}`,
+          title: lesson.title || `${course.title || 'Lesson'} ${index + 1}`,
+          description: lesson.description || 'Continue learning with this lesson.',
+          duration: lesson.duration || `${Math.max(8, 10 + index * 4)} min`,
+          order: lesson.order || index + 1,
+          videoId: lesson.videoId || course?.videoId || 'wMQDsjS9WC4',
+        }));
+        if (isMounted) {
+          setLessons(demoLessonsForCourse);
+          setLoadingLessons(false);
+        }
+        return;
+      }
+
       try {
         setLoadingLessons(true);
         const response = await lessonsAPI.getByCourse(course.id);
-        const payload = response?.data?.data ?? response?.data ?? [];
-        const normalized = (Array.isArray(payload) ? payload : []).map((lesson, index) => ({
+        const normalized = (response?.data || []).map((lesson, index) => ({
           id: lesson.id,
           title: lesson.title || `Lesson ${index + 1}`,
-          description: lesson.description || '',
-          duration: lesson.duration ? `${Math.max(1, Math.round(lesson.duration))} min` : '',
+          description: lesson.description || 'Continue learning with this lesson.',
+          duration: lesson.duration ? `${Math.max(1, Math.round(lesson.duration / 60))} min` : `${Math.max(8, 10 + index * 4)} min`,
           order: lesson.order || index + 1,
-          videoUrl: lesson.videoUrl || '',
-          videoId: extractYouTubeVideoId(lesson.videoUrl),
+          videoId: lesson.videoId || course?.videoId || 'wMQDsjS9WC4',
         }));
         if (isMounted) {
-          setLessons(normalized.length ? normalized : buildFallbackLessons(course));
+          setLessons(normalized.length ? normalized : fallbackLessons);
         }
       } catch (error) {
         if (isMounted) {
-          setLessons(buildFallbackLessons(course));
+          setLessons(fallbackLessons);
         }
       } finally {
         if (isMounted) {
@@ -951,7 +950,7 @@ function LessonPlayer({ course, onBack, isMobile, isTablet, onMenuToggle, saved,
     return () => {
       isMounted = false;
     };
-  }, [course?.id]);
+  }, [course?.id, course?.title, course?.lessons]);
 
   useEffect(() => {
     if (!lessonItems.length) return;
@@ -1292,6 +1291,143 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
   const FILTERS = [{id:'thisMonth',label:'This month'},{id:'energyFinance',label:'Energy Finance'},{id:'solarStorage',label:'Solar & Storage'},{id:'riskFX',label:'Risk & FX'},{id:'policyESG',label:'Policy & ESG'}];
   const SORTS   = [{id:'progress',label:'Progress'},{id:'newest',label:'Newest'},{id:'az',label:'A–Z'}];
   const FILTER_CAT = { energyFinance:'Energy Finance', solarStorage:'Solar & Storage', riskFX:'Risk & FX', policyESG:'Policy & ESG' };
+  const channelCourseVideos = [
+    {
+      id: 'channel-9',
+      title: "Africa's Energy Challenge Is Bigger Than the Grid | Tribes Capital",
+      subtitle: 'A Tribes Capital perspective on the wider energy access challenge across Africa',
+      videoId: 'I9DBUsKJ-eI',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: 'Video',
+      lessons: 1,
+    },
+    {
+      id: 'channel-10',
+      title: 'Join the Tribes Capital Community | Africa\'s Clean Energy Network',
+      subtitle: 'An introduction to the Tribes Capital community and its clean energy network',
+      videoId: '6R9E5kuwEl4',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: 'Video',
+      lessons: 1,
+    },
+    {
+      id: 'channel-11',
+      title: 'Tribes Capital: Making Sustainable Energy Accessible Through Innovative Finance',
+      subtitle: 'How innovative finance can expand sustainable energy access',
+      videoId: 'wtEb_1Pf0aU',
+      cat: 'Course',
+      level: 'Intermediate',
+      dur: 'Video',
+      lessons: 1,
+    },
+    {
+      id: 'channel-1',
+      title: 'How Clean Energy Is Transforming Schools & Communities in Africa',
+      subtitle: 'A short Tribes Capital video on practical community impact',
+      videoId: 'wMQDsjS9WC4',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: '1 min',
+      lessons: 4,
+    },
+    {
+      id: 'channel-2',
+      title: 'Hospitals Are Going Dark in Africa — Tribes Capital is Fixing It',
+      subtitle: 'A focused look at energy resilience in healthcare settings',
+      videoId: 'Jdmt9BaYHnw',
+      cat: 'Course',
+      level: 'Intermediate',
+      dur: '31 sec',
+      lessons: 3,
+    },
+    {
+      id: 'channel-3',
+      title: 'How Clean Energy Powers Africa',
+      subtitle: 'A fast-paced overview of the sector opportunity and momentum',
+      videoId: 'DnjMO5L5QgI',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: '45 sec',
+      lessons: 3,
+    },
+    {
+      id: 'channel-4',
+      title: 'Financing resilient energy projects',
+      subtitle: 'Insights into project finance and structured deals for Africa',
+      videoId: 'byMAFK-2szg',
+      cat: 'Course',
+      level: 'Intermediate',
+      dur: '2 min',
+      lessons: 4,
+    },
+    {
+      id: 'channel-5',
+      title: 'The business case for community solar',
+      subtitle: 'How local generation changes the economics for communities',
+      videoId: 'bNMeYzFtnCI',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: '1 min',
+      lessons: 3,
+    },
+    {
+      id: 'channel-6',
+      title: 'From concept to commissioning: project development explained',
+      subtitle: 'A practical walkthrough of clean energy development stages',
+      videoId: 'XtgP-D04bAI',
+      cat: 'Course',
+      level: 'Intermediate',
+      dur: '2 min',
+      lessons: 4,
+    },
+    {
+      id: 'channel-7',
+      title: 'Renewable energy and community impact',
+      subtitle: 'A short case study on social benefits and resilience',
+      videoId: 'HdHUoRx-4ig',
+      cat: 'Course',
+      level: 'Beginner',
+      dur: '1 min',
+      lessons: 3,
+    },
+    {
+      id: 'channel-8',
+      title: 'Scaling energy access with smart partnerships',
+      subtitle: 'Key lessons from partnerships that accelerate deployment',
+      videoId: 'u3sUE2dY7x0',
+      cat: 'Course',
+      level: 'Advanced',
+      dur: '1 min',
+      lessons: 4,
+    },
+  ];
+
+  const channelCourseEntries = channelCourseVideos.map((course) => ({
+    id: course.id,
+    cat: course.cat,
+    title: course.title,
+    desc: course.subtitle,
+    dur: course.dur,
+    lessons: course.lessons,
+    level: course.level,
+    progress: 0,
+    status: 'notStarted',
+    videoId: course.videoId,
+    thumbnail: buildYouTubeThumbnailUrl(course.videoId),
+    lessonItems: [
+      {
+        id: `${course.id}-lesson`,
+        title: course.title,
+        description: course.subtitle,
+        duration: course.dur,
+        order: 1,
+        videoId: course.videoId,
+      },
+    ],
+  }));
+
   useEffect(() => {
     let isMounted = true;
     const loadCourses = async () => {
@@ -1334,11 +1470,11 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
         }));
 
         if (isMounted) {
-          setCourses(transformed.length ? transformed : FALLBACK_COURSES);
+          setCourses([...channelCourseEntries, ...transformed]);
         }
       } catch (error) {
         if (isMounted) {
-          setCourses(FALLBACK_COURSES);
+          setCourses(channelCourseEntries);
         }
       } finally {
         if (isMounted) {

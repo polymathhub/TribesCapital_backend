@@ -1,10 +1,13 @@
 @import './messaging-premium-visual.css';
 
 /* People-first messaging navigation */
-.active-user-panel { position: sticky; bottom: 0; z-index: 4; flex: 0 0 auto; padding: 8px 10px 9px; border-top: 1px solid #e6e8ef; background: rgba(255,255,255,.98); box-shadow: 0 -8px 20px rgba(16,24,40,.06); }
+.active-user-panel { position: sticky; bottom: 0; z-index: 4; flex: 0 0 auto; padding: 8px 10px 9px; border-top: 1px solid #e6e8ef; background: rgba(255,255,255,.98); }
 .people-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 3px 6px; }
 .people-panel-header > div { display: flex; align-items: center; gap: 7px; }
 .people-panel-actions { display: flex; align-items: center; gap: 8px; }
+.people-live-label,
+.people-online-strip,
+.people-empty-copy { display: none !important; }
 .people-search-toggle { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid #d0d5dd; border-radius: 7px; background: #fff; color: #475467; cursor: pointer; }
 .people-search-toggle:hover, .people-search-toggle:focus-visible { border-color: #7c3aed; color: #5b21b6; outline: 0; }
 .people-search-box { display: flex; align-items: center; gap: 6px; margin: 0 3px 6px; padding: 6px 8px; border: 1px solid #d0d5dd; border-radius: 8px; background: #fff !important; color-scheme: light; }
@@ -22,7 +25,7 @@
 .people-search-results b { color: #5b21b6; font-size: 9px; white-space: nowrap; }
 .people-live-label { display: inline-flex; align-items: center; gap: 5px; color: #667085; font-size: 9px; font-weight: 700; }
 .people-live-label i { width: 6px; height: 6px; border-radius: 50%; background: #12b76a; box-shadow: 0 0 0 3px #ecfdf3; }
-.people-online-strip { display: flex; align-items: flex-start; gap: 8px; width: 100%; min-height: 58px; padding: 1px 3px 2px; overflow-x: auto; overflow-y: hidden; scrollbar-width: auto; scrollbar-color: #c9ced8 transparent; scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
+.people-online-strip { display: none; }
 .people-online-strip::-webkit-scrollbar { height: 5px; }
 .people-online-strip::-webkit-scrollbar-thumb { background: #c9ced8; border-radius: 999px; }
 .people-online-avatar { position: relative; flex: 0 0 54px; min-width: 54px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0; border: 0; background: transparent; color: #344054; cursor: pointer; scroll-snap-align: start; }
@@ -32,14 +35,17 @@
 .people-avatar-wrap .message-avatar { width: 34px; height: 34px; border: 2px solid #fff; box-shadow: 0 1px 5px rgba(16,24,40,.14); }
 .people-avatar-wrap > i, .people-row-avatar > i { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; background: #12b76a; }
 .people-online-avatar:hover .message-avatar, .people-online-avatar:focus-visible .message-avatar { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(16,24,40,.18); }
-.people-empty-copy { padding: 10px 2px; color: #98a2b3; font-size: 10px; }
+.people-empty-copy { display: none; }
 .people-online-list, .people-directory-link { display: none; }
 .messaging-header-actions .messaging-primary-button, .conversation-heading .rail-action { display: none; }
 .conversation-filters button:last-child { font-size: 0; }
 .conversation-filters button:last-child::after { content: 'Channels'; font-size: 10px; }
 
 /* Conversation background is owned by messaging-premium-visual.css. */
-.thread-panel { background: #fff; }
+.thread-panel { background: transparent; }
+.conversation-item { border-radius: 0; box-shadow: none; }
+.conversation-item:hover { box-shadow: inset 2px 0 0 #7c3aed; }
+.conversation-item.selected { box-shadow: inset 2px 0 0 #5b21b6; }
 .message-list > * { position: relative; z-index: 1; }
 
 /* Keep the no-conversation state clean: no TribesCapital brand mark in the empty workspace. */

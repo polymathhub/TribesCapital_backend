@@ -29,7 +29,7 @@ export class UsersController {
 
   @Patch('me')
   @ApiOperation({ summary: 'Update the current user profile' })
-  @ApiBody({ type: UpdateUserDto, description: 'Profile fields can be updated together. Cover images may be supplied as data URLs.' })
+  @ApiBody({ type: UpdateUserDto, description: 'Profile fields can be updated together. Upload profile images to S3 first, then save their URLs.' })
   @ApiOkResponse({ type: UserResponseDto, description: 'Updated user profile.' })
   async updateProfile(@Body() updateUserDto: UpdateUserDto, @CurrentUser() user: any) {
     return this.usersService.updateUser(user.id, updateUserDto);

@@ -862,7 +862,6 @@ function LoginPage({ onNavigate, onSuccess }) {
       <GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading || Boolean(socialLoading)} />
       <div className="auth-other-providers">
         <ExternalAuthButton provider="linkedin" onClick={() => handleExternalAuth('linkedin')} disabled={loading || googleLoading || Boolean(socialLoading)} />
-        <ExternalAuthButton provider="x" onClick={() => handleExternalAuth('x')} disabled={loading || googleLoading || Boolean(socialLoading)} />
       </div>
 
       <p style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
@@ -1918,7 +1917,7 @@ export default function AuthPage({ onLogin }) {
         .auth-slide-dot{width:10px;height:10px;border:none;border-radius:999px;background:rgba(255,255,255,0.38);cursor:pointer;transition:all 0.2s ease;padding:0}
         .auth-slide-dot.is-active{width:28px;background:#fff;box-shadow:0 0 14px rgba(255,255,255,0.55)}
         .auth-desktop-form-panel{display:grid;place-items:center;min-width:0;padding:40px 72px;overflow-y:auto;background:#fff}
-        .auth-other-providers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+        .auth-other-providers{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
         @media (max-width:1199px){.auth-energy-panel{padding:48px}.auth-desktop-form-panel{padding:36px 48px}.auth-typewriter-headline{font-size:clamp(2.2rem, 2.8vw, 3.4rem)} }
         @media (max-width:1023px){.auth-desktop-root{display:flex!important;height:auto;min-height:100vh;padding:20px 16px 40px!important;background:#f3f4f6!important}.auth-desktop-shell{display:block;width:100%;height:auto;min-height:0}.auth-energy-panel{display:none}.auth-desktop-form-panel{display:block;padding:0;overflow:visible;background:transparent}.auth-desktop-form-panel>div{max-width:460px!important;margin:0 auto!important;background:#fff!important;border:1px solid #e5e7eb!important;border-radius:16px!important;padding:40px 48px!important;box-shadow:0 12px 32px rgba(15,23,42,.08)!important}.auth-other-providers{grid-template-columns:1fr;gap:10px}}
         @media (max-width:639px){.auth-desktop-root{padding:20px 16px 40px!important}.auth-desktop-form-panel>div{padding:20px 16px 28px!important;border-radius:12px!important}}
