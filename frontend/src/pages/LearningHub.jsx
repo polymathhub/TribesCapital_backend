@@ -1816,6 +1816,9 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
    APP ROOT
 ═══════════════════════════════════════════════════════ */
 export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
+  const viewport = useBreakpoint();
+  const mobile = isMobile ?? viewport.isMobile;
+  const tablet = isTablet ?? viewport.isTablet;
   const [screen,       setScreen]       = useState('hub');
   const [playerCourse, setPlayerCourse] = useState(null);
   const [savedCourseIds, setSavedCourseIds] = useState(() => {
@@ -1884,8 +1887,8 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
       {screen === 'hub'
         ? <HubView
             onPlay={handlePlay}
-            isMobile={isMobile}
-            isTablet={isTablet}
+            isMobile={mobile}
+            isTablet={tablet}
             onMenuToggle={onToggleSidebar}
             savedCourseIds={savedCourseIds}
             onToggleSaved={toggleSavedCourse}
@@ -1893,8 +1896,8 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
         : <LessonPlayer
             course={playerCourse}
             onBack={handleBackFromPlayer}
-            isMobile={isMobile}
-            isTablet={isTablet}
+            isMobile={mobile}
+            isTablet={tablet}
             onMenuToggle={onToggleSidebar}
             saved={Boolean(playerCourse && savedCourseIds[String(playerCourse.id)])}
             onToggleSaved={toggleSavedCourse}

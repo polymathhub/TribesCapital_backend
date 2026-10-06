@@ -5,15 +5,18 @@ import React, {
   useRef,
   useMemo,
   useCallback,
+  lazy,
+  Suspense,
   forwardRef,
   useImperativeHandle 
 } from 'react';
 import { analyticsAPI, communityAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
-import LearningHub from './pages/LearningHub.jsx';
-import OfficeHoursEvents from './pages/OfficeHoursEvents.jsx';
-import MessagingPage from './pages/MessagingPage.jsx';
-import DueDiligenceVault from './pages/DueDiligencePage.jsx';
-import ProfileSettings, { PublicProfilePage } from './components/ProfileSettings.jsx';
+const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
+const OfficeHoursEvents = lazy(() => import('./pages/OfficeHoursEvents.jsx'));
+const MessagingPage = lazy(() => import('./pages/MessagingPage.jsx'));
+const DueDiligenceVault = lazy(() => import('./pages/DueDiligencePage.jsx'));
+const ProfileSettings = lazy(() => import('./components/ProfileSettings.jsx'));
+const PublicProfilePage = lazy(() => import('./components/ProfileSettings.jsx').then((module) => ({ default: module.PublicProfilePage })));
 import homepageHeroImage from './assets/homepage-community-hero.png';
 import { 
   Eye,
@@ -41,6 +44,15 @@ const STYLES = `
 }
 .tca *{ box-sizing:border-box; }
 .tca button{ font-family:inherit; }
+.route-loading-state{min-height:48vh;display:grid;place-content:center;justify-items:center;gap:14px;padding:28px;color:#5B21B6;font-size:13px;font-weight:600}
+.route-loading-spinner{width:26px;height:26px;border:3px solid #E9DDF5;border-top-color:#6D28D9;border-radius:50%;animation:route-spin .8s linear infinite}
+.route-loading-skeleton{display:grid;width:min(320px,70vw);gap:8px}
+.route-loading-skeleton i{display:block;height:10px;border-radius:999px;background:linear-gradient(90deg,#F1ECF8 25%,#E6DCF1 50%,#F1ECF8 75%);background-size:200% 100%;animation:route-shimmer 1.3s ease-in-out infinite}
+.route-loading-skeleton i:nth-child(2){width:82%}
+.route-loading-skeleton i:nth-child(3){width:64%}
+@keyframes route-spin{to{transform:rotate(360deg)}}
+@keyframes route-shimmer{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.route-loading-spinner,.route-loading-skeleton i{animation:none}}
 
 /* ---------- Auth shells ---------- */
 .tca-shell{ min-height:100vh; width:100%; display:grid; grid-template-columns:1fr 1fr; background:#fff; }
@@ -245,6 +257,9 @@ const STYLES = `
 
 .dash-content{ padding:28px 32px 60px; max-width:1180px; }
 @media (max-width:640px){ .dash-content{ padding:20px; } }
+.learning-hub-main{display:flex;flex-direction:column;min-height:100dvh}
+.learning-hub-content{display:flex;flex:1;min-height:0;max-width:none!important;padding:0!important;overflow:hidden}
+.learning-hub-shell{display:flex;flex:1;min-width:0;min-height:0;width:100%}
 .dash-banner{ background:linear-gradient(120deg,var(--purple-700) 0%, var(--purple-900) 100%); border-radius:16px; padding:28px 32px; color:#fff; margin-bottom:26px; }
 @media (max-width:640px){ .dash-banner{ padding:22px; } }
 .dash-banner .eyebrow{ font-size:11.5px; letter-spacing:.08em; color:#D8B4FE; font-weight:600; margin-bottom:10px; }
@@ -266,6 +281,8 @@ const STYLES = `
 .dash-stat-card{ background:#fff; border:1px solid var(--line); border-radius:13px; padding:16px 18px; }
 .dash-stat-card .label{ font-size:12.5px; color:var(--ink-600); margin-bottom:8px; }
 .dash-stat-card .value{ font-size:24px; font-weight:700; margin-bottom:8px; color:var(--ink-900); }
+.dash-stat-skeleton{display:block;width:76px;height:26px;border-radius:6px;background:linear-gradient(90deg,#F1ECF8 25%,#E6DCF1 50%,#F1ECF8 75%);background-size:200% 100%;animation:route-shimmer 1.3s ease-in-out infinite}
+.dash-stat-empty{font-size:12px;font-weight:500;color:var(--ink-400)}
 .dash-tag-mint{ display:inline-block; background:var(--mint-bg); color:var(--mint-text); font-size:11.5px; padding:2px 8px; border-radius:999px; font-weight:600; }
 
 .dash-cards-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
@@ -2073,6 +2090,10 @@ function Icon({ name, size = 16, color = 'currentColor', strokeWidth = 2, classN
   );
 }
 
+function Ava({ c = '#5B21B6', t = 'M', s = 36 }) {
+  return <div className="ava" aria-hidden="true" style={{ width: s, height: s, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: c, color: '#fff', fontSize: Math.max(10, Math.round(s * 0.38)), fontWeight: 700 }}>{t || 'M'}</div>;
+}
+
 /* Drop-in replacements for the lucide icons the design also defines,
    so every existing <Search/>, <Bell/>, <ArrowLeft/>, <ArrowRight/>, <Check/> call
    site now renders the design's version. */
@@ -2470,7 +2491,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
           <button className="dash-navitem" onClick={onLogout} title="Log out"><LogOut size={16} /><span className="lbl">Log out</span></button>
         </div>
       </aside>
-      <div className="dash-main">
+      <div className={`dash-main${activeKey === 'learning' ? ' learning-hub-main' : ''}`}>
         <header className="dash-topbar">
           <button className="dash-mobile-menu" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}><Menu size={20} /></button>
           <form className="dash-searchbar" role="search" onSubmit={(e) => { e.preventDefault(); onSearch(q.trim()); setQ(''); }}>
@@ -2482,7 +2503,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
             <button className="dash-user" title={user.name} onClick={onOpenProfile}><span className="dash-avatar">{user.avatar ? <img src={user.avatar} alt="" /> : user.initial}</span><span className="dash-user-name">{user.name.split(' ')[0]}</span></button>
           </div>
         </header>
-        <main className="dash-content">{children}</main>
+        <main className={`dash-content${activeKey === 'learning' ? ' learning-hub-content' : ''}`}>{children}</main>
       </div>
     </div>
   );
@@ -2539,6 +2560,7 @@ const HOMEPAGE_HERO_SLIDES = [
 
 function DashboardHomeContent({ onGo }) {
   const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState('');
   const [heroIndex, setHeroIndex] = useState(0);
 
@@ -2558,6 +2580,9 @@ function DashboardHomeContent({ onGo }) {
       })
       .catch(() => {
         if (isCurrent) setStatsError('Dashboard metrics are unavailable right now.');
+      })
+      .finally(() => {
+        if (isCurrent) setStatsLoading(false);
       });
     return () => { isCurrent = false; };
   }, []);
@@ -2584,11 +2609,11 @@ function DashboardHomeContent({ onGo }) {
       <h2 className="dash-section-title">What would you like to do?</h2>
       <p className="dash-section-sub">Start with your goal — pick an action and we'll take you to the right place.</p>
 
-      <div className="dash-stats-grid">
+      <div className="dash-stats-grid" aria-busy={statsLoading}>
         {statCards.map(([label, value]) => (
           <div className="dash-stat-card" key={label}>
             <div className="label">{label}</div>
-            <div className="value">{stats ? Number(value || 0).toLocaleString() : '—'}</div>
+            <div className="value">{statsLoading ? <span className="dash-stat-skeleton" aria-label={`Loading ${label.toLowerCase()}`} /> : statsError ? 'Unavailable' : value == null ? <span className="dash-stat-empty">No data yet</span> : Number(value).toLocaleString()}</div>
           </div>
         ))}
       </div>
@@ -4530,7 +4555,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'learning') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="learning" onNavigate={handleSidebarNav} {...shellProps}>
-        <div className="tcx"><LearningHub onBack={() => navigate('dashboard')} onToggleSidebar={() => {}} /></div>
+        <div className="tcx learning-hub-shell"><LearningHub onBack={() => navigate('dashboard')} onToggleSidebar={() => {}} /></div>
       </AppShell>
     );
   } else if (screen === 'events') {
@@ -4615,7 +4640,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   return (
     <div className="tca">
       <style>{STYLES}</style>
-      <RouteErrorBoundary key={screen} onRecover={() => navigate('dashboard')}>{bodyEl}</RouteErrorBoundary>
+      <RouteErrorBoundary key={screen} onRecover={() => navigate('dashboard')}><Suspense fallback={<div className="route-loading-state" role="status" aria-live="polite"><span className="route-loading-spinner" aria-hidden="true" /><span>Loading page…</span><span className="route-loading-skeleton" aria-hidden="true"><i /><i /><i /></span></div>}>{bodyEl}</Suspense></RouteErrorBoundary>
       {tourOpen && (
         <TourOverlay
           step={tourStep}
