@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Optional } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
@@ -10,7 +10,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
   constructor(
     private reflector: Reflector,
     private configService: ConfigService,
-    private prismaService: PrismaService,
+    @Optional() private prismaService?: PrismaService,
   ) {
     super();
   }
@@ -34,7 +34,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements CanActivate {
       const demoEmail = 'demo@tribes.capital';
       let demoUser: any = null;
 
-      if (this.prismaService.isDatabaseAvailable()) {
+      if (this.prismaService?.isDatabaseAvailable()) {
         try {
           demoUser = await this.prismaService.user.findUnique({
             where: { email: demoEmail },
