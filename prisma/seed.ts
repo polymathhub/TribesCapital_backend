@@ -8,6 +8,15 @@ const prisma = new PrismaClient();
 
 type RegistrationRow = Record<string, string>;
 
+const ADMIN_SEED_ACCOUNTS = [
+  { email: 'tribesadmin1@gmail.com', firstName: 'Admin', lastName: 'One', password: 'TribesAdmin1!2026' },
+  { email: 'tribesadmin2@gmail.com', firstName: 'Admin', lastName: 'Two', password: 'TribesAdmin2!2026' },
+  { email: 'tribesadmin3@gmail.com', firstName: 'Admin', lastName: 'Three', password: 'TribesAdmin3!2026' },
+  { email: 'ibukun@tribes.capital', firstName: 'Ibukun', lastName: 'Iken', password: 'TribesAdminIbukun!2026' },
+  { email: 'jenkeo@tribes.capital', firstName: 'Jenkeo', lastName: 'O', password: 'TribesAdminJenkeo!2026' },
+  { email: 'olaide@tribes.capital', firstName: 'Laide', lastName: 'Y', password: 'TribesAdminLaide!2026' },
+];
+
 const INLINE_REGISTRATIONS: RegistrationRow[] = [
   ['Fatihu Ayomide Yahya', 'yahyafatihuay@gmail.com', 'Usmanu DanFodiyo University Teaching Hospital, Sokoto', '09061448672', 'Student', 'Usmanu DanFodiyo University, Sokoto', 'Medicine and Surgery'],
   ['BARKA STEPHEN', 'barkastephen70@gmail.com', 'Asokoro extension Abuja', '08033065955', 'Employed', '', ''],
@@ -250,27 +259,37 @@ async function main() {
 
   await importRegistrations(userRole.id);
 
-  // Create admin user (optional - you can modify email/password)
-  const hashedPassword = await bcrypt.hash('FundedEnergy12@', 10);
-  
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@tribescapital.com' },
-    update: {},
-    create: {
-      email: 'admin@tribescapital.com',
-      firstName: 'Admin',
-      lastName: 'User',
-      password: hashedPassword,
-      isActive: true,
-      emailVerified: true,
-      roles: {
-        connect: [{ id: adminRole.id }],
-      },
-    },
-    include: { roles: true },
-  });
+  for (const adminAccount of ADMIN_SEED_ACCOUNTS) {
+    const hashedPassword = await bcrypt.hash(adminAccount.password, 12);
 
-  console.log(' Admin user created/updated:', adminUser);
+    const adminUser = await prisma.user.upsert({
+      where: { email: adminAccount.email },
+      update: {
+        firstName: adminAccount.firstName,
+        lastName: adminAccount.lastName,
+        password: hashedPassword,
+        isActive: true,
+        emailVerified: true,
+        roles: {
+          connect: [{ id: adminRole.id }],
+        },
+      },
+      create: {
+        email: adminAccount.email,
+        firstName: adminAccount.firstName,
+        lastName: adminAccount.lastName,
+        password: hashedPassword,
+        isActive: true,
+        emailVerified: true,
+        roles: {
+          connect: [{ id: adminRole.id }],
+        },
+      },
+      include: { roles: true },
+    });
+
+    console.log('✅ Admin seed user created/updated:', adminUser.email, adminUser.roles.map((role) => role.name));
+  }
 
   // Create event management permissions here
   const permissions = [
