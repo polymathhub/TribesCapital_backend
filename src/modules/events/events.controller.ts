@@ -7,8 +7,10 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Public } from '@common/decorators/public.decorator';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('events')
+@ApiTags('Events')
 export class EventsController {
   constructor(private eventsService: EventsService) {}
 
@@ -23,6 +25,7 @@ export class EventsController {
 
   @Get('admin/pending')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles('admin')
   async findPending(): Promise<EventResponseDto[]> {
     return this.eventsService.findPending();
@@ -30,6 +33,7 @@ export class EventsController {
 
   @Put(':id/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles('admin')
   async approve(@Param('id') id: string): Promise<EventResponseDto> {
     return this.eventsService.approve(id);
@@ -43,6 +47,7 @@ export class EventsController {
 
   @Get(':id/rsvp-status')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getRsvpStatus(
     @Param('id') eventId: string,
     @GetCurrentUser('sub') userId: string,
@@ -52,6 +57,7 @@ export class EventsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async create(
     @GetCurrentUser('sub') userId: string,
     @Body() createEventDto: CreateEventDto,
@@ -61,6 +67,7 @@ export class EventsController {
 
   @Post(':id/rsvp')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(201)
   async createRsvp(
     @Param('id') eventId: string,
@@ -72,6 +79,7 @@ export class EventsController {
 
   @Delete(':id/rsvp')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async cancelRsvp(
     @Param('id') eventId: string,
     @GetCurrentUser('sub') userId: string,
@@ -81,12 +89,14 @@ export class EventsController {
 
   @Get(':id/rsvps')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getRsvps(@Param('id') eventId: string): Promise<RsvpResponseDto[]> {
     return this.eventsService.getRsvps(eventId);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles('admin')
   async update(
     @Param('id') id: string,
@@ -98,6 +108,7 @@ export class EventsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles('admin')
   @HttpCode(204)
   async delete(

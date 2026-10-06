@@ -10,6 +10,7 @@ import { MailService } from './mail.service';
 import { JwtTokenService } from './jwt-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { SocialAuthService } from './social-auth.service';
 import { EmailitProvider } from './emailit.provider';
 import { EMAIL_PROVIDER } from './email-provider.interface';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -39,6 +40,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
   controllers: [AuthController],
   providers: [
     AuthService,
+    SocialAuthService,
     JwtStrategy,
     GoogleStrategy,
     JwtTokenService,

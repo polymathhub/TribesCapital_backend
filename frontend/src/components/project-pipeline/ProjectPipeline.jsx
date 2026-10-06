@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { dueDiligenceAPI } from '../../api/endpoints';
+import { dueDiligenceAPI, projectsAPI } from '../../api/endpoints';
 import { computeProjectScore } from '../../utils/dashboardMetrics';
+import { uploadFileInChunks } from '../../utils/chunkedUpload';
+import { downloadFileFromApi, downloadFileFromUrl } from '../../utils/chunkedUpload';
 
 /* ═══════════════════════════════════════════════════════════
    TRIBES CAPITAL — PROJECT PIPELINE
@@ -149,12 +151,38 @@ const mapDueDiligenceToPipelineProject = (item) => {
     progress,
     tags: normalizedTags,
     description: item?.description || '',
+    attachments: Array.isArray(item?.documents) ? item.documents.map((document) => ({ id: document.id, fileName: document.fileName, mimeType: document.mimeType || document.fileType, size: document.fileSize, storageKey: document.storageKey, url: document.fileUrl })) : [],
     updated: item?.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'just now',
     updatedAt: item?.updatedAt ? new Date(item.updatedAt).toISOString() : null,
     source: 'due-diligence',
     sourceType: 'due-diligence',
     status: item?.status || 'draft',
     owner: 'DD',
+  };
+};
+
+const mapApiProjectToPipeline = (project) => {
+  const metadata = project?.pipelineMetadata && typeof project.pipelineMetadata === 'object' ? project.pipelineMetadata : {};
+  const stageByStatus = { scoping: 'Sourcing', 'due-diligence': 'Due Diligence', development: 'Term Sheet', operational: 'Portfolio' };
+  return {
+    id: project.id,
+    name: project.title,
+    type: metadata.type || project.projectType || 'Solar',
+    stage: metadata.stage || stageByStatus[project.status] || 'Sourcing',
+    country: metadata.country || '',
+    city: metadata.city || project.location || '',
+    capacity: metadata.capacity ?? (project.capacityKwp != null ? project.capacityKwp / 1000 : null),
+    value: metadata.value ?? null,
+    irr: metadata.irr ?? null,
+    sponsor: metadata.sponsor || project.managingContractor || '',
+    progress: metadata.progress ?? null,
+    tags: Array.isArray(metadata.tags) ? metadata.tags : [],
+    description: project.description || '',
+    attachments: Array.isArray(project.attachments) ? project.attachments : [],
+    updated: project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'just now',
+    updatedAt: project.updatedAt || null,
+    source: 'project-record',
+    owner: 'You',
   };
 };
 
@@ -256,6 +284,9 @@ function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
   const [err, setErr] = useState({});
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState('form');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadError, setUploadError] = useState('');
 
   const set = (k, v) => { setF(p => ({ ...p, [k]: v })); setErr(e => ({ ...e, [k]: false })); };
 
@@ -270,10 +301,18 @@ function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
   };
 
   const preview = () => { if (validate()) setStep('preview'); };
-  const submit = () => {
+  const submit = async () => {
     if (!validate()) { setStep('form'); return; }
     setSaving(true);
-    setTimeout(() => { setSaving(false); onSave(f); }, 800);
+    setUploadError('');
+    try {
+      await onSave(f, selectedFiles, setUploadProgress);
+    } catch (error) {
+      setUploadError(error?.response?.data?.message || error?.message || 'Could not save this project. Select the same files again to resume.');
+    } finally {
+      setUploadProgress(null);
+      setSaving(false);
+    }
   };
 
   const heading = step === 'preview'
@@ -321,6 +360,7 @@ function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
               ['Lead sponsor', f.sponsor || '—'],
               ['Deal progress (%)', (f.progress || '0') + '%'],
               ['Tags', f.tags || '—'],
+              ['Files', [...(f.attachments || []), ...selectedFiles].map((file) => file.fileName || file.name).join(', ') || '—'],
             ].map(([l, v]) => (
               <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: 16,
                 padding: '12px 0', borderBottom: `1px solid ${BD}` }}>
@@ -389,6 +429,12 @@ function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
                 style={{ ...inputStyle, height: 'auto', padding: '12px 14px', resize: 'vertical',
                   lineHeight: 1.6, borderColor: err.description ? RED : BD }} />
             </Field>
+            <Field label="Project files">
+              <input type="file" multiple onChange={(event) => { setSelectedFiles((current) => [...current, ...Array.from(event.target.files || [])].slice(0, 10)); event.target.value = ''; }} />
+              {[...(f.attachments || []), ...selectedFiles].length > 0 && <div style={{ marginTop: 8, display: 'grid', gap: 5, fontSize: 12, color: T2 }}>{[...(f.attachments || []), ...selectedFiles].map((file, index) => <span key={`${file.name || file.fileName}-${index}`}>{file.name || file.fileName}</span>)}</div>}
+            </Field>
+            {uploadProgress !== null && <div role="status" style={{ marginBottom: 12, color: T2, fontSize: 12 }}>Uploading project files: {uploadProgress}%<progress value={uploadProgress} max="100" style={{ display: 'block', width: '100%', marginTop: 5 }} /></div>}
+            {uploadError && <p role="alert" style={{ color: RED, fontSize: 12 }}>{uploadError}</p>}
           </div>
         )}
 
@@ -417,8 +463,24 @@ function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
 }
 
 function DetailPanel({ p, onClose, onEdit, onDelete, onDownload, isMobile, offset }) {
+  const [attachmentProgress, setAttachmentProgress] = useState(null);
   const cell = { background: BG, borderRadius: 8, padding: '12px 14px', fontSize: 14, color: T2 };
   const lbl  = { fontSize: 13, color: T1, fontWeight: 500, marginBottom: 6 };
+  const downloadAttachment = async (attachment, index) => {
+    setAttachmentProgress({ index, percent: 0 });
+    try {
+      if (p.dueDiligenceId && attachment.id) {
+        await downloadFileFromApi(`/due-diligence/${p.dueDiligenceId}/documents/${attachment.id}/download`, attachment.fileName || 'document', (percent) => setAttachmentProgress({ index, percent }));
+      } else {
+        const response = unwrapApiData(await projectsAPI.getAttachmentDownloadUrl(p.id, index));
+        await downloadFileFromUrl(response.url, attachment.fileName || 'project-file', (percent) => setAttachmentProgress({ index, percent }));
+      }
+      setAttachmentProgress({ index, percent: 100 });
+    } catch (error) {
+      setAttachmentProgress(null);
+      window.alert(error?.message || 'Unable to download this project file.');
+    }
+  };
   return (
     <>
       <Overlay onClick={onClose} offset={offset} />
@@ -479,6 +541,7 @@ function DetailPanel({ p, onClose, onEdit, onDelete, onDownload, isMobile, offse
 
             <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Description</div>
             <p style={{ fontSize: 14, color: T2, lineHeight: 1.7, margin: 0 }}>{p.description}</p>
+            {Array.isArray(p.attachments) && p.attachments.length > 0 && <div style={{ marginTop: 20 }}><div style={{ ...lbl, marginBottom: 8 }}>Project files</div>{p.attachments.map((attachment, index) => <div key={`${attachment.storageKey || attachment.url}-${index}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 0', borderTop: `1px solid ${BD}` }}><span style={{ minWidth: 0, overflowWrap: 'anywhere', color: T2, fontSize: 12 }}>{attachment.fileName || `File ${index + 1}`}</span><button type="button" onClick={() => void downloadAttachment(attachment, index)} style={{ flexShrink: 0, border: `1px solid ${BD}`, borderRadius: 6, background: W, padding: '6px 9px', color: T1, cursor: 'pointer', fontSize: 11 }}>{attachmentProgress?.index === index && attachmentProgress.percent < 100 ? `${attachmentProgress.percent || ''}%` : 'Download'}</button>{attachmentProgress?.index === index && attachmentProgress.percent < 100 && <progress value={attachmentProgress.percent || undefined} max="100" style={{ width: 70 }} />}</div>)}</div>}
           </div>
         </div>
 
@@ -653,7 +716,7 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
 }
 
 const BLANK = { name:'', type:'', stage:'', country:'', city:'', capacity:'', value:'',
-                irr:'', sponsor:'', progress:'', tags:'', description:'' };
+                irr:'', sponsor:'', progress:'', tags:'', description:'', attachments:[] };
 
 export default function ProjectPipeline({ onNavigate = () => {} }) {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
@@ -706,8 +769,21 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     }
   };
 
+  const syncSavedPipelineProjects = async () => {
+    try {
+      const response = await projectsAPI.list({ take: 100 });
+      const payload = unwrapApiData(response);
+      const records = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+      const savedProjects = records.map(mapApiProjectToPipeline);
+      setProjects((previous) => [...savedProjects, ...previous.filter((project) => project.dueDiligenceId)]);
+    } catch (error) {
+      console.error('Failed to load saved pipeline projects:', error);
+    }
+  };
+
   useEffect(() => {
     void syncApprovedPipelineProjects();
+    void syncSavedPipelineProjects();
   }, []);
 
   useEffect(() => {
@@ -816,7 +892,14 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     };
   }, []);
 
-  const save = form => {
+  const save = async (form, selectedFiles = [], setProgress = () => {}) => {
+    const attachments = [...(form.attachments || [])];
+    for (let index = 0; index < selectedFiles.length; index += 1) {
+      const uploaded = await uploadFileInChunks(selectedFiles[index], 'project-pipeline', (progress) => {
+        setProgress(Math.round(((index + progress.percent / 100) / selectedFiles.length) * 100));
+      });
+      attachments.push(uploaded);
+    }
     const shaped = {
       name: form.name.trim(),
       type: form.type,
@@ -832,14 +915,36 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
         : null,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
       description: form.description.trim(),
+      attachments,
     };
-    if (editP) {
-      setProjects(ps => ps.map(x => x.id === editP.id ? { ...x, ...shaped, updated: 'just now' } : x));
-      setDetail(d => (d && d.id === editP.id ? { ...d, ...shaped, updated: 'just now' } : d));
+    const statusByStage = { Sourcing: 'scoping', Screening: 'scoping', 'Due Diligence': 'due-diligence', 'Term Sheet': 'development', Closing: 'development', Portfolio: 'operational' };
+    const payload = {
+      title: shaped.name,
+      projectType: ['Solar', 'Solar PV', 'C&I Solar', 'Mini-grid', 'Storage', 'Battery Storage', 'Wind', 'Hydro'].includes(shaped.type) ? shaped.type : 'Solar',
+      status: statusByStage[shaped.stage] || 'scoping',
+      location: [shaped.city, shaped.country].filter(Boolean).join(', '),
+      capacityKwp: shaped.capacity == null ? undefined : shaped.capacity * 1000,
+      managingContractor: shaped.sponsor,
+      description: shaped.description,
+      pipelineMetadata: {
+        type: shaped.type, stage: shaped.stage, country: shaped.country, city: shaped.city,
+        capacity: shaped.capacity, value: shaped.value, irr: shaped.irr,
+        sponsor: shaped.sponsor, progress: shaped.progress, tags: shaped.tags,
+      },
+      attachments: attachments.map(({ fileName, mimeType, size, storageKey, url }) => ({ fileName, mimeType, size, storageKey, url })),
+    };
+
+    if (editP && editP.source === 'project-record') {
+      const response = await projectsAPI.update(editP.id, payload);
+      const saved = mapApiProjectToPipeline(unwrapApiData(response));
+      setProjects(ps => ps.map(x => x.id === editP.id ? saved : x));
+      setDetail(d => (d && d.id === editP.id ? saved : d));
       setEditP(null);
       setToast('Changes saved');
     } else {
-      setProjects(ps => [{ ...shaped, id: Date.now(), owner: 'OO', updated: 'just now' }, ...ps]);
+      const response = await projectsAPI.create(payload);
+      const saved = mapApiProjectToPipeline(unwrapApiData(response));
+      setProjects(ps => [saved, ...ps]);
       setAdding(false);
       setToast('Project added to pipeline');
     }

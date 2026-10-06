@@ -6,6 +6,7 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 const normalizePagination = (value: number | string | undefined, fallback: number, maximum?: number) => {
   const parsed = Number(value);
@@ -15,6 +16,7 @@ const normalizePagination = (value: number | string | undefined, fallback: numbe
 };
 
 @Controller('courses')
+@ApiTags('Courses')
 export class CoursesController {
   constructor(private coursesService: CoursesService) {}
 
@@ -29,6 +31,7 @@ export class CoursesController {
 
   @Get('enrolled')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getEnrolled(@GetCurrentUser('id') userId: string): Promise<EnrollmentResponseDto[]> {
     return this.coursesService.getEnrollments(userId);
   }
@@ -41,6 +44,7 @@ export class CoursesController {
 
   @Get(':id/progress')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getProgress(
     @Param('id') courseId: string,
     @GetCurrentUser('id') userId: string,
@@ -50,6 +54,7 @@ export class CoursesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles('admin')
   async create(
     @GetCurrentUser('id') userId: string,
@@ -60,6 +65,7 @@ export class CoursesController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async update(
     @Param('id') id: string,
     @GetCurrentUser('id') userId: string,
@@ -70,6 +76,7 @@ export class CoursesController {
 
   @Post(':id/enroll')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async enroll(
     @Param('id') courseId: string,
     @GetCurrentUser('id') userId: string,
@@ -79,6 +86,7 @@ export class CoursesController {
 
   @Get(':userId/enrollments')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getEnrollments(@Param('userId') userId: string): Promise<EnrollmentResponseDto[]> {
     return this.coursesService.getEnrollments(userId);
   }

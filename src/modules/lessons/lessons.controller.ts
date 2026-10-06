@@ -25,13 +25,16 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { videoUploadOptions } from '@common/services/upload-validation';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('lessons')
+@ApiTags('Lessons')
 export class LessonsController {
   constructor(private lessonsService: LessonsService) {}
 
   @Post('courses/:courseId')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles('admin')
   @UseInterceptors(FileInterceptor('video', videoUploadOptions))
   async createLesson(
@@ -70,6 +73,7 @@ export class LessonsController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @UseInterceptors(FileInterceptor('video', videoUploadOptions))
   async updateLesson(
     @Param('id') id: string,
@@ -82,6 +86,7 @@ export class LessonsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async deleteLesson(
     @Param('id') id: string,
     @GetCurrentUser('id') userId: string,
@@ -92,6 +97,7 @@ export class LessonsController {
 
   @Post(':id/complete')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async markLessonComplete(
     @Param('id') lessonId: string,
     @GetCurrentUser('id') userId: string,
@@ -132,6 +138,7 @@ export class LessonsController {
 
   @Post('track/watch')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async trackVideoWatch(
     @GetCurrentUser('id') userId: string,
     @Body() trackingData: {
@@ -159,6 +166,7 @@ export class LessonsController {
 
   @Get('track/analytics/:courseId')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getVideoAnalytics(
     @GetCurrentUser('id') userId: string,
     @Param('courseId') courseId: string,

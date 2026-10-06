@@ -10,6 +10,7 @@ import { validateConfig } from './config/validation';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { AccountTypeAccessGuard } from './common/guards/account-type-access.guard';
 
 // Module imports
 import { AuthModule } from './modules/auth/auth.module';
@@ -26,6 +27,8 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { DueDiligenceModule } from './modules/due-diligence/due-diligence.module';
 import { HealthModule } from './modules/health/health.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
+import { ProjectsModule } from './modules/projects/projects.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 
 const frontendDistCandidates = [
@@ -75,6 +78,8 @@ const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(c
     DueDiligenceModule,
     HealthModule,
     MessagingModule,
+    ProjectsModule,
+    UploadsModule,
   ],
   providers: [
     {
@@ -84,6 +89,10 @@ const frontendDistPath = frontendDistCandidates.find((candidate) => existsSync(c
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AccountTypeAccessGuard,
     },
   ],
 })

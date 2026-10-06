@@ -7,9 +7,10 @@ import { MessagingController } from './messaging.controller';
 import { MemberDirectoryController } from './member-directory.controller';
 import { MessagingGateway } from './messaging.gateway';
 import { JwtService } from '@nestjs/jwt';
+import { UploadsModule } from '../uploads/uploads.module';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, NotificationsModule],
+  imports: [DatabaseModule, AuthModule, NotificationsModule, UploadsModule],
   controllers: [MessagingController, MemberDirectoryController],
   providers: [MessagingService, MessagingGateway],
   exports: [MessagingService],

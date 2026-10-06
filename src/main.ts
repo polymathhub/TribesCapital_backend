@@ -7,6 +7,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ValidationPipe } from './common/pipes/validation.pipe';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import express from 'express';
 import { existsSync, mkdirSync } from 'fs';
@@ -33,7 +34,9 @@ async function bootstrap() {
     process.env.DATABASE_URL = `postgresql://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
   }
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+  app.use(express.json({ limit: '8mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '8mb' }));
   const configService = app.get(ConfigService);
 
   const port = Number(process.env.PORT || configService.get<number>('app.port') || 3000);
@@ -66,7 +69,7 @@ async function bootstrap() {
     };
   }
 
-  app.use(helmet());
+  app.use(helmet({ crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' } }));
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
@@ -89,6 +92,34 @@ async function bootstrap() {
 
   const httpAdapter = app.getHttpAdapter();
   const expressInstance = httpAdapter.getInstance();
+  const swaggerPath = `/${apiPrefix}/docs`;
+  expressInstance.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.path === swaggerPath || req.path.startsWith(`${swaggerPath}/`)) {
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';",
+      );
+    }
+    next();
+  });
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Tribes Capital API')
+    .setDescription('Authentication, profiles, learning, community, marketplace, events, and investor tools. Account type controls guest and investor access; administrative roles remain separate.')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .addTag('Authentication', 'Registration, login, and session endpoints.')
+    .addTag('Users', 'Authenticated profile read and update operations.')
+    .addTag('Courses', 'Course catalog and enrollment operations.')
+    .addTag('Lessons', 'Lesson content and progress operations.')
+    .addTag('Events', 'Public event listings and member event actions.')
+    .addTag('Community', 'Community browsing and member interactions.')
+    .addTag('Marketplace', 'Contractor listings and member actions.')
+    .addTag('Projects', 'Investor-only project endpoints; read-only for investor accounts.')
+    .addTag('Due Diligence', 'Investor-only due-diligence endpoints; read-only for investor accounts.')
+    .build();
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup(`${apiPrefix}/docs`, app, swaggerDocument);
 
   expressInstance.use(express.static(frontendDistPath, { index: false }));
   if (existsSync(frontendAssetsPath)) {

@@ -22,6 +22,8 @@ import { join } from 'path';
 import { Response } from 'express';
 import { DueDiligenceService } from './due-diligence.service';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
+import { InvestorOnly, InvestorReadOnly } from '@common/decorators/account-type-access.decorator';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { attachmentUploadOptions, documentUploadOptions, validateStoredFile } from '@common/services/upload-validation';
 import {
@@ -64,6 +66,10 @@ function inferDocumentType(originalname: string, mimetype: string) {
 
 @Controller('due-diligence')
 @UseGuards(JwtAuthGuard)
+@InvestorOnly()
+@InvestorReadOnly()
+@ApiTags('Due Diligence')
+@ApiBearerAuth()
 export class DueDiligenceController {
   constructor(private service: DueDiligenceService) {}
 
@@ -170,6 +176,9 @@ export class DueDiligenceController {
       dto.fileType = dto.fileType || inferDocumentType(file.originalname, file.mimetype);
       dto.fileSize = file.size;
     }
+    if (dto.storageKey && !dto.storageKey.startsWith(`uploads/${userId}/due-diligence/`)) {
+      throw new BadRequestException('Invalid due-diligence storage key');
+    }
 
     if (typeof dto.tags === 'string') {
       dto.tags = dto.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
@@ -239,6 +248,8 @@ export class DueDiligenceController {
     @Res() response: Response,
   ) {
     const download = await this.service.getDocumentDownload(dueDiligenceId, docId, userId);
+    if (download.url) return response.redirect(download.url);
+    if (!download.filePath) throw new BadRequestException('Document download is unavailable');
     return response.download(download.filePath, download.fileName);
   }
 

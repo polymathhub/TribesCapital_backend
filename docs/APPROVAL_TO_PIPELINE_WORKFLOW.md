@@ -89,8 +89,8 @@ The `mapDueDiligenceToPipelineProject()` function transforms due diligence recor
 ## Testing the Workflow
 
 ### Prerequisites
-✅ **Done**: CORS configuration allows localhost origins
-✅ **Done**: Demo user role changed to 'admin' for approval visibility
+Done: CORS configuration allows localhost origins
+Done: Demo user role changed to 'admin' for approval visibility
 
 ### Manual Test Steps
 1. **Backend running** - Verify `http://localhost:3000/api/health` returns 200
@@ -112,15 +112,15 @@ The `mapDueDiligenceToPipelineProject()` function transforms due diligence recor
 ```javascript
 // In browser console, paste:
 window.addEventListener('tribes:project-pipeline-add', (e) => {
-  console.log('✅ Project added to pipeline:', e.detail);
+  console.log('Project added to pipeline:', e.detail);
 });
 
 window.addEventListener('tribes:due-diligence-approved', (e) => {
-  console.log('✅ Due diligence approved:', e.detail);
+  console.log('Due diligence approved:', e.detail);
 });
 
 window.addEventListener('tribes:notifications-update', (e) => {
-  console.log('✅ Notification event:', e.detail);
+  console.log('Notification event:', e.detail);
 });
 ```
 
@@ -181,7 +181,7 @@ const DEMO_USER = {
 
 ## Success Indicators
 
-✅ **Complete Success**: After approving a due diligence item:
+Complete success: After approving a due diligence item:
 1. Item disappears from Due Diligence Vault
 2. Item appears in Project Pipeline
 3. Item has "Approved" tag and metadata intact
@@ -197,6 +197,6 @@ If workflow verification succeeds:
 
 ---
 **Last Updated**: 2026-08-16
-**CORS Status**: ✅ Fixed
-**Admin Role**: ✅ Enabled
-**Event Architecture**: ✅ In Place
+**CORS Status**: Fixed
+**Admin Role**: Enabled
+**Event Architecture**: In Place

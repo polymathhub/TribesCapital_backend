@@ -1,9 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 
 @Injectable()
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getDashboard() {
+    if (!this.prisma.isDatabaseAvailable()) {
+      throw new ServiceUnavailableException('Dashboard data is unavailable while the database is offline.');
+    }
+
+    const [members, activeDiscussions, upcomingEvents, publishedCourses] = await Promise.all([
+      this.prisma.user.count({ where: { isActive: true } }),
+      this.prisma.communityPost.count(),
+      this.prisma.event.count({ where: { isPublished: true, startDate: { gte: new Date() } } }),
+      this.prisma.course.count({ where: { isPublished: true } }),
+    ]);
+
+    return { members, activeDiscussions, upcomingEvents, publishedCourses };
+  }
 
   async getAdminOverview() {
     const since = new Date();

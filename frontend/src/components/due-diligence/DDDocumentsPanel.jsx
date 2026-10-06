@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
+import { uploadFileInChunks } from '../../utils/chunkedUpload';
+import { downloadFileFromApi } from '../../utils/chunkedUpload';
 import DDCommentsPanel from './DDCommentsPanel';
 import Icon from '../Icon';
 
 const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadError, setUploadError] = useState('');
+  const [downloadStatus, setDownloadStatus] = useState(null);
   const [formData, setFormData] = useState({
     fileName: '',
     fileUrl: '',
@@ -50,19 +55,20 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
     }
 
     try {
-      const data = new FormData();
+      setUploadError('');
+      let uploadedFile = null;
       if (selectedFile) {
-        data.append('file', selectedFile);
+        uploadedFile = await uploadFileInChunks(selectedFile, 'due-diligence', (progress) => setUploadProgress(progress.percent));
       }
-      data.append('category', formData.category);
-      if (formData.description) data.append('description', formData.description);
-      if (formData.tags) data.append('tags', formData.tags);
-      if (formData.fileName) data.append('fileName', formData.fileName);
-      if (formData.fileType) data.append('fileType', formData.fileType);
-      if (formData.fileUrl) data.append('fileUrl', formData.fileUrl);
-
-      await dueDiligenceAPI.uploadDocument(dueDiligenceId, data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      await dueDiligenceAPI.uploadDocument(dueDiligenceId, {
+        fileName: uploadedFile?.fileName || formData.fileName,
+        fileUrl: uploadedFile?.url || formData.fileUrl,
+        storageKey: uploadedFile?.storageKey,
+        fileType: selectedFile?.name.split('.').pop()?.toLowerCase() || formData.fileType,
+        fileSize: uploadedFile?.size,
+        category: formData.category,
+        description: formData.description || undefined,
+        tags: formData.tags || undefined,
       });
 
       setSelectedFile(null);
@@ -78,7 +84,9 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
       onRefresh();
     } catch (error) {
       console.error('Error uploading document:', error);
-      alert('Failed to upload document');
+      setUploadError(error?.message || 'Failed to upload document. Select the same file again to resume.');
+    } finally {
+      setUploadProgress(null);
     }
   };
 
@@ -93,11 +101,24 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
     }
   };
 
+  const handleDownload = async (document) => {
+    setDownloadStatus({ id: document.id, percent: 0 });
+    try {
+      await downloadFileFromApi(`/due-diligence/${dueDiligenceId}/documents/${document.id}/download`, document.fileName || 'document', (percent) => setDownloadStatus({ id: document.id, percent }));
+      setDownloadStatus({ id: document.id, percent: 100 });
+    } catch (error) {
+      setUploadError(error?.message || 'Unable to download this document.');
+      setDownloadStatus(null);
+    }
+  };
+
   return (
     <div>
       {showForm ? (
         <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
           <form onSubmit={handleSubmit}>
+            {uploadProgress !== null && <div role="status" style={{ marginBottom: 12, color: '#475467', fontSize: 12 }}>Uploading: {uploadProgress}%<progress value={uploadProgress} max="100" style={{ display: 'block', width: '100%', marginTop: 5 }} /></div>}
+            {uploadError && <p role="alert" style={{ color: '#B42318', fontSize: 12 }}>{uploadError}</p>}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '12px' }}>
               <div>
                 <label htmlFor="dd-doc-file" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File upload</label>
@@ -323,22 +344,7 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
               <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6B7280' }}>
                 {doc.fileSize || 'Unknown size'}
               </p>
-              {doc.fileUrl && (
-                <a
-                  href={doc.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    marginBottom: '8px',
-                    color: '#4338CA',
-                    fontSize: '12px',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  View document
-                </a>
-              )}
+              {doc.fileUrl && <div><button type="button" onClick={() => void handleDownload(doc)} style={{ marginBottom: 8, border: 0, padding: 0, background: 'transparent', color: '#4338CA', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}>{downloadStatus?.id === doc.id && downloadStatus.percent < 100 ? `Downloading ${downloadStatus.percent || ''}%` : 'Download document'}</button>{downloadStatus?.id === doc.id && downloadStatus.percent < 100 && <progress value={downloadStatus.percent || undefined} max="100" style={{ display: 'block', width: '100%', marginBottom: 8 }} />}</div>}
               {doc.description && (
                 <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6B7280' }}>
                   {doc.description}

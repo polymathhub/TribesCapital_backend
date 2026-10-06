@@ -147,6 +147,10 @@ export class MessageSearchDto {
   @Max(100)
   @IsOptional()
   limit?: number;
+
+  @IsString()
+  @IsOptional()
+  conversationId?: string;
 }
 
 export class ReadMessagesDto {

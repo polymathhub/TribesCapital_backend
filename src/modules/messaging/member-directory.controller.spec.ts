@@ -13,7 +13,7 @@ describe('MemberDirectoryController', () => {
   it('returns paginated members without exposing email addresses', async () => {
     prisma.user.count.mockResolvedValue(2);
     prisma.user.findMany.mockResolvedValue([
-      { id: 'user-2', firstName: 'Ava', lastName: 'Scott', avatar: null, isActive: true, lastLogin: new Date('2026-09-17T10:00:00Z') },
+      { id: 'user-2', firstName: 'Ava', lastName: 'Scott', avatar: null, isActive: true, lastLogin: new Date('2026-09-17T10:00:00Z'), sentConnectionRequests: [{ id: 'request-1', status: 'PENDING' }], receivedConnectionRequests: [] },
       { id: 'user-3', firstName: 'David', lastName: 'Cole', avatar: null, isActive: true, lastLogin: null },
     ]);
 
@@ -21,7 +21,7 @@ describe('MemberDirectoryController', () => {
     const result = await controller.listMembers({ id: 'user-1' }, 'av', '1', '24');
 
     expect(result.meta).toEqual({ page: 1, limit: 24, total: 2, totalPages: 1 });
-    expect(result.data[0]).toEqual(expect.objectContaining({ id: 'user-2', lastSeenAt: expect.any(Date) }));
+    expect(result.data[0]).toEqual(expect.objectContaining({ id: 'user-2', lastSeenAt: expect.any(Date), connectionStatus: 'PENDING_RECEIVED', connectionRequestId: 'request-1' }));
     expect(result.data[0]).not.toHaveProperty('email');
     expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ id: { not: 'user-1' }, isActive: true, OR: expect.any(Array) }),
@@ -47,7 +47,7 @@ describe('MemberDirectoryController', () => {
       user: {
         count: jest.fn().mockResolvedValue(1),
         findMany: jest.fn().mockResolvedValue([
-          { id: 'user-2', firstName: 'Ava', lastName: 'Scott', avatar: null, isActive: true, lastLogin: new Date('2026-09-17T10:00:00Z') },
+          { id: 'user-2', firstName: 'Ava', lastName: 'Scott', avatar: null, isActive: true, lastLogin: new Date('2026-09-17T10:00:00Z'), sentConnectionRequests: [], receivedConnectionRequests: [] },
         ]),
       },
     } as any;

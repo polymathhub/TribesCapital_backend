@@ -2,22 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 
-const CONTRIBUTOR_ANNOUNCEMENT = {
-  type: 'announcement',
-  title: 'New contributor announcement',
-  message: 'Tribes Capital is inviting contributors to help build the Learning Hub experience. Open the announcement page to see the update and how to get involved.',
-};
-
-const LEARNING_HUB_VIDEO_ANNOUNCEMENT = {
-  type: 'learning-video-update',
-  title: 'New videos added to the Learning Hub',
-  message: 'Three new Tribes Capital videos are now available in the Learning Hub. Open Learning Hub to watch them.',
-  data: {
-    page: 'learning',
-    videoIds: ['I9DBUsKJ-eI', '6R9E5kuwEl4', 'wtEb_1Pf0aU'],
-  },
-};
-
 export interface CreateBroadcastNotificationInput {
   type: string;
   title: string;
@@ -67,43 +51,9 @@ export class NotificationsService {
     return this.prisma.notification.createMany({ data: notifications });
   }
 
-  async ensureAnnouncementNotificationForUser(userId: string) {
-    const existing = await this.prisma.notification.findMany({
-      where: {
-        userId,
-        type: CONTRIBUTOR_ANNOUNCEMENT.type,
-      },
-      select: { id: true },
-      take: 1,
-    });
-
-    if (existing.length > 0) {
-      return existing[0];
-    }
-
-    return this.prisma.notification.create({
-      data: {
-        userId,
-        type: CONTRIBUTOR_ANNOUNCEMENT.type,
-        title: CONTRIBUTOR_ANNOUNCEMENT.title,
-        message: CONTRIBUTOR_ANNOUNCEMENT.message,
-        isRead: false,
-      },
-    });
-  }
-
   async listForUser(userId: string) {
     if (!this.prisma.isDatabaseAvailable()) {
       return [];
-    }
-
-    const existingVideoUpdate = await this.prisma.notification.findFirst({
-      where: { userId, type: LEARNING_HUB_VIDEO_ANNOUNCEMENT.type },
-      select: { id: true },
-    });
-
-    if (!existingVideoUpdate) {
-      await this.createForUser(userId, LEARNING_HUB_VIDEO_ANNOUNCEMENT);
     }
 
     return this.prisma.notification.findMany({

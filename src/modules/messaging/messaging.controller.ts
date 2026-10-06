@@ -84,10 +84,15 @@ export class MessagingController {
   }
 
   @Get('search')
-  async searchMessages(@CurrentUser() user: any, @Query() query: MessageSearchDto) { return this.messagingService.searchMessages(user.id, query.query, normalizeLimit(String(query.limit ?? 25))); }
+  async searchMessages(@CurrentUser() user: any, @Query() query: MessageSearchDto) { return this.messagingService.searchMessages(user.id, query.query, normalizeLimit(String(query.limit ?? 25)), query.conversationId); }
 
   @Get('unread')
   async getUnreadCounts(@CurrentUser() user: any) { return this.messagingService.getUnreadCounts(user.id); }
+
+  @Get('attachments/:id/download')
+  async downloadAttachment(@CurrentUser() user: any, @Param('id') id: string) {
+    return { url: await this.messagingService.getAttachmentDownloadUrl(user.id, id) };
+  }
 
   @Patch('messages/:id')
   async updateMessage(@CurrentUser() user: any, @Param('id') id: string, @Body() body: UpdateMessageDto) {

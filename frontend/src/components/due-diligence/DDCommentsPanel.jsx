@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
+import { uploadFileInChunks } from '../../utils/chunkedUpload';
 import Icon from '../Icon';
 
 const MAX_ATTACHMENTS = 5;
@@ -8,6 +9,8 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
   const [newComment, setNewComment] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadError, setUploadError] = useState('');
   const currentUserEmail = typeof window !== 'undefined' ? localStorage.getItem('userEmail') : '';
   const canPost = newComment.trim().length > 0 || attachments.length > 0;
 
@@ -40,20 +43,23 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
 
     try {
       setSubmitting(true);
-      const formData = new FormData();
-      formData.append('content', newComment.trim());
-      attachments.forEach((file) => formData.append('attachments', file));
-
-      await dueDiligenceAPI.addComment(dueDiligenceId, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      setUploadError('');
+      const uploadedAttachments = [];
+      for (let index = 0; index < attachments.length; index += 1) {
+        const uploaded = await uploadFileInChunks(attachments[index], 'due-diligence', (progress) => {
+          setUploadProgress(Math.round(((index + progress.percent / 100) / attachments.length) * 100));
+        });
+        uploadedAttachments.push(uploaded.url);
+      }
+      await dueDiligenceAPI.addComment(dueDiligenceId, { content: newComment.trim(), attachments: uploadedAttachments });
       setNewComment('');
       setAttachments([]);
       onRefresh();
     } catch (error) {
       console.error('Error posting comment:', error);
-      alert('Failed to post comment');
+      setUploadError(error?.message || 'Failed to post comment. Select the same files again to resume.');
     } finally {
+      setUploadProgress(null);
       setSubmitting(false);
     }
   };
@@ -152,6 +158,8 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
             {submitting ? 'Sending...' : 'Post'}
           </button>
         </div>
+        {uploadProgress !== null && <div role="status" style={{ margin: '8px 0', color: '#475467', fontSize: 12 }}>Uploading: {uploadProgress}%<progress value={uploadProgress} max="100" style={{ display: 'block', width: '100%', marginTop: 5 }} /></div>}
+        {uploadError && <p role="alert" style={{ color: '#B42318', fontSize: 12 }}>{uploadError}</p>}
 
         {attachments.length > 0 && (
           <div className="dd-file-chip-group">

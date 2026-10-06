@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 export type ConversationType = 'DIRECT' | 'GROUP' | 'COMMUNITY_CHANNEL' | 'PROJECT_ROOM' | 'INVESTMENT_ROOM';
 
@@ -33,6 +34,7 @@ export class MessagingService {
   constructor(
     @Inject(PrismaService) private readonly prisma: MessagingPrismaService,
     @Optional() private readonly notificationsService?: NotificationsService,
+    @Optional() private readonly uploadsService?: UploadsService,
   ) {}
 
   private async withAdvisoryLock<T>(key: string, operation: (tx: any) => Promise<T>): Promise<T> {
@@ -350,7 +352,7 @@ export class MessagingService {
     }));
   }
 
-  async searchMessages(userId: string, searchTerm: string, limit = 25) {
+  async searchMessages(userId: string, searchTerm: string, limit = 25, conversationId?: string) {
     const normalizedTerm = searchTerm.trim();
     if (!normalizedTerm) return [];
 
@@ -359,6 +361,7 @@ export class MessagingService {
         isDeleted: false,
         content: { contains: normalizedTerm, mode: 'insensitive' },
         conversation: {
+          ...(conversationId ? { id: conversationId } : {}),
           OR: [
             { members: { some: { userId } } },
             { type: 'COMMUNITY_CHANNEL', channel: { is: { isPrivate: false } } },
@@ -462,7 +465,17 @@ export class MessagingService {
       if (!attachment.fileName?.trim() || !attachment.mimeType?.trim() || !Number.isInteger(attachment.size) || attachment.size < 0 || attachment.size > 25 * 1024 * 1024) {
         throw new BadRequestException('Invalid attachment metadata');
       }
-      if (!/^messaging\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(attachment.storageKey) || !/^\/uploads\/messaging\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(attachment.url)) {
+      const legacyLocation = /^messaging\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(attachment.storageKey) && /^\/uploads\/messaging\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(attachment.url);
+      const s3Location = attachment.storageKey.startsWith(`uploads/${payload.userId}/messaging/`) && (() => {
+        try {
+          const attachmentUrl = new URL(attachment.url);
+          const urlPath = attachmentUrl.pathname.split('/').map(decodeURIComponent).join('/');
+          return attachmentUrl.protocol === 'https:' && urlPath.endsWith(`/${attachment.storageKey}`);
+        } catch {
+          return false;
+        }
+      })();
+      if (!legacyLocation && !s3Location) {
         throw new BadRequestException('Invalid attachment location');
       }
     }
@@ -656,5 +669,17 @@ export class MessagingService {
       storageKey: `messaging/${file.filename}`,
       url: `/uploads/messaging/${file.filename}`,
     };
+  }
+
+  async getAttachmentDownloadUrl(userId: string, attachmentId: string) {
+    const attachment = await this.prisma.messageAttachment.findUnique({
+      where: { id: attachmentId },
+      include: { message: { select: { conversationId: true } } },
+    });
+    if (!attachment?.message?.conversationId) throw new NotFoundException('Attachment not found');
+    await this.ensureUserAccess(userId, attachment.message.conversationId);
+    if (!attachment.storageKey?.startsWith('uploads/')) return attachment.url;
+    if (!this.uploadsService) throw new NotFoundException('Attachment download is unavailable');
+    return this.uploadsService.getSignedDownloadUrl(attachment.storageKey);
   }
 }

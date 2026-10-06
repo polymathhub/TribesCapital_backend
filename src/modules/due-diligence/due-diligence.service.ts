@@ -1,7 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, ServiceUnavailableException, Optional } from '@nestjs/common';
 import { PrismaService } from '@database/prisma.service';
 import { inMemoryFallbackStore } from '@common/services/in-memory-fallback.store';
 import { NotificationsService } from '../notifications/notifications.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import {
@@ -39,6 +40,7 @@ export class DueDiligenceService {
   constructor(
     private prisma: PrismaService,
     private notificationsService?: NotificationsService,
+    @Optional() private uploadsService?: UploadsService,
   ) {}
 
   /* ═══════════════════════════════════════════════════════════ */
@@ -381,6 +383,7 @@ export class DueDiligenceService {
         data: {
           fileName,
           fileUrl,
+          storageKey: dto.storageKey,
           fileType,
           fileSize,
           category,
@@ -432,6 +435,7 @@ export class DueDiligenceService {
         unlinkSync(filePath);
       }
     }
+    if (doc.storageKey && this.uploadsService) await this.uploadsService.deleteObject(doc.storageKey);
 
     await this.logAudit(dueDiligenceId, userId, 'DELETE_DOCUMENT', 'DueDiligenceDocument', doc.id, doc, null);
     await this.prisma.dueDiligenceDocument.delete({ where: { id: docId } });
@@ -445,6 +449,7 @@ export class DueDiligenceService {
           id: true,
           fileName: true,
           fileUrl: true,
+          storageKey: true,
           dueDiligenceId: true,
           uploadedById: true,
           dueDiligence: { select: { creatorId: true, assignedToId: true } },
@@ -453,7 +458,7 @@ export class DueDiligenceService {
       this.prisma.user.findUnique({ where: { id: userId }, select: { roles: { select: { name: true } } } }),
     ]);
 
-    if (!document || document.dueDiligenceId !== dueDiligenceId || !document.fileUrl?.startsWith('/uploads/')) {
+    if (!document || document.dueDiligenceId !== dueDiligenceId || (!document.storageKey && !document.fileUrl?.startsWith('/uploads/'))) {
       throw new NotFoundException('Document not found');
     }
 
@@ -463,6 +468,10 @@ export class DueDiligenceService {
       throw new ForbiddenException('You are not authorized to download this document');
     }
 
+    if (document.storageKey) {
+      if (!this.uploadsService) throw new ServiceUnavailableException('S3 download service is unavailable');
+      return { url: await this.uploadsService.getSignedDownloadUrl(document.storageKey), fileName: document.fileName };
+    }
     const filePath = join(process.cwd(), document.fileUrl.replace(/^[\\/]+/, ''));
     if (!existsSync(filePath)) {
       throw new NotFoundException('Document file not found');

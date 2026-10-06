@@ -2,8 +2,10 @@ import { Body, Controller, Get, HttpCode, Logger, Post, Query, Req, Res, UseGuar
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { ApiBadRequestResponse, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '@common/decorators/public.decorator';
 import { AuthService } from './auth.service';
+import { SocialAuthService, SocialLoginProvider } from './social-auth.service';
 import {
   AuthTokenResponseDto,
   CheckEmailDto,
@@ -18,15 +20,21 @@ import {
 } from './dto/auth.dto';
 
 @Controller('auth')
+@ApiTags('Authentication')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly socialAuthService: SocialAuthService,
   ) {}
 
   @Public()
   @Post('register')
+  @ApiOperation({ summary: 'Register a user account', description: 'Creates an account with the selected account type. Missing role defaults to Community Member.' })
+  @ApiBody({ type: RegisterDto })
+  @ApiCreatedResponse({ description: 'Account created and authentication tokens returned.' })
+  @ApiBadRequestResponse({ description: 'The request is invalid or the selected account type is unsupported.' })
   async register(@Body() registerDto: RegisterDto): Promise<AuthTokenResponseDto | MessageResponseDto> {
     const start = Date.now();
     const ctx = '[REGISTER]';
@@ -72,6 +80,9 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
+  @ApiOperation({ summary: 'Sign in with email and password' })
+  @ApiOkResponse({ type: AuthTokenResponseDto })
+  @ApiBadRequestResponse({ description: 'Invalid credentials or request body.' })
   async login(@Body() loginDto: LoginDto): Promise<AuthTokenResponseDto> {
     return this.authService.login(loginDto);
   }
@@ -113,6 +124,50 @@ export class AuthController {
     res.redirect(nextUrl);
   }
 
+  @Public()
+  @Get('linkedin')
+  async linkedinLogin(@Query('redirect') redirect: string | undefined, @Res() response: Response): Promise<void> {
+    const target = this.resolveSafeRedirect(redirect);
+    try {
+      response.redirect(await this.socialAuthService.createAuthorizationUrl('linkedin', target));
+    } catch {
+      response.redirect(this.buildFrontendErrorRedirect(target, 'LinkedIn sign-in is not configured.'));
+    }
+  }
+
+  @Public()
+  @Get('linkedin/callback')
+  async linkedinCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') providerError: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.completeSocialLogin('linkedin', code, state, providerError, response);
+  }
+
+  @Public()
+  @Get('x')
+  async xLogin(@Query('redirect') redirect: string | undefined, @Res() response: Response): Promise<void> {
+    const target = this.resolveSafeRedirect(redirect);
+    try {
+      response.redirect(await this.socialAuthService.createAuthorizationUrl('x', target));
+    } catch {
+      response.redirect(this.buildFrontendErrorRedirect(target, 'X sign-in is not configured.'));
+    }
+  }
+
+  @Public()
+  @Get('x/callback')
+  async xCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') providerError: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.completeSocialLogin('x', code, state, providerError, response);
+  }
+
   private getFrontendUrl(): string {
     return (
       this.configService.get<string>('FRONTEND_URL') ??
@@ -146,6 +201,31 @@ export class AuthController {
     }).toString();
 
     return `${url.toString()}#${authHash}`;
+  }
+
+  private buildFrontendErrorRedirect(frontendUrl: string, message: string): string {
+    const url = new URL(frontendUrl);
+    url.hash = new URLSearchParams({ error: message }).toString();
+    return url.toString();
+  }
+
+  private async completeSocialLogin(
+    provider: SocialLoginProvider,
+    code: string,
+    state: string,
+    providerError: string,
+    response: Response,
+  ) {
+    let frontendUrl = this.getFrontendUrl();
+    try {
+      if (state) frontendUrl = this.socialAuthService.getRedirectUrlFromState(state, provider);
+      if (providerError || !code || !state) throw new Error('Provider authorization was declined');
+      const result = await this.socialAuthService.complete(provider, code, state);
+      response.redirect(this.buildFrontendRedirect(result.redirectUrl, result.authResponse));
+    } catch {
+      const providerName = provider === 'linkedin' ? 'LinkedIn' : 'X';
+      response.redirect(this.buildFrontendErrorRedirect(frontendUrl, `${providerName} sign-in failed. Please try again.`));
+    }
   }
 
   @Public()

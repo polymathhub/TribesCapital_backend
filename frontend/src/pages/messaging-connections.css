@@ -1,0 +1,285 @@
+.network-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 34px;
+  flex: 0 0 auto;
+  margin: 0;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+.network-toolbar > span { margin-right: auto; }
+.network-toolbar button,
+.network-primary,
+.network-secondary,
+.network-message {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #344054;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.network-toolbar button:hover,
+.network-secondary:hover,
+.network-message:hover { background: #f2f4f7; }
+.network-toolbar button b { display: inline-grid; min-width: 17px; height: 17px; place-items: center; margin-left: 6px; background: #5b21b6; color: #fff; font-size: 9px; }
+.conversation-load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 12px;
+  padding: 11px 14px;
+  border: 1px solid rgba(124, 58, 237, .16);
+  border-left: 4px solid #7c3aed;
+  background: rgba(255, 255, 255, .82);
+  color: #344054;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .06);
+  backdrop-filter: blur(14px) saturate(130%);
+}
+.conversation-load-error > span { display: grid; gap: 3px; }
+.conversation-load-error strong { font-size: 12px; }
+.conversation-load-error small { color: #667085; font-size: 11px; }
+.conversation-load-error button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid #7c3aed;
+  background: #fff;
+  color: #5b21b6;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.conversation-load-error button:disabled { cursor: wait; opacity: .65; }
+.network-inline-error {
+  margin: 12px 24px 0;
+  line-height: 1.4;
+}
+.network-profile > .network-inline-error { margin: 14px 0 0; }
+.network-requests > .network-inline-error { margin-top: 0; }
+.messaging-page button { border-radius: 999px !important; }
+.messaging-page .modal-field input,
+.messaging-page .search-wrap input,
+.messaging-page .network-search input,
+.messaging-page .people-search-box input,
+.messaging-page .message-composer textarea,
+.messaging-page .thread-composer textarea {
+  border-radius: 0 !important;
+}
+.messaging-page .message-composer,
+.messaging-page .thread-composer { overflow: visible; }
+.messaging-page input:focus,
+.messaging-page textarea:focus,
+.messaging-page select:focus {
+  border-color: #98a2b3 !important;
+  outline: 2px solid rgba(102, 112, 133, .28) !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+.messaging-page .search-wrap:focus-within,
+.messaging-page .people-search-box:focus-within,
+.messaging-page .message-composer:focus-within,
+.messaging-page .thread-composer:focus-within {
+  border-color: #98a2b3;
+  outline: 2px solid rgba(102, 112, 133, .28);
+  outline-offset: 2px;
+  box-shadow: none;
+  transform: none;
+}
+.messaging-page .network-search:focus-within {
+  border-color: #d0d5dd !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+.messaging-page .search-wrap input:focus,
+.messaging-page .network-search input:focus,
+.messaging-page .people-search-box input:focus,
+.messaging-page .message-composer textarea:focus,
+.messaging-page .thread-composer textarea:focus {
+  border-color: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.messaging-page .thread-composer button,
+.messaging-page .member-picker-row.selected i { background: #5b21b6; border-color: #5b21b6; }
+.messaging-page .thread-composer button:hover { background: #4c1d95; }
+.messaging-page .thread-composer button:disabled { background: #98a2b3; border-color: #98a2b3; }
+
+.dash-app.messaging-app {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.dash-app.messaging-app .dash-main {
+  display: flex;
+  width: auto;
+  margin-left: 0;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+.dash-app.messaging-app .dash-topbar { flex: 0 0 auto; }
+.dash-app.messaging-app .dash-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 0;
+}
+.dash-app.messaging-app .dash-content > .tcx {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+.dash-app.messaging-app .messaging-page {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 0;
+}
+.dash-app.messaging-app .messaging-header { margin: 0; padding: 12px 20px; }
+.dash-app.messaging-app .messaging-layout {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  flex: 1 1 0;
+}
+@media (min-width: 768px) {
+  .dash-app.messaging-app .dash-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100%;
+    max-height: 100dvh;
+    flex: 0 0 auto;
+    overflow-y: auto;
+  }
+}
+@media (max-width: 767px) {
+  .dash-app.messaging-app .dash-content,
+  .dash-app.messaging-app .messaging-page { padding: 0; }
+  .messaging-header-actions { gap: 6px; }
+  .network-toolbar { gap: 5px; }
+}
+.network-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(16, 24, 40, .46);
+}
+.network-directory,
+.network-requests,
+.network-profile {
+  position: relative;
+  display: flex;
+  width: min(680px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(16, 24, 40, .24);
+  color: #172033;
+}
+.network-directory > header,
+.network-requests > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #e6e8ef;
+}
+.network-directory h2,
+.network-requests h2,
+.network-profile h2 { margin: 4px 0; color: #172033; font-size: 20px; }
+.network-directory > header p { margin: 4px 0 0; color: #667085; font-size: 12px; }
+.network-close { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border: 1px solid #d0d5dd; background: #fff; color: #475467; cursor: pointer; }
+.network-close svg { width: 16px; height: 16px; }
+.network-search { display: flex; min-height: 40px; align-items: center; gap: 8px; margin: 14px 24px 0; padding: 0 10px; border: 1px solid #d0d5dd; }
+.network-search input { width: 100%; border: 0; outline: 0; background: #fff !important; color: #172033 !important; color-scheme: light; font: inherit; font-size: 12px; }
+.network-search input::placeholder { color: #98a2b3; opacity: 1; }
+.network-directory-list,
+.network-request-list { min-height: 120px; overflow-y: auto; padding: 12px 24px 20px; }
+.network-directory-person { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eaecf0; }
+.network-person-main { display: flex; min-width: 0; flex: 1; align-items: center; gap: 10px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.network-person-main > span:last-child,
+.network-person-link { display: grid; min-width: 0; gap: 3px; }
+.network-person-main strong,
+.network-person-link strong { overflow: hidden; color: #1d2939; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.network-person-main small,
+.network-person-link small { overflow: hidden; color: #667085; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.network-directory-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.network-primary { border-color: #5b21b6; background: #5b21b6; color: #fff; }
+.network-primary:hover { background: #4c1d95; }
+.network-primary:disabled,
+.network-secondary:disabled { cursor: default; opacity: .7; }
+.network-message { border-color: transparent; color: #5b21b6; }
+.network-profile-backdrop { z-index: 140; }
+.network-profile { width: min(520px, 100%); max-height: calc(100vh - 48px); padding: 26px; overflow-y: auto; }
+.network-profile > .network-close { position: absolute; top: 16px; right: 16px; }
+.network-profile-heading { display: flex; align-items: center; gap: 14px; padding: 4px 44px 20px 0; border-bottom: 1px solid #e6e8ef; }
+.network-profile-heading .message-avatar { width: 64px; height: 64px; }
+.network-profile-heading h2 { margin: 0 0 4px; }
+.network-profile-heading p,
+.network-profile-heading small { display: block; margin: 0; color: #667085; font-size: 12px; }
+.network-profile-heading small { margin-top: 5px; color: #087443; font-size: 10px; font-weight: 700; }
+.network-profile-details { display: grid; gap: 18px; padding: 20px 0; }
+.network-profile-details h3,
+.network-request-list h3 { margin: 0 0 6px; color: #344054; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.network-profile-details p { margin: 0; color: #475467; font-size: 12px; line-height: 1.55; }
+.network-profile-actions { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 14px; border-top: 1px solid #e6e8ef; }
+.network-requests { width: min(620px, 100%); }
+.network-request-list > section + section { margin-top: 20px; }
+.network-request-row { display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 0; border: 0; border-bottom: 1px solid #eaecf0; background: #fff; color: inherit; text-align: left; }
+.network-request-row .network-person-link { flex: 1; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.network-request-row > .network-primary,
+.network-request-row > .network-secondary { flex: 0 0 auto; }
+.network-sent-row { cursor: pointer; }
+.network-status-label { color: #667085; font-size: 10px; font-weight: 700; }
+.network-empty { padding: 26px 0; color: #667085; font-size: 12px; text-align: center; }
+
+@media (max-width: 720px) {
+  .network-backdrop { align-items: end; padding: 0; }
+  .network-directory,
+  .network-requests { width: 100%; max-height: 88dvh; }
+  .network-directory > header,
+  .network-requests > header { padding: 18px 16px 14px; }
+  .network-search { margin: 12px 16px 0; }
+  .network-inline-error { margin-right: 16px; margin-left: 16px; }
+  .network-profile > .network-inline-error { margin-right: 0; margin-left: 0; }
+  .conversation-load-error { align-items: flex-start; }
+  .network-directory-list,
+  .network-request-list { padding: 8px 16px 18px; }
+  .network-directory-person { flex-wrap: wrap; gap: 8px; }
+  .network-directory-actions { width: 100%; justify-content: flex-start; padding-left: 42px; }
+  .network-profile-backdrop { z-index: 140; align-items: center; padding: 12px; }
+  .network-profile { width: 100%; max-height: 88dvh; padding: 20px; }
+  .network-request-row { flex-wrap: wrap; }
+  .network-request-row > .network-primary,
+  .network-request-row > .network-secondary { margin-left: 38px; }
+}

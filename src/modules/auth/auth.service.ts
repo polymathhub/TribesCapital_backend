@@ -136,6 +136,7 @@ export class AuthService {
         where: { id: existingUser.id },
         data: {
           password: passwordHash,
+          accountType: this.getAccountType(registerDto.role),
           emailVerified: existingUser.emailVerified || false,
           isActive: true,
         },
@@ -151,7 +152,7 @@ export class AuthService {
     const tHash = Date.now();
     let passwordHash;
     try {
-      passwordHash = await bcrypt.hash(password, 8);
+      passwordHash = await bcrypt.hash(password, 12);
       this.logger.log(`${new Date().toISOString()} ${ctx}[7] Password hash completed (duration=${Date.now()-tHash}ms)`);
     } catch (e) {
       this.logger.error(`${new Date().toISOString()} ${ctx}[ERR] Password hashing failed`, e instanceof Error ? e.stack : String(e));
@@ -164,12 +165,14 @@ export class AuthService {
     this.logger.log(`${new Date().toISOString()} ${ctx}[8] Creating Prisma user record`);
     const tCreate = Date.now();
     let user;
+    const accountType = this.getAccountType(registerDto.role);
     try {
       user = await this.withDatabase(() => this.prisma.user.create({
       data: {
         email,
         firstName: registerDto.firstName?.trim() || 'User',
         lastName: registerDto.lastName?.trim() || '',
+        accountType,
         password: passwordHash,
         emailVerified: true,
         emailVerificationToken,
@@ -223,7 +226,22 @@ export class AuthService {
       lastName: user.lastName ?? '',
       isActive: user.isActive ?? true,
       emailVerified: true,
+      accountType,
     });
+  }
+
+  private getAccountType(role?: string): string {
+    switch (role) {
+      case 'Investor':
+        return 'INVESTOR';
+      case 'Facility Operator':
+        return 'FACILITY_OPERATOR';
+      case 'Read-only Guest':
+        return 'GUEST';
+      case 'Community Member':
+      default:
+        return 'COMMUNITY_MEMBER';
+    }
   }
 
   async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {
@@ -296,6 +314,52 @@ export class AuthService {
   async authenticateWithGoogle(googleAuthDto: GoogleAuthDto): Promise<AuthTokenResponseDto> {
     const payload = await this.verifyGoogleIdToken(googleAuthDto.idToken);
     return this.authenticateWithGoogleProfile(payload);
+  }
+
+  async authenticateWithExternalProfile(profile: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    avatar?: string | null;
+  }): Promise<AuthTokenResponseDto> {
+    const email = this.normalizeEmail(profile.email);
+    if (!email) throw new BadRequestException('The identity provider did not return a valid email');
+
+    let user = await this.withDatabase(() => this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, firstName: true, lastName: true, isActive: true, emailVerified: true, accountType: true, avatar: true },
+    }), '[SOCIAL LOGIN] user lookup');
+
+    if (user && !user.isActive) throw new UnauthorizedException('Account suspended');
+
+    if (!user) {
+      const generatedPassword = await bcrypt.hash(randomBytes(48).toString('base64url'), 10);
+      user = await this.withDatabase(() => this.prisma.user.create({
+        data: {
+          email,
+          firstName: profile.firstName?.trim() || 'User',
+          lastName: profile.lastName?.trim() || '',
+          password: generatedPassword,
+          emailVerified: true,
+          isActive: true,
+          ...(profile.avatar ? { avatar: profile.avatar } : {}),
+        },
+        select: { id: true, email: true, firstName: true, lastName: true, isActive: true, emailVerified: true, accountType: true, avatar: true },
+      }), '[SOCIAL LOGIN] user creation');
+    } else {
+      user = await this.withDatabase(() => this.prisma.user.update({
+        where: { id: user!.id },
+        data: {
+          emailVerified: true,
+          lastLogin: new Date(),
+          ...(!user!.avatar && profile.avatar ? { avatar: profile.avatar } : {}),
+        },
+        select: { id: true, email: true, firstName: true, lastName: true, isActive: true, emailVerified: true, accountType: true, avatar: true },
+      }), '[SOCIAL LOGIN] user update');
+    }
+
+    await this.withDatabase(() => this.prisma.user.update({ where: { id: user!.id }, data: { lastLogin: new Date() } }), '[SOCIAL LOGIN] login timestamp');
+    return this.buildAuthResponse(user);
   }
 
   async authenticateWithGoogleProfile(profile: {
@@ -416,6 +480,7 @@ export class AuthService {
         lastName: true,
         isActive: true,
         emailVerified: true,
+        accountType: true,
         roles: { select: { name: true } },
       },
     });
@@ -581,7 +646,7 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset code');
     }
 
-    const passwordHash = await bcrypt.hash(resetPasswordDto.password, 8);
+    const passwordHash = await bcrypt.hash(resetPasswordDto.password, 12);
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -632,6 +697,7 @@ export class AuthService {
     lastName?: string | null;
     isActive?: boolean | null;
     emailVerified?: boolean | null;
+    accountType?: string | null;
   }): Promise<AuthTokenResponseDto> {
     this.logger.log(`[AUTH] Entering buildAuthResponse for ${user.email}`);
     const userWithRoles = await this.prisma.user.findUnique({
@@ -643,6 +709,7 @@ export class AuthService {
         lastName: true,
         isActive: true,
         emailVerified: true,
+        accountType: true,
         roles: {
           select: { name: true },
         },
@@ -651,7 +718,8 @@ export class AuthService {
 
     const roleNames = userWithRoles?.roles?.map((role) => role.name) ?? [];
     const isAdmin = roleNames.includes('admin');
-    const payload = { sub: user.id, email: user.email, role: isAdmin ? 'admin' : 'user', roles: roleNames };
+    const accountType = userWithRoles?.accountType ?? user.accountType ?? 'COMMUNITY_MEMBER';
+    const payload = { sub: user.id, email: user.email, role: isAdmin ? 'admin' : 'user', roles: roleNames, accountType };
 
     let tokens;
     try {
@@ -682,6 +750,7 @@ export class AuthService {
           isActive: user.isActive ?? true,
           roles: roleNames,
           isAdmin,
+          accountType,
         },
       },
       accessToken: tokens.accessToken,
@@ -696,6 +765,7 @@ export class AuthService {
         isActive: user.isActive ?? true,
         roles: roleNames,
         isAdmin,
+        accountType,
       },
     };
   }

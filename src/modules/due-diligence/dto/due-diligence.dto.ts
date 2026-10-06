@@ -222,6 +222,10 @@ export class CreateDDDocumentDto {
 
   @IsOptional()
   @IsString()
+  storageKey?: string;
+
+  @IsOptional()
+  @IsString()
   fileType?: string;
 
   @IsOptional()

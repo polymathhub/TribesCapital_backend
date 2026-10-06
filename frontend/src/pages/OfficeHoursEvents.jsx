@@ -159,34 +159,6 @@ function I({ k, s=16, c=C.t2, sw=1.5, fill='none' }) {
   );
 }
 
-/* ─── DATA ─── */
-const SPK = {
-  KA:{ initials:'KA', name:'Kwame Asante', role:'Lead Investment Analyst', color:C.pu, bg:C.puf },
-  RA:{ initials:'RA', name:'Ria Adeyemi',  role:'Legal Counsel',           color:C.am, bg:C.amb },
-  NF:{ initials:'NF', name:'Ngozi Fakoya', role:'ESG & Policy Lead',       color:C.tl, bg:C.tlb },
-};
-const BASE_EVENT = {
-  title:'Project Financing Deep Dive: Structuring Your First Deal',
-  desc:'Join our lead investment analyst for a live walkthrough of a real $2.4M C&I solar deal — from term sheet to financial close. Bring your questions.',
-  dateLabel:'Thursday, May 8, 2026', dateShort:'Thu, May 8 · 3:00 PM GMT',
-  time:'3:00 PM GMT', dur:'90 min', format:'Live Zoom · Recorded',
-  month:'MAY', day:'8', weekday:'THU', calDay:8, calMonth:4, calYear:2026,
-  spotsLeft:14, totalSpots:40, rsvped:true, type:'Office hours',
-  speakers:[SPK.KA, SPK.RA],
-  agenda:[
-    {t:'3:00', d:'Welcome & housekeeping'},
-    {t:'3:05', d:'Deal overview: the $2.4M C&I solar project'},
-    {t:'3:20', d:'Term sheet walkthrough'},
-    {t:'3:45', d:'Financial model deep dive'},
-    {t:'4:10', d:'Q&A with the team'},
-  ],
-};
-const INIT_EVENTS = [
-  { ...BASE_EVENT, id:1, speakers:[SPK.KA,SPK.RA] },
-  { ...BASE_EVENT, id:2, speakers:[SPK.KA,SPK.RA] },
-  { ...BASE_EVENT, id:3, speakers:[SPK.KA,SPK.NF] },
-  { ...BASE_EVENT, id:4, speakers:[SPK.KA,SPK.RA] },
-];
 const NAV = [
   {l:'Home',k:'home'},{l:'Learning Hub',k:'book'},{l:'Due Diligence Vault',k:'folder'},
   {l:'Project Pipeline',k:'activity'},{l:'Reporting Library',k:'file'},
@@ -992,8 +964,8 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
       slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      location: String(form.location || '').trim() || (Boolean(form.isVirtual || form.meetingPlatform || meetingLinkValue) ? 'Virtual' : 'TBD'),
-      isVirtual: Boolean(form.isVirtual || form.meetingPlatform || meetingLinkValue),
+      location: String(form.location || '').trim() || ((form.isVirtual || form.meetingPlatform || meetingLinkValue) ? 'Virtual' : 'TBD'),
+      isVirtual: !!form.isVirtual || !!form.meetingPlatform || !!meetingLinkValue,
       capacity: normalizedCapacity,
       eventType: String(form.type || 'Office hours'),
       meetingPlatform: inferMeetingPlatform(form.meetingPlatform, meetingLinkValue),

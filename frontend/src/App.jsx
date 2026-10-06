@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import AuthPage from './pages/AuthPage';
-import HomePage from './pages/HomePage';
 import LoadingScreen from './components/LoadingScreen';
-import Sidebar from './components/Sidebar';
+import TribesCapitalResponsive from './TribesCapitalResponsive.jsx';
 import { usersAPI } from './api/endpoints';
 import { clearAuthSession } from './utils/authSession';
 import './App.css';
 
-const isAdminUser = (candidate) => {
-  const roles = Array.isArray(candidate?.roles) ? candidate.roles : [];
-  return Boolean(candidate?.isAdmin || candidate?.role === 'admin' || roles.includes('admin') || roles.includes('super-admin'));
-};
-
 function App() {
-  const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
-  const [width, setWidth] = useState(initialWidth);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window === 'undefined') return false;
 
@@ -41,27 +33,14 @@ function App() {
 
     return null;
   });
-  const [currentPage, setCurrentPage] = useState(() => isAdminUser(user) ? 'admin-dashboard' : 'home');
   const [isLoading, setIsLoading] = useState(true);
   const [hasBootstrapped, setHasBootstrapped] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(initialWidth >= 1024);
-
-  const isMobile = width < 640;
-  const isTablet = width >= 640 && width < 1024;
-  const isDesktop = width >= 1024;
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     const handleAuthLogout = () => {
       clearAuthSession();
       setIsAuthenticated(false);
       setUser(null);
-      setCurrentPage('login');
       setIsLoading(false);
       setHasBootstrapped(true);
     };
@@ -97,10 +76,9 @@ function App() {
           const nextUser = {
             ...profile,
             email: profile.email || userEmail || '',
-            name: profile.name || profile.firstName || profile.email?.split('@')[0] || userEmail?.split('@')[0] || 'there',
+            name: profile.displayName || profile.name || profile.firstName || profile.email?.split('@')[0] || userEmail?.split('@')[0] || 'there',
           };
           setUser(nextUser);
-          if (isAdminUser(nextUser)) setCurrentPage('admin-dashboard');
           setIsAuthenticated(true);
         } else if (userEmail) {
           setUser({ email: userEmail, name: userEmail.split('@')[0] });
@@ -138,7 +116,6 @@ function App() {
     localStorage.setItem('userName', normalizedUser.firstName || normalizedUser.name || normalizedUser.email?.split('@')[0] || 'there');
     setUser(normalizedUser);
     setIsAuthenticated(true);
-    setCurrentPage(isAdminUser(normalizedUser) ? 'admin-dashboard' : 'home');
     try {
       window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'announcement-updated' } }));
     } catch (error) {
@@ -146,43 +123,26 @@ function App() {
     }
   };
 
+  const handleLogout = () => {
+    clearAuthSession();
+    setIsAuthenticated(false);
+    setUser(null);
+  };
+
   const handleUpdateUser = (updatedUser) => {
     setUser((currentUser) => {
       const nextUser = {
         ...currentUser,
         ...updatedUser,
+        name: updatedUser.displayName || updatedUser.name || `${updatedUser.firstName || currentUser?.firstName || ''} ${updatedUser.lastName || currentUser?.lastName || ''}`.trim() || currentUser?.email?.split('@')[0] || 'Member',
       };
-      nextUser.name = nextUser.name || `${nextUser.firstName || ''} ${nextUser.lastName || ''}`.trim() || nextUser.email?.split('@')[0] || 'there';
       try {
-        if (typeof window !== 'undefined') {
-          const cachedUser = { ...nextUser };
-          delete cachedUser.avatar;
-          window.localStorage.setItem('user', JSON.stringify(cachedUser));
-          if (nextUser.email) {
-            window.localStorage.setItem('userEmail', nextUser.email);
-          }
-        }
+        localStorage.setItem('user', JSON.stringify(nextUser));
       } catch {
-        // ignore storage failures
+        // Ignore storage failures; the in-memory profile remains updated.
       }
       return nextUser;
     });
-  };
-
-  const handleLogout = () => {
-    clearAuthSession();
-    setIsAuthenticated(false);
-    setUser(null);
-    setCurrentPage('login');
-  };
-
-  const handleNavigate = (page) => {
-    setCurrentPage(page);
-    setIsSidebarOpen(true);
-  };
-
-  const handleToggleSidebar = () => {
-    setIsSidebarOpen((prev) => !prev);
   };
 
   if (!isAuthenticated) {
@@ -199,30 +159,8 @@ function App() {
   return (
     <>
       <LoadingScreen isVisible={isLoading && !hasBootstrapped} />
-      <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out', display: 'flex', width: '100%', minHeight: '100dvh', height: '100dvh', overflow: 'hidden', background: '#f9fafb' }}>
-        <Sidebar
-          user={user}
-          activePage={currentPage}
-          onNavigate={handleNavigate}
-          onClose={handleToggleSidebar}
-          onLogout={handleLogout}
-          collapsed={isDesktop && !isSidebarOpen}
-          isOpen={isSidebarOpen}
-          isOverlay={isMobile || isTablet}
-        />
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
-          <HomePage 
-            user={user}
-            currentPage={currentPage}
-            onNavigate={handleNavigate}
-            onLogout={handleLogout}
-            onToggleSidebar={handleToggleSidebar}
-            onUpdateUser={handleUpdateUser}
-            isSidebarOpen={isSidebarOpen}
-            isMobile={isMobile}
-            isTablet={isTablet}
-          />
-        </div>
+      <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out' }}>
+        <TribesCapitalResponsive initialScreen="dashboard" user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
       </div>
     </>
   );

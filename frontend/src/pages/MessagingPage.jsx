@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { BubbleChatIcon } from '@hugeicons/core-free-icons';
-import { messagingAPI } from '../api/endpoints';
+import { communityAPI, messagingAPI } from '../api/endpoints';
+import { uploadFileInChunks } from '../utils/chunkedUpload';
+import { downloadFileFromUrl } from '../utils/chunkedUpload';
 import { messagingMembersAPI } from '../api/messagingMembers';
 import Icon from '../components/Icon';
 import InitialsAvatar from '../components/InitialsAvatar';
@@ -10,6 +12,7 @@ import './messaging.css';
 import './messaging-mobile.css';
 import './messaging-people-polish.css';
 import './messaging-advanced.css';
+import './messaging-connections.css';
 
 const EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👏', '💯', '🙏'];
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
@@ -71,14 +74,31 @@ function Avatar({ person, size = 'md' }) {
 }
 
 function AttachmentPreview({ attachment, onClose }) {
+  const [downloadProgress, setDownloadProgress] = useState(null);
   const url = resolveAttachmentUrl(attachment.url);
   const previewable = isPreviewableAttachment(attachment);
+  const download = async () => {
+    setDownloadProgress(0);
+    try {
+      let downloadUrl = attachment.url;
+      if (attachment.id) {
+        const result = unwrap(await messagingAPI.getAttachmentDownloadUrl(attachment.id));
+        downloadUrl = result?.url || downloadUrl;
+      }
+      await downloadFileFromUrl(downloadUrl, attachment.fileName || 'attachment', setDownloadProgress);
+      setDownloadProgress(100);
+    } catch (error) {
+      setDownloadProgress(null);
+      window.alert(error?.message || 'Unable to download this attachment.');
+    }
+  };
   return <div className="attachment-preview-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="attachment-preview" role="dialog" aria-modal="true" aria-label={`Preview ${attachment.fileName}`}>
       <header><div><strong>{attachment.fileName}</strong><small>{attachment.mimeType || 'Attachment'}</small></div><button type="button" onClick={onClose} aria-label="Close preview">×</button></header>
       <div className="attachment-preview-body">
-        {!url ? <p className="attachment-unavailable">This attachment is still uploading.</p> : !previewable ? <div className="attachment-unavailable"><Icon name="file" size={28} /><p>Preview is not available for this file type.</p><a href={url} download={attachment.fileName}>Download file</a></div> : isImageAttachment(attachment) ? <img src={url} alt={attachment.fileName} onError={(event) => { event.currentTarget.replaceWith(Object.assign(document.createElement('p'), { className: 'attachment-unavailable', textContent: 'This attachment is no longer available.' })); }} /> : <iframe src={url} title={`Preview of ${attachment.fileName}`} />}
+        {!url ? <p className="attachment-unavailable">This attachment is still uploading.</p> : !previewable ? <div className="attachment-unavailable"><Icon name="file" size={28} /><p>Preview is not available for this file type.</p></div> : isImageAttachment(attachment) ? <img src={url} alt={attachment.fileName} onError={(event) => { event.currentTarget.replaceWith(Object.assign(document.createElement('p'), { className: 'attachment-unavailable', textContent: 'This attachment is no longer available.' })); }} /> : <iframe src={url} title={`Preview of ${attachment.fileName}`} />}
       </div>
+      {url && <footer className="attachment-preview-download"><button type="button" className="attachment-download-button" onClick={() => void download()} disabled={downloadProgress !== null && downloadProgress !== 100}>Download file</button>{downloadProgress !== null && <span role="status">{downloadProgress === 100 ? 'Download ready' : downloadProgress ? `Downloading ${downloadProgress}%` : 'Downloading…'}{downloadProgress < 100 && <progress value={downloadProgress || undefined} max="100" />}</span>}</footer>}
     </section>
   </div>;
 }
@@ -91,7 +111,7 @@ function ActionIcon({ type }) {
     close: <><path d="m5 5 10 10M15 5 5 15" /></>,
     send: <path d="m3 3 14 7-14 7 3.5-7L3 3Zm3.5 7H17" />,
   };
-  return <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg>;
+  return <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg>;
 }
 
 function MessageRow({ message, user, onReply, onReact, onEdit, onDelete, onRetry }) {
@@ -140,18 +160,112 @@ function ConversationModal({ open, mode, setMode, members, query, setQuery, sele
   </div>;
 }
 
+function InlineNetworkError({ message, onDismiss }) {
+  if (!message) return null;
+  return <div className="conversation-load-error network-inline-error" role="alert"><span>{message}</span><button type="button" onClick={onDismiss}>Dismiss</button></div>;
+}
+
+function NetworkDirectoryModal({ open, refreshKey, onClose, onViewProfile, onConnect, onMessage, busyId, error, onClearError }) {
+  const [query, setQuery] = useState('');
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!open) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    messagingMembersAPI.list({ query: query.trim() || undefined, limit: 24 })
+      .then((response) => { if (!cancelled) setMembers(unwrapMembers(response)); })
+      .catch(() => { if (!cancelled) setMembers([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, query, refreshKey]);
+  if (!open) return null;
+  return <div className="network-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="network-directory" role="dialog" aria-modal="true" aria-labelledby="network-directory-title">
+      <header><div><span className="modal-eyebrow">Tribes Capital</span><h2 id="network-directory-title">Find people</h2><p>Explore member profiles and grow your professional network.</p></div><button type="button" className="network-close" onClick={onClose} aria-label="Close people directory"><ActionIcon type="close" /></button></header>
+      <label className="network-search"><Icon name="search" size={15} color="#667085" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name or email" aria-label="Search members" /></label>
+      <InlineNetworkError message={error} onDismiss={onClearError} />
+      <div className="network-directory-list">
+        {loading ? <p className="network-empty">Finding members…</p> : members.length === 0 ? <p className="network-empty">No members found.</p> : members.map((person) => <article className="network-directory-person" key={person.id}>
+          <button type="button" className="network-person-main" onClick={() => onViewProfile(person)}><Avatar person={person} /><span><strong>{displayName(person)}</strong><small>{person.occupation || 'Tribes Capital member'}{person.presence === 'online' ? ' · Online' : ''}</small></span></button>
+          <div className="network-directory-actions">
+            <button type="button" className="network-secondary" onClick={() => onViewProfile(person)}>Profile</button>
+            {person.connectionStatus === 'NONE' && <button type="button" className="network-primary" disabled={busyId === person.id} onClick={() => onConnect(person)}>{busyId === person.id ? 'Sending…' : 'Connect'}</button>}
+            {person.connectionStatus === 'PENDING_SENT' && <button type="button" className="network-secondary" disabled>Pending</button>}
+            {person.connectionStatus === 'PENDING_RECEIVED' && <button type="button" className="network-primary" onClick={() => onViewProfile(person)}>Respond</button>}
+            {person.connectionStatus === 'CONNECTED' && <button type="button" className="network-secondary" disabled>Connected</button>}
+            <button type="button" className="network-message" onClick={() => onMessage(person)}>Message</button>
+          </div>
+        </article>)}
+      </div>
+    </section>
+  </div>;
+}
+
+function MemberProfileModal({ person, busy, error, onClearError, onClose, onConnect, onRespond, onMessage }) {
+  if (!person) return null;
+  const status = person.connectionStatus || 'NONE';
+  const name = displayName(person);
+  return <div className="network-backdrop network-profile-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="network-profile" role="dialog" aria-modal="true" aria-label={`${name} profile`}>
+      <button type="button" className="network-close" onClick={onClose} aria-label="Close profile"><ActionIcon type="close" /></button>
+      <div className="network-profile-heading"><Avatar person={person} /><div><h2>{name}</h2><p>{person.occupation || 'Tribes Capital member'}</p><small>{person.presence === 'online' ? 'Online now' : formatLastSeen(person.lastSeenAt)}</small></div></div>
+      <InlineNetworkError message={error} onDismiss={onClearError} />
+      <div className="network-profile-details">
+        <section><h3>About</h3><p>{person.bio || 'This member has not added a bio yet.'}</p></section>
+        {(person.school || person.department) && <section><h3>Background</h3><p>{[person.department, person.school].filter(Boolean).join(' · ')}</p></section>}
+        {person.createdAt && <section><h3>Member since</h3><p>{new Date(person.createdAt).getFullYear()}</p></section>}
+      </div>
+      <footer className="network-profile-actions">
+        {status === 'NONE' && <button type="button" className="network-primary" disabled={busy} onClick={() => onConnect(person)}>{busy ? 'Sending…' : 'Connect'}</button>}
+        {status === 'PENDING_SENT' && <button type="button" className="network-secondary" disabled>Request sent</button>}
+        {status === 'PENDING_RECEIVED' && <><button type="button" className="network-primary" disabled={busy} onClick={() => onRespond(person, 'ACCEPTED')}>Accept request</button><button type="button" className="network-secondary" disabled={busy} onClick={() => onRespond(person, 'DECLINED')}>Decline</button></>}
+        {status === 'CONNECTED' && <button type="button" className="network-secondary" disabled>Connected</button>}
+        <button type="button" className="network-message" onClick={() => onMessage(person)}>Message</button>
+      </footer>
+    </section>
+  </div>;
+}
+
+function ConnectionRequestsModal({ requests, busy, userId, error, onClearError, onClose, onViewProfile, onRespond }) {
+  const received = requests.received || [];
+  const sent = requests.sent || [];
+  const connections = requests.connections || [];
+  const personFor = (request, key, status) => ({ ...request[key], connectionRequestId: request.id, connectionStatus: status });
+  const connectionPerson = (request) => request.requesterId === userId ? request.recipient : request.requester;
+  return <div className="network-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="network-requests" role="dialog" aria-modal="true" aria-labelledby="network-requests-title">
+      <header><div><span className="modal-eyebrow">Your network</span><h2 id="network-requests-title">Connection requests</h2></div><button type="button" className="network-close" onClick={onClose} aria-label="Close requests"><ActionIcon type="close" /></button></header>
+      <InlineNetworkError message={error} onDismiss={onClearError} />
+      <div className="network-request-list">
+        {received.length === 0 && sent.length === 0 && connections.length === 0 && <p className="network-empty">No connection requests or connections yet.</p>}
+        {received.length > 0 && <section><h3>Received</h3>{received.map((request) => { const person = personFor(request, 'requester', 'PENDING_RECEIVED'); return <article className="network-request-row" key={request.id}><Avatar person={person} size="sm" /><button type="button" className="network-person-link" onClick={() => onViewProfile(person)}><strong>{displayName(person)}</strong><small>{person.occupation || 'Tribes Capital member'}</small></button><button type="button" className="network-primary" disabled={busy === request.id} onClick={() => onRespond(request.id, 'ACCEPTED', person)}>Accept</button><button type="button" className="network-secondary" disabled={busy === request.id} onClick={() => onRespond(request.id, 'DECLINED', person)}>Ignore</button></article>; })}</section>}
+        {sent.length > 0 && <section><h3>Sent</h3>{sent.map((request) => { const person = personFor(request, 'recipient', 'PENDING_SENT'); return <button type="button" className="network-request-row network-sent-row" key={request.id} onClick={() => onViewProfile(person)}><Avatar person={person} size="sm" /><span className="network-person-link"><strong>{displayName(person)}</strong><small>{person.occupation || 'Request pending'}</small></span><span className="network-status-label">Pending</span></button>; })}</section>}
+        {connections.length > 0 && <section><h3>Connected</h3>{connections.map((request) => { const person = { ...connectionPerson(request), connectionStatus: 'CONNECTED' }; return <button type="button" className="network-request-row network-sent-row" key={request.id} onClick={() => onViewProfile(person)}><Avatar person={person} size="sm" /><span className="network-person-link"><strong>{displayName(person)}</strong><small>{person.occupation || 'Connection'}</small></span><span className="network-status-label">Connected</span></button>; })}</section>}
+      </div>
+    </section>
+  </div>;
+}
+
 export default function MessagingPage({ user }) {
-  const [conversations, setConversations] = useState([]); const [activeUsers, setActiveUsers] = useState([]); const [selectedId, setSelectedId] = useState(null); const [selectedPeer, setSelectedPeer] = useState(null); const [messages, setMessages] = useState([]); const [draft, setDraft] = useState(''); const [searchTerm, setSearchTerm] = useState(''); const [searchResults, setSearchResults] = useState([]); const [unread, setUnread] = useState([]); const [typingUsers, setTypingUsers] = useState(new Set()); const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const [connected, setConnected] = useState(false); const [pendingFile, setPendingFile] = useState(null); const [replyingTo, setReplyingTo] = useState(null); const [editingMessage, setEditingMessage] = useState(null); const [mobileView, setMobileView] = useState('list'); const [conversationFilter, setConversationFilter] = useState('all');
+  const [conversationLoadError, setConversationLoadError] = useState(false);
+  const [networkError, setNetworkError] = useState('');
+  const [messageSearchLoading, setMessageSearchLoading] = useState(false);
+  const [conversations, setConversations] = useState([]); const [activeUsers, setActiveUsers] = useState([]); const [selectedId, setSelectedId] = useState(null); const [selectedPeer, setSelectedPeer] = useState(null); const [messages, setMessages] = useState([]); const [draft, setDraft] = useState(''); const [searchTerm, setSearchTerm] = useState(''); const [searchResults, setSearchResults] = useState([]); const [unread, setUnread] = useState([]); const [typingUsers, setTypingUsers] = useState(new Set()); const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const [connected, setConnected] = useState(false); const [pendingFile, setPendingFile] = useState(null); const [uploadProgress, setUploadProgress] = useState(null); const [replyingTo, setReplyingTo] = useState(null); const [editingMessage, setEditingMessage] = useState(null); const [mobileView, setMobileView] = useState('list'); const [conversationFilter, setConversationFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false); const [conversationMode, setConversationMode] = useState('direct'); const [memberQuery, setMemberQuery] = useState(''); const [directoryMembers, setDirectoryMembers] = useState([]); const [memberLoading, setMemberLoading] = useState(false); const [selectedMemberIds, setSelectedMemberIds] = useState([]); const [groupName, setGroupName] = useState(''); const [threadRoot, setThreadRoot] = useState(null); const [threadDraft, setThreadDraft] = useState(''); const [mentionQuery, setMentionQuery] = useState(null); const [mentionResults, setMentionResults] = useState([]); const [selectedMentions, setSelectedMentions] = useState([]); const [peopleSearchOpen, setPeopleSearchOpen] = useState(false); const [peopleSearchQuery, setPeopleSearchQuery] = useState(''); const [peopleSearchResults, setPeopleSearchResults] = useState([]); const [peopleSearchLoading, setPeopleSearchLoading] = useState(false);
+  const [networkOpen, setNetworkOpen] = useState(false); const [requestsOpen, setRequestsOpen] = useState(false); const [selectedPerson, setSelectedPerson] = useState(null); const [connectionRequests, setConnectionRequests] = useState({ received: [], sent: [], connections: [] }); const [connectionBusy, setConnectionBusy] = useState(null); const [networkRefresh, setNetworkRefresh] = useState(0);
   const socketRef = useRef(null); const selectedIdRef = useRef(null); const typingTimers = useRef(new Map()); const messageEndRef = useRef(null); const threadEndRef = useRef(null); const fileInputRef = useRef(null); const composerRef = useRef(null); const dropZoneRef = useRef(null); const heartbeatRef = useRef(null);
   const selectedConversation = useMemo(() => conversations.find((conversation) => conversation.id === selectedId), [conversations, selectedId]); const unreadByConversation = useMemo(() => new Map(unread.map((item) => [item.conversationId, item.count || 0])), [unread]); const totalUnread = unread.reduce((total, item) => total + (item.count || 0), 0); const threadReplies = useMemo(() => threadRoot ? messages.filter((message) => message.replyToId === threadRoot.id) : [], [messages, threadRoot]);
   const visibleConversations = useMemo(() => conversations.filter((conversation) => { if (conversationFilter === 'unread') return (unreadByConversation.get(conversation.id) || 0) > 0; if (conversationFilter === 'channels') return conversation.type !== 'DIRECT'; return true; }), [conversationFilter, conversations, unreadByConversation]);
   const getConversationTitle = useCallback((conversation) => { if (!conversation) return 'Conversation'; if (conversation.type === 'DIRECT') { if (conversation.id === selectedId && selectedPeer) return displayName(selectedPeer); const peerMember = conversation.members?.find((member) => member.userId !== user?.id && member.user?.id !== user?.id); const peer = peerMember?.user || peerMember; const peerName = displayName(peer); return peerName !== 'Member' ? peerName : conversation.title || 'Direct message'; } return conversation.title || conversation.channel?.name || 'Conversation'; }, [selectedId, selectedPeer, user?.id]);
   const refreshUnread = useCallback(async () => { try { setUnread(unwrap(await messagingAPI.unread()) || []); } catch {} }, []);
-  const loadConversations = useCallback(async () => { try { const next = unwrap(await messagingAPI.listConversations()); const list = Array.isArray(next) ? next : []; setConversations(list); setSelectedId((current) => current || list[0]?.id || null); } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to load conversations.'); } finally { setLoading(false); } }, []);
+  const loadConversations = useCallback(async () => { try { const next = unwrap(await messagingAPI.listConversations()); const list = Array.isArray(next) ? next : []; setConversations(list); setSelectedId((current) => current || list[0]?.id || null); setConversationLoadError(false); } catch { setConversationLoadError(true); } finally { setLoading(false); } }, []);
+  const retryLoadConversations = () => { setLoading(true); void loadConversations(); };
   const loadActiveUsers = useCallback(async () => { try { const next = unwrap(await messagingAPI.listActiveUsers()); setActiveUsers(Array.isArray(next) ? next : []); } catch {} }, []);
   const loadMessages = useCallback(async (conversationId) => { if (!conversationId) return; try { const next = unwrap(await messagingAPI.getMessages(conversationId)); const list = Array.isArray(next) ? next : []; setMessages(list); const incomingIds = list.filter((message) => message.senderId !== user?.id).map((message) => message.id); if (incomingIds.length) { await messagingAPI.markRead(incomingIds[incomingIds.length - 1], incomingIds); socketRef.current?.emit('message:read', { messageIds: incomingIds }); await refreshUnread(); } } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to load messages.'); } }, [refreshUnread, user?.id]);
   const loadDirectory = useCallback(async (query = '') => { setMemberLoading(true); try { const response = await messagingMembersAPI.list({ query: query.trim() || undefined, limit: 50 }); setDirectoryMembers(unwrapMembers(response)); } catch { setDirectoryMembers([]); } finally { setMemberLoading(false); } }, []);
+  const loadConnections = useCallback(async () => { try { const payload = unwrap(await communityAPI.listConnections()); setConnectionRequests(payload || { received: [], sent: [], connections: [] }); } catch { setConnectionRequests({ received: [], sent: [], connections: [] }); } }, []);
+  useEffect(() => { void loadConnections(); }, [loadConnections]);
   useEffect(() => { void loadConversations(); void loadActiveUsers(); void refreshUnread(); }, [loadActiveUsers, loadConversations, refreshUnread]); useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
   useEffect(() => { if (!modalOpen) return; void loadDirectory(memberQuery); }, [loadDirectory, modalOpen, memberQuery]);
   useEffect(() => {
@@ -171,6 +285,23 @@ export default function MessagingPage({ user }) {
     }).catch(() => { if (!cancelled) setPeopleSearchResults([]); }).finally(() => { if (!cancelled) setPeopleSearchLoading(false); });
     return () => { cancelled = true; };
   }, [peopleSearchOpen, peopleSearchQuery]);
+  useEffect(() => {
+    const query = searchTerm.trim();
+    if (!selectedId || query.length < 2) {
+      setSearchResults([]);
+      setMessageSearchLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setMessageSearchLoading(true);
+      messagingAPI.search(query, 25, selectedId)
+        .then((response) => { if (!cancelled) setSearchResults(Array.isArray(unwrap(response)) ? unwrap(response) : []); })
+        .catch(() => { if (!cancelled) setError('Unable to search messages in this conversation.'); })
+        .finally(() => { if (!cancelled) setMessageSearchLoading(false); });
+    }, 250);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [searchTerm, selectedId]);
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const socket = io(resolveSocketUrl(), {
@@ -229,8 +360,9 @@ export default function MessagingPage({ user }) {
     return () => { if (heartbeatRef.current) window.clearInterval(heartbeatRef.current); typingTimers.current.forEach((timer) => clearTimeout(timer)); socket.disconnect(); socketRef.current = null; };
   }, [loadActiveUsers, loadConversations, loadMessages, refreshUnread, user?.id]);
   useEffect(() => { if (!selectedId) return; void loadMessages(selectedId); const socket = socketRef.current; if (socket?.connected) socket.emit('conversation:join', { conversationId: selectedId }); setReplyingTo(null); setEditingMessage(null); setThreadRoot(null); setThreadDraft(''); setMobileView('thread'); }, [loadMessages, selectedId]);
+  useEffect(() => { if (!selectedId && !loading && window.innerWidth <= 720) setMobileView('thread'); }, [loading, selectedId]);
   useEffect(() => { messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages.length]); useEffect(() => { threadEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [threadReplies.length]); useEffect(() => { if (composerRef.current) { composerRef.current.style.height = 'auto'; composerRef.current.style.height = `${Math.min(composerRef.current.scrollHeight, 140)}px`; } }, [draft]);
-  const chooseConversation = (id) => { if (!id || id === selectedId) { if (id) setMobileView('thread'); return; } socketRef.current?.emit('conversation:leave', { conversationId: selectedId }); setSelectedPeer(null); setSelectedId(id); };
+  const chooseConversation = (id) => { if (!id || id === selectedId) { if (id) setMobileView('thread'); return; } socketRef.current?.emit('conversation:leave', { conversationId: selectedId }); setSelectedPeer(null); setSearchTerm(''); setSearchResults([]); setSelectedId(id); };
   const handleReconnect = useCallback(() => {
     const socket = socketRef.current;
     if (!socket) return;
@@ -245,7 +377,36 @@ export default function MessagingPage({ user }) {
   const createConversation = async () => { try { const payload = conversationMode === 'direct' ? { type: 'DIRECT', participantIds: selectedMemberIds } : { type: 'GROUP', participantIds: selectedMemberIds, title: groupName.trim() }; const conversation = unwrap(await messagingAPI.createConversation(payload)); setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]); setSelectedId(conversation.id); closeModal(); } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to create conversation.'); } };
   const openNewConversation = (mode = 'direct') => { setConversationMode(mode); setSelectedMemberIds([]); setGroupName(''); setMemberQuery(''); setModalOpen(true); };
   const startDirectMessage = async (person) => { if (!person || person.id === user?.id) return; const hydrate = (conversation) => ({ ...conversation, title: conversation.title || displayName(person), members: Array.isArray(conversation.members) ? conversation.members.map((member) => member.userId === person.id && !member.user ? { ...member, user: person } : member) : conversation.members }); const existing = conversations.find((conversation) => conversation.type === 'DIRECT' && conversation.members?.some((member) => member.userId === person.id)); if (existing) { setConversations((current) => current.map((conversation) => conversation.id === existing.id ? hydrate(conversation) : conversation)); setSelectedPeer(person); setSelectedId(existing.id); setMobileView('thread'); return; } try { const conversation = hydrate(unwrap(await messagingAPI.createConversation({ type: 'DIRECT', participantIds: [person.id], title: displayName(person) }))); if (!conversation?.id) throw new Error('The conversation could not be opened.'); setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)]); setSelectedPeer(person); setSelectedId(conversation.id); setMobileView('thread'); } catch (requestError) { setError(requestError.response?.data?.message || requestError.message || 'Unable to start direct message.'); } };
-  const uploadFile = async (conversationId, file) => { if (!file) return []; const formData = new FormData(); formData.append('file', file); return [unwrap(await messagingAPI.uploadAttachment(conversationId, formData))]; };
+  const updateConnectionStatus = (person, status, requestId = null) => {
+    const updated = { ...person, connectionStatus: status, connectionRequestId: requestId };
+    setSelectedPerson((current) => current?.id === person.id ? updated : current);
+    setActiveUsers((current) => current.map((member) => member.id === person.id ? { ...member, ...updated } : member));
+    setPeopleSearchResults((current) => current.map((member) => member.id === person.id ? { ...member, ...updated } : member));
+    setNetworkRefresh((current) => current + 1);
+  };
+  const sendConnectionRequest = async (person) => {
+    if (!person?.id) return;
+    setConnectionBusy(person.id);
+    try {
+      const request = unwrap(await communityAPI.requestConnection(person.id));
+      updateConnectionStatus(person, request?.status === 'ACCEPTED' ? 'CONNECTED' : 'PENDING_SENT', request?.id);
+      await loadConnections();
+    } catch (requestError) {
+      setNetworkError(requestError.response?.data?.message || 'Unable to send this connection request.');
+    } finally { setConnectionBusy(null); }
+  };
+  const respondToConnectionRequest = async (requestId, status, person) => {
+    setConnectionBusy(requestId);
+    try {
+      await communityAPI.respondToConnectionRequest(requestId, status);
+      updateConnectionStatus(person, status === 'ACCEPTED' ? 'CONNECTED' : 'NONE', null);
+      await loadConnections();
+    } catch (requestError) {
+      setNetworkError(requestError.response?.data?.message || 'Unable to update this connection request.');
+    } finally { setConnectionBusy(null); }
+  };
+  const messageProfile = (person) => { setSelectedPerson(null); setNetworkOpen(false); setRequestsOpen(false); void startDirectMessage(person); };
+  const uploadFile = async (_conversationId, file) => { if (!file) return []; return [await uploadFileInChunks(file, 'messaging', setUploadProgress)]; };
   const sendMessage = async (event, explicitReplyTo = null, explicitContent = null, explicitFile = null) => {
     event?.preventDefault();
     const file = explicitFile || pendingFile; const content = explicitContent ?? draft.trim(); const conversationId = selectedId; const replyTarget = explicitReplyTo || replyingTo;
@@ -270,6 +431,8 @@ export default function MessagingPage({ user }) {
     } catch (requestError) {
       setMessages((current) => current.map((item) => item.id === optimistic.id || item.clientMessageId === clientMessageId ? { ...item, isOptimistic: false, sendFailed: true, pendingFile: file } : item));
       setError(requestError.response?.data?.message || requestError.message || 'Unable to send message. Try again.');
+    } finally {
+      setUploadProgress(null);
     }
   };
   const sendThreadReply = async (event) => { event?.preventDefault(); const content = threadDraft.trim(); if (!threadRoot || !content) return; setThreadDraft(''); await sendMessage(null, threadRoot, content); };
@@ -282,28 +445,42 @@ export default function MessagingPage({ user }) {
   const acceptFile = (file) => { if (!file) return; if (file.size > 25 * 1024 * 1024) { setError('Attachments must be 25 MB or smaller.'); return; } setPendingFile(file); };
   const handlePaste = (event) => { const image = [...(event.clipboardData?.files || [])].find((file) => file.type.startsWith('image/')); if (image) { event.preventDefault(); acceptFile(image); } };
   const handleDrop = (event) => { event.preventDefault(); dropZoneRef.current?.classList.remove('dragging'); acceptFile(event.dataTransfer?.files?.[0]); };
-  const handleSearch = async (event) => { const value = event.target.value; setSearchTerm(value); if (value.trim().length < 2) return setSearchResults([]); try { const results = unwrap(await messagingAPI.search(value)); setSearchResults(Array.isArray(results) ? results : []); } catch { setSearchResults([]); } };
   const safePeopleSearchResults = Array.isArray(peopleSearchResults) ? peopleSearchResults.filter((person) => person && typeof person === 'object' && person.id) : [];
   const safeMentionResults = Array.isArray(mentionResults) ? mentionResults.filter((person) => person && typeof person === 'object' && person.id) : [];
   const typingNames = [...typingUsers].map((id) => displayName(activeUsers.find((person) => person.id === id) || { id, displayName: 'Someone' }));
   return <main className="messaging-page">
-    <header className="messaging-header"><div className="messaging-heading-copy"><div className="messaging-title-row"><span className="messaging-mark"><HugeiconsIcon icon={BubbleChatIcon} size={24} color="currentColor" strokeWidth={1.8} /></span><div><h1>Messages</h1><p>Focused conversations for teams, communities, and direct collaboration.</p></div></div></div><div className="messaging-header-actions"><button className="messaging-primary-button" type="button" onClick={() => openNewConversation('direct')}><Icon name="plus" size={15} color="#fff" /> New conversation</button></div></header>
-    {error && <div className="messaging-alert" role="alert"><span>{error}</span><button type="button" onClick={() => setError('')} aria-label="Dismiss">×</button></div>}
+    <header className="messaging-header"><div className="messaging-heading-copy"><div className="messaging-title-row"><span className="messaging-mark"><HugeiconsIcon icon={BubbleChatIcon} size={24} color="currentColor" strokeWidth={2} /></span><div><h1>Messages</h1><p>Focused conversations for teams, communities, and direct collaboration.</p></div></div></div><div className="messaging-header-actions"><div className="network-toolbar"><button type="button" onClick={() => { setNetworkError(''); setNetworkOpen(true); }}>Find people</button><button type="button" onClick={() => { setNetworkError(''); setRequestsOpen(true); }}>Invitations{connectionRequests.received?.length > 0 && <b>{connectionRequests.received.length}</b>}</button></div><button className="messaging-primary-button" type="button" onClick={() => openNewConversation('direct')}><Icon name="plus" size={15} color="#fff" /> New conversation</button></div></header>
+    {error && !networkOpen && !requestsOpen && !selectedPerson && <div className="messaging-alert conversation-load-error" role="alert"><span><strong>Messaging error</strong><small>{error}</small></span><button type="button" onClick={() => setError('')}>Dismiss</button></div>}
+    {conversationLoadError && !networkOpen && !requestsOpen && !selectedPerson && <div className="conversation-load-error" role="alert"><span><strong>Conversations couldn’t load</strong><small>Check your connection, then try again. Your existing messages are unchanged.</small></span><button type="button" onClick={retryLoadConversations} disabled={loading}>{loading ? 'Retrying…' : 'Try again'}</button></div>}
     <div className={`messaging-layout mobile-${mobileView}`}>
-      <aside className="conversation-panel"><div className="conversation-heading"><div><span className="panel-title">Inbox</span><span className="panel-count">{conversations.length}</span></div><button className="rail-action" type="button" onClick={() => openNewConversation('direct')} aria-label="New conversation">+</button></div><label className="search-wrap"><Icon name="search" size={14} color="#6B7280" /><input value={searchTerm} onChange={handleSearch} placeholder="Search messages" aria-label="Search messages" /></label><div className="conversation-filters">{[['all', 'All'], ['unread', 'Unread'], ['channels', 'Groups']].map(([value, label]) => <button key={value} type="button" className={conversationFilter === value ? 'filter-active' : ''} onClick={() => setConversationFilter(value)}>{label}{value === 'unread' && totalUnread > 0 && <span>{totalUnread}</span>}</button>)}</div>
-        {searchResults.length > 0 && <div className="search-results">{searchResults.map((result) => result.conversation?.id ? <button type="button" key={result.id} onClick={() => { chooseConversation(result.conversation.id); setSearchTerm(''); setSearchResults([]); }}><strong>{result.conversation?.title || 'Conversation'}</strong><span>{result.content}</span></button> : null)}</div>}
+      <aside className="conversation-panel"><div className="conversation-heading"><div><span className="panel-title">Inbox</span><span className="panel-count">{conversations.length}</span></div><button className="rail-action" type="button" onClick={() => openNewConversation('direct')} aria-label="New conversation">+</button></div><div className="conversation-filters">{[['all', 'All'], ['unread', 'Unread'], ['channels', 'Groups']].map(([value, label]) => <button key={value} type="button" className={conversationFilter === value ? 'filter-active' : ''} onClick={() => setConversationFilter(value)}>{label}{value === 'unread' && totalUnread > 0 && <span>{totalUnread}</span>}</button>)}</div>
         <div className="conversation-list">{loading ? <div className="empty-state">Loading conversations…</div> : visibleConversations.length === 0 ? <div className="empty-state rail-empty"><strong>{conversationFilter === 'unread' ? 'You are all caught up' : 'No conversations yet'}</strong><span>Start a direct message or create a named group.</span><button type="button" className="empty-state-action" onClick={() => openNewConversation('direct')}>Start a conversation</button></div> : visibleConversations.map((conversation) => { const count = unreadByConversation.get(conversation.id) || 0; const lastMessage = conversation.messages?.[0]; const title = getConversationTitle(conversation); return <button key={conversation.id} type="button" className={`conversation-item ${selectedId === conversation.id ? 'selected' : ''}`} onClick={() => chooseConversation(conversation.id)}><InitialsAvatar person={{ displayName: title }} className="conversation-avatar" style={{ width: 36, height: 36, borderRadius: 10, fontSize: 12 }} alt={`${title} conversation`} /><span className="conversation-copy"><strong>{title}</strong><span>{lastMessage?.content || 'Start the conversation'}</span></span>{count > 0 && <span className="unread-badge">{count > 99 ? '99+' : count}</span>}</button>; })}</div>
         <div className="active-user-panel"><div className="people-panel-header"><div><span className="panel-title">People</span><span className="panel-count">{activeUsers.length}</span></div><div className="people-panel-actions"><span className="people-live-label"><i /> {activeUsers.length ? 'Online now' : 'No one online'}</span><button type="button" className="people-search-toggle" onClick={() => { setPeopleSearchOpen((open) => !open); setPeopleSearchQuery(''); }} aria-label="Search people" title="Search people"><Icon name="search" size={14} color="currentColor" /></button></div></div>{peopleSearchOpen && <div className="people-search-box"><Icon name="search" size={13} color="#667085" /><input autoFocus value={peopleSearchQuery} onChange={(event) => setPeopleSearchQuery(event.target.value)} placeholder="Search by name or username" aria-label="Search people by name or username" /><button type="button" onClick={() => { setPeopleSearchOpen(false); setPeopleSearchQuery(''); }} aria-label="Close people search">×</button></div>}{peopleSearchOpen && peopleSearchQuery.trim() && <div className="people-search-results">{peopleSearchLoading ? <span>Searching people…</span> : safePeopleSearchResults.length === 0 ? <span>No matching people.</span> : safePeopleSearchResults.map((person) => <button type="button" key={person.id} onClick={() => { void startDirectMessage(person); setPeopleSearchOpen(false); setPeopleSearchQuery(''); }}><Avatar person={person} size="sm" /><span><strong>{displayName(person)}</strong><small>{person?.email || 'Workspace member'}</small></span><b>Message</b></button>)}</div>}<div className="people-online-strip" aria-label="People online">{activeUsers.slice(0, 8).map((person) => { const name = person.id === user?.id ? 'You' : displayName(person); return <button className="people-online-avatar" key={person.id} type="button" onClick={() => void startDirectMessage(person)} title={name} aria-label={`Message ${name}`}><span className="people-avatar-wrap"><Avatar person={person} size="sm" /><i /></span><span className="people-online-name">{name}</span></button>; })}{activeUsers.length === 0 && <span className="people-empty-copy">Connected teammates will appear here.</span>}</div><div className="people-online-list">{activeUsers.slice(0, 5).map((person) => <button className="active-user-item" key={person.id} type="button" onClick={() => person.id !== user?.id && void startDirectMessage(person)}><span className="people-row-avatar"><Avatar person={person} size="sm" /><i /></span><span><strong>{person.id === user?.id ? 'You' : displayName(person)}</strong><small>{person.id === user?.id ? 'Your active session' : 'Available to message'}</small></span><span className="people-dm-hint">{person.id === user?.id ? 'Online' : 'DM'}</span></button>)}</div><button className="people-directory-link" type="button" onClick={() => openNewConversation('direct')}><span>Find someone in the workspace</span><span aria-hidden="true">→</span></button></div>
       </aside>
-      <section className="thread-panel">{!selectedConversation ? <div className="thread-empty"><span className="empty-icon"><HugeiconsIcon icon={BubbleChatIcon} size={22} color="currentColor" strokeWidth={1.8} /></span><h2>Choose a conversation</h2><p>Select a conversation from your inbox or start a new one.</p><button type="button" className="messaging-primary-button" onClick={() => openNewConversation('direct')}>Start a conversation</button></div> : <>
-        <header className="thread-header"><button className="mobile-back" type="button" onClick={() => setMobileView('list')} aria-label="Back to conversations">←</button><Avatar person={selectedConversation.type === 'DIRECT' ? (selectedConversation.members?.find((member) => member.userId !== user?.id && member.user?.id !== user?.id)?.user || { displayName: getConversationTitle(selectedConversation) }) : null} /><div className="thread-header-copy"><h2>{getConversationTitle(selectedConversation)}</h2><p>{selectedConversation.type === 'DIRECT' ? 'Direct message' : `${selectedConversation.members?.length || 0} people · named group`} · {connected ? 'Live updates on' : 'Offline mode'}</p></div><div className="thread-header-actions"><button type="button" title="Start a group conversation" onClick={() => openNewConversation('group')}>＋</button><button type="button" title="Conversation details">ⓘ</button></div></header>
+      <section className="thread-panel">{!selectedConversation ? <div className="thread-empty"><button type="button" className="mobile-back thread-empty-back" onClick={() => setMobileView('list')} aria-label="Back to inbox" title="Back to inbox">← Inbox</button><span className="empty-icon"><HugeiconsIcon icon={BubbleChatIcon} size={22} color="currentColor" strokeWidth={2} /></span><h2>{conversationLoadError ? 'Inbox unavailable' : 'Choose a conversation'}</h2><p>{conversationLoadError ? 'The conversation view is ready. Retry loading the inbox, or start a new conversation.' : 'Select a conversation from your inbox or start a new one.'}</p><button type="button" className="messaging-primary-button" onClick={() => openNewConversation('direct')}>Start a conversation</button></div> : <>
+        <header className="thread-header"><button className="mobile-back" type="button" onClick={() => setMobileView('list')} aria-label="Back to conversations">←</button><Avatar person={selectedConversation.type === 'DIRECT' ? (selectedConversation.members?.find((member) => member.userId !== user?.id && member.user?.id !== user?.id)?.user || { displayName: getConversationTitle(selectedConversation) }) : null} /><div className="thread-header-copy"><h2>{getConversationTitle(selectedConversation)}</h2><p>{selectedConversation.type === 'DIRECT' ? 'Direct message' : `${selectedConversation.members?.length || 0} people · named group`} · {connected ? 'Live updates on' : 'Offline mode'}</p></div>{selectedConversation.type === 'DIRECT' && <button type="button" className="thread-view-profile" onClick={() => { const peerMember = selectedConversation.members?.find((member) => member.userId !== user?.id && member.user?.id !== user?.id); const person = selectedPeer || peerMember?.user || peerMember; if (!person?.id) return; setNetworkError(''); setSelectedPerson(person); }}>View profile</button>}<div className="thread-header-actions"><button type="button" title="Start a group conversation" onClick={() => openNewConversation('group')}>＋</button><button type="button" title="Conversation details">ⓘ</button></div></header>
+        <div className="thread-message-search"><label><Icon name="search" size={15} color="#667085" /><input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search messages in this conversation" aria-label="Search messages in this conversation" /></label>{searchTerm.trim().length >= 2 && <div className="thread-message-search-results" role="status">{messageSearchLoading ? <p>Searching this conversation…</p> : searchResults.length === 0 ? <p>No matching messages in this conversation.</p> : searchResults.map((result) => <button type="button" key={result.id} onClick={() => document.getElementById(`message-${result.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><span><strong>{displayName(result.sender)}</strong><small>{formatTime(result.createdAt)}</small></span><p>{result.content}</p></button>)}</div>}</div>
         <div className={`message-list ${threadRoot ? 'with-thread' : ''}`} ref={dropZoneRef} onDragOver={(event) => { event.preventDefault(); dropZoneRef.current?.classList.add('dragging'); }} onDragLeave={() => dropZoneRef.current?.classList.remove('dragging')} onDrop={handleDrop}>{messages.length === 0 ? <div className="thread-empty compact"><h3>No messages yet</h3><p>Start the conversation</p></div> : messages.map((message) => <MessageRow key={message.id || message.tempId} message={message} user={user} onReply={setThreadRoot} onReact={reactToMessage} onEdit={(item) => { setEditingMessage(item); setDraft(item.content || ''); setTimeout(() => composerRef.current?.focus(), 0); }} onDelete={deleteMessage} onRetry={(item) => void sendMessage(null, item.replyTo, item.draftContent ?? item.content, item.pendingFile)} />)}{typingNames.length > 0 && <div className="typing-indicator"><span className="typing-dots"><i /><i /><i /></span>{typingNames.length === 1 ? `${typingNames[0]} is typing…` : `${typingNames.slice(0, 2).join(', ')} are typing…`}</div>}<div ref={messageEndRef} /></div>
-        {replyingTo && <div className="composer-context"><span><strong>Replying to {displayName(replyingTo.sender)}</strong><small>{replyingTo.content || '[attachment]'}</small></span><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply">×</button></div>}{editingMessage && <div className="composer-context editing"><span><strong>Editing message</strong><small>Enter to save · Esc to cancel</small></span><button type="button" onClick={() => { setEditingMessage(null); setDraft(''); }} aria-label="Cancel edit">×</button></div>}{pendingFile && <div className="file-preview"><span>📎</span><strong>{pendingFile.name}</strong><small>{Math.max(1, Math.round(pendingFile.size / 1024))} KB</small><button type="button" onClick={() => setPendingFile(null)}>×</button></div>}
+        {replyingTo && <div className="composer-context"><span><strong>Replying to {displayName(replyingTo.sender)}</strong><small>{replyingTo.content || '[attachment]'}</small></span><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply">×</button></div>}{editingMessage && <div className="composer-context editing"><span><strong>Editing message</strong><small>Enter to save · Esc to cancel</small></span><button type="button" onClick={() => { setEditingMessage(null); setDraft(''); }} aria-label="Cancel edit">×</button></div>}{pendingFile && <div className="file-preview"><span>📎</span><strong>{pendingFile.name}</strong><small>{Math.max(1, Math.round(pendingFile.size / 1024))} KB</small><button type="button" onClick={() => setPendingFile(null)}>×</button></div>}{uploadProgress !== null && <div role="status" className="message-upload-progress">Uploading attachment: {uploadProgress.percent}%<progress value={uploadProgress.percent} max="100" /></div>}
         {mentionQuery !== null && safeMentionResults.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Mention a user">{safeMentionResults.map((person) => <button type="button" key={person.id} onMouseDown={(event) => event.preventDefault()} onClick={() => selectMention(person)}><Avatar person={person} size="sm" /><span><strong>{displayName(person)}</strong><small>{person?.email || 'Workspace member'}</small></span></button>)}</div>}
         <form className="message-composer" onSubmit={editingMessage ? submitEdit : sendMessage} onPaste={handlePaste}><button type="button" className="composer-tool" onClick={() => fileInputRef.current?.click()} aria-label="Attach a file" title="Attach a file">＋</button><input ref={fileInputRef} type="file" hidden onChange={(event) => acceptFile(event.target.files?.[0])} /><textarea ref={composerRef} value={draft} onChange={handleTyping} onKeyDown={handleComposerKeyDown} placeholder={editingMessage ? 'Edit your message…' : 'Write a message…'} rows={1} aria-label="Message" /><button type="button" className="composer-tool" onClick={() => setDraft((value) => `${value}${value ? ' ' : ''}👍`)} aria-label="Add emoji">☺</button><button type="submit" className="send-button" disabled={!draft.trim() && !pendingFile} aria-label={editingMessage ? 'Save message' : 'Send message'}>{editingMessage ? 'Save' : 'Send'}</button></form><div className="composer-hint">Enter to send · Shift + Enter for a new line · Reply opens a focused thread</div>
         {threadRoot && <aside className="thread-drawer"><header><div><span className="modal-eyebrow">Thread</span><h3>{threadReplies.length ? `${threadReplies.length} ${threadReplies.length === 1 ? 'reply' : 'replies'}` : 'Start a thread'}</h3></div><button type="button" className="icon-button" onClick={() => setThreadRoot(null)} aria-label="Close thread"><ActionIcon type="close" /></button></header><div className="thread-root"><Avatar person={threadRoot.sender} size="sm" /><div><strong>{displayName(threadRoot.sender)}</strong><p>{threadRoot.content || '[attachment]'}</p></div></div><div className="thread-replies">{threadReplies.map((reply) => <div className="thread-reply" key={reply.id}><Avatar person={reply.sender} size="sm" /><div><strong>{reply.senderId === user?.id ? 'You' : displayName(reply.sender)}</strong><p>{reply.content}</p><time>{formatTime(reply.createdAt)}</time></div></div>)}<div ref={threadEndRef} /></div><form className="thread-composer" onSubmit={sendThreadReply}><textarea value={threadDraft} onChange={(event) => setThreadDraft(event.target.value)} placeholder="Reply in thread…" rows={2} /><button type="submit" disabled={!threadDraft.trim()} aria-label="Send thread reply"><ActionIcon type="send" /></button></form></aside>}
       </>}</section>
     </div>
     <ConversationModal open={modalOpen} mode={conversationMode} setMode={setConversationMode} members={directoryMembers} query={memberQuery} setQuery={setMemberQuery} selectedIds={selectedMemberIds} setSelectedIds={setSelectedMemberIds} groupName={groupName} setGroupName={setGroupName} loading={memberLoading} onClose={closeModal} onCreate={createConversation} />
+    <NetworkDirectoryModal open={networkOpen} refreshKey={networkRefresh} onClose={() => { setNetworkOpen(false); setNetworkError(''); }} onViewProfile={(person) => { setNetworkError(''); setSelectedPerson(person); }} onConnect={sendConnectionRequest} onMessage={messageProfile} busyId={connectionBusy} error={networkError} onClearError={() => setNetworkError('')} />
+    <MemberProfileModal person={selectedPerson} busy={connectionBusy === selectedPerson?.id || connectionBusy === selectedPerson?.connectionRequestId} error={networkError} onClearError={() => setNetworkError('')} onClose={() => { setSelectedPerson(null); setNetworkError(''); }} onConnect={sendConnectionRequest} onRespond={(person, status) => respondToConnectionRequest(person.connectionRequestId, status, person)} onMessage={messageProfile} />
+    {requestsOpen && <ConnectionRequestsModal requests={connectionRequests} busy={connectionBusy} userId={user?.id} error={networkError} onClearError={() => setNetworkError('')} onClose={() => { setRequestsOpen(false); setNetworkError(''); }} onViewProfile={(person) => { setNetworkError(''); setSelectedPerson(person); }} onRespond={respondToConnectionRequest} />}
   </main>;
 }
+const formatLastSeen = (value) => {
+  if (!value) return 'Availability not shared';
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return 'Availability not shared';
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+  if (elapsedMinutes < 1) return 'Active just now';
+  if (elapsedMinutes < 60) return `Last seen ${elapsedMinutes} min ago`;
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `Last seen ${elapsedHours} hr ago`;
+  return `Last seen ${Math.floor(elapsedHours / 24)} days ago`;
+};

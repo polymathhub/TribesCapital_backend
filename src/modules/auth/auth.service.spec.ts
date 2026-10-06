@@ -59,18 +59,19 @@ describe('AuthService', () => {
   });
 
   it('returns auth tokens immediately when email verification is disabled', async () => {
+    const createUser = jest.fn().mockResolvedValue({
+      id: 'user-1',
+      email: 'user@example.com',
+      firstName: 'Test',
+      lastName: 'User',
+      isActive: true,
+      emailVerified: false,
+      emailVerificationToken: 'token',
+    });
     const prisma = {
       user: {
         findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockResolvedValue({
-          id: 'user-1',
-          email: 'user@example.com',
-          firstName: 'Test',
-          lastName: 'User',
-          isActive: true,
-          emailVerified: false,
-          emailVerificationToken: 'token',
-        }),
+        create: createUser,
         update: jest.fn().mockResolvedValue({}),
       },
     } as unknown as PrismaService;
@@ -97,10 +98,13 @@ describe('AuthService', () => {
       passwordConfirmation: 'Password123!',
       firstName: 'Test',
       lastName: 'User',
+      role: 'Investor',
     });
 
     expect(response).toEqual(expect.objectContaining({ accessToken: 'access-token' }));
     expect(response).toEqual(expect.objectContaining({ refreshToken: 'refresh-token' }));
+    expect(createUser).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ accountType: 'INVESTOR' }) }));
+    expect(response).toEqual(expect.objectContaining({ user: expect.objectContaining({ accountType: 'INVESTOR' }) }));
     expect(mail.sendVerificationEmail).not.toHaveBeenCalled();
   });
 

@@ -1,11 +1,11 @@
 import React from 'react';
 import { COLORS } from '../constants/colors';
 
-function Icon({ name, size = 15, color = COLORS.T3, strokeWidth = 1.5 }) {
+function Icon({ name, size = 15, color = COLORS.T3, strokeWidth = 2 }) {
   const s = { width: size, height: size, flexShrink: 0 };
   const sw = strokeWidth;
   const paths = {
-    home: <><path d="M3 9.5L9 4l6 5.5V19H6v-5h6v5h3V9.5" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,
+    home: <><path d="m3 10 9-7 9 7" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 9.5V21h14V9.5M9 21v-7h6v7" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,
     book: <><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round"/><path d="M4 15h16" stroke={color} strokeWidth={sw}/></>,
     folder: <><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke={color} strokeWidth={sw} fill="none"/></>,
     chart: <><polyline points="22,12 18,12 15,21 9,3 6,12 2,12" stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,

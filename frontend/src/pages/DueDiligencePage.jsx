@@ -1,10 +1,24 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import * as pdfjsLib from 'pdfjs-dist';
 import { dueDiligenceAPI } from '../api/endpoints';
+import { uploadFileInChunks } from '../utils/chunkedUpload';
 import dueDiligenceIllustration from '../assets/illustrations/Questions.mp4';
 import dueDiligenceGif from '../assets/illustrations/Accept-tasks.gif';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+
+const uploadDueDiligenceFile = async (dueDiligenceId, file, category, setProgress) => {
+  const uploaded = await uploadFileInChunks(file, 'due-diligence', (progress) => setProgress(`Uploading document: ${progress.percent}%`));
+  setProgress('Saving document details…');
+  await dueDiligenceAPI.uploadDocument(dueDiligenceId, {
+    fileName: uploaded.fileName,
+    fileUrl: uploaded.url,
+    storageKey: uploaded.storageKey,
+    fileType: file.name.split('.').pop()?.toLowerCase() || 'other',
+    fileSize: uploaded.size,
+    category: category || 'general',
+  });
+};
 
 /* ═══════════════════════════════════════════════════════════
    TRIBES CAPITAL — DUE DILIGENCE VAULT
@@ -127,15 +141,6 @@ function I({ k, s = 16, c = T2, sw = 1.6, fill = 'none' }) {
     </svg>
   );
 }
-
-/* ─── DATA ─── */
-const SEED = [
-  { id: 1, title: 'Investment Framework Template Q1 2026', targetName: 'Data Center',    type: 'Investment', targetType: 'Company', priority: 'Low',    deadline: '12/06/2026', fileType: 'PDF',  size: '1.4 MB', updated: '2 days ago',  category: 'Investment Framework', description: 'Comprehensive investment framework covering diligence criteria, risk assessment, and financial modelling for clean energy projects.' },
-  { id: 2, title: 'Portfolio Financial Dashboard Model',   targetName: 'Financial Models', type: 'Investment', targetType: 'Company', priority: 'Low',  deadline: '12/06/2026', fileType: 'PDF',  size: '5.1 MB', updated: '1 week ago',  category: 'Financial Models',     description: 'Multi-asset portfolio tracking model. Consolidates financials across projects with automated reporting and benchmarking.' },
-  { id: 3, title: 'Technical Site Assessment Template',    targetName: 'Data Center',    type: 'Investment', targetType: 'Company', priority: 'Medium', deadline: '18/07/2026', fileType: 'DOCX', size: '2.2 MB', updated: '3 days ago',  category: 'Technical',            description: 'Site assessment checklist covering grid access, land tenure, irradiance data, and environmental constraints.' },
-  { id: 4, title: 'ESG Compliance Checklist 2026',         targetName: 'Compliance',     type: 'Diligence',  targetType: 'Fund',    priority: 'High',   deadline: '02/05/2026', fileType: 'XLSX', size: '0.8 MB', updated: '2 weeks ago', category: 'Legal & Compliance',   description: 'Environmental, social and governance compliance checklist aligned with IFC Performance Standards.' },
-  { id: 5, title: 'West Africa Market Analysis',           targetName: 'Market Research', type: 'Research',  targetType: 'Sector',  priority: 'Low',    deadline: '30/08/2026', fileType: 'PDF',  size: '3.6 MB', updated: '1 month ago', category: 'Market Research',      description: 'Market sizing and opportunity analysis for off-grid solar and mini-grid deployments across West Africa.' },
-];
 
 const TYPES        = ['Investment', 'Diligence', 'Research', 'Legal'];
 const TARGET_TYPES = ['Company', 'Fund', 'Sector', 'Asset'];
@@ -1362,14 +1367,9 @@ export default function DueDiligenceVault() {
         await dueDiligenceAPI.update(editDoc.id, payload);
 
         if (form.file) {
-          setProgress('Uploading document…');
+          setProgress('Starting document upload…');
           try {
-            const uploadData = new FormData();
-            uploadData.append('file', form.file);
-            uploadData.append('fileName', form.file.name);
-            await dueDiligenceAPI.uploadDocument(editDoc.id, uploadData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            await uploadDueDiligenceFile(editDoc.id, form.file, form.category, setProgress);
           } catch (uploadErr) {
             console.error('Failed to upload replacement document for due diligence:', uploadErr);
             setToast('Changes saved, but the new document upload failed. Please retry the upload.');
@@ -1400,13 +1400,9 @@ export default function DueDiligenceVault() {
 
         let uploadError = null;
         if (form.file) {
-          setProgress('Uploading document…');
+          setProgress('Starting document upload…');
           try {
-            const uploadData = new FormData();
-            uploadData.append('file', form.file);
-            uploadData.append('fileName', form.file.name);
-            uploadData.append('category', form.category || 'general');
-            await dueDiligenceAPI.uploadDocument(createdItem.id, uploadData);
+            await uploadDueDiligenceFile(createdItem.id, form.file, form.category, setProgress);
           } catch (uploadErr) {
             uploadError = uploadErr;
             console.error('Document upload failed after creating due diligence:', uploadErr);

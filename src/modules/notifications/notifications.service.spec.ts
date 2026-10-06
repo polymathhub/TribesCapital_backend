@@ -1,31 +1,25 @@
 import { NotificationsService } from './notifications.service';
 
 describe('NotificationsService', () => {
-  it('creates the contributor announcement once per user', async () => {
+  it('lists persisted notifications without seeding announcement records', async () => {
     const prisma = {
+      isDatabaseAvailable: jest.fn().mockReturnValue(true),
       notification: {
-        findMany: jest.fn().mockResolvedValue([]),
-        create: jest.fn().mockResolvedValue({ id: 'notification-1' }),
+        findMany: jest.fn().mockResolvedValue([{ id: 'notification-1', isRead: false }]),
       },
     };
 
     const service = new NotificationsService(prisma as any);
-    await service.ensureAnnouncementNotificationForUser('user-1');
+    const result = await service.listForUser('user-1');
 
     expect(prisma.notification.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ userId: 'user-1', type: 'announcement' }),
+        where: { userId: 'user-1' },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
       }),
     );
-    expect(prisma.notification.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          userId: 'user-1',
-          type: 'announcement',
-          title: 'New contributor announcement',
-        }),
-      }),
-    );
+    expect(result).toEqual([{ id: 'notification-1', isRead: false }]);
   });
 
   it('marks a notification as read only for the current user', async () => {

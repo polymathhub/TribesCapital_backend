@@ -14,6 +14,7 @@
     "@nestjs/passport": "^11.0.5",
     "axios": "^1.6.0",
     "jest": "^30.4.2",
+    "lucide-react": "^1.49.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pdfjs-dist": "^6.2.108",

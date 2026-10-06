@@ -7,6 +7,11 @@ const isAdminUser = (user) => {
   return Boolean(user?.isAdmin || user?.role === 'admin' || roles.includes('admin') || roles.includes('super-admin'));
 };
 
+const ACCOUNT_TYPE_REMINDER = {
+  title: 'Please confirm your Tribes Capital account type',
+  message: 'We have updated profile categories to better reflect how you participate in Tribes Capital. Please open Settings > Profile, choose the account type that best describes you, and save your profile. Available categories are Community Member, Investor, Facility Operator, and Read-only Guest. Updating this category does not change administrative permissions.',
+};
+
 export default function AnnouncementsPage({ user, onBack, onToggleSidebar, isMobile, isTablet }) {
   const isMobileLocal = isMobile !== undefined ? isMobile : (typeof window !== 'undefined' ? window.innerWidth < 640 : false);
   const [broadcast, setBroadcast] = useState({ title: '', message: '' });
@@ -66,6 +71,7 @@ export default function AnnouncementsPage({ user, onBack, onToggleSidebar, isMob
             <div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 8 }}>Admin broadcast</div>
             <h2 style={{ margin: '0 0 6px', fontSize: 20 }}>Send an announcement to everyone</h2>
             <p style={{ color: COLORS.T2, fontSize: 13, margin: '0 0 16px' }}>This message will appear in every member's notification feed.</p>
+            <button type="button" onClick={() => setBroadcast(ACCOUNT_TYPE_REMINDER)} style={{ marginBottom: 14, border: `1px solid ${COLORS.BD}`, borderRadius: 8, background: COLORS.W, color: COLORS.T1, padding: '8px 11px', font: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Prepare account type reminder</button>
             <div style={{ display: 'grid', gap: 10 }}>
               <input required placeholder="Announcement title" value={broadcast.title} onChange={(event) => setBroadcast({ ...broadcast, title: event.target.value })} style={{ border: `1px solid ${COLORS.BD}`, borderRadius: 8, padding: '10px 12px', font: 'inherit', color: COLORS.T1, background: COLORS.W }} />
               <textarea required rows={4} placeholder="Write the announcement..." value={broadcast.message} onChange={(event) => setBroadcast({ ...broadcast, message: event.target.value })} style={{ border: `1px solid ${COLORS.BD}`, borderRadius: 8, padding: '10px 12px', font: 'inherit', color: COLORS.T1, background: COLORS.W, resize: 'vertical' }} />

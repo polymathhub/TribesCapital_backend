@@ -67,10 +67,23 @@ export class MemberDirectoryController {
           id: true,
           firstName: true,
           lastName: true,
-          email: true,
+          displayName: true,
+          occupation: true,
+          bio: true,
+          school: true,
+          department: true,
           avatar: true,
           isActive: true,
+          createdAt: true,
           lastLogin: true,
+          sentConnectionRequests: {
+            where: { recipientId: user.id },
+            select: { id: true, status: true },
+          },
+          receivedConnectionRequests: {
+            where: { requesterId: user.id },
+            select: { id: true, status: true },
+          },
         },
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
         skip: (currentPage - 1) * pageSize,
@@ -89,11 +102,19 @@ export class MemberDirectoryController {
 
     const onlineIds = new Set<string>((Array.isArray(sessions) ? sessions : []).map((session: { userId: string }) => session.userId).filter(Boolean));
     const data = users
-      .map((member: any) => ({
-        ...member,
-        presence: onlineIds.has(member.id) ? 'online' : 'offline',
-        lastSeenAt: member.lastLogin,
-      }))
+      .map((member: any) => {
+        const sentRequest = member.receivedConnectionRequests?.[0];
+        const receivedRequest = member.sentConnectionRequests?.[0];
+        const request = sentRequest || receivedRequest;
+        const { sentConnectionRequests, receivedConnectionRequests, ...profile } = member;
+        return {
+          ...profile,
+          connectionStatus: request?.status === 'ACCEPTED' ? 'CONNECTED' : sentRequest ? 'PENDING_SENT' : receivedRequest ? 'PENDING_RECEIVED' : 'NONE',
+          connectionRequestId: request?.id || null,
+          presence: onlineIds.has(member.id) ? 'online' : 'offline',
+          lastSeenAt: member.lastLogin,
+        };
+      })
       .sort((a: any, b: any) => Number(b.presence === 'online') - Number(a.presence === 'online'));
 
     return {

@@ -7,18 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ConnectionRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 model User {
   id                    String      @id @default(cuid())
   email                 String      @unique
   firstName             String
   lastName              String
+  displayName           String?
+  accountType           String      @default("COMMUNITY_MEMBER")
   password              String
   address               String?
   phoneNumber           String?
   occupation            String?
+  interests             String[]    @default([])
+  socialLink            String?
+  socialLinks           Json?
   school                String?
   department            String?
   avatar                String?
+  coverPhoto            String?
   bio                   String?
   isActive              Boolean     @default(true)
   emailVerified         Boolean     @default(false)
@@ -61,6 +73,15 @@ model User {
   
   communityPostCreated  CommunityPost[] @relation("PostCreator")
   communityComments     CommunityComment[] @relation("CommentCreator")
+  communityPostVotes    CommunityPostVote[]
+  communityCommentVotes CommunityCommentVote[]
+  communityFollows      CommunityFollow[] @relation("CommunityFollowFollower")
+  communityFollowers    CommunityFollow[] @relation("CommunityFollowFollowed")
+  sentConnectionRequests ConnectionRequest[] @relation("ConnectionRequestSender")
+  receivedConnectionRequests ConnectionRequest[] @relation("ConnectionRequestRecipient")
+  savedCommunityPosts   CommunityPostSave[]
+  contractorProfile     ContractorProfile?
+  contractorReviews    ContractorReview[] @relation("ContractorReviewAuthor")
   
   notifications         Notification[]
   notificationRead      NotificationRead[]
@@ -272,7 +293,14 @@ model Project {
   id              String      @id @default(cuid())
   title           String
   description     String?
+  projectType     String?
+  location        String?
+  capacityKwp     Float?
+  managingContractor String?
+  notes           String?
   thumbnail       String?
+  pipelineMetadata Json?
+  attachments     Json?
   status          String      @default("planning")
   startDate       DateTime?
   endDate         DateTime?
@@ -332,6 +360,43 @@ model MarketplaceItem {
   @@index([price])
 }
 
+model ContractorProfile {
+  id              String              @id @default(cuid())
+  businessName    String
+  description     String
+  services        String[]            @default([])
+  location        String?
+  contactEmail    String?
+  website         String?
+  certifications  String[]            @default([])
+  teamSize        String?
+  foundedYear     Int?
+  isVerified      Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  userId          String              @unique
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews         ContractorReview[]
+
+  @@index([isVerified, createdAt])
+  @@index([location])
+}
+
+model ContractorReview {
+  id          String            @id @default(cuid())
+  rating      Int
+  content     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  contractorId String
+  contractor  ContractorProfile @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User              @relation("ContractorReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([contractorId, authorId])
+  @@index([contractorId, createdAt])
+}
+
 model Document {
   id              String      @id @default(cuid())
   title           String
@@ -376,8 +441,11 @@ model CommunityPost {
   id              String      @id @default(cuid())
   title           String
   content         String
+  category        String      @default("General")
+  tags            Json?
   upvotes         Int         @default(0)
   downvotes       Int         @default(0)
+  viewCount       Int         @default(0)
   isPinned        Boolean     @default(false)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -386,6 +454,8 @@ model CommunityPost {
   creator         User        @relation("PostCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
   comments        CommunityComment[]
+  votes           CommunityPostVote[]
+  saves           CommunityPostSave[]
 
   @@index([creatorId])
   @@index([isPinned])
@@ -405,9 +475,77 @@ model CommunityComment {
   
   creatorId       String
   creator         User        @relation("CommentCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  votes           CommunityCommentVote[]
 
   @@index([postId])
   @@index([creatorId])
+}
+
+model CommunityPostVote {
+  id        String        @id @default(cuid())
+  value     Int           @default(1)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId, value])
+}
+
+model CommunityCommentVote {
+  id        String          @id @default(cuid())
+  value     Int             @default(1)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commentId String
+  comment   CommunityComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@index([commentId, value])
+}
+
+model CommunityFollow {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  followerId String
+  follower   User     @relation("CommunityFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followedId String
+  followed   User     @relation("CommunityFollowFollowed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@index([followedId])
+}
+
+model ConnectionRequest {
+  id          String                  @id @default(cuid())
+  status      ConnectionRequestStatus @default(PENDING)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  requesterId String
+  requester   User                    @relation("ConnectionRequestSender", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User                    @relation("ConnectionRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, recipientId])
+  @@index([recipientId, status])
+  @@index([requesterId, status])
+}
+
+model CommunityPostSave {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
 }
 
 enum ConversationType {
@@ -726,6 +864,7 @@ model DueDiligenceDocument {
   id                  String      @id @default(cuid())
   fileName            String
   fileUrl             String
+  storageKey          String?
   fileType            String
   fileSize            Int
   category            String

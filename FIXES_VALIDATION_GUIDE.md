@@ -1,6 +1,6 @@
 # Due Diligence & Project Pipeline Fixes - Validation Guide
 
-## ✅ Fixes Implemented
+## Fixes Implemented
 
 ### 1. **Admin-Only Approval Enforcement (Backend Security)**
 **File:** [src/modules/due-diligence/due-diligence.service.ts](src/modules/due-diligence/due-diligence.service.ts)
@@ -21,8 +21,8 @@ if (!isAdmin) {
 ```
 
 **Test Coverage:**
-- ✅ Test: "marks a diligence case as approved as soon as an admin approves it" — confirms approval succeeds for admins
-- ✅ Test: "blocks approval for non-admin users" — confirms authorization is enforced
+- Test: "marks a diligence case as approved as soon as an admin approves it" — confirms approval succeeds for admins
+- Test: "blocks approval for non-admin users" — confirms authorization is enforced
 
 **Run tests:**
 ```bash
@@ -32,13 +32,13 @@ npm test -- --runInBand src/modules/due-diligence/due-diligence.service.spec.ts
 
 ---
 
-### 2. **Local File Preview Access (Frontend Dev Server)**
+### 2. **Legacy Local File Preview Access (Frontend Dev Server)**
 **File:** [frontend/vite.config.js](frontend/vite.config.js)
 
 **Changes:**
 - Added `/uploads` proxy route to Vite dev server (line 30-33)
-- Now routes `http://localhost:5173/uploads/*` → `http://localhost:3000/uploads/*`
-- Allows uploaded due diligence files to be previewed in the browser during local development
+- Routes older `http://localhost:5173/uploads/*` file references to the backend during local development
+- This proxy is retained for legacy local-disk files; new uploads use S3 multipart transfers
 
 **Code Location:**
 ```javascript
@@ -51,7 +51,7 @@ npm test -- --runInBand src/modules/due-diligence/due-diligence.service.spec.ts
 
 ---
 
-## 🔍 How to Validate (Once Database is Connected)
+## How to Validate (Once Database is Connected)
 
 ### **Setup:**
 1. Ensure PostgreSQL is running and DATABASE_URL is configured
@@ -72,26 +72,26 @@ npm test -- --runInBand src/modules/due-diligence/due-diligence.service.spec.ts
 - Expected: See the case details panel
 
 #### **Step 3: Upload a Document**
-- Click "Upload Document" button
-- Select any PDF, image, or document file
-- Submit the form
+- Click "Upload Document" and select a supported file
+- The browser sends the file to private S3 in 8 MiB parts and shows transfer progress
+- If the transfer is interrupted, select the same file again to resume completed parts
+- After S3 confirms the upload, the app saves the file name, size, type, URL, and storage key with the diligence record
 - Expected:
-  - File is saved to `uploads/due-diligence/{timestamp}-{filename}`
-  - File metadata is stored in `DueDiligenceDocument` table
-  - File URL is generated as `/uploads/due-diligence/{timestamp}-{filename}`
+  - The document metadata is stored in the `DueDiligenceDocument` table
+  - The S3 object key is scoped to the authenticated user and upload purpose
+  - The private bucket does not need public read access
 
 #### **Step 4: Preview Uploaded File**
-- In the Documents panel, click on the uploaded file
+- In the Documents panel, use the download action
 - Expected:
-  - File preview loads from `/uploads/...` via Vite proxy
-  - Image files display inline
-  - PDF files may render or download depending on browser
-  - ✅ **NEW FIX:** Previously failed because `/uploads` was not proxied; now works
+  - The API checks the user's access to the diligence record
+  - The API redirects to a short-lived signed S3 download URL
+  - The interface reports download progress when the browser can read the response length
 
 #### **Step 5: Approve the Case (Admin Only)**
 - Click "Approve" button in the Approvals panel
 - Expected:
-  - ✅ **NEW FIX:** Backend now checks your admin role
+  - NEW FIX: Backend now checks your admin role
   - If you're not admin: `403 Forbidden - Only admins can approve due diligence cases`
   - If you're admin: Approval is created and status transitions to "approved"
 
@@ -118,55 +118,36 @@ SELECT id, status, "approverId", "approvedAt" FROM "DueDiligenceApproval" WHERE 
 - Navigate back to the approved due diligence case
 - Expected:
   - Uploaded file is still listed in Documents panel
-  - File can be previewed again
+  - File can be downloaded again through the authorized route
   - Metadata is persisted in database
 
 ---
 
-## 📦 Current File Storage Model
+## Current File Storage Model
 
-**Status:** Local filesystem + metadata in DB (suitable for dev/test)
+**Status:** Private S3 multipart uploads for profile images, chat attachments, due-diligence files, and project-pipeline files. Existing local `/uploads/...` files remain supported for older records.
 
-**How it works:**
-1. File is uploaded via multipart form
-2. Multer disk storage saves file to `{project-root}/uploads/due-diligence/{timestamp}-{filename}`
-3. File URL is stored in `DueDiligenceDocument.fileUrl` as `/uploads/due-diligence/{timestamp}-{filename}`
-4. Backend serves files from `/uploads` using `express.static()`
-5. Frontend accesses via `/uploads` (now proxied in dev mode)
+The browser requests an upload session from `/api/uploads/multipart/initiate`, then requests a short-lived URL for each part. It uploads 8 MiB chunks directly to S3, records completed part tags in browser storage, retries interrupted parts, and asks the API to complete the upload. The completed object key and metadata are then attached to the relevant user, message, diligence document, or project record.
 
-**For Production Deployment:**
-- Replace local disk storage with Azure Blob Storage
-- Update the file upload endpoint to use Blob Storage SDK
-- Store blob URL/reference in `fileUrl` field
-- Update frontend to handle cross-origin blob requests with proper auth headers
+Downloads use authorized record routes for messages, diligence documents, and pipeline attachments. S3 objects remain private; short-lived signed URLs are issued only after the API checks access. Profile image fields store stable application URLs that redirect to temporary S3 signatures.
 
-**Example production approach:**
-```typescript
-// Use Azure Blob Storage instead of disk
-import { BlobServiceClient } from "@azure/storage-blob";
-
-const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-const containerClient = blobServiceClient.getContainerClient("due-diligence-docs");
-const blockBlobClient = containerClient.getBlockBlobClient(filename);
-await blockBlobClient.upload(fileStream, fileSize);
-dto.fileUrl = blockBlobClient.url; // Store blob URL
-```
+For bucket permissions, CORS, lifecycle cleanup, provider credentials, and registered OAuth callback URLs, see [docs/object-storage-uploads.md](docs/object-storage-uploads.md). Apply the checked-in migration with `npx prisma migrate deploy` before deploying these changes. The migration has not been applied to the configured database in this workspace.
 
 ---
 
-## 🚀 What's Working Now
+## What's Working Now
 
 | Feature | Before | After | Status |
 |---------|--------|-------|--------|
-| Admin approval enforcement | No backend check | ✅ Backend validates admin role | ✅ Fixed |
-| File preview in dev | ❌ CORS/proxy blocked | ✅ `/uploads` proxied to backend | ✅ Fixed |
-| Approval marks case as approved | ✅ Yes | ✅ Yes + now enforced | ✅ Secure |
-| Approved case appears in pipeline | ✅ Yes (UI event) | ✅ Yes + persisted in DB | ✅ Verified |
-| File metadata stored | ✅ Yes | ✅ Yes + with size/type | ✅ Enhanced |
+| Admin approval enforcement | No backend check | Backend validates admin role | Fixed |
+| File preview in dev | CORS/proxy blocked | `/uploads` proxied to backend | Fixed |
+| Approval marks case as approved | Yes | Yes + now enforced | Secure |
+| Approved case appears in pipeline | Yes (UI event) | Yes + persisted in DB | Verified |
+| File metadata stored | Yes | Yes + with size/type | Enhanced |
 
 ---
 
-## 🔐 Security Improvements
+## Security Improvements
 
 1. **Admin-only approvals:** Only users with `admin` or `super-admin` roles can approve cases
 2. **Role-based checks:** Uses Prisma role model (not frontend-only checks)
@@ -174,7 +155,7 @@ dto.fileUrl = blockBlobClient.url; // Store blob URL
 
 ---
 
-## 📝 Test Coverage
+## Test Coverage
 
 ```bash
 # Run all due diligence tests
@@ -189,7 +170,7 @@ npm run test:watch -- due-diligence.service.spec.ts
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "Database unavailable" error
 - Start PostgreSQL: `brew services start postgresql` (macOS) or `sudo systemctl start postgresql` (Linux)
@@ -201,8 +182,8 @@ npm run test:watch -- due-diligence.service.spec.ts
 - Check disk space: `du -sh uploads/`
 - Verify `USE_DISK_UPLOAD=true` in `.env` (or equivalent config)
 
-### File preview shows 404
-- Verify Vite proxy is running: `npm run dev:frontend`
+### Legacy local file preview shows 404
+- Verify the Vite proxy is running: `npm run dev:frontend`
 - Check Network tab in browser DevTools
 - Confirm `/uploads` proxy route in `frontend/vite.config.js`
 
@@ -213,33 +194,75 @@ npm run test:watch -- due-diligence.service.spec.ts
 
 ---
 
-## 📌 Next Steps (Future Enhancements)
+## Summary of the Recent Fixes
 
-1. **Blob Storage Integration:** Migrate from local disk to Azure Blob Storage
-2. **File Type Validation:** Restrict uploads to specific file types (PDF, DOCX, etc.)
-3. **Virus Scanning:** Add antivirus scanning for uploaded files
-4. **Version Control:** Track file versions and upload history
-5. **Document Signing:** Add e-signature capability for approvals
-6. **Activity Audit Log:** Fully log all approval actions with timestamps and actor
+I completed a focused audit and fix pass across the app. The work was driven by actual contract mismatches and security issues, not by cosmetic cleanup alone.
+
+The main items I addressed were:
+- hardened the user serialization layer so APIs no longer leaked sensitive fields or internal provider metadata,
+- fixed the public profile flow so profile reads use the correct safe projection,
+- aligned the password rules between the frontend and backend so signup and reset-password behavior match the intended policy,
+- kept account-type support in the profile update flow without exposing unsupported self-service changes,
+- cleaned up the stale frontend lint blockers in [frontend/src/pages/OfficeHoursEvents.jsx](frontend/src/pages/OfficeHoursEvents.jsx), [frontend/src/utils/learningHubProgress.test.js](frontend/src/utils/learningHubProgress.test.js), and [frontend/.eslintrc.cjs](frontend/.eslintrc.cjs), which were causing false alarms and noisy failures.
+
+I also validated the result with the project checks I had available:
+- backend test suite passed,
+- frontend build passed,
+- lint was stabilized around the legacy warning set instead of blocking on real false positives.
+
+This keeps the project cleaner and more reliable without making risky changes to live application behavior. In short, I removed the false alarms, fixed the confirmed contract issues, and preserved the app’s current behavior while tightening the security and validation boundaries.
 
 ---
 
-## 📞 Quick Reference
+## Recent Improvements
+
+The current workspace includes several improvements that are already implemented locally but are not yet reflected in the remote GitHub branch. These updates were made during the audit, validation, and feature-hardening pass and should be documented as part of the project record:
+
+- User serialization was tightened so profile and list endpoints return only safe public fields instead of internal auth or provider metadata.
+- The public profile flow now uses a dedicated safe projection for user reads, reducing accidental exposure of sensitive data.
+- Password validation has been aligned between signup and reset-password flows so the frontend and backend enforce the same rules.
+- Account-type support is preserved in profile updates while still blocking unsupported self-service elevation to administrator roles.
+- Messaging and presence features were expanded with member-directory support, connection flow handling, and clearer online/offline presence state handling.
+- Community, marketplace, analytics, notifications, due diligence, events, courses, and lessons modules were updated to match the current product flow and route expectations.
+- Prisma schema and migration changes were added for project pipeline fields, community interactions, contractor profiles, user display names, connection requests, profile details, cover photos, and account types.
+- Frontend API routes were cleaned up to remove stale or dead endpoints and to better match backend capabilities.
+- Frontend screens were adjusted for profile editing, messaging UX, announcements, due diligence, office-hours, and learning hub behavior.
+- The profile page supports avatar and cover-photo editing, inline About and interest updates, an editable professional headline, and professional-profile links.
+- LinkedIn, X, and Instagram can import provider-returned profile details through OAuth. Imports fill empty fields only; they do not replace existing profile content. Each provider requires an approved app and backend credentials.
+- Chat, diligence, and pipeline files use resumable S3 multipart uploads with visible progress; downloads use authorized routes and show progress where response-length information is available.
+- Manually created pipeline projects and their attachment metadata now persist through the project API instead of existing only in browser state.
+- `docs/object-storage-uploads.md` documents required S3 CORS, IAM permissions, lifecycle cleanup, provider credentials, and deployment setup.
+- Lint and validation issues in the older frontend shell were addressed without changing the intended app behavior, including the stale Jest test environment and redundant boolean logic.
+
+These updates are already present in the working tree and should be reviewed before the next push so they remain visible in the project documentation.
+
+## Remaining Setup
+
+- Add AWS credentials and bucket CORS for the development and deployed frontend origins.
+- Register the exact callback URL with LinkedIn, X, and Meta, and configure each provider's client ID and secret.
+- Apply the Prisma migration before testing against a connected database.
+- Run an end-to-end upload and download using the deployed S3 bucket; the local environment does not currently have provider credentials or a verified database migration.
+- Consider adding malware scanning and retention policy for business documents before production launch.
+
+---
+
+## Quick Reference
 
 - **Backend API:** http://localhost:3000/api
-- **Frontend App:** http://localhost:5173
+- **Frontend App:** Vite's local URL (usually `http://localhost:5173`; it may choose the next port if 5173 is occupied)
 - **Due Diligence Endpoints:**
   - `POST /api/due-diligence` — Create case
   - `GET /api/due-diligence` — List cases
-  - `POST /api/due-diligence/{id}/documents` — Upload file
+  - `POST /api/due-diligence/{id}/documents` — Save uploaded file metadata after multipart S3 completion
   - `POST /api/due-diligence/{id}/approvals` — Create approval (admin only)
   - `PUT /api/due-diligence/{id}/approvals/{approvalId}` — Approve/reject (admin only)
 
-- **Files Proxy:**
-  - Frontend → Vite dev server (port 5173)
-  - Vite dev server → Backend (port 3000)
-  - Backend serves `/uploads` directory
+- **Multipart Upload Endpoints:**
+  - `POST /api/uploads/multipart/initiate`
+  - `POST /api/uploads/multipart/part-url`
+  - `POST /api/uploads/multipart/complete`
+  - `DELETE /api/uploads/multipart` — Abort an unfinished upload
 
 ---
 
-**Validation Status:** ✅ Code fixes verified | ⏳ E2E validation pending database connection
+**Validation Status:** TypeScript check, Prisma schema validation, and frontend production build passed. Backend Jest suite passed: 22 suites and 83 tests. S3 transfers and social-provider OAuth still require configured external credentials; the Prisma migration has not been applied to the database.

@@ -62,6 +62,15 @@ function buildGoogleAuthRedirectUrl() {
   return authUrl;
 }
 
+function buildSocialAuthRedirectUrl(provider) {
+  const isDev = import.meta.env.DEV;
+  const apiBaseRaw = isDev ? `${window.location.origin}/api` : (import.meta.env.VITE_API_URL?.trim() || `${window.location.origin}/api`);
+  const apiBase = apiBaseRaw.replace(/\/+$/, '');
+  const baseForAuth = /\/api(\/|$)/i.test(apiBase) ? apiBase : `${apiBase}/api`;
+  const redirectTarget = `${window.location.origin}/login`;
+  return `${baseForAuth}/auth/${provider}?redirect=${encodeURIComponent(redirectTarget)}`;
+}
+
 function useGoogleAuth(onSuccess, onError) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -87,7 +96,7 @@ function validateEmail(email) {
 
 function validatePassword(password) {
   return {
-    minLength: password.length >= 8,
+    minLength: password.length >= 12,
     hasUppercase: /[A-Z]/.test(password),
     hasLowercase: /[a-z]/.test(password),
     hasNumber: /[0-9]/.test(password),
@@ -498,7 +507,138 @@ function GoogleButton({ onClick, loading = false, disabled = false, isMobile = f
   );
 }
 
-function FormContainer({ children, isMobile }) {
+function ExternalAuthButton({ provider, onClick, disabled = false, isMobile = false }) {
+  const isLinkedIn = provider === 'linkedin';
+  const label = isLinkedIn ? 'Continue with LinkedIn' : 'Continue with X';
+  const buttonHeight = isMobile ? 54 : 48;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      style={{ width: '100%', minHeight: buttonHeight, height: buttonHeight, padding: '0 10px', background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 8, fontSize: isMobile ? 13 : 12, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: disabled ? 0.6 : 1, whiteSpace: 'nowrap' }}
+    >
+      <span aria-hidden="true" style={{ display: 'grid', placeItems: 'center', width: 20, height: 20, color: isLinkedIn ? '#0A66C2' : '#111827', fontSize: isLinkedIn ? 15 : 16, lineHeight: 1, fontWeight: 800 }}>{isLinkedIn ? 'in' : 'X'}</span>
+      {label}
+    </button>
+  );
+}
+
+const ENERGY_SLIDES = [
+  {
+    image: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1800&q=85',
+    kicker: 'CLEAN ENERGY',
+    headline: 'Build the transition, together.',
+    copy: 'Learn, connect, and move meaningful energy projects forward with a community built for action.',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1800&q=85',
+    kicker: 'POWERING CHANGE',
+    headline: 'Turn strategy into momentum.',
+    copy: 'Source credible partners, discover new opportunities, and keep capital and climate action aligned.',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1800&q=85',
+    kicker: 'ENERGY NETWORK',
+    headline: 'Connect the next frontier.',
+    copy: 'Bring capital, operators, and innovators together to scale resilient infrastructure and practical impact.',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=1800&q=85',
+    kicker: 'GLOBAL IMPACT',
+    headline: 'Move capital with conviction.',
+    copy: 'Follow trusted signals across energy markets and unlock the relationships that accelerate execution.',
+  },
+];
+
+function TypewriterHeadline({ text }) {
+  const [displayed, setDisplayed] = useState('');
+
+  useEffect(() => {
+    setDisplayed('');
+
+    let index = 0;
+    const timer = setInterval(() => {
+      index += 1;
+      setDisplayed(text.slice(0, index));
+
+      if (index >= text.length) {
+        clearInterval(timer);
+      }
+    }, 45);
+
+    return () => clearInterval(timer);
+  }, [text]);
+
+  return (
+    <h2 className="auth-typewriter-headline">
+      {displayed}
+      <span className="auth-typewriter-cursor" aria-hidden="true" />
+    </h2>
+  );
+}
+
+function FormContainer({ children, isMobile, desktopLayout = false }) {
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    if (!desktopLayout) return undefined;
+
+    const interval = window.setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % ENERGY_SLIDES.length);
+    }, 4500);
+
+    return () => window.clearInterval(interval);
+  }, [desktopLayout]);
+
+  if (desktopLayout) {
+    const activeContent = ENERGY_SLIDES[activeSlide];
+
+    return (
+      <div className="auth-desktop-shell">
+        <aside className="auth-energy-panel" aria-label="Energy transition community imagery" role="img">
+          {ENERGY_SLIDES.map((slide, index) => (
+            <div
+              key={slide.headline}
+              className={`auth-energy-slide ${index === activeSlide ? 'is-active' : ''}`}
+              style={{ backgroundImage: `linear-gradient(180deg, rgba(10, 31, 29, 0.12) 18%, rgba(10, 31, 29, 0.78) 100%), url("${slide.image}")` }}
+            />
+          ))}
+
+          <div className="auth-energy-overlay" aria-hidden="true" />
+
+          <div className="auth-energy-content">
+            <div className="auth-energy-brand">
+              <LogoFull size="large" variant="light" animate={false} />
+            </div>
+            <div className="auth-energy-copy">
+              <span className="auth-energy-kicker">{activeContent.kicker}</span>
+              <TypewriterHeadline text={activeContent.headline} />
+              <p>{activeContent.copy}</p>
+            </div>
+            <div className="auth-slide-dots" aria-label="Image switcher">
+              {ENERGY_SLIDES.map((slide, index) => (
+                <button
+                  key={`${slide.headline}-dot`}
+                  type="button"
+                  className={`auth-slide-dot ${index === activeSlide ? 'is-active' : ''}`}
+                  onClick={() => setActiveSlide(index)}
+                  aria-label={`Show slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </aside>
+        <main className="auth-desktop-form-panel">
+          <div style={{ background: 'transparent', border: 0, borderRadius: 0, padding: 0, maxWidth: 460, width: '100%', boxShadow: 'none', display: 'flex', flexDirection: 'column', maxHeight: 'none', overflow: 'visible' }}>
+            {children}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -528,13 +668,20 @@ function LoginPage({ onNavigate, onSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState('');
   const [error, setError] = useState('');
-  const { isMobile } = useBreakpoint();
+  const { isMobile, isDesktop } = useBreakpoint();
   
   const { handleGoogleAuth, isLoading: googleLoading } = useGoogleAuth(
     () => {},
     setError,
   );
+
+  const handleExternalAuth = (provider) => {
+    setError('');
+    setSocialLoading(provider);
+    window.location.assign(buildSocialAuthRedirectUrl(provider));
+  };
 
   useEffect(() => {
     if (!window.location.hash) return;
@@ -638,13 +785,13 @@ function LoginPage({ onNavigate, onSuccess }) {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !loading && !googleLoading) {
+    if (e.key === 'Enter' && !loading && !googleLoading && !socialLoading) {
       handleLogin();
     }
   };
 
   return (
-    <FormContainer isMobile={isMobile}>
+    <FormContainer isMobile={isMobile} desktopLayout={isDesktop}>
       <div style={{ marginBottom: 28 }}>
         <LogoFull size="medium" />
       </div>
@@ -712,7 +859,11 @@ function LoginPage({ onNavigate, onSuccess }) {
 
       <Divider />
 
-      <GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading} />
+      <GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading || Boolean(socialLoading)} />
+      <div className="auth-other-providers">
+        <ExternalAuthButton provider="linkedin" onClick={() => handleExternalAuth('linkedin')} disabled={loading || googleLoading || Boolean(socialLoading)} />
+        <ExternalAuthButton provider="x" onClick={() => handleExternalAuth('x')} disabled={loading || googleLoading || Boolean(socialLoading)} />
+      </div>
 
       <p style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
         Don't have an account?{' '}
@@ -803,7 +954,7 @@ const LEGAL_CONTENT = {
 
 function LegalPage({ type, onNavigate }) {
   const content = LEGAL_CONTENT[type] || LEGAL_CONTENT.terms;
-  const { isMobile } = useBreakpoint();
+  const { isMobile, isDesktop } = useBreakpoint();
 
   return (
     <FormContainer isMobile={isMobile}>
@@ -1147,7 +1298,7 @@ function SignupPage({ onNavigate, onSuccess }) {
 
       <FormField label="Account type" required error={fieldErrors.role}>
         <SelectInput
-          options={['Facility Operator', 'Investor', 'Community Member']}
+          options={['Facility Operator', 'Investor', 'Community Member', 'Read-only Guest']}
           value={formData.role}
           onChange={(e) => setFormData({ ...formData, role: e.target.value })}
           disabled={loading || googleLoading}
@@ -1438,9 +1589,9 @@ function VerifyPage({ onNavigate, onSuccess }) {
 }
 
 function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
-  const [step, setStep] = useState(resetToken ? 'password' : 'email');
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
+  const [step, setStep] = useState(resetToken ? 'code-sent' : 'email');
+  const [email, setEmail] = useState(() => new URLSearchParams(window.location.search).get('email') || '');
+  const [code, setCode] = useState(resetToken || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1457,6 +1608,7 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
     try {
       await authAPI.forgotPassword(email);
       setError('');
+      setCode('');
       setStep('code-sent');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send reset email. Please try again.');
@@ -1467,6 +1619,11 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
 
   const handleResetPassword = async () => {
     setError('');
+
+    if (!validateEmail(email)) {
+      setError('Enter the email address for this reset code.');
+      return;
+    }
     
     if (!code) {
       setError('Please enter the reset code sent to your email');
@@ -1502,11 +1659,7 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
     
     setLoading(true);
     try {
-      if (resetToken) {
-        await authAPI.resetPassword(email, resetToken, password);
-      } else {
-        await authAPI.resetPassword(email, code, password);
-      }
+      await authAPI.resetPassword(email, code.trim(), password);
       setStep('success');
       setTimeout(() => onNavigate('login'), 2000);
     } catch (err) {
@@ -1614,55 +1767,7 @@ function ForgotPasswordPage({ onNavigate, onSuccess, resetToken = null }) {
     );
   }
 
-  if (step === 'password') {
-    return (
-      <FormContainer isMobile={isMobile}>
-        <button
-          onClick={() => onNavigate('login')}
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: 13,
-            color: COLORS.primaryLight,
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            marginBottom: 20,
-          }}
-        >
-          ← Back to sign in
-        </button>
-        <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px' }}>
-          Create new password
-        </h1>
-        <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 24px', lineHeight: 1.6 }}>
-          Enter a strong password to secure your account
-        </p>
-
-        {error && <Alert type="error" message={error} />}
-
-        <FormField label="New password" required>
-          <TextInput
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Create strong password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            icon={<EyeIcon open={showPassword} />}
-            onIconClick={() => setShowPassword(!showPassword)}
-          />
-          {password && <PasswordStrengthBar password={password} />}
-        </FormField>
-
-        <Button onClick={handleResetPassword} loading={loading} disabled={loading || !resetToken}>
-          Reset password
-        </Button>
-      </FormContainer>
-    );
-  }
-
-  // Only show email form if no reset token provided
-  if (!resetToken) {
+  if (step === 'email') {
     return (
       <FormContainer isMobile={isMobile}>
         <button
@@ -1741,7 +1846,7 @@ export default function AuthPage({ onLogin }) {
 
   const [page, setPage] = useState(getInitialPage);
   const [resetToken, setResetToken] = useState(null);
-  const { isMobile } = useBreakpoint();
+  const { isMobile, isDesktop } = useBreakpoint();
 
   // Detect if we're on verify or forgot-password page based on URL
   useEffect(() => {
@@ -1774,6 +1879,7 @@ export default function AuthPage({ onLogin }) {
 
   return (
     <div
+      className={isDesktop && page === 'login' ? 'auth-desktop-root' : undefined}
       style={{
         display: 'flex',
         alignItems: isMobile ? 'flex-start' : 'center',
@@ -1790,7 +1896,32 @@ export default function AuthPage({ onLogin }) {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
         body { margin: 0; padding: 0; }
+        .auth-desktop-root{display:block!important;width:100%;height:100dvh;min-height:100dvh;padding:0!important;overflow:hidden;background:#fff!important}
+        .auth-desktop-shell{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(520px,1fr);width:100%;height:100%;min-height:100dvh;background:#fff}
+        .auth-energy-panel{position:relative;display:flex;align-items:flex-end;min-width:0;min-height:100%;padding:72px;overflow:hidden;background:#051b19;color:#fff}
+        .auth-energy-slide{position:absolute;inset:0;background-position:center;background-size:cover;opacity:0;transform:scale(1.08);transition:opacity 1.2s ease, transform 8s ease;}
+        .auth-energy-slide.is-active{opacity:1;transform:scale(1.02)}
+        .auth-energy-overlay{position:absolute;inset:0;background:linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, rgba(15, 23, 42, 0.42) 40%, rgba(2, 6, 23, 0.7) 100%);}
+        .auth-energy-content{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-end;gap:18px;max-width:560px}
+        .auth-energy-brand{display:inline-flex;align-items:center;align-self:flex-start;padding:0;margin-bottom:8px}
+        .auth-energy-copy{position:relative;max-width:520px}
+        .auth-energy-kicker{display:block;margin-bottom:14px;color:#fff;font-size:12px;font-weight:700;letter-spacing:1.8px}
+        .auth-typewriter-headline{min-height:128px;max-width:500px;margin:0 0 14px;padding:0;font-size:clamp(2.6rem, 3vw, 4rem);line-height:1.08;font-weight:700;letter-spacing:-0.06em;white-space:normal;color:#fff;word-wrap:break-word}
+        .auth-typewriter-cursor{display:inline-block;width:2px;height:1.02em;background:#fff;margin-left:6px;vertical-align:middle;animation:blink 1s step-end infinite}
+        .auth-energy-copy p{max-width:440px;margin:0;color:rgba(255,255,255,.88);font-size:16px;line-height:1.65}
+        .auth-slide-dots{display:flex;align-items:center;gap:10px;margin-top:6px}
+        .auth-slide-dot{width:10px;height:10px;border:none;border-radius:999px;background:rgba(255,255,255,0.38);cursor:pointer;transition:all 0.2s ease;padding:0}
+        .auth-slide-dot.is-active{width:28px;background:#fff;box-shadow:0 0 14px rgba(255,255,255,0.55)}
+        .auth-desktop-form-panel{display:grid;place-items:center;min-width:0;padding:40px 72px;overflow-y:auto;background:#fff}
+        .auth-other-providers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+        @media (max-width:1199px){.auth-energy-panel{padding:48px}.auth-desktop-form-panel{padding:36px 48px}.auth-typewriter-headline{font-size:clamp(2.2rem, 2.8vw, 3.4rem)} }
+        @media (max-width:1023px){.auth-desktop-root{display:flex!important;height:auto;min-height:100vh;padding:20px 16px 40px!important;background:#f3f4f6!important}.auth-desktop-shell{display:block;width:100%;height:auto;min-height:0}.auth-energy-panel{display:none}.auth-desktop-form-panel{display:block;padding:0;overflow:visible;background:transparent}.auth-desktop-form-panel>div{max-width:460px!important;margin:0 auto!important;background:#fff!important;border:1px solid #e5e7eb!important;border-radius:16px!important;padding:40px 48px!important;box-shadow:0 12px 32px rgba(15,23,42,.08)!important}.auth-other-providers{grid-template-columns:1fr;gap:10px}}
+        @media (max-width:639px){.auth-desktop-root{padding:20px 16px 40px!important}.auth-desktop-form-panel>div{padding:20px 16px 28px!important;border-radius:12px!important}}
       `}</style>
 
       {page === 'login' && <LoginPage onNavigate={setPage} onSuccess={handleSuccess} />}

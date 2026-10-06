@@ -5,13 +5,18 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { AnalyticsService } from './analytics.service';
 
 @Controller('analytics')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('admin/overview')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   getAdminOverview() {
     return this.analyticsService.getAdminOverview();
+  }
+
+  @Get('dashboard')
+  getDashboard() {
+    return this.analyticsService.getDashboard();
   }
 }

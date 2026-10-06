@@ -75,6 +75,18 @@ describe('MessagingService', () => {
     expect(result).toHaveLength(1);
   });
 
+  it('limits message search to the selected accessible conversation', async () => {
+    prisma.message.findMany.mockResolvedValue([]);
+
+    await service.searchMessages('user-1', 'solar finance', 10, 'conversation-1');
+
+    expect(prisma.message.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        conversation: expect.objectContaining({ id: 'conversation-1' }),
+      }),
+    }));
+  });
+
   it('uses one grouped query for unread counts and preserves zero-count conversations', async () => {
     prisma.conversation.findMany.mockResolvedValue([{ id: 'conv-1' }, { id: 'conv-2' }, { id: 'conv-3' }]);
     prisma.message.groupBy.mockResolvedValue([{ conversationId: 'conv-1', _count: { _all: 3 } }]);

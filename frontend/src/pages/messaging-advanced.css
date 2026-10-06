@@ -77,3 +77,28 @@
 @media (prefers-reduced-motion: reduce) {
   .reaction-picker button { transform: none !important; }
 }
+
+.messaging-page *,
+.messaging-page *::before,
+.messaging-page *::after {
+  border-radius: 0 !important;
+}
+
+.messaging-page .search-wrap,
+.messaging-page .network-search,
+.messaging-page .people-search-box,
+.messaging-page .message-composer,
+.messaging-page .thread-composer,
+.messaging-page .modal-field input {
+  border-radius: 999px !important;
+}
+
+.messaging-page .message-avatar,
+.messaging-page .people-live-label i,
+.messaging-page .people-avatar-wrap > i,
+.messaging-page .people-row-avatar > i,
+.messaging-page .active-user-item.live::after,
+.messaging-page .typing-dots i,
+.messaging-page .workspace-status i {
+  border-radius: 50% !important;
+}

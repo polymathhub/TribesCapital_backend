@@ -43,6 +43,19 @@ body {
   height: 100%;
 }
 
+html:has(.tca),
+body:has(.tca) {
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#root:has(.tca) {
+  height: auto;
+  min-height: 100dvh;
+}
+
 button {
   font-family: inherit;
   cursor: pointer;

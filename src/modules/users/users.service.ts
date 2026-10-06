@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { UpdateUserDto } from './dto/user.dto';
+
+const DEFAULT_TAKE = 10;
+const MAX_TAKE = 100;
 
 @Injectable()
 export class UsersService {
@@ -38,6 +42,33 @@ export class UsersService {
     return this.sanitizeUser(user);
   }
 
+  async getPublicProfileById(id: string) {
+    if (!this.prisma.isDatabaseAvailable()) throw new NotFoundException('User not found');
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        displayName: true,
+        accountType: true,
+        address: true,
+        occupation: true,
+        interests: true,
+        socialLink: true,
+        socialLinks: true,
+        school: true,
+        department: true,
+        avatar: true,
+        coverPhoto: true,
+        bio: true,
+        createdAt: true,
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
   async getUserByEmail(email: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -54,9 +85,13 @@ export class UsersService {
   }
 
   async updateUser(id: string, updateUserDto: UpdateUserDto) {
+    const data = {
+      ...updateUserDto,
+      ...(updateUserDto.socialLinks ? { socialLinks: updateUserDto.socialLinks as Prisma.InputJsonArray } : {}),
+    };
     const user = await this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data,
       include: {
         roles: true,
       },
@@ -75,21 +110,38 @@ export class UsersService {
   }
 
   async getAllUsers(skip = 0, take = 10) {
+    const safeSkip = Number.isFinite(skip) ? Math.max(0, Math.floor(skip)) : 0;
+    const safeTake = Number.isFinite(take) ? Math.min(MAX_TAKE, Math.max(1, Math.floor(take))) : DEFAULT_TAKE;
     if (!this.prisma.isDatabaseAvailable()) {
       return {
         data: [],
         total: 0,
-        skip,
-        take,
+        skip: safeSkip,
+        take: safeTake,
       };
     }
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
-        skip,
-        take,
-        include: {
-          roles: true,
+        skip: safeSkip,
+        take: safeTake,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+          accountType: true,
+          address: true,
+          occupation: true,
+          interests: true,
+          socialLink: true,
+          socialLinks: true,
+          school: true,
+          department: true,
+          avatar: true,
+          coverPhoto: true,
+          bio: true,
+          createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -97,15 +149,22 @@ export class UsersService {
     ]);
 
     return {
-      data: users.map((u) => this.sanitizeUser(u)),
+      data: users,
       total,
-      skip,
-      take,
+      skip: safeSkip,
+      take: safeTake,
     };
   }
 
   private sanitizeUser(user: any) {
-    const { password, ...result } = user;
+    const {
+      password,
+      passwordResetToken,
+      passwordResetExpires,
+      emailVerificationToken,
+      googleId,
+      ...result
+    } = user;
     return result;
   }
 }
