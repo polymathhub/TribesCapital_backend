@@ -154,7 +154,7 @@
 .conversation-filters button.filter-active { background: #ece8ff; color: var(--msg-accent); }
 .conversation-filters button span { margin-left: 3px; }
 
-.conversation-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+.conversation-list { display: flex; flex: 1; flex-direction: column; overflow-y: auto; padding: 0 8px 8px; }
 .conversation-item { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 9px; margin: 2px 0; border: 0; border-radius: 12px; background: transparent; color: inherit; text-align: left; cursor: pointer; transition: transform .16s ease, background .16s ease, box-shadow .16s ease; }
 .conversation-item:hover { background: linear-gradient(180deg, rgba(124,58,237,0.06), rgba(255,255,255,0.9)); transform: translateX(2px); box-shadow: inset 0 0 0 1px rgba(124,58,237,.06); }
 .conversation-item.selected { background: linear-gradient(180deg, rgba(124,58,237,0.1), rgba(255,255,255,0.98)); box-shadow: inset 0 0 0 1px rgba(124,58,237,0.08); }
@@ -409,11 +409,11 @@
 .file-preview { border-left-color: #98a2b3; background: #f8f9fb; }
 .file-preview strong { margin-right: auto; overflow: hidden; font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
 
-.thread-empty { position: relative; display: flex; flex: 1; min-height: 420px; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; color: #667085; }
+.thread-empty { position: relative; display: flex; flex: 1; min-height: 0; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; color: #667085; }
 .thread-empty-back { display: none; }
 .thread-empty h2, .thread-empty h3 { margin: 8px 0 4px; color: #344054; }
 .thread-empty p { max-width: 360px; margin: 0; font-size: 12px; line-height: 1.5; }
-.thread-empty.compact { min-height: 260px; }
+.thread-empty.compact { min-height: 100%; }
 .empty-icon {
   display: grid;
   place-items: center;
@@ -430,7 +430,7 @@
   transform-origin: center;
   animation: message-icon-pulse 2.8s ease-in-out infinite;
 }
-.empty-state { display: flex; flex-direction: column; gap: 5px; padding: 28px 12px; color: #667085; text-align: center; font-size: 11px; }
+.empty-state { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 220px; padding: 28px 12px; color: #667085; text-align: center; font-size: 11px; }
 .empty-state strong { color: #344054; font-size: 12px; }
 
 @media (max-width: 900px) {

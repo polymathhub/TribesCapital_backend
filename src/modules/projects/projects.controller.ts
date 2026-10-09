@@ -6,7 +6,6 @@ import { CreateProjectDto, UpdateProjectDto, UpdateProjectStatusDto } from './dt
 import { ProjectsService } from './projects.service';
 
 @Controller('projects')
-@InvestorOnly()
 @InvestorReadOnly()
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -24,6 +23,7 @@ export class ProjectsController {
   }
 
   @Post()
+  @InvestorOnly()
   create(@GetCurrentUser('sub') userId: string, @Body() dto: CreateProjectDto) {
     return this.projectsService.create(userId, dto);
   }
@@ -44,6 +44,7 @@ export class ProjectsController {
   }
 
   @Patch(':id/status')
+  @InvestorOnly()
   updateStatus(
     @Param('id') id: string,
     @GetCurrentUser('sub') userId: string,
@@ -53,6 +54,7 @@ export class ProjectsController {
   }
 
   @Patch(':id')
+  @InvestorOnly()
   update(
     @Param('id') id: string,
     @GetCurrentUser('sub') userId: string,
@@ -62,6 +64,7 @@ export class ProjectsController {
   }
 
   @Delete(':id')
+  @InvestorOnly()
   remove(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
     return this.projectsService.remove(id, userId);
   }

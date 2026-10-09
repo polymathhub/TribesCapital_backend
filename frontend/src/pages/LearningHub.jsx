@@ -1770,7 +1770,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
 
         {/* Course content */}
         {filtered.length === 0 ? (
-          <div style={{textAlign:'center',padding:'60px 20px',background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'min(58dvh, 620px)',textAlign:'center',padding:'32px 20px',background:'rgba(255,255,255,0.74)',border:'1px solid rgba(91,33,182,0.16)',borderRadius:14,backdropFilter:'blur(16px)',boxShadow:'0 12px 30px rgba(15,23,42,0.04)'}}>
             <div style={{display:'flex',justifyContent:'center',marginBottom:14}}>
               <img
                 src={learningIllustration}

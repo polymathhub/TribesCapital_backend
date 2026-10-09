@@ -29,6 +29,7 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
       high: '#EF4444',
       critical: '#7C3AED',
     };
+    
     return (
       <span
         style={{
@@ -149,9 +150,9 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
 
       {/* Table */}
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>Loading...</div>
+        <div role="status" style={{ minHeight: 'min(58dvh, 620px)', display: 'grid', placeItems: 'center', padding: '40px', textAlign: 'center', color: '#6B7280' }}>Loading...</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '16px' }}>
+        <div style={{ minHeight: 'min(58dvh, 620px)', padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '16px' }}>
           <CorporateMemphisIllustration variant="data" size={220} />
           <div style={{ maxWidth: '420px' }}>
             <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>No due diligences yet</div>

@@ -10,14 +10,14 @@ import React, {
   forwardRef,
   useImperativeHandle 
 } from 'react';
-import { analyticsAPI, communityAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
+import { communityAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
+import homepageHeroImage from './assets/homepage-community-hero.png';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
 const OfficeHoursEvents = lazy(() => import('./pages/OfficeHoursEvents.jsx'));
 const MessagingPage = lazy(() => import('./pages/MessagingPage.jsx'));
 const DueDiligenceVault = lazy(() => import('./pages/DueDiligencePage.jsx'));
 const ProfileSettings = lazy(() => import('./components/ProfileSettings.jsx'));
 const PublicProfilePage = lazy(() => import('./components/ProfileSettings.jsx').then((module) => ({ default: module.PublicProfilePage })));
-import homepageHeroImage from './assets/homepage-community-hero.png';
 import { 
   Eye,
   EyeOff,
@@ -44,7 +44,7 @@ const STYLES = `
 }
 .tca *{ box-sizing:border-box; }
 .tca button{ font-family:inherit; }
-.route-loading-state{min-height:48vh;display:grid;place-content:center;justify-items:center;gap:14px;padding:28px;color:#5B21B6;font-size:13px;font-weight:600}
+.route-loading-state{min-height:100dvh;display:grid;place-content:center;justify-items:center;gap:14px;padding:28px;color:#5B21B6;font-size:13px;font-weight:600}
 .route-loading-spinner{width:26px;height:26px;border:3px solid #E9DDF5;border-top-color:#6D28D9;border-radius:50%;animation:route-spin .8s linear infinite}
 .route-loading-skeleton{display:grid;width:min(320px,70vw);gap:8px}
 .route-loading-skeleton i{display:block;height:10px;border-radius:999px;background:linear-gradient(90deg,#F1ECF8 25%,#E6DCF1 50%,#F1ECF8 75%);background-size:200% 100%;animation:route-shimmer 1.3s ease-in-out infinite}
@@ -119,8 +119,9 @@ const STYLES = `
 .tca-not-found-illustration{ display:block; width:min(100%, 360px); height:auto; margin:0 auto 20px; }
 .tca-not-found-card h1{ margin:0 0 10px; font-size:clamp(28px, 5vw, 44px); line-height:1.1; color:#1F2937; }
 .tca-not-found-card p{ margin:0 auto 22px; max-width:480px; font-size:14px; line-height:1.6; color:#4B5563; }
-.tca-empty-state-wrap{ display:flex; align-items:center; justify-content:center; grid-column:1/-1; padding:28px 20px 16px; }
+.tca-empty-state-wrap{ display:flex; align-items:center; justify-content:center; grid-column:1/-1; min-height:calc(100dvh - 230px); padding:28px 20px 16px; }
 .tca-empty-state-content{ width:min(100%, 520px); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:28px 18px 20px; }
+.tcx .community-empty-state{display:flex;min-height:calc(100dvh - 300px);align-items:center;justify-content:center;text-align:center}
 .tca-empty-state-illustration{ display:block; width:min(100%, 280px); height:auto; margin:0 auto 18px; animation:tca-float 3s ease-in-out infinite; }
 .tca-empty-state-content h3{ margin:0 0 8px; color:var(--i9); font-size:clamp(20px, 2vw, 26px); }
 .tca-empty-state-content p{ margin:0; color:var(--p6); font-size:14px; line-height:1.6; }
@@ -294,16 +295,75 @@ const STYLES = `
 .dash-action-card p{ font-size:13px; color:var(--ink-600); line-height:1.5; margin:0 0 12px; }
 .dash-action-card a{ font-size:13px; color:var(--purple-600); font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
 
-.dash-notsure{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:24px; margin-top:26px; }
-.dash-notsure h3{ font-size:16px; margin:0 0 4px; font-weight:700; color:var(--ink-900); }
-.dash-notsure > p{ font-size:13.5px; color:var(--ink-600); margin:0 0 18px; }
-.dash-notsure-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.dash-notsure{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;margin-top:0}
+.dash-notsure h3{font-size:16px;margin:0 0 4px;font-weight:700;color:var(--ink-900)}
+.dash-notsure>p{font-size:13.5px;color:var(--ink-600);margin:0 0 18px}
+.dash-notsure-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 @media (max-width:900px){ .dash-notsure-grid{ grid-template-columns:1fr 1fr; } }
 @media (max-width:600px){ .dash-notsure-grid{ grid-template-columns:1fr; } }
-.dash-mini-card{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
-.dash-mini-card .q{ font-size:13.5px; font-weight:700; color:var(--ink-900); margin-bottom:4px; }
-.dash-mini-card .a{ font-size:13px; color:var(--ink-600); margin-bottom:6px; }
-.dash-mini-card .l{ font-size:12.8px; color:var(--purple-600); font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
+.dash-mini-card{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:0;padding:14px 16px;border:1px solid var(--line);border-radius:10px;text-align:left;background:#fff;font:inherit;cursor:pointer;transition:border-color .16s ease,transform .16s ease}
+.dash-mini-card:hover{border-color:#7C3AED;transform:translateY(-2px)}
+.dash-mini-card:focus-visible{outline:3px solid #C4B5FD;outline-offset:2px}
+.dash-mini-card .q{font-size:13.5px;font-weight:700;color:var(--ink-900);margin:0 0 4px}
+.dash-mini-card .a{font-size:13px;color:var(--ink-600);margin:0 0 6px}
+.dash-mini-card .l{font-size:12.8px;color:var(--purple-600);font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.dash-contact{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:22px;padding:18px 20px;border-top:1px solid var(--line);color:var(--ink-600)}
+.dash-contact h3{margin:0 0 4px;color:var(--ink-900);font-size:14px}
+.dash-contact p{margin:0;font-size:13px}
+.dash-contact a{display:inline-flex;align-items:center;gap:8px;color:#5B21B6;font-size:13px;font-weight:600;text-decoration:none;overflow-wrap:anywhere}
+.restored-homepage-hero{aspect-ratio:3.36/1;padding:0!important;margin-bottom:26px;overflow:hidden;border-radius:14px;background:#F3E8FF}
+.restored-homepage-hero img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+@media(max-width:760px){.restored-homepage-hero{aspect-ratio:2.7/1}.restored-homepage-hero img{object-fit:contain;background:#F7F7F8}}
+@media(max-width:480px){.restored-homepage-hero{aspect-ratio:2.3/1}}
+.forum-hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:32px;align-items:center;margin:0 0 30px;padding:30px 34px;border-radius:14px;background:transparent;color:#2E1065}
+.forum-hero-copy{max-width:590px}
+.forum-hero-eyebrow{margin:0 0 14px!important;color:#5B21B6;font-size:11px;font-weight:700;letter-spacing:.08em}
+.forum-hero h1{margin:0 0 12px!important;color:#2E1065;font-size:30px;line-height:1.18}
+.forum-hero-copy>p:not(.forum-hero-eyebrow){margin:0;color:#4B5563;font-size:14px;line-height:1.7}
+.forum-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.forum-hero .forum-messaging-action{background:#fff;border:1px solid #C4B5FD;color:#5B21B6}
+.forum-hero .forum-messaging-action:hover{background:#FAF5FF}
+.forum-visual{width:min(100%,340px);min-width:0;border-radius:10px;background:#2E1065;padding:22px 24px}
+.forum-visual-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;color:#fff;font-size:13px;font-weight:700}
+.forum-live-tag{padding:4px 8px;border-radius:5px;background:#fff;color:#5B21B6;font-size:10px;font-weight:700;text-transform:uppercase}
+.forum-visual-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.18)}
+.forum-visual-index{display:block;width:auto;height:auto;flex:0 0 auto;border-radius:0;background:none;color:#D8B4FE;font-size:12px;font-weight:800}
+.forum-visual-row strong{display:block;margin-bottom:3px;color:#fff;font-size:13px}
+.forum-visual-row small{display:block;color:#E9D5FF;font-size:12px;line-height:1.45}
+.forum-visual-foot{display:flex;gap:22px;padding-top:14px;color:#E9D5FF;font-size:12px}
+.forum-visual-foot strong{color:#fff;font-size:14px}
+.forum-filters{margin-bottom:24px}
+.forum-filter-label{width:100%;margin:0 0 2px;color:#4B5563;font-size:12px;font-weight:700}
+.forum-post{padding:28px!important;border-radius:12px!important;transition:border-color .18s ease,box-shadow .18s ease}
+.forum-post:hover{border-color:#C4B5FD;box-shadow:0 10px 26px rgba(46,16,101,.07)}
+.forum-post .disc-title-btn h3{font-size:17px!important;line-height:1.4}
+.forum-rail .forum-topic-panel{background:#FAF5FF;border-color:#E9D5FF}
+.forum-rail .forum-member-panel{background:#fff;border-color:#E9D5FF}
+.forum-topic-row{padding:9px 0;border-bottom:1px solid rgba(91,33,182,.1)}
+.forum-topic-row:last-child{border-bottom:0}
+.forum-topic-swatch{width:9px;height:9px;flex:0 0 9px;border-radius:2px;background:#7C3AED}
+.forum-topic-row:nth-child(3n) .forum-topic-swatch,.forum-topic-row:nth-child(3n + 1) .forum-topic-swatch{background:#5B21B6}
+.forum-empty-state{display:flex;width:min(100%,760px);min-height:260px;align-self:center;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-color:#DDD6FE!important;background:#FAF5FF!important;text-align:center}
+.forum-empty-icon{display:grid;place-items:center;width:54px;height:54px;border-radius:12px;background:#EDE9FE}
+.forum-empty-state strong{color:#2E1065;font-size:16px}
+@media(max-width:760px){.forum-hero{grid-template-columns:1fr;gap:26px;padding:26px 22px}.forum-visual{width:100%;padding:18px}.forum-hero h1{font-size:25px}}
+@media(max-width:480px){.forum-visual-foot{gap:14px}.forum-post{padding:20px!important}}
+.submit-project-page{max-width:820px;margin:0 auto;padding:28px 0}
+.submit-project-heading{margin-bottom:24px}
+.submit-project-heading>span{font-size:11px;font-weight:700;letter-spacing:.08em;color:#5B21B6}
+.submit-project-heading h1{margin:8px 0;font-size:26px;color:var(--ink-900)}
+.submit-project-heading p{margin:0;color:var(--ink-600);font-size:14px;line-height:1.55}
+.submit-project-form{display:grid;gap:18px;padding:24px;background:#fff;border:1px solid var(--line);border-radius:12px}
+.submit-project-form label{display:grid;gap:7px;color:var(--ink-700);font-size:13px;font-weight:600}
+.submit-project-form input,.submit-project-form select,.submit-project-form textarea{width:100%;min-width:0;border:1px solid #D0D5DD;border-radius:7px;padding:11px 12px;color:var(--ink-900);font:inherit;font-size:14px;background:#fff}
+.submit-project-form textarea{resize:vertical;line-height:1.5}
+.submit-project-form input:focus,.submit-project-form select:focus,.submit-project-form textarea:focus{outline:3px solid #E9DDF5;border-color:#7C3AED}
+.submit-project-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.submit-project-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:4px}
+.submit-project-actions p{margin:0;color:var(--ink-600);font-size:12px;line-height:1.5}
+.submit-project-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border:0;border-radius:7px;background:#5B21B6;color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.submit-project-actions button:hover{background:#3B0764}
+@media(max-width:600px){.dash-contact,.submit-project-actions{align-items:flex-start;flex-direction:column}.submit-project-row{grid-template-columns:1fr}.submit-project-form{padding:18px}.submit-project-page{padding:18px 0}}
 
 .dash-footer-tag{ text-align:center; color:var(--ink-400); font-size:13px; margin-top:36px; }
 
@@ -1164,7 +1224,7 @@ const STYLES = `
 .dash-notif-unread-count{color:var(--ink-400);font-size:11px;line-height:1.3}
 .dash-notif-mark{background:none;border:0;color:var(--purple-600);font-size:12.5px;font-weight:600;cursor:pointer;padding:0}
 .dash-notif-list{max-height:360px;overflow-y:auto}
-.dash-notif-empty{padding:22px 18px;margin:0;color:var(--ink-400);font-size:12.5px;line-height:1.5;text-align:center}
+.dash-notif-empty{display:grid;min-height:180px;place-items:center;padding:22px 18px;margin:0;color:var(--ink-400);font-size:12.5px;line-height:1.5;text-align:center}
 .dash-notif-error-card{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px;padding:12px 14px;border:1px solid #E5E7EB;border-left:3px solid #98A2B3;border-radius:10px;background:#fff;color:#344054}
 .dash-notif-error-card strong{display:block;margin-bottom:3px;font-size:12px}
 .dash-notif-error-card p{margin:0;color:#667085;font-size:11px;line-height:1.45}
@@ -1518,7 +1578,7 @@ button.lb-control{cursor:pointer;justify-content:space-between;gap:10px}
 .lb-combo input.lb-control{padding-right:44px}
 .lb-combo .lb-cbtn{position:absolute;top:0;right:0;width:44px;height:100%;display:flex;align-items:center;justify-content:center;background:none;border:0;color:#A3A3A8;cursor:pointer;padding:0}
 @media (max-width:640px){.lb-modal.up .lb-row{grid-template-columns:1fr;gap:24px}}
-@media (max-width:640px){.lb-ov{padding:16px}.lb-foot{gap:12px}.lb-foot .lb-btn{flex:1;min-width:0}}
+@media (max-width:640px){.lb-ov{padding:16px}.lb-foot{gap:12px}.lb-foot .lb-btn{flex:1;min-width:0}.lb-ov.center.disc-overlay{padding:12px}.lb-modal.ask.disc .lb-head{padding:36px 18px 12px}.lb-modal.ask.disc .lb-body{padding:16px 18px 8px}.lb-modal.ask.disc .lb-field{margin-bottom:12px}.lb-modal.ask.disc textarea.lb-control{height:82px}.lb-modal.ask.disc .lb-foot{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:14px 18px}.lb-modal.ask.disc .lb-foot .lb-btn{width:100%;height:42px;min-width:0;padding:0 12px;flex:none}.lb-modal.ask.disc .lb-close{top:12px;right:12px}}
 
 /* ---------- Contractor profile page (matches design "05 Contractor Profile") ---------- */
 .tcx .cp{--cp-purple:#6700A6;--cp-line:#E7E7EA;--cp-ink:#1A1A1A;--cp-mut:#6B7280;--cp-chip:#F1EFF5}
@@ -2333,14 +2393,13 @@ function Toast({ message }) {
 const NAV_ITEMS = [
   { key: 'home', label: 'Home', icon: 'home' },
   { key: 'learning', label: 'Learning', icon: 'book' },
-  { key: 'community', label: 'Community', icon: 'users' },
-  { key: 'contractors', label: 'Contractors', icon: 'grid' },
+  { key: 'pipeline', label: 'Portfolio', icon: 'briefcase' },
+  { key: 'community', label: 'Forum', icon: 'users' },
   { key: 'events', label: 'Office Hours & Events', icon: 'calendar' },
-  { key: 'messaging', label: 'Messaging', icon: 'message' },
+  { key: 'submit-project', label: 'Submit Your Project', icon: 'upload' },
 ];
 const INVESTOR_NAV_ITEMS = [
   { key: 'vault', label: 'Due Diligence Vault', icon: 'shield' },
-  { key: 'pipeline', label: 'Project Pipeline', icon: 'briefcase' },
 ];
 
 function notificationTime(value) {
@@ -2477,7 +2536,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
     </button>
   );
   const visibleNavItems = user?.accountType === 'GUEST'
-    ? NAV_ITEMS.filter((navItem) => navItem.key !== 'messaging')
+    ? NAV_ITEMS.filter((navItem) => navItem.key !== 'submit-project')
     : NAV_ITEMS;
   const visibleInvestorItems = user?.accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : [];
   return (
@@ -2518,139 +2577,82 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
    Dashboard home content
    ============================================================ */
 
-const ACTION_CARDS = [
-  { icon: 'sun', title: 'Find a Solar Contractor', desc: 'Find professionals who can support a solar installation project.', cta: 'Find contractors', nav: 'contractors' },
-  { icon: 'grid', title: 'Find an Energy Contractor', desc: 'Discover professionals providing energy-related services.', cta: 'Browse services', nav: 'contractors' },
-  { icon: 'book', title: 'Learn About Renewable Energy', desc: 'Explore learning materials, topics and resources.', cta: 'Start learning', nav: 'learning' },
-  { icon: 'users', title: 'Join the Energy Community', desc: 'Explore groups, discussions and conversations.', cta: 'Explore community', nav: 'community' },
-  { icon: 'message', title: 'Ask an Energy-Related Question', desc: 'Ask the community and learn from other members.', cta: 'Ask a question', nav: 'community:ask' },
-  { icon: 'link', title: 'Connect With Other Members', desc: 'Discover professionals, organisations and people with similar interests.', cta: 'Find members', nav: 'community' },
-  { icon: 'upload', title: 'Contribute Your Knowledge', desc: 'Share experience, expertise and useful information with the community.', cta: 'Share knowledge', nav: 'community:start' },
-];
-
 const NOTSURE_CARDS = [
-  { q: 'Want to learn?', a: 'Start with Learning.', l: 'Go to Learning', nav: 'learning' },
-  { q: 'Need professional support?', a: 'Explore the Contractor Directory.', l: 'Go to Contractors', nav: 'contractors' },
-  { q: 'Want to ask or share ideas?', a: 'Visit Community.', l: 'Go to Community', nav: 'community' },
-  { q: 'Want to speak with someone?', a: 'Use Messaging.', l: 'Go to Messaging', nav: 'messaging' },
-  { q: 'Want to be understood?', a: 'Complete your Profile.', l: 'Go to Profile', nav: 'settings' },
-];
-
-const HOMEPAGE_HERO_SLIDES = [
-  {
-    src: homepageHeroImage,
-    alt: 'Learn, connect, participate and take action with the Tribes Capital community.',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1800&q=85',
-    alt: 'Solar panels collecting clean energy beneath a clear sky.',
-    title: 'Solar energy that powers stronger communities',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1800&q=85',
-    alt: 'Electricity infrastructure delivering power across the landscape.',
-    title: 'Building the energy systems of tomorrow',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&w=1800&q=85',
-    alt: 'A field of solar panels supporting renewable power generation.',
-    title: 'Turning clean energy ideas into real projects',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1589726096666-8bb135284e21?q=80&w=1800&auto=format&fit=crop',
-    alt: 'Wind turbines generating renewable electricity in a green landscape.',
-    title: 'Connect with people shaping a sustainable future',
-  },
+  { q: 'Want to learn?', a: 'Explore courses and resources.', l: 'Go to Learning', nav: 'learning' },
+  { q: 'Want to see projects in the pipeline?', a: 'Browse projects in Portfolio.', l: 'Go to Portfolio', nav: 'pipeline' },
+  { q: 'Want to ask questions or share ideas?', a: 'Join the conversation in Forum.', l: 'Go to Forum', nav: 'community' },
+  { q: 'Want to find upcoming events?', a: 'See office hours and events.', l: 'Go to Office Hours & Events', nav: 'events' },
+  { q: 'Have a project?', a: 'Share it with the Tribes Capital team.', l: 'Go to Submit Your Project', nav: 'submit-project' },
 ];
 
 function DashboardHomeContent({ onGo }) {
-  const [stats, setStats] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [statsError, setStatsError] = useState('');
-  const [heroIndex, setHeroIndex] = useState(0);
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-    const timer = window.setInterval(() => {
-      setHeroIndex((index) => (index + 1) % HOMEPAGE_HERO_SLIDES.length);
-    }, 5500);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    let isCurrent = true;
-    analyticsAPI.getDashboard()
-      .then((response) => {
-        if (isCurrent) setStats(response?.data?.data ?? response?.data ?? {});
-      })
-      .catch(() => {
-        if (isCurrent) setStatsError('Dashboard metrics are unavailable right now.');
-      })
-      .finally(() => {
-        if (isCurrent) setStatsLoading(false);
-      });
-    return () => { isCurrent = false; };
-  }, []);
-
-  const statCards = [
-    ['Community members', stats?.members],
-    ['Active discussions', stats?.activeDiscussions],
-    ['Upcoming events', stats?.upcomingEvents],
-    ['Published courses', stats?.publishedCourses],
-  ];
-
   return (
     <>
-      <div className="dash-banner homepage-hero" role="region" aria-roledescription="carousel" aria-label="Clean energy highlights">
-        <div className="homepage-hero-track" style={{ transform: `translateX(-${heroIndex * 100}%)` }}>
-          {HOMEPAGE_HERO_SLIDES.map((slide, index) => <div className={`homepage-hero-slide${slide.title ? ' photo-slide' : ''}${index === 0 ? ' intro-slide' : ''}`} key={slide.src} aria-hidden={heroIndex !== index}>
-            <img src={slide.src} alt={slide.alt} />
-            {slide.title && <div className="homepage-hero-caption"><h2>{slide.title}</h2></div>}
-          </div>)}
-        </div>
-        <div className="homepage-hero-dots" role="group" aria-label="Choose hero image">{HOMEPAGE_HERO_SLIDES.map((slide, index) => <button type="button" className={`homepage-hero-dot${heroIndex === index ? ' active' : ''}`} key={slide.src} onClick={() => setHeroIndex(index)} aria-label={`Show hero image ${index + 1}`} aria-pressed={heroIndex === index} />)}</div>
+      <div className="dash-banner restored-homepage-hero" role="img" aria-label="Welcome to the Tribes Capital community: learn, connect, participate and take action.">
+        <img src={homepageHeroImage} alt="" />
       </div>
-
-      <h2 className="dash-section-title">What would you like to do?</h2>
-      <p className="dash-section-sub">Start with your goal — pick an action and we'll take you to the right place.</p>
-
-      <div className="dash-stats-grid" aria-busy={statsLoading}>
-        {statCards.map(([label, value]) => (
-          <div className="dash-stat-card" key={label}>
-            <div className="label">{label}</div>
-            <div className="value">{statsLoading ? <span className="dash-stat-skeleton" aria-label={`Loading ${label.toLowerCase()}`} /> : statsError ? 'Unavailable' : value == null ? <span className="dash-stat-empty">No data yet</span> : Number(value).toLocaleString()}</div>
-          </div>
-        ))}
-      </div>
-      {statsError && <p role="status" className="dash-section-sub">{statsError}</p>}
-
-      <div className="dash-cards-grid">
-        {ACTION_CARDS.map((c) => (
-          <div className="dash-action-card" key={c.title}>
-            <div className="chip"><Icon name={c.icon} size={24} color="#5B21B6" /></div>
-            <h3>{c.title}</h3>
-            <p>{c.desc}</p>
-            <button type="button" onClick={() => c.nav && onGo(c.nav)}>{c.cta} <ArrowRight size={13} color="#7C3AED" /></button>
-          </div>
-        ))}
-      </div>
-
       <div className="dash-notsure">
         <h3>Not sure where to start?</h3>
         <p>Tell us what you want to achieve and we'll point you to the right place.</p>
         <div className="dash-notsure-grid">
           {NOTSURE_CARDS.map((c) => (
-            <div className="dash-mini-card" key={c.q}>
-              <div className="q">{c.q}</div>
-              <div className="a">{c.a}</div>
-              <button type="button" className="l" onClick={() => c.nav && onGo(c.nav)}>{c.l} <ArrowRight size={12} color="#7C3AED" /></button>
-            </div>
+            <button type="button" className="dash-mini-card" key={c.q} onClick={() => onGo(c.nav)}>
+              <span className="q">{c.q}</span>
+              <span className="a">{c.a}</span>
+              <span className="l">{c.l} <ArrowRight size={12} color="#7C3AED" /></span>
+            </button>
           ))}
         </div>
       </div>
 
-      <p className="dash-footer-tag">Learn.&nbsp;&nbsp;Connect.&nbsp;&nbsp;Participate.&nbsp;&nbsp;Take Action.</p>
+      <section className="dash-contact" aria-labelledby="dash-contact-title">
+        <div><h3 id="dash-contact-title">Contact Tribes Capital</h3><p>Questions about the community or your project?</p></div>
+        <a href="mailto:hello@tribes.capital"><Mail size={17} />hello@tribes.capital</a>
+      </section>
     </>
+  );
+}
+
+function SubmitYourProjectPage() {
+  const [project, setProject] = useState({ name: '', type: '', location: '', capacity: '', overview: '', contact: '' });
+  const update = (field) => (event) => setProject((current) => ({ ...current, [field]: event.target.value }));
+  const submit = (event) => {
+    event.preventDefault();
+    const subject = encodeURIComponent(`Project submission: ${project.name.trim()}`);
+    const body = encodeURIComponent([
+      `Project name: ${project.name.trim()}`,
+      `Project type: ${project.type || 'Not specified'}`,
+      `Location: ${project.location.trim() || 'Not specified'}`,
+      `Capacity (kWp): ${project.capacity || 'Not specified'}`,
+      `Contact email: ${project.contact.trim() || 'Not specified'}`,
+      '',
+      'Project overview:',
+      project.overview.trim(),
+    ].join('\n'));
+    window.location.href = `mailto:hello@tribes.capital?subject=${subject}&body=${body}`;
+  };
+
+  return (
+    <div className="submit-project-page">
+      <header className="submit-project-heading">
+        <span>TRIBES CAPITAL</span>
+        <h1>Submit Your Project</h1>
+        <p>Tell us about your clean energy project. Review the prepared email and send it from your email app.</p>
+      </header>
+      <form className="submit-project-form" onSubmit={submit}>
+        <label>Project name<input required value={project.name} onChange={update('name')} placeholder="e.g. Community solar in Accra" /></label>
+        <div className="submit-project-row">
+          <label>Project type<select value={project.type} onChange={update('type')}><option value="">Select a type</option><option>Solar</option><option>Mini-grid</option><option>Wind</option><option>Hydro</option><option>Battery storage</option><option>Other</option></select></label>
+          <label>Location<input value={project.location} onChange={update('location')} placeholder="City, country" /></label>
+        </div>
+        <div className="submit-project-row">
+          <label>Capacity (kWp)<input type="number" min="0" step="any" value={project.capacity} onChange={update('capacity')} placeholder="Optional" /></label>
+          <label>Your contact email<input type="email" value={project.contact} onChange={update('contact')} placeholder="you@example.com" /></label>
+        </div>
+        <label>Project overview<textarea required rows="5" value={project.overview} onChange={update('overview')} placeholder="Describe the project, its current stage, and the support you are looking for." /></label>
+        <div className="submit-project-actions"><p>Submitting opens an email addressed to hello@tribes.capital.</p><button type="submit">Continue to email <ArrowRight size={16} /></button></div>
+      </form>
+    </div>
   );
 }
 
@@ -3202,7 +3204,7 @@ function AskQuestionModal({ categories, onClose, onSubmit }) {
   };
 
   return (
-    <div className="lb-ov center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="lb-ov center disc-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="lb-modal ask" role="dialog" aria-modal="true" aria-labelledby="ask-title">
         <button className="lb-close" onClick={onClose} aria-label="Close"><Icon name="close" size={17} strokeWidth={3} /></button>
         {sent ? (
@@ -3313,7 +3315,7 @@ function StartDiscussionModal({ categories, onClose, onSubmit }) {
             <div className="lb-body">
               <div className="lb-field">
                 <label className="lb-label" htmlFor="disc-t">Title</label>
-                <input id="disc-t" className={`lb-control${errs.t ? " err" : ""}`} placeholder="e.g helios@gmail.com" value={v.t} onChange={(e) => set("t", e.target.value)} />
+                <input id="disc-t" className={`lb-control${errs.t ? " err" : ""}`} placeholder="e.g. How can mini-grids scale sustainably?" value={v.t} onChange={(e) => set("t", e.target.value)} />
                 {errs.t && <div className="lb-msg">{errs.t}</div>}
               </div>
               <div className="lb-field" ref={menuRef}>
@@ -3334,12 +3336,12 @@ function StartDiscussionModal({ categories, onClose, onSubmit }) {
               </div>
               <div className="lb-field">
                 <label className="lb-label" htmlFor="disc-b">Discussion</label>
-                <textarea id="disc-b" className={`lb-control${errs.b ? " err" : ""}`} placeholder="What does your business do, and who is it for?" value={v.b} onChange={(e) => set("b", e.target.value)} />
+                <textarea id="disc-b" className={`lb-control${errs.b ? " err" : ""}`} placeholder="Share your perspective, experience, or question with the community." value={v.b} onChange={(e) => set("b", e.target.value)} />
                 {errs.b && <div className="lb-msg">{errs.b}</div>}
               </div>
               <div className="lb-field">
                 <div className="lb-label"><label htmlFor="disc-tags">Tags (optional)</label><em>Separate tags with commas.</em></div>
-                <input id="disc-tags" className="lb-control" placeholder="e.g helios@gmail.com" value={v.tags} onChange={(e) => set("tags", e.target.value)} />
+                <input id="disc-tags" className="lb-control" placeholder="e.g. solar, mini-grid, financing" value={v.tags} onChange={(e) => set("tags", e.target.value)} />
               </div>
             </div>
             <div className="lb-foot">
@@ -3393,7 +3395,7 @@ const toCommunityPost = (post) => {
   };
 };
 
-function Community({ open, user, toast }) {
+function Community({ open, user, toast, onOpenMessaging }) {
   const [posts, setPosts] = useState([]), [members, setMembers] = useState([]);
   const [f, setF] = useState('All'), [m, setM] = useState(open || null);
   const [liked, setLiked] = useState({}), [saved, setSaved] = useState({});
@@ -3514,14 +3516,31 @@ function Community({ open, user, toast }) {
 
   const popularTopics = posts.reduce((counts, post) => ({ ...counts, [post.tag]: (counts[post.tag] || 0) + 1 }), {});
   return <>
-    <div className="ph"><div><h1>Community</h1><p>Ask questions, share knowledge and connect with the energy community.</p></div>
-      <div className="row wrap"><button className="btn bo" onClick={() => setM("ask")}>Ask a Question</button><button className="btn bp" onClick={() => setM("start")}>Start a Discussion</button></div></div>
+    <section className="forum-hero" aria-labelledby="forum-title">
+      <div className="forum-hero-copy">
+        <p className="forum-hero-eyebrow">TRIBES CAPITAL / MEMBER FORUM</p>
+        <h1 id="forum-title">Ideas and experience for a stronger energy sector.</h1>
+        <p>Ask thoughtful questions, share what you have learned, and connect with people working across clean energy.</p>
+        <div className="forum-hero-actions">
+          <button className="btn bo" onClick={() => setM("ask")}>Ask a question</button>
+          <button className="btn forum-messaging-action" onClick={() => setM("start")}>Start a discussion</button>
+          {user?.accountType !== 'GUEST' && <button className="btn forum-messaging-action" onClick={onOpenMessaging}>Messaging</button>}
+        </div>
+      </div>
+      <aside className="forum-visual" aria-label="Forum topics">
+        <div className="forum-visual-heading"><span>What brings us together</span><span className="forum-live-tag">Community</span></div>
+        <div className="forum-visual-row"><span className="forum-visual-index">01</span><div><strong>Learn</strong><small>Trade practical knowledge and insight</small></div></div>
+        <div className="forum-visual-row"><span className="forum-visual-index">02</span><div><strong>Connect</strong><small>Meet peers across the energy sector</small></div></div>
+        <div className="forum-visual-row"><span className="forum-visual-index">03</span><div><strong>Build</strong><small>Turn good conversations into action</small></div></div>
+        <div className="forum-visual-foot"><span><strong>{posts.length}</strong> discussions</span><span><strong>{Object.keys(popularTopics).length}</strong> active topics</span></div>
+      </aside>
+    </section>
     {error && <p role="alert" className="sub">{error}</p>}
-    <div className="pills">{FILTER_PILLS.map((x) => <button key={x.key} className={"pl" + (f === x.key ? " on" : "")} onClick={() => setF(x.key)}>{x.label}</button>)}</div>
-    <div className="lay"><div className="sp" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {loading && <div role="status" className="card sub">Loading discussions…</div>}
-      {!loading && shown.length === 0 && <div className="card sub">{f === "Following" ? "You're not following anyone yet. Follow active members to see their posts here." : "No discussions here yet. Start one to get things going."}</div>}
-      {shown.map((p) => <div className="card" key={p.id} style={{ padding: 26 }}>
+    <div className="pills forum-filters"><span className="forum-filter-label">Browse discussions by topic</span>{FILTER_PILLS.map((x) => <button key={x.key} className={"pl" + (f === x.key ? " on" : "")} onClick={() => setF(x.key)}>{x.label}</button>)}</div>
+    <div className="lay"><div className="sp forum-post-list" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {loading && <div role="status" className="card sub forum-empty-state">Loading discussions…</div>}
+      {!loading && shown.length === 0 && <div className="card forum-empty-state"><span className="forum-empty-icon"><Icon name="message" size={26} color="#5B21B6" /></span><strong>{f === "Following" ? "Your followed conversations will appear here" : "The next good conversation starts here"}</strong><p className="sub">{f === "Following" ? "Follow members whose ideas you want to keep up with." : "Share a question or perspective with the community."}</p></div>}
+      {shown.map((p) => <div className="card forum-post" key={p.id}>
         <div className="row" style={{ justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start" }}><div className="row"><Ava c={p.c} t={p.n[0]} /><div><b style={{ fontSize: 13.5 }}>{p.n} <span className="mut" style={{ fontWeight: 400 }}>· {p.w}</span></b><div className="mut">{p.r}</div></div></div><span className="tp">{p.tag}</span></div>
         <button className="disc-title-btn" onClick={() => void openPost(p.id)}><h3 style={{ fontSize: 15, marginBottom: 8 }}>{p.t}</h3></button>
         <p className="sub" style={{ marginBottom: 14 }}>{p.b.split("\n\n")[0]}</p>
@@ -3531,10 +3550,10 @@ function Community({ open, user, toast }) {
         </div>
       </div>)}
     </div>
-      <div className="rail">
-        <div className="card"><h4 style={{ marginBottom: 12, fontSize: 13.5 }}>Popular topics</h4>{Object.entries(popularTopics).map(([topic, count]) => <div key={topic} className="row" style={{ justifyContent: "space-between", fontSize: 13, marginBottom: 10 }}><span style={{ color: "var(--p6)", fontWeight: 600 }}>{topic}</span><span className="mut">{count} posts</span></div>)}</div>
-        <div className="card"><h4 style={{ marginBottom: 12, fontSize: 13.5 }}>Active members</h4>{members.map((member) => { const name = [member.firstName, member.lastName].filter(Boolean).join(' ') || 'Member'; return <div key={member.id} className="row" style={{ marginBottom: 14 }}><Ava c="#5B21B6" t={name[0]} s={32} /><div className="sp"><b style={{ fontSize: 13 }}>{name}</b><div className="mut">{member.occupation || 'Community member'}</div></div><button className="btn sm" style={{ background: member.isFollowedByMe ? "var(--bg)" : "var(--p0)", color: member.isFollowedByMe ? "var(--i4)" : "var(--p7)", borderRadius: 999 }} onClick={() => void toggleFollow(member)}>{member.isFollowedByMe ? "Following" : "Follow"}</button></div>; })}</div>
-        <div className="card" style={{ background: "var(--p0)", borderColor: "var(--p1)" }}><h4 style={{ color: "var(--p9)", marginBottom: 8, fontSize: 13.5 }}>Community guidelines</h4><p className="sub" style={{ marginBottom: 10 }}>Be respectful, stay on topic and share knowledge that helps others learn and take action.</p><button className="lk" onClick={() => setM("guide")}>Read the guidelines →</button></div>
+      <div className="rail forum-rail">
+        <div className="card forum-topic-panel"><h4 style={{ marginBottom: 12, fontSize: 14 }}>Popular topics</h4>{Object.entries(popularTopics).map(([topic, count]) => <div key={topic} className="row forum-topic-row" style={{ justifyContent: "space-between", fontSize: 13 }}><span className="row" style={{ color: "var(--p9)", fontWeight: 600 }}><i className="forum-topic-swatch" aria-hidden="true" />{topic}</span><span className="mut">{count} posts</span></div>)}</div>
+        <div className="card forum-member-panel"><h4 style={{ marginBottom: 14, fontSize: 14 }}>Active members</h4>{members.map((member) => { const name = [member.firstName, member.lastName].filter(Boolean).join(' ') || 'Member'; return <div key={member.id} className="row" style={{ marginBottom: 14 }}><Ava c="#5B21B6" t={name[0]} s={32} /><div className="sp"><b style={{ fontSize: 13 }}>{name}</b><div className="mut">{member.occupation || 'Community member'}</div></div><button className="btn sm" style={{ background: member.isFollowedByMe ? "var(--bg)" : "var(--p0)", color: member.isFollowedByMe ? "var(--i4)" : "var(--p7)", borderRadius: 999 }} onClick={() => void toggleFollow(member)}>{member.isFollowedByMe ? "Following" : "Follow"}</button></div>; })}</div>
+        <div className="card"><h4 style={{ color: "var(--p9)", marginBottom: 8, fontSize: 14 }}>Community guidelines</h4><p className="sub" style={{ marginBottom: 10 }}>Be respectful, stay on topic and share knowledge that helps others learn and take action.</p><button className="lk" onClick={() => setM("guide")}>Read the guidelines →</button></div>
       </div></div>
     {m === "ask" && <AskQuestionModal categories={CATS} onClose={close} onSubmit={(v) => add(v)} />}
     {m === "start" && <StartDiscussionModal categories={CATS} onClose={close} onSubmit={add} />}
@@ -3743,7 +3762,7 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
   );
 }
 
-function Pipeline({ toast, go }) {
+function Pipeline({ toast, go, allowCreate = true }) {
   const [ps, setPs] = useState([]), [sel, setSel] = useState(null), [add, setAdd] = useState(false);
   const [loading, setLoading] = useState(true), [error, setError] = useState('');
   useEffect(() => {
@@ -3774,7 +3793,7 @@ function Pipeline({ toast, go }) {
     }
   };
   return <>
-    <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div><button className="btn bp" onClick={() => setAdd(true)}>+ Add project</button></div>
+    <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div>{allowCreate ? <button className="btn bp" onClick={() => setAdd(true)}>+ Add project</button> : <button className="btn bp" type="button" disabled title="Project creation is currently unavailable">Create Project</button>}</div>
     {error && <p role="alert" className="sub">{error}</p>}
     <div className="card stats">{[[ps.length, "Visible projects"], [ps.filter(x => x.s === 1 || x.s === 2).length, "In development"], [ps.filter(x => x.s === 3).length, "Operational"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([v, l]) => <div key={l}><b>{v}</b><span className="sub">{l}</span></div>)}</div>
     {loading && <p role="status" className="sub">Loading projects…</p>}
@@ -4362,7 +4381,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   function reopenTour() { setTourStep(1); setTourOpen(true); }
   function openHelp() { navigate('help'); }
 
-  const PAGES = ['learning', 'events', 'community', 'contractors', 'messaging', 'vault', 'pipeline', 'settings'];
+  const PAGES = ['learning', 'events', 'community', 'contractors', 'messaging', 'vault', 'pipeline', 'submit-project', 'settings'];
   function handleSidebarNav(key) {
     const [k, arg] = key.split(':');
     if (k === 'home') { navigate('dashboard'); return; }
@@ -4605,7 +4624,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'community') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="community" onNavigate={handleSidebarNav} {...shellProps}>
-        <div className="tcx"><Community key={communityOpen || 'all'} open={communityOpen} user={user} toast={showToast} /></div>
+        <div className="tcx"><Community key={communityOpen || 'all'} open={communityOpen} user={user} toast={showToast} onOpenMessaging={() => navigate('messaging')} /></div>
       </AppShell>
     );
   } else if (screen === 'contractors') {
@@ -4629,7 +4648,13 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'pipeline') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="pipeline" onNavigate={handleSidebarNav} {...shellProps}>
-        <div className="tcx"><Pipeline toast={showToast} go={goApp} /></div>
+        <div className="tcx"><Pipeline toast={showToast} go={goApp} allowCreate={false} /></div>
+      </AppShell>
+    );
+  } else if (screen === 'submit-project') {
+    bodyEl = (
+      <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="submit-project" onNavigate={handleSidebarNav} {...shellProps}>
+        <SubmitYourProjectPage />
       </AppShell>
     );
   } else if (screen === 'settings') {

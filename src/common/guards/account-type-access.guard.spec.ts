@@ -29,6 +29,12 @@ describe('AccountTypeAccessGuard', () => {
     expect(() => guard.canActivate(createContext({ accountType: 'GUEST' }, 'GET'))).toThrow(ForbiddenException);
   });
 
+  it('allows community members to read routes without investor-only access', () => {
+    const reflector = { getAllAndOverride: () => false } as unknown as Reflector;
+    const guard = new AccountTypeAccessGuard(reflector);
+    expect(guard.canActivate(createContext({ accountType: 'COMMUNITY_MEMBER' }, 'GET'))).toBe(true);
+  });
+
   it('limits investor tools to investor reads', () => {
     const reflector = { getAllAndOverride: (key: string) => key === INVESTOR_ONLY_KEY || key === INVESTOR_READ_ONLY_KEY } as unknown as Reflector;
     const guard = new AccountTypeAccessGuard(reflector);

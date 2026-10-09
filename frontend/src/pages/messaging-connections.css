@@ -66,15 +66,42 @@
 }
 .network-profile > .network-inline-error { margin: 14px 0 0; }
 .network-requests > .network-inline-error { margin-top: 0; }
-.messaging-page button { border-radius: 999px !important; }
+.messaging-page button { border-radius: 12px !important; }
+.messaging-page .conversation-item { border-radius: 14px !important; }
+.messaging-page .conversation-filters button,
+.messaging-page .panel-count,
+.messaging-page .unread-badge,
+.messaging-page .reaction-chip,
+.messaging-page .selected-member-pills button { border-radius: 999px !important; }
 .messaging-page .modal-field input,
 .messaging-page .search-wrap input,
 .messaging-page .network-search input,
 .messaging-page .people-search-box input,
 .messaging-page .message-composer textarea,
 .messaging-page .thread-composer textarea {
-  border-radius: 0 !important;
+  border-radius: 14px !important;
 }
+.messaging-page .search-wrap,
+.messaging-page .network-search,
+.messaging-page .people-search-box,
+.messaging-page .thread-message-search > label { border-radius: 14px !important; }
+.messaging-page .message-composer,
+.messaging-page .thread-composer { border-radius: 20px !important; }
+.messaging-page .message-row:not(.mine) .message-bubble:not(.deleted) { border-radius: 20px 20px 20px 8px !important; }
+.messaging-page .message-row.mine .message-bubble:not(.deleted) { border-radius: 20px 20px 8px 20px !important; }
+.messaging-page .messaging-modal,
+.messaging-page .network-directory,
+.messaging-page .network-requests,
+.messaging-page .network-profile,
+.messaging-page .attachment-preview { border-radius: 22px; }
+.messaging-page .conversation-load-error,
+.messaging-page .thread-drawer,
+.messaging-page .thread-message-search-results button,
+.messaging-page .attachment-card,
+.messaging-page .message-menu,
+.messaging-page .reaction-picker,
+.messaging-page .mention-suggestions,
+.messaging-page .people-search-results { border-radius: 14px; }
 .messaging-page .message-composer,
 .messaging-page .thread-composer { overflow: visible; }
 .messaging-page input:focus,
@@ -261,7 +288,7 @@
 .network-request-row > .network-secondary { flex: 0 0 auto; }
 .network-sent-row { cursor: pointer; }
 .network-status-label { color: #667085; font-size: 10px; font-weight: 700; }
-.network-empty { padding: 26px 0; color: #667085; font-size: 12px; text-align: center; }
+.network-empty { display: grid; min-height: 200px; place-items: center; padding: 26px 16px; color: #667085; font-size: 12px; text-align: center; }
 
 @media (max-width: 720px) {
   .network-backdrop { align-items: end; padding: 0; }
@@ -282,4 +309,106 @@
   .network-request-row { flex-wrap: wrap; }
   .network-request-row > .network-primary,
   .network-request-row > .network-secondary { margin-left: 38px; }
+}
+
+/* Unified messaging finish: one rounded purple system across panels and tools. */
+.messaging-page .messaging-header { gap: 16px; }
+.messaging-page .messaging-layout {
+  border: 1px solid rgba(91, 33, 182, .12);
+  border-radius: 24px;
+  box-shadow: 0 20px 56px rgba(42, 29, 69, .11), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.messaging-page .conversation-panel {
+  border-right-color: rgba(91, 33, 182, .12);
+  background: linear-gradient(180deg, #fbfaff 0%, #f6f3fb 100%);
+}
+.messaging-page .thread-panel {
+  background: linear-gradient(180deg, rgba(250,248,255,.32), rgba(246,243,251,.42)), url('/illustrations/chat-thread-background.jpeg') center/cover no-repeat;
+}
+.messaging-page .conversation-heading { padding: 18px 18px 12px; }
+.messaging-page .conversation-filters { gap: 6px; padding-inline: 14px; }
+.messaging-page .conversation-filters button {
+  min-height: 34px;
+  border-radius: 999px !important;
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+}
+.messaging-page .conversation-filters button:hover { background: #eee7f8; }
+.messaging-page .conversation-filters button.filter-active { background: #e7dcf4; color: #51218d; }
+.messaging-page .rail-action,
+.messaging-page .people-search-toggle,
+.messaging-page .thread-header-actions button,
+.messaging-page .mobile-back,
+.messaging-page .composer-tool,
+.messaging-page .message-actions > button,
+.messaging-page .network-toolbar button,
+.network-toolbar button,
+.network-primary,
+.network-secondary,
+.network-message,
+.network-close {
+  border-radius: 12px !important;
+}
+.messaging-page .thread-header,
+.messaging-page .thread-message-search { background: rgba(255,255,255,.9); backdrop-filter: blur(14px); }
+.messaging-page .thread-view-profile { border-radius: 12px; }
+.messaging-page .thread-message-search > label,
+.messaging-page .people-search-box { border-radius: 14px !important; }
+.messaging-page .message-list {
+  background: linear-gradient(180deg, rgba(250,248,255,.26), rgba(246,243,251,.34)), url('/illustrations/chat-thread-background.jpeg') center/cover local no-repeat !important;
+}
+.messaging-page .message-row:not(.mine) .message-bubble:not(.deleted) {
+  background: rgba(246, 240, 251, .97);
+  border-color: #e4d8ef;
+  border-radius: 20px 20px 20px 8px !important;
+  box-shadow: 0 5px 16px rgba(46, 28, 69, .09);
+}
+.messaging-page .message-row.mine .message-bubble:not(.deleted) {
+  background: linear-gradient(145deg, #7540c8, #55229a);
+  border-color: #6531ae;
+  border-radius: 20px 20px 8px 20px !important;
+  box-shadow: 0 7px 18px rgba(83, 38, 142, .2);
+}
+.messaging-page .message-composer {
+  border-color: rgba(103, 58, 157, .2);
+  border-radius: 20px !important;
+  box-shadow: 0 10px 24px rgba(63, 39, 94, .1);
+}
+.messaging-page .message-composer textarea,
+.messaging-page .thread-composer textarea { border-radius: 14px !important; }
+.messaging-page .message-composer:focus-within,
+.messaging-page .thread-composer:focus-within {
+  border-color: rgba(103, 58, 157, .46);
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(103, 58, 157, .1), 0 12px 28px rgba(63, 39, 94, .12);
+}
+.messaging-page .send-button,
+.messaging-page .thread-composer button { border-radius: 13px !important; }
+.messaging-page .reply-context,
+.messaging-page .composer-context,
+.messaging-page .file-preview,
+.messaging-page .attachment-card { border-radius: 13px; }
+.messaging-page .message-actions,
+.messaging-page .message-menu,
+.messaging-page .reaction-picker,
+.messaging-page .mention-suggestions,
+.messaging-page .people-search-results,
+.messaging-page .thread-drawer { border-radius: 16px; }
+.network-directory,
+.network-requests,
+.network-profile { border-radius: 22px; }
+.network-search { border-radius: 14px; }
+.messaging-page .messaging-primary-button,
+.messaging-page .network-toolbar button { border-radius: 13px !important; }
+.messaging-page button:focus-visible,
+.network-backdrop button:focus-visible { outline: 3px solid rgba(112, 67, 170, .34); outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .messaging-page .messaging-layout { border-radius: 0; }
+  .messaging-page .thread-panel {
+    background: linear-gradient(180deg, rgba(250,248,255,.35), rgba(246,243,251,.45)), url('/illustrations/chat-thread-background.jpeg') center/cover no-repeat;
+  }
+  .messaging-page .message-list {
+    background: linear-gradient(180deg, rgba(250,248,255,.28), rgba(246,243,251,.36)), url('/illustrations/chat-thread-background.jpeg') center/cover local no-repeat !important;
+  }
+  .messaging-page .message-composer { margin-inline: 10px; }
 }
