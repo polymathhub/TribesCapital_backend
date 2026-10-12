@@ -41,8 +41,8 @@ function getCurrentPermissions() {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
     if (!stored) return { canCreate: false, canEdit: false, canDelete: false, canExport: false };
     const user = JSON.parse(stored);
-    const roles = user?.roles || [];
-    const isAdmin = user?.isAdmin || roles.includes && roles.includes('admin');
+    const roles = (user?.roles || []).map((role) => typeof role === 'string' ? role : role?.name);
+    const isAdmin = user?.isAdmin || roles.includes('admin') || roles.includes('super-admin');
     return {
       canCreate: Boolean(isAdmin || roles.includes('editor') || roles.includes('contributor')),
       canEdit: Boolean(isAdmin || roles.includes('editor') || roles.includes('moderator')),
@@ -644,22 +644,6 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
               </button>
             )}
 
-            {p && p.source === 'due-diligence' && (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={e => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('tribes:request-approval', { detail: { id: p.dueDiligenceId } })); }}
-                  title="Request approval" aria-label="Request approval"
-                  style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${BD}`, background: W,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <I k="plus" s={14} c={T2} />
-                </button>
-                <button onClick={e => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('tribes:quick-approve', { detail: { id: p.dueDiligenceId } })); }}
-                  title="Quick approve" aria-label="Quick approve"
-                  style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${BD}`, background: '#DCFCE7',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <I k="check" s={14} c={GRN} />
-                </button>
-              </div>
-            )}
         </div>
       </div>
 
@@ -841,57 +825,6 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     };
   }, []);
 
-  useEffect(() => {
-    const notify = (detail = {}) => {
-      try {
-        window.dispatchEvent(new CustomEvent('tribes:notifications-update', { detail: { type: 'due-diligence-updated', ...detail } }));
-      } catch (e) {
-        console.warn('notify failed', e);
-      }
-    };
-
-    const handleRequest = async (e) => {
-      const id = e?.detail?.id;
-      if (!id) return;
-      try {
-        await dueDiligenceAPI.createApproval(id, { approverRole: 'reviewer', approvalNotes: 'Requested from pipeline' });
-        setToast('Approval requested');
-        notify({ id, action: 'approval-requested' });
-        void syncApprovedPipelineProjects();
-      } catch (err) {
-        console.error('request approval failed', err);
-        setToast('Failed to request approval');
-      }
-    };
-
-    const handleQuickApprove = async (e) => {
-      const id = e?.detail?.id;
-      if (!id) return;
-      try {
-        const res = await dueDiligenceAPI.createApproval(id, { approverRole: 'admin', approvalNotes: 'Quick-approved from pipeline' });
-        const approvalId = res?.data?.id || res?.id || null;
-        if (approvalId) {
-          await dueDiligenceAPI.approveOrReject(id, approvalId, { status: 'approved', approvalNotes: 'Quick-approved from pipeline' });
-          setToast('Project approved');
-          notify({ id, action: 'approval-decided', decision: 'approved' });
-          void syncApprovedPipelineProjects();
-        } else {
-          setToast('Approval created, but could not apply decision');
-        }
-      } catch (err) {
-        console.error('quick approve failed', err);
-        setToast('Quick approve failed');
-      }
-    };
-
-    window.addEventListener('tribes:request-approval', handleRequest);
-    window.addEventListener('tribes:quick-approve', handleQuickApprove);
-    return () => {
-      window.removeEventListener('tribes:request-approval', handleRequest);
-      window.removeEventListener('tribes:quick-approve', handleQuickApprove);
-    };
-  }, []);
-
   const save = async (form, selectedFiles = [], setProgress = () => {}) => {
     const attachments = [...(form.attachments || [])];
     for (let index = 0; index < selectedFiles.length; index += 1) {
@@ -917,11 +850,10 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
       description: form.description.trim(),
       attachments,
     };
-    const statusByStage = { Sourcing: 'scoping', Screening: 'scoping', 'Due Diligence': 'due-diligence', 'Term Sheet': 'development', Closing: 'development', Portfolio: 'operational' };
     const payload = {
       title: shaped.name,
       projectType: ['Solar', 'Solar PV', 'C&I Solar', 'Mini-grid', 'Storage', 'Battery Storage', 'Wind', 'Hydro'].includes(shaped.type) ? shaped.type : 'Solar',
-      status: statusByStage[shaped.stage] || 'scoping',
+      status: 'scoping',
       location: [shaped.city, shaped.country].filter(Boolean).join(', '),
       capacityKwp: shaped.capacity == null ? undefined : shaped.capacity * 1000,
       managingContractor: shaped.sponsor,

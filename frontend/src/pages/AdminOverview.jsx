@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { analyticsAPI } from '../api/endpoints';
 import { COLORS } from '../constants/colors';
+import AdminLifecyclePanel from './AdminLifecyclePanel';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
 
@@ -12,7 +13,7 @@ function Metric({ label, value, note, color }) {
   </article>;
 }
 
-export default function AdminOverview({ isMobile = false, onNavigate = () => {} }) {
+export default function AdminOverview({ isMobile = false, onNavigate = () => {}, user }) {
   const [metrics, setMetrics] = useState({ loading: true, members: 0, newSignups: 0, publishedVideos: 0, announcementUpdates: 0, publishedCourses: 0, publishedEvents: 0, pendingEvents: 0, periodDays: 30, error: '' });
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function AdminOverview({ isMobile = false, onNavigate = () => {} 
         <div style={{ background: COLORS.W, color: COLORS.T1, border: `1px solid ${COLORS.BD}`, borderRadius: 14, padding: isMobile ? 20 : 28, minHeight: 240, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}><div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase' }}>Live activity</div><h2 style={{ margin: '12px 0 10px', fontSize: 24, maxWidth: 430 }}>Stay close to the community pulse.</h2><p style={{ color: COLORS.T2, lineHeight: 1.6, fontSize: 13, maxWidth: 470 }}>There are {metrics.loading ? '—' : metrics.publishedCourses} published courses, {metrics.loading ? '—' : metrics.publishedEvents} live events, and {metrics.loading ? '—' : metrics.pendingEvents} pending event reviews in the platform.</p></div>
         <div style={{ background: COLORS.W, border: `1px solid ${COLORS.BD}`, borderRadius: 14, padding: 20 }}><div style={{ fontSize: 12, color: COLORS.T2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>Quick actions</div><div style={{ display: 'grid', gap: 10 }}>{[['learning', 'Manage Learning Hub', 'Add courses and YouTube lessons'], ['announcements', 'Broadcast announcement', 'Reach every member at once'], ['vault', 'Review diligence', 'Keep the existing approval flow'], ['admin-events', 'Event requests', 'Review pending community events']].map(([page, title, note]) => <button className="overview-action" key={page} onClick={() => onNavigate(page)} style={{ textAlign: 'left', border: `1px solid ${COLORS.BD}`, borderRadius: 9, background: COLORS.BG, padding: 13, cursor: 'pointer', color: COLORS.T1 }}><strong>{title}</strong><span style={{ display: 'block', color: COLORS.T2, fontSize: 12, marginTop: 3 }}>{note}</span></button>)}</div></div>
       </section>
+      <AdminLifecyclePanel currentUser={user} />
     </div>
   </main>;
 }

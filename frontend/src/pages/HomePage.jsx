@@ -10,11 +10,9 @@ import MessagingPage from './MessagingPage';
 import ProfileSettings from '../components/ProfileSettings';
 import InitialsAvatar from '../components/InitialsAvatar';
 import { usersAPI, coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
-import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
 import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
 import wavingHandIllustration from '../assets/illustrations/waving-hand-skin-4-svgrepo-com.svg';
 import { formatRelativeTime } from '../utils/learningHubProgress';
-import { buildDashboardStats } from '../utils/dashboardMetrics';
 import AdminOverview from './AdminOverview';
 import AdminLearningHub from './AdminLearningHub';
 
@@ -40,7 +38,8 @@ const W   = '#FFFFFF';
 
 const isAdminUser = (candidate) => {
   const roles = Array.isArray(candidate?.roles) ? candidate.roles : [];
-  return Boolean(candidate?.isAdmin || candidate?.role === 'admin' || roles.includes('admin') || roles.includes('super-admin'));
+  const roleNames = roles.map((role) => typeof role === 'string' ? role : role?.name);
+  return Boolean(candidate?.isAdmin || candidate?.role === 'admin' || roleNames.includes('admin') || roleNames.includes('super-admin'));
 };
 
 const glassCardStyle = (radius = 16, padding = '16px 18px') => ({
@@ -54,19 +53,15 @@ const glassCardStyle = (radius = 16, padding = '16px 18px') => ({
 /* ─── TUTORIAL STEPS ──────*/
 const STEPS = [
   { id:'welcome',  target:null,       pos:'center', icon:'spark', title:'Welcome to Tribes Capital',
-    desc:"You're now part of a community of 240+ clean energy investors and professionals across Africa. Let us show you around in 8 quick steps." },
+    desc:"You're now part of a community of clean energy investors and professionals across Africa. Let us show you around in 6 quick steps." },
   { id:'sidebar',  target:'sidebar',  pos:'right',  icon:'home', title:'Your main navigation',
     desc:'Use this sidebar to jump between Learning Hub, Due Diligence Vault, Project Pipeline, Office Hours & Events, and every other community section.' },
   { id:'banner',   target:'banner',   pos:'bottom', icon:'book', title:'Your personal home base',
-    desc:"This banner shows your community at a glance — active deals, upcoming events, course progress, and live pipeline value." },
+    desc:"Your dashboard brings together the learning, events, projects, and community updates you need for your next move." },
   { id:'stats',    target:'stats',    pos:'bottom', icon:'chart', title:'Track your progress',
-    desc:'Four cards tracking community members, active projects, vault documents, and events this week — all updated in real time.' },
-  { id:'resume',   target:'resume',   pos:'bottom', icon:'doc', title:'Pick up where you left off',
-    desc:'This card shows your most recent course. Click Continue to jump straight back into your learning right where you stopped.' },
-  { id:'learning', target:'learning', pos:'right',  icon:'book', title:'Continue your courses',
-    desc:'All your enrolled courses live here. Track progress, access lessons, and earn certificates as you complete each module.' },
-  { id:'events',   target:'events',   pos:'top',    icon:'calendar', title:'Join live sessions',
-    desc:'Office Hours, workshops, and Member Circles run weekly. RSVP directly here so you never miss a live community session.' },
+    desc:'Five quick links take you straight to learning, events, projects, due diligence, and the latest community updates.' },
+  { id:'activity', target:'activity', pos:'top',    icon:'calendar', title:'Stay up to date',
+    desc:'Recent courses, events, videos, and announcements appear here, with a direct path to each item.' },
   { id:'done',     target:null,       pos:'center', icon:'check', title:"You're all set!",
     desc:"Dive into Learning Hub to continue your course, join an upcoming Office Hours, or explore the Project Pipeline. Welcome aboard!", isLast:true },
 ];
@@ -349,7 +344,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeVideo, setActiveVideo] = useState(null);
-  const [recommendedCourse, setRecommendedCourse] = useState(null);
 
   const isOverlay = isMobile || isTablet;
   const displayName = user?.name || user?.firstName || user?.email?.split('@')[0] || 'there';
@@ -772,10 +766,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   /* Section refs */
   const bannerRef   = useRef(null);
   const statsRef    = useRef(null);
-  const resumeRef   = useRef(null);
-  const learningRef = useRef(null);
-  const eventsRef   = useRef(null);
-  const REFS = { banner:bannerRef, stats:statsRef, resume:resumeRef, learning:learningRef, events:eventsRef };
+  const activityRef = useRef(null);
+  const REFS = { banner:bannerRef, stats:statsRef, activity:activityRef };
 
   const updatePositions = useCallback(() => {
     const step = STEPS[tourStep];
@@ -872,113 +864,18 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const buildYouTubeEmbedUrl = (videoId) => `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&modestbranding=1&controls=1&rel=0&fs=1`;
 
-  const statCards = useMemo(() => {
-    const stats = buildDashboardStats({
-      memberCount,
-      dashboardCourses,
-      dashboardEvents,
-      pipelineProjects: sharedPipelineProjects,
-      diligenceDocs: sharedDiligenceDocs,
-    });
-    return stats.slice(0, 4).map((card) => ({
-      label: card.label,
-      value: card.value,
-      badge: card.badge,
-    }));
-  }, [memberCount, dashboardCourses, dashboardEvents, sharedPipelineProjects, sharedDiligenceDocs]);
-
-  const currentCourse = useMemo(() => {
-    const inProgressCourses = [...dashboardCourses]
-      .filter((course) => course.progress > 0 && course.progress < 100)
-      .sort((a, b) => (Number(b.progress || 0) - Number(a.progress || 0)) || ((Number(b.lastAccessedAt || 0) - Number(a.lastAccessedAt || 0))));
-    if (inProgressCourses.length > 0) return inProgressCourses[0];
-    if (dashboardCourses.length > 0) return dashboardCourses[0];
-    return null;
-  }, [dashboardCourses]);
-
-  useEffect(() => {
-    if (!dashboardCourses.length) {
-      setRecommendedCourse(null);
-      return;
-    }
-
-    const userIdentity = user?.id || user?.email || user?.name || 'guest';
-    const storageKey = `tribes-home-recommended-course:${String(userIdentity)}`;
-
-    let storedSelection = null;
-    try {
-      const storedValue = window.localStorage.getItem(storageKey);
-      if (storedValue) {
-        storedSelection = JSON.parse(storedValue);
-      }
-    } catch {
-      storedSelection = null;
-    }
-
-    const availableCourses = dashboardCourses.filter((course) => course?.id && (!storedSelection?.id || String(course.id) !== String(storedSelection.id)));
-    const candidatePool = availableCourses.length > 0 ? availableCourses : dashboardCourses;
-    const nextCourse = candidatePool[Math.floor(Math.random() * candidatePool.length)];
-
-    setRecommendedCourse(nextCourse || null);
-
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify({ id: nextCourse?.id, title: nextCourse?.title, selectedAt: Date.now() }));
-    } catch {
-      // ignore storage failures
-    }
-  }, [dashboardCourses, user?.id, user?.email, user?.name]);
-
-  const resumeCardSubtitle = currentCourse
-    ? `${currentCourse.category || 'Course'} • ${currentCourse.duration || 'Self-paced'} • ${currentCourse.lessons || 0} lessons`
-    : 'Open the learning hub to explore your latest content.';
-  const resumeCardMetaLine = currentCourse
-    ? (currentCourse.lastAccessedAt ? `Last active ${formatRelativeTime(currentCourse.lastAccessedAt)}` : 'Resume from your saved progress')
-    : 'Continue from your most recent learning activity.';
-
   const latestCourses = useMemo(() => {
     return [...dashboardCourses]
       .sort((a, b) => (Number(b.progress || 0) - Number(a.progress || 0)) || ((Number(b.lastAccessedAt || 0) - Number(a.lastAccessedAt || 0))))
       .slice(0, 3);
   }, [dashboardCourses]);
-  const upcomingEvents = dashboardEvents.slice(0, 3);
-  const recommendedNextStep = useMemo(() => {
-    if (recommendedCourse) {
-      const course = recommendedCourse;
-      const isCompleted = (course.progress || 0) >= 100;
-      return {
-        type: 'course',
-        title: course.title || 'Continue learning',
-        subtitle: course.description || 'Pick up the lesson you left off and keep the momentum going.',
-        detail: `${course.progress || 0}% complete • ${course.duration || 'Self-paced'} • ${course.lessons || 0} lessons`,
-        metaLine: course.lastAccessedAt ? `Last active ${formatRelativeTime(course.lastAccessedAt)}` : 'A fresh recommendation for your next session',
-        actionLabel: isCompleted ? 'Review course' : 'Explore course',
-        actionTarget: 'learning',
-        pillLabel: isCompleted ? 'Completed' : 'Recommended',
-      };
-    }
-    if (dashboardEvents.length > 0) {
-      const event = dashboardEvents[0];
-      return {
-        type: 'event',
-        title: event.title || 'Upcoming session',
-        subtitle: event.description || 'Join the next live session and stay close to the community.',
-        detail: `${event.meetingPlatform || 'Live session'} • ${event.startDate ? new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : 'Upcoming'}`,
-        actionLabel: 'Join event',
-        actionTarget: 'events',
-        pillLabel: 'Next event',
-      };
-    }
-    return {
-      type: 'general',
-      title: 'Explore the platform',
-      subtitle: 'Browse courses, events, and announcements to build momentum.',
-      detail: 'Fresh learning content and community updates are ready to explore.',
-      actionLabel: 'Open hub',
-      actionTarget: 'learning',
-      pillLabel: 'Fresh picks',
-    };
-  }, [currentCourse, dashboardEvents]);
-
+  const dashboardShortcuts = [
+    { label: 'Learning hub', count: dashboardCourses.length, unit: 'courses', detail: 'Build your knowledge', icon: 'book', page: 'learning', tone: 'violet' },
+    { label: 'Events', count: dashboardEvents.length, unit: 'sessions', detail: 'Meet the community', icon: 'calendar', page: 'events', tone: 'blue' },
+    { label: 'Project pipeline', count: sharedPipelineProjects.length, unit: 'projects', detail: 'Follow opportunities', icon: 'chart', page: 'pipeline', tone: 'teal' },
+    { label: 'Due diligence', count: sharedDiligenceDocs.length, unit: 'documents', detail: 'Explore resources', icon: 'folder', page: 'vault', tone: 'amber' },
+    { label: 'Community updates', count: unreadNotificationCount, unit: 'unread', detail: 'See what’s new', icon: 'bell', page: 'announcements', tone: 'rose' },
+  ];
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
     if (!normalizedSearch) return [];
@@ -1231,304 +1128,101 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
           {/* ── HOME PAGE ── */}
           {currentPage === 'admin-dashboard' && isAdminUser(user) && (
-            <AdminOverview isMobile={isMobile} onNavigate={onNavigate} />
+            <AdminOverview isMobile={isMobile} onNavigate={onNavigate} user={user} />
           )}
 
           {currentPage === 'home' && !isAdminUser(user) && (
           <>
-          <div ref={bannerRef} className="soft-card" style={{
-            background: W,
-            border: `1px solid ${BD}`,
-            borderRadius:20, padding:isMobile?'18px 18px':'24px 26px', marginBottom:20,
-            display:'flex', flexDirection:isMobile?'column':'row',
-            justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', gap:isMobile?14:18,
-            boxShadow:'0 18px 40px rgba(15,23,42,0.08)',
-            position:'relative', overflow:'hidden', minHeight:isMobile?'240px':'260px',
-          }}>
-            <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at top right, rgba(124,58,237,0.08), transparent 42%), radial-gradient(circle at bottom left, rgba(124,58,237,0.05), transparent 36%)', pointerEvents:'none', animation:'softDrift 14s ease-in-out infinite' }} />
-            <div style={{ position:'absolute', top:'-36px', right:'-24px', width:180, height:180, borderRadius:'50%', background:'rgba(124,58,237,0.08)', filter:'blur(4px)', pointerEvents:'none', animation:'floatPulse 8s ease-in-out infinite' }} />
-            <div style={{ position:'absolute', bottom:'-48px', left:'-20px', width:150, height:150, borderRadius:'50%', background:'rgba(124,58,237,0.05)', filter:'blur(4px)', pointerEvents:'none', animation:'floatPulse 9s ease-in-out infinite', animationDelay:'-2s' }} />
-            <div style={{ minWidth:0, width:'100%', position:'relative', zIndex:1, display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
-              <p style={{ color:P, fontSize:10, fontWeight:800, letterSpacing:1.35,
-                textTransform:'uppercase', margin:'0 0 6px' }}>WELCOME</p>
-              <h1 style={{ color:T1, fontSize:isMobile?22:30, fontWeight:800, margin:'0 0 8px', letterSpacing:-.5, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', lineHeight:1.14 }}>
-                <span>{greeting}, {displayName}</span>
-                <img src={wavingHandIllustration} alt="" width="26" height="26" aria-hidden="true" style={{ flexShrink:0, animation:'wave 1.4s ease-in-out infinite', transformOrigin:'70% 60%', display:'block' }} />
+          <section ref={bannerRef} className="home-dashboard-hero" aria-labelledby="home-dashboard-title">
+            <div className="home-dashboard-hero-copy">
+              <p className="home-dashboard-eyebrow">YOUR TRIBES CAPITAL DASHBOARD</p>
+              <h1 id="home-dashboard-title">
+                {greeting}, {displayName}
+                <img src={wavingHandIllustration} alt="" aria-hidden="true" />
               </h1>
-              <p style={{ color:T2, fontSize:isMobile?14:15, margin:'0 0 12px', maxWidth:470, lineHeight:isMobile?1.7:1.75 }}>
-                Welcome to Tribes Capital, your home for clean energy learning, live sessions, and the momentum behind every next move.
-              </p>
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                {heroChips.map((chip) => (
-                  <div key={chip} style={{ background:'#EEF2FF', border:'1px solid rgba(226,232,240,0.9)',
-                    borderRadius:999, padding:'5px 12px', fontSize:11, fontWeight:600, color:P, whiteSpace:'nowrap' }}>
-                    {chip}
-                  </div>
-                ))}
+              <p>Discover opportunities, build your clean energy knowledge, and stay connected to the community.</p>
+              <div className="home-dashboard-hero-tags">
+                {heroChips.map((chip) => <span key={chip}>{chip}</span>)}
               </div>
             </div>
-            <div style={{ position:'relative', flexShrink:0, width:isMobile?'100%':'220px', maxWidth:isMobile?320:220, minHeight:isMobile?'140px':'180px', display:'flex', alignItems:'center', justifyContent:'center', marginTop:isMobile?6:0, alignSelf:isMobile?'stretch':'auto', padding:isMobile?'4px 0':'0' }}>
-              {achievementImages.map((src, index) => {
-                const offset = (index - activeMetricIndex + 4) % 4;
-                const translateX = offset === 0 ? 0 : offset === 1 ? 16 : offset === 2 ? 32 : 48;
-                const translateY = offset === 0 ? 0 : offset === 1 ? -6 : offset === 2 ? -12 : -18;
-                const rotate = offset === 0 ? 0 : offset === 1 ? -2 : offset === 2 ? -4 : -6;
-                const opacity = offset === 0 ? 1 : offset === 1 ? 0.9 : offset === 2 ? 0.72 : 0.5;
-                const scale = offset === 0 ? 1 : offset === 1 ? 0.96 : 0.91;
-                const zIndex = 4 - offset;
-                return (
-                  <div key={src} style={{
-                    position:'absolute',
-                    inset:0,
-                    top:0,
-                    left:0,
-                    right:0,
-                    background:'rgba(255,255,255,0.16)',
-                    border:'1px solid rgba(255,255,255,0.24)',
-                    borderRadius:isMobile?10:12,
-                    overflow:'hidden',
-                    backdropFilter:'blur(16px)',
-                    WebkitBackdropFilter:'blur(16px)',
-                    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -8px 16px rgba(15,23,42,0.16), 0 10px 24px rgba(15,23,42,0.12)',
-                    transform:`translateX(${translateX}px) translateY(${translateY}px) rotate(${rotate}deg) scale(${scale})`,
-                    opacity,
-                    zIndex,
-                    transition:'all 0.8s cubic-bezier(.2,.8,.2,1)',
-                  }}>
-                    <img
-                      src={src}
-                      alt={`Tribes Capital achievement ${index + 1}`}
-                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-                    />
-                  </div>
-                );
-              })}
+            <div className="home-dashboard-hero-art" aria-hidden="true">
+              <img src={achievementImages[activeMetricIndex]} alt="" />
+              <span className="home-dashboard-hero-orbit" />
             </div>
-          </div>
+          </section>
 
-          {/* ── RESUME CARD ── */}
-          <div ref={resumeRef} className="soft-card" style={{
-            ...glassCardStyle(14, '18px 20px'),
-            marginBottom:24, display:'flex', flexDirection:isMobile?'column':'row',
-            alignItems:isMobile?'flex-start':'center', gap:isMobile?10:16,
-          }}>
-            <div style={{ width:54, minWidth:54, height:54, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ width:54, height:54, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', background:'#EEF2FF', boxShadow:'0 10px 24px rgba(91, 33, 182, 0.08)' }}>
-                <svg viewBox="0 0 64 64" width={40} height={40} aria-hidden="true" style={{ display:'block' }}>
-                  <rect x="10" y="10" width="44" height="44" rx="12" fill="rgba(255,255,255,0.18)" />
-                  <path d="M24 18h16" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
-                  <path d="M24 30h16" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
-                  <path d="M24 42h10" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
-                  <path d="M44 42l6 6" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
-                  <path d="M50 42l-6 6" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
-                </svg>
+          <section ref={statsRef} className="home-dashboard-shortcuts" aria-labelledby="home-dashboard-shortcuts-title">
+            <div className="home-dashboard-section-head">
+              <div>
+                <h2 id="home-dashboard-shortcuts-title">Explore your community</h2>
+                <p>Quick access to what matters most.</p>
               </div>
+              <button type="button" onClick={() => onNavigate('pipeline')}>Explore all <Icon name="arrow" size={13} color={P} /></button>
             </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
-                <p style={{ fontSize:15, fontWeight:600, color:T1, margin:0, lineHeight:1.3 }}>
-                  {currentCourse?.title || 'Your next course is ready'}
-                </p>
-                {currentCourse && (
-                  <span style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.0, textTransform:'uppercase', background:PF, padding:'3px 7px', borderRadius:999 }}>
-                    {currentCourse.progress >= 100 ? 'Completed' : 'In progress'}
-                  </span>
-                )}
-              </div>
-              <p style={{ fontSize:13, color:T2, margin:'0 0 6px' }}>
-                {resumeCardSubtitle}
-              </p>
-              <p style={{ fontSize:12, color:P, margin:'0 0 8px', fontWeight:600 }}>
-                {resumeCardMetaLine}
-              </p>
-              {currentCourse && (
-                <>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:2 }}>
-                    <div style={{ flex:1, height:4, background:'#E5E7EB', borderRadius:4, overflow:'hidden' }}>
-                      <div style={{ width:`${Math.max(0, Math.min(100, currentCourse.progress || 0))}%`, height:4, background:P, borderRadius:4 }} />
-                    </div>
-                    <span style={{ fontSize:12, fontWeight:600, color:P }}>{currentCourse.progress || 0}%</span>
-                  </div>
-                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
-                    <span style={{ fontSize:11, color:T2, background:'#F9FAFB', border:'1px solid #E5E7EB', borderRadius:999, padding:'4px 8px' }}>{currentCourse.category || 'Course'}</span>
-                    <span style={{ fontSize:11, color:T2, background:'#F9FAFB', border:'1px solid #E5E7EB', borderRadius:999, padding:'4px 8px' }}>{currentCourse.duration || 'Self-paced'}</span>
-                    <span style={{ fontSize:11, color:T2, background:'#F9FAFB', border:'1px solid #E5E7EB', borderRadius:999, padding:'4px 8px' }}>{currentCourse.lessons || 0} lessons</span>
-                  </div>
-                </>
-              )}
+            <div className="home-dashboard-shortcut-grid">
+              {dashboardShortcuts.map((shortcut) => (
+                <button
+                  type="button"
+                  key={shortcut.page}
+                  className={`home-dashboard-shortcut home-dashboard-shortcut--${shortcut.tone}`}
+                  onClick={() => onNavigate(shortcut.page)}
+                >
+                  <span className="home-dashboard-shortcut-icon"><Icon name={shortcut.icon} size={19} color="currentColor" /></span>
+                  <span className="home-dashboard-shortcut-label">{shortcut.label}</span>
+                  <span className="home-dashboard-shortcut-count">{shortcut.count} <small>{shortcut.unit}</small></span>
+                  <span className="home-dashboard-shortcut-detail">{shortcut.detail}</span>
+                </button>
+              ))}
             </div>
-            <button onClick={() => onNavigate('learning')} style={{ ...btnStyle('none', P, W, 13), padding:'10px 20px', borderRadius:8, fontWeight:600,
-              flexShrink:0, whiteSpace:'nowrap', width:isMobile?'100%':'auto', boxShadow:'0 10px 22px rgba(91, 33, 182, 0.18)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
-              {currentCourse?.progress >= 100 ? 'Review course' : 'Resume course'}
-            </button>
-          </div>
+          </section>
 
           {/* ── TWO-COLUMN GRID ── */}
           <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 240px':'1fr 290px', gap:isMobile?16:24 }}>
 
-            {/* LEFT COLUMN */}
-            <div>
-              <div style={{ ...glassCardStyle(14, isMobile ? '12px' : '16px'), marginBottom: 16 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, gap:8, flexWrap:'wrap' }}>
-                  <h2 style={{ fontSize:isMobile?14:16, fontWeight:600, color:T1, margin:0 }}>Updates</h2>
-                  <button onClick={() => onNavigate('events')} style={{ fontSize:isMobile?12:13, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>See what’s next</button>
-                </div>
-                {updatesFeed.length > 0 ? updatesFeed.map((item, index, arr) => {
-                  const icon = item.kind === 'event' ? 'calendar' : item.kind === 'announcement' ? 'bell' : item.kind === 'video' ? 'play' : 'spark';
-                  return (
-                    <div key={item.id} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 0', borderBottom:index < arr.length - 1 ? `1px solid ${BD}` : 'none' }}>
-                      <div style={{ width:34, height:34, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
-                        <svg width={20} height={20} viewBox="0 0 24 24" aria-hidden="true">
-                          <circle cx="12" cy="12" r="10" fill={P} />
-                          <circle cx="12" cy="12" r="4" fill="#fff" />
-                        </svg>
-                      </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:12, fontWeight:600, color:T1, marginBottom:2 }}>{item.title}</div>
-                        <div style={{ fontSize:11, color:T2, lineHeight:1.4 }}>{item.detail}</div>
-                      </div>
-                      <span style={{ fontSize:11, color:P, fontWeight:600, flexShrink:0, marginTop:2 }}>{item.time}</span>
-                    </div>
-                  );
-                }) : (
-                  <div style={{ fontSize:13, color:T2, padding:'4px 0' }}>No updates yet. New events, announcements, and watched videos will appear here.</div>
-                )}
-              </div>
-
-              <div style={{ ...glassCardStyle(16, isMobile ? '14px' : '16px 18px'), marginBottom:16 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8, flexWrap:'wrap', marginBottom:10 }}>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.1, textTransform:'uppercase', marginBottom:4 }}>Recommended next step</div>
-                    <div style={{ fontSize:15, fontWeight:700, color:T1, marginBottom:4 }}>{recommendedNextStep.title}</div>
-                    <div style={{ fontSize:12, color:T2, lineHeight:1.4 }}>{recommendedNextStep.subtitle}</div>
+            {/* CENTER DASHBOARD */}
+            <div className="home-dashboard-center">
+              <section ref={activityRef} className="home-dashboard-activity" aria-labelledby="home-dashboard-activity-title">
+                <div className="home-dashboard-section-head">
+                  <div>
+                    <h2 id="home-dashboard-activity-title">Recent activity</h2>
+                    <p>Stay up to date with what’s happening across the community.</p>
                   </div>
-                  <span style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.0, textTransform:'uppercase', background:PF, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>
-                    {recommendedNextStep.pillLabel}
-                  </span>
+                  <button type="button" onClick={() => onNavigate('announcements')}>View updates <Icon name="arrow" size={13} color={P} /></button>
                 </div>
-                {recommendedNextStep.detail && (
-                  <div style={{ fontSize:12, color:T2, marginBottom:10, lineHeight:1.45 }}>{recommendedNextStep.detail}</div>
-                )}
-                {recommendedNextStep.metaLine && (
-                  <div style={{ fontSize:12, color:P, fontWeight:600, marginBottom:12 }}>{recommendedNextStep.metaLine}</div>
-                )}
-                {recommendedNextStep.type === 'course' && currentCourse && (
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
-                    <div style={{ flex:1, height:4, background:'#E5E7EB', borderRadius:4, overflow:'hidden' }}>
-                      <div style={{ width:`${Math.max(0, Math.min(100, currentCourse.progress || 0))}%`, height:4, background:P, borderRadius:4 }} />
-                    </div>
-                    <span style={{ fontSize:12, fontWeight:600, color:P }}>{currentCourse.progress || 0}%</span>
-                  </div>
-                )}
-                <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                  <button onClick={() => onNavigate(recommendedNextStep.actionTarget)} style={{ ...btnStyle('none', P, W, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>{recommendedNextStep.actionLabel}</button>
-                  <button onClick={() => onNavigate('events')} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>View events</button>
-                  <button onClick={() => onNavigate('announcements')} style={{ ...btnStyle(`1px solid ${BD}`, W, T2, 12), padding:'8px 12px', borderRadius:8, fontWeight:600 }}>See updates</button>
+                <div className="home-dashboard-table-wrap">
+                  <table className="home-dashboard-table">
+                    <thead>
+                      <tr><th>Activity</th><th>Category</th><th>When</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                      {updatesFeed.slice(0, 5).map((item) => {
+                        const itemIcon = item.kind === 'event' ? 'calendar' : item.kind === 'announcement' ? 'bell' : item.kind === 'video' ? 'play' : 'book';
+                        const status = item.kind === 'event' ? 'Upcoming' : item.kind === 'announcement' ? 'New' : item.kind === 'video' ? 'Watched' : 'Available';
+                        const targetPage = item.kind === 'event' ? 'events' : item.kind === 'announcement' ? 'announcements' : 'learning';
+                        return (
+                          <tr key={item.id}>
+                            <td>
+                              <button type="button" className="home-dashboard-activity-link" onClick={() => onNavigate(targetPage)}>
+                                <span className="home-dashboard-activity-icon"><Icon name={itemIcon} size={16} color={P} /></span>
+                                <span className="home-dashboard-activity-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
+                              </button>
+                            </td>
+                            <td><span className={`home-dashboard-category home-dashboard-category--${item.kind}`}>{item.kind === 'announcement' ? 'Update' : item.kind === 'video' ? 'Video' : item.kind === 'event' ? 'Event' : 'Learning'}</span></td>
+                            <td className="home-dashboard-activity-time">{item.time}</td>
+                            <td><span className={`home-dashboard-status home-dashboard-status--${item.kind}`}>{status}</span></td>
+                          </tr>
+                        );
+                      })}
+                      {!dashboardLoading && updatesFeed.length === 0 && (
+                        <tr><td colSpan="4" className="home-dashboard-empty">No recent activity yet. New courses, events, and community updates will appear here.</td></tr>
+                      )}
+                      {dashboardLoading && updatesFeed.length === 0 && (
+                        <tr><td colSpan="4" className="home-dashboard-empty">Loading your latest community activity…</td></tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-
-              {/* Learning section */}
-              <div ref={learningRef}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?10:14, gap:8, flexWrap:'wrap' }}>
-                  <h2 style={{ fontSize:isMobile?14:16, fontWeight:600, color:T1, margin:0 }}>Learning</h2>
-                  <button onClick={() => onNavigate('learning')} style={{ fontSize:isMobile?12:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
-                    Go to Learning Hub <Icon name="arrow" size={13} color={P}/>
-                  </button>
-                </div>
-                {dashboardLoading ? (
-                  <div style={{ display:'grid', gap:12 }}>
-                    <LoadingCard isMobile={isMobile} />
-                    <LoadingCard isMobile={isMobile} compact />
-                  </div>
-                ) : latestCourses.length > 0 ? latestCourses.map((course) => (
-                  <CourseCard
-                    key={course.id}
-                    cat={course.category || 'COURSE'}
-                    title={course.title}
-                    meta={course.description || 'Live from the platform'}
-                    pct={course.progress > 0 || course.status === 'completed' ? course.progress : null}
-                    btn={course.videoId ? 'Watch video' : (course.progress > 0 || course.status === 'completed') ? 'Continue' : 'Start'}
-                    isMobile={isMobile}
-                    thumbnail={course.thumbnail}
-                    videoId={course.videoId}
-                    onPlay={() => recordWatchedVideo({ title: course.title, duration: course.duration || 'Self-paced', tag: course.category || 'Course video', videoId: course.videoId, thumbnail: course.thumbnail })}
-                  />
-                )) : (
-                  <div style={{ ...glassCardStyle(14, '16px'), color:T2 }}>
-                    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:10, fontWeight:700, color:P, letterSpacing:1.1, textTransform:'uppercase', marginBottom:6 }}>Next up</div>
-                        <div style={{ fontSize:15, fontWeight:700, color:T1, marginBottom:6 }}>Your learning hub is ready for deeper insight</div>
-                        <p style={{ margin:0, fontSize:13, color:T2, lineHeight:1.55 }}>Explore curated deal briefings, live member sessions, and practical toolkits designed for modern clean-energy operators.</p>
-                      </div>
-                    </div>
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginTop:12 }}>
-                      {['Investment briefings','Live office hours','Practical toolkits'].map((chip) => (
-                        <span key={chip} style={{ background:'#F8FAFC', border:'1px solid #E5E7EB', borderRadius:999, padding:'6px 10px', fontSize:11, fontWeight:600, color:T2 }}>{chip}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Events section */}
-              <div ref={eventsRef} style={{ marginTop:8 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?10:14, gap:8, flexWrap:'wrap' }}>
-                  <h2 style={{ fontSize:isMobile?14:16, fontWeight:600, color:T1, margin:0 }}>
-                    Upcoming events <span style={{ fontSize:isMobile?12:13, color:T3, fontWeight:400 }}>({dashboardEvents.length})</span>
-                  </h2>
-                  <button onClick={() => onNavigate('events')} style={{ fontSize:isMobile?12:13, color:P, background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap' }}>
-                    View all <Icon name="arrow" size={13} color={P}/>
-                  </button>
-                </div>
-                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
-                  {dashboardLoading ? (
-                    <div style={{ padding:'12px 14px', display:'grid', gap:10 }}>
-                      <LoadingCard isMobile={isMobile} compact />
-                      <LoadingCard isMobile={isMobile} compact />
-                    </div>
-                  ) : upcomingEvents.length > 0 ? upcomingEvents.map((event, index, arr) => {
-                    const start = new Date(event.startDate);
-                    const month = start.toLocaleDateString('en', { month: 'short' }).toUpperCase();
-                    const day = start.getDate();
-                    const weekday = start.toLocaleDateString('en', { weekday: 'short' }).toUpperCase();
-                    const type = event.eventType || 'EVENT';
-                    const meta = `${start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })} · ${event.meetingPlatform || 'Live session'} · ${event.capacity ? `${event.capacity} spots` : 'Open'}`;
-                    return (
-                      <div key={event.id} style={{ display:'flex', alignItems:isMobile?'flex-start':'center', gap:isMobile?8:14, padding:isMobile?'10px 10px':'14px 18px',
-                        borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap', width:'100%' }}>
-                        <div style={{ width:isMobile?40:46, minWidth:isMobile?40:46, background:PF, borderRadius:8, textAlign:'center', padding:'7px 4px' }}>
-                          <div style={{ fontSize:isMobile?7.5:9, fontWeight:700, color:P, letterSpacing:.5, textTransform:'uppercase' }}>{month}</div>
-                          <div style={{ fontSize:isMobile?15:20, fontWeight:700, color:P, lineHeight:1.1 }}>{day}</div>
-                          <div style={{ fontSize:isMobile?7.5:9, color:P, fontWeight:500 }}>{weekday}</div>
-                        </div>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <span style={{ background:PF, color:P, fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:4, textTransform:'uppercase', letterSpacing:.4 }}>
-                            {type}
-                          </span>
-                          <p style={{ fontSize:isMobile?11:12, fontWeight:600, color:T1, margin:'3px 0 2px', lineHeight:1.25 }}>{event.title}</p>
-                          <p style={{ fontSize:isMobile?9.5:11, color:T2, margin:0, lineHeight:1.3 }}>{meta}</p>
-                        </div>
-                        <button onClick={() => onNavigate('events')} style={{
-                          ...btnStyle('none', P, W, 12),
-                          padding:'7px 14px', borderRadius:7, fontWeight:600, flexShrink:0,
-                          marginTop:isMobile?4:0,
-                          width:isMobile?'100%':'auto',
-                          boxShadow:'0 8px 18px rgba(91, 33, 182, 0.12)', transition:'transform 0.2s ease, box-shadow 0.2s ease',
-                        }}>Open</button>
-                      </div>
-                    );
-                  }) : (
-                    <div style={{ padding:'20px 16px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, textAlign:'center', color:T2 }}>
-                      <img src={eventsIllustration} alt="Illustration for the home page events empty state" style={{ width:'min(100%, 170px)', maxWidth:170, height:'auto', display:'block' }} />
-                      <div style={{ maxWidth:320 }}>
-                        <div style={{ fontSize:14, fontWeight:700, color:T1, marginBottom:6 }}>No upcoming sessions yet</div>
-                        <p style={{ margin:0, fontSize:12.5, color:T2, lineHeight:1.55 }}>New community sessions and office hours will appear here as they’re published.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              </section>
             </div>
 
             {/* RIGHT COLUMN */}
@@ -1765,6 +1459,65 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         .notification-toast-close:hover{background:#F2F4F7;color:#344054;}
         @keyframes notification-toast-in{from{opacity:0;transform:translate3d(20px,-10px,0) scale(.97)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
         @media (max-width:600px){.notification-toast{top:12px;right:16px;width:calc(100vw - 32px);}.notification-toast-content strong{white-space:normal;}}
+        .home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:190px;margin-bottom:22px;padding:24px 28px;overflow:hidden;border-radius:15px;background:linear-gradient(108deg,#3730a3 0%,#4f46e5 52%,#2563eb 100%);box-shadow:0 14px 28px rgba(49,46,129,.2);color:#fff}
+        .home-dashboard-hero::before,.home-dashboard-hero::after{position:absolute;content:'';border-radius:50%;pointer-events:none}
+        .home-dashboard-hero::before{width:250px;height:250px;right:17%;top:-190px;background:rgba(255,255,255,.09)}
+        .home-dashboard-hero::after{width:190px;height:190px;right:-85px;bottom:-125px;background:rgba(255,255,255,.1)}
+        .home-dashboard-hero-copy{position:relative;z-index:1;min-width:0;max-width:560px}
+        .home-dashboard-eyebrow{margin:0 0 8px;color:rgba(255,255,255,.75);font-size:9px;font-weight:800;letter-spacing:.13em}
+        .home-dashboard-hero h1{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 8px;color:#fff;font-size:clamp(21px,2vw,29px);font-weight:750;letter-spacing:-.03em;line-height:1.15}
+        .home-dashboard-hero h1 img{width:23px;height:23px;object-fit:contain;animation:wave 1.4s ease-in-out infinite;transform-origin:70% 60%}
+        .home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){max-width:440px;margin:0 0 14px;color:rgba(255,255,255,.86);font-size:12px;line-height:1.6}
+        .home-dashboard-hero-tags{display:flex;flex-wrap:wrap;gap:7px}
+        .home-dashboard-hero-tags span{padding:5px 9px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:10px;font-weight:600}
+        .home-dashboard-hero-art{position:relative;z-index:1;flex:0 0 174px;height:126px;overflow:hidden;border:1px solid rgba(255,255,255,.34);border-radius:12px;background:rgba(255,255,255,.14);box-shadow:0 14px 26px rgba(15,23,42,.18);transform:rotate(2deg)}
+        .home-dashboard-hero-art img{width:100%;height:100%;object-fit:cover;opacity:.9}
+        .home-dashboard-hero-orbit{position:absolute;right:-20px;bottom:-37px;width:92px;height:92px;border:12px solid rgba(255,255,255,.23);border-radius:50%}
+        .home-dashboard-shortcuts{margin-bottom:22px}
+        .home-dashboard-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+        .home-dashboard-section-head h2{margin:0;color:#111827;font-size:15px;font-weight:700;letter-spacing:-.01em}
+        .home-dashboard-section-head p{margin:3px 0 0;color:#6b7280;font-size:11px;line-height:1.45}
+        .home-dashboard-section-head>button{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:6px 0;background:transparent;color:#5b21b6;font-size:11px;font-weight:650}
+        .home-dashboard-section-head>button:hover{text-decoration:underline}
+        .home-dashboard-shortcut-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+        .home-dashboard-shortcut{display:flex;min-width:0;min-height:131px;flex-direction:column;align-items:flex-start;padding:12px 11px;border:1px solid #e8eaf0;border-radius:11px;background:#fff;text-align:left;box-shadow:0 4px 12px rgba(15,23,42,.04);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+        .home-dashboard-shortcut:hover{transform:translateY(-2px);border-color:#c7d2fe;box-shadow:0 10px 20px rgba(15,23,42,.09)}
+        .home-dashboard-shortcut:focus-visible,.home-dashboard-section-head>button:focus-visible,.home-dashboard-activity-link:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
+        .home-dashboard-shortcut-icon{display:grid;width:31px;height:31px;place-items:center;margin-bottom:10px;border-radius:9px;background:#eef2ff;color:#4338ca}
+        .home-dashboard-shortcut-label{overflow:hidden;width:100%;color:#1f2937;font-size:10.5px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+        .home-dashboard-shortcut-count{margin-top:5px;color:#111827;font-size:17px;font-weight:750;line-height:1.2}
+        .home-dashboard-shortcut-count small{color:#6b7280;font-size:9px;font-weight:500}
+        .home-dashboard-shortcut-detail{margin-top:4px;color:#8b95a5;font-size:9px;line-height:1.3}
+        .home-dashboard-shortcut--blue .home-dashboard-shortcut-icon{background:#eff6ff;color:#2563eb}
+        .home-dashboard-shortcut--teal .home-dashboard-shortcut-icon{background:#ecfdf5;color:#059669}
+        .home-dashboard-shortcut--amber .home-dashboard-shortcut-icon{background:#fffbeb;color:#d97706}
+        .home-dashboard-shortcut--rose .home-dashboard-shortcut-icon{background:#fdf2f8;color:#db2777}
+        .home-dashboard-activity{overflow:hidden;border:1px solid #e8eaf0;border-radius:13px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.045)}
+        .home-dashboard-activity>.home-dashboard-section-head{margin:0;padding:15px 16px 12px}
+        .home-dashboard-table-wrap{overflow-x:auto}
+        .home-dashboard-table{width:100%;min-width:545px;border-collapse:collapse;text-align:left}
+        .home-dashboard-table th{padding:9px 12px;background:#f8fafc;color:#8791a1;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+        .home-dashboard-table th:first-child,.home-dashboard-table td:first-child{padding-left:16px}
+        .home-dashboard-table th:last-child,.home-dashboard-table td:last-child{padding-right:16px}
+        .home-dashboard-table td{padding:10px 12px;border-bottom:1px solid #f0f1f4;color:#667085;font-size:10px;vertical-align:middle}
+        .home-dashboard-table tbody tr:last-child td{border-bottom:0}
+        .home-dashboard-table tbody tr:hover{background:#fafaff}
+        .home-dashboard-activity-link{display:flex;width:100%;align-items:center;gap:9px;padding:0;background:transparent;text-align:left}
+        .home-dashboard-activity-icon{display:grid;width:29px;height:29px;flex:0 0 29px;place-items:center;border-radius:8px;background:#f1f0ff}
+        .home-dashboard-activity-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
+        .home-dashboard-activity-copy strong{overflow:hidden;color:#1f2937;font-size:10.5px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+        .home-dashboard-activity-copy small{overflow:hidden;color:#929baa;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+        .home-dashboard-category,.home-dashboard-status{display:inline-flex;align-items:center;white-space:nowrap}
+        .home-dashboard-category{color:#667085;font-size:9px}
+        .home-dashboard-status{padding:4px 7px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:9px;font-weight:650}
+        .home-dashboard-status--event{background:#eff6ff;color:#2563eb}
+        .home-dashboard-status--announcement{background:#fff7ed;color:#c2410c}
+        .home-dashboard-status--video{background:#ecfdf5;color:#047857}
+        .home-dashboard-activity-time{white-space:nowrap}
+        .home-dashboard-empty{padding:25px 16px!important;color:#6b7280!important;text-align:center}
+        @media (max-width:1100px){.home-dashboard-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+        @media (max-width:680px){.home-dashboard-hero{min-height:0;padding:20px;gap:12px}.home-dashboard-hero-art{flex-basis:112px;height:100px}.home-dashboard-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-dashboard-shortcut{min-height:118px}}
+        @media (max-width:420px){.home-dashboard-hero{align-items:flex-start}.home-dashboard-hero-art{flex-basis:76px;height:76px}.home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){font-size:11px}.home-dashboard-hero-tags span{font-size:9px}}
         @keyframes softDrift { 0%, 100% { transform: translate(0,0) scale(1); opacity:1; } 50% { transform: translate(6px,-4px) scale(1.01); opacity:0.94; } }
         @keyframes floatPulse { 0%, 100% { transform: translate(0,0) scale(1); opacity:1; } 30% { transform: translate(0,-4px) scale(1.04); opacity:0.88; } 60% { transform: translate(0,2px) scale(1.02); opacity:0.92; } }
         @keyframes wave { 0% { transform: rotate(0deg) scale(0.96); } 15% { transform: rotate(12deg) scale(1.04); } 30% { transform: rotate(-8deg) scale(1.02); } 45% { transform: rotate(10deg) scale(1.06); } 60% { transform: rotate(-4deg) scale(1.03); } 75% { transform: rotate(6deg) scale(1.05); } 100% { transform: rotate(0deg) scale(0.96); } }

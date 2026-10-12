@@ -22,9 +22,11 @@ import { join } from 'path';
 import { Response } from 'express';
 import { DueDiligenceService } from './due-diligence.service';
 import { GetCurrentUser } from '@common/decorators/get-current-user.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
 import { InvestorOnly, InvestorReadOnly } from '@common/decorators/account-type-access.decorator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
+import { AdminOperationsService } from '@modules/admin-operations/admin-operations.service';
 import { attachmentUploadOptions, documentUploadOptions, validateStoredFile } from '@common/services/upload-validation';
 import {
   CreateDueDiligenceDto,
@@ -71,7 +73,10 @@ function inferDocumentType(originalname: string, mimetype: string) {
 @ApiTags('Due Diligence')
 @ApiBearerAuth()
 export class DueDiligenceController {
-  constructor(private service: DueDiligenceService) {}
+  constructor(
+    private service: DueDiligenceService,
+    private adminOperationsService: AdminOperationsService,
+  ) {}
 
   /* ═══════════════════════════════════════════════════════════ */
   /*               DUE DILIGENCE ENDPOINTS                       */
@@ -267,21 +272,35 @@ export class DueDiligenceController {
 
   @Post(':id/approvals')
   @HttpCode(201)
+  @Roles('admin', 'super-admin')
   async createApproval(
     @Param('id') dueDiligenceId: string,
     @Body() dto: CreateDDApprovalDto,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('sub') userId: string,
   ) {
-    return this.service.createApproval(dueDiligenceId, dto, userId);
+    if (dto.approverRole !== 'investment-approver' || !dto.approverId) {
+      throw new BadRequestException('Assign the approval to a user with the investment-approver role');
+    }
+    return this.adminOperationsService.createInvestmentApproval(dueDiligenceId, userId, {
+      approverId: dto.approverId,
+      level: dto.level || 1,
+    });
   }
 
   @Put(':id/approvals/:approvalId')
+  @Roles('investment-approver')
   async approveOrReject(
     @Param('id') dueDiligenceId: string,
     @Param('approvalId') approvalId: string,
     @Body() dto: ApproveDDDto,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('sub') userId: string,
   ) {
-    return this.service.approveOrReject(dueDiligenceId, approvalId, dto, userId);
+    const reason = dto.approvalNotes?.trim() || '';
+    if (reason.length < 3) throw new BadRequestException('A decision reason of at least 3 characters is required');
+    const decision = dto.status === 'approved' ? 'approved' : 'rejected';
+    return this.adminOperationsService.decideInvestmentApproval(dueDiligenceId, approvalId, userId, {
+      decision,
+      reason,
+    });
   }
 }

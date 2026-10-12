@@ -233,6 +233,18 @@ async function main() {
 
   console.log('Admin role created/updated:', adminRole);
 
+  for (const [name, description] of [
+    ['project-reviewer', 'Assigned reviewer for project submissions'],
+    ['diligence-reviewer', 'Responsible reviewer for due-diligence work'],
+    ['investment-approver', 'Authorized to make assigned investment decisions'],
+  ]) {
+    await prisma.role.upsert({
+      where: { name },
+      update: { description },
+      create: { name, description },
+    });
+  }
+
   // Create moderator role
   const moderatorRole = await prisma.role.upsert({
     where: { name: 'moderator' },

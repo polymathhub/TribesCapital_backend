@@ -56,6 +56,10 @@ model User {
   
   projectCreated        Project[]   @relation("ProjectCreator")
   projectTeam           Project[]   @relation("ProjectTeam")
+  projectReviews        Project[]   @relation("ProjectReviewer")
+  projectAuditEntries   ProjectAuditLog[] @relation("ProjectAuditActor")
+  adminAuditEntries     AdminAuditLog[] @relation("AdminAuditActor")
+  adminAuditTargets     AdminAuditLog[] @relation("AdminAuditTarget")
 
   conversationCreated   Conversation[] @relation("ConversationCreator")
   conversationMembers   ConversationMember[]
@@ -302,6 +306,7 @@ model Project {
   pipelineMetadata Json?
   attachments     Json?
   status          String      @default("planning")
+  contactEmail    String?
   startDate       DateTime?
   endDate         DateTime?
   budget          Float?
@@ -311,16 +316,55 @@ model Project {
 
   creatorId       String
   creator         User        @relation("ProjectCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  reviewerId      String?
+  reviewer        User?       @relation("ProjectReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
   
   teamMembers     User[]      @relation("ProjectTeam")
   conversations   Conversation[] @relation("ProjectConversations")
 
   stages          ProjectStage[]
+  diligenceCases  DueDiligence[]
+  auditLogs       ProjectAuditLog[]
   marketplaceItem MarketplaceItem?
 
   @@index([creatorId])
+  @@index([reviewerId])
   @@index([status])
   @@index([isPublished])
+}
+
+model ProjectAuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  oldValue    Json?
+  newValue    Json?
+  reason      String?
+  actorId     String?
+  actor       User?    @relation("ProjectAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([actorId])
+  @@index([action])
+}
+
+model AdminAuditLog {
+  id             String   @id @default(cuid())
+  action         String
+  oldValue       Json?
+  newValue       Json?
+  reason         String?
+  actorId        String?
+  actor          User?    @relation("AdminAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  subjectUserId  String?
+  subjectUser    User?    @relation("AdminAuditTarget", fields: [subjectUserId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+
+  @@index([subjectUserId, createdAt])
+  @@index([actorId])
+  @@index([action])
 }
 
 model ProjectStage {
@@ -810,6 +854,8 @@ model DueDiligence {
   
   assignedTo          User?       @relation("DDAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
   assignedToId        String?
+  projectId           String?
+  project             Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   items               DueDiligenceItem[]
   documents           DueDiligenceDocument[]
@@ -824,6 +870,7 @@ model DueDiligence {
   @@index([completionPercent])
   @@index([createdAt])
   @@index([type])
+  @@index([projectId])
 }
 
 model DueDiligenceItem {

@@ -1,9 +1,35 @@
-import { IsArray, IsIn, IsNumber, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsIn, IsNumber, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
 
-export const PROJECT_STATUSES = ['scoping', 'due-diligence', 'development', 'operational'] as const;
+export const PROJECT_STATUSES = ['submitted', 'information_requested', 'rejected', 'scoping', 'due-diligence', 'development', 'operational'] as const;
 export const PROJECT_TYPES = ['Solar', 'Solar PV', 'C&I Solar', 'Mini-grid', 'Storage', 'Battery Storage', 'Wind', 'Hydro'] as const;
 
 export type ProjectFile = { fileName: string; mimeType: string; size: number; storageKey: string; url: string };
+
+export class ProjectSubmissionDto {
+  @IsString()
+  @MinLength(1)
+  title!: string;
+
+  @IsString()
+  @MinLength(1)
+  description!: string;
+
+  @IsOptional()
+  @IsIn(PROJECT_TYPES)
+  projectType?: typeof PROJECT_TYPES[number];
+
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @IsOptional()
+  @IsNumber()
+  capacityKwp?: number;
+
+  @IsOptional()
+  @IsEmail()
+  contactEmail?: string;
+}
 
 export class CreateProjectDto {
   @IsString()

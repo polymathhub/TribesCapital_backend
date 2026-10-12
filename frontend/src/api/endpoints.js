@@ -93,6 +93,23 @@ export const analyticsAPI = {
   getAdminOverview: () => apiClient.get('/analytics/admin/overview'),
 };
 
+export const adminOperationsAPI = {
+  getOverview: () => apiClient.get('/admin/operations/overview'),
+  listProjects: (params) => apiClient.get('/admin/operations/projects', { params }),
+  getProject: (id) => apiClient.get(`/admin/operations/projects/${id}`),
+  assignProjectReviewer: (id, data) => apiClient.patch(`/admin/operations/projects/${id}/reviewer`, data),
+  decideProject: (id, data) => apiClient.patch(`/admin/operations/projects/${id}/screening-decision`, data),
+  createProjectDiligence: (id, data = {}) => apiClient.post(`/admin/operations/projects/${id}/due-diligence`, data),
+  listDiligence: (params) => apiClient.get('/admin/operations/due-diligence', { params }),
+  assignDiligenceReviewer: (id, data) => apiClient.patch(`/admin/operations/due-diligence/${id}/reviewer`, data),
+  createInvestmentApproval: (id, data) => apiClient.post(`/admin/operations/due-diligence/${id}/approvals`, data),
+  decideInvestmentApproval: (id, approvalId, data) => apiClient.patch(`/admin/operations/due-diligence/${id}/approvals/${approvalId}`, data),
+  listUsers: (params) => apiClient.get('/admin/operations/users', { params }),
+  listRoles: () => apiClient.get('/admin/operations/roles'),
+  updateUserAccess: (id, data) => apiClient.patch(`/admin/operations/users/${id}/access`, data),
+  listAuditHistory: (params) => apiClient.get('/admin/operations/audit-history', { params }),
+};
+
 export const projectsAPI = {
   list: (params) => apiClient.get('/projects', { params }),
   getById: (id) => apiClient.get(`/projects/${id}`),
@@ -101,6 +118,7 @@ export const projectsAPI = {
   updateStatus: (id, status) => apiClient.patch(`/projects/${id}/status`, { status }),
   delete: (id) => apiClient.delete(`/projects/${id}`),
   getAttachmentDownloadUrl: (id, index) => apiClient.get(`/projects/${id}/attachments/${index}/download`),
+  submit: (data) => apiClient.post('/project-submissions', data),
 };
 
 export const communityAPI = {

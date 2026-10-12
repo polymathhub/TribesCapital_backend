@@ -58,6 +58,7 @@ describe('MessagingService', () => {
     prisma.communityChannel.create.mockResolvedValue({ id: 'channel-1' });
     prisma.communityMembership.createMany.mockResolvedValue({ count: 1 });
     prisma.conversation.findUnique.mockResolvedValue({ id: 'channel-conv', type: 'COMMUNITY_CHANNEL', members: [{ userId: 'creator-1' }] });
+
     await service.createConversation({ type: 'COMMUNITY_CHANNEL', userId: 'creator-1', title: 'General', channelName: 'general' });
     expect(prisma.user.findMany).not.toHaveBeenCalled();
     expect(prisma.conversationMember.createMany).toHaveBeenCalledWith({ data: [{ conversationId: 'channel-conv', userId: 'creator-1', role: 'owner' }] });

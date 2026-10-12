@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException,
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
-import { CreateProjectDto, PROJECT_STATUSES, UpdateProjectDto } from './dto/project.dto';
+import { CreateProjectDto, ProjectSubmissionDto, UpdateProjectDto } from './dto/project.dto';
 
 const MAX_PAGE_SIZE = 100;
 
@@ -48,6 +48,9 @@ export class ProjectsService {
 
   async create(userId: string, dto: CreateProjectDto) {
     this.ensureDatabase();
+    if (dto.status && dto.status !== 'scoping') {
+      throw new BadRequestException('New projects enter the pipeline at scoping; later stages require an authorized workflow decision');
+    }
     this.validateAttachments(userId, dto.attachments);
     return this.prisma.project.create({
       data: {
@@ -60,8 +63,40 @@ export class ProjectsService {
         notes: dto.notes?.trim(),
         pipelineMetadata: dto.pipelineMetadata as Prisma.InputJsonObject | undefined,
         attachments: dto.attachments as Prisma.InputJsonArray | undefined,
-        status: dto.status || PROJECT_STATUSES[0],
+        status: 'scoping',
         creatorId: userId,
+      },
+    });
+  }
+
+  async submit(userId: string, dto: ProjectSubmissionDto) {
+    this.ensureDatabase();
+    const submitter = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { accountType: true },
+    });
+    if (!submitter) throw new NotFoundException('Submitting account not found');
+    if (submitter.accountType === 'GUEST') {
+      throw new ForbiddenException('A registered account is required to submit a project');
+    }
+
+    return this.prisma.project.create({
+      data: {
+        title: dto.title.trim(),
+        description: dto.description.trim(),
+        projectType: dto.projectType,
+        location: dto.location?.trim(),
+        capacityKwp: dto.capacityKwp,
+        contactEmail: dto.contactEmail?.trim().toLowerCase(),
+        status: 'submitted',
+        isPublished: false,
+        creatorId: userId,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        createdAt: true,
       },
     });
   }
@@ -86,7 +121,8 @@ export class ProjectsService {
 
   async updateStatus(id: string, userId: string, status: string) {
     const project = await this.getEditableProject(id, userId);
-    return this.prisma.project.update({ where: { id: project.id }, data: { status } });
+    if (project.status === status) return project;
+    throw new ForbiddenException('Project lifecycle stages can only be changed through an authorized review or investment decision');
   }
 
   async remove(id: string, userId: string) {

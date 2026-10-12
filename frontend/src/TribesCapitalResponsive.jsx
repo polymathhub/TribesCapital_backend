@@ -10,8 +10,9 @@ import React, {
   forwardRef,
   useImperativeHandle 
 } from 'react';
-import { communityAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
-import homepageHeroImage from './assets/homepage-community-hero.png';
+import { communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
+import dashboardHeroIllustration from './assets/hello-cuate.svg';
+import folderUpIcon from './assets/folder-up.svg';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
 const OfficeHoursEvents = lazy(() => import('./pages/OfficeHoursEvents.jsx'));
 const MessagingPage = lazy(() => import('./pages/MessagingPage.jsx'));
@@ -242,6 +243,7 @@ const STYLES = `
 .dash-navgroup{ margin-bottom:18px; }
 .dash-navlabel{ font-size:11px; color:var(--ink-400); font-weight:600; letter-spacing:.06em; padding:0 10px 8px; }
 .dash-navitem{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; color:var(--ink-600); font-size:14px; text-decoration:none; margin-bottom:2px; background:none; border:none; width:100%; text-align:left; cursor:pointer; position:relative; }
+.submit-project-nav-icon{display:block;width:22px;height:22px;flex:0 0 22px;background:currentColor;mask-position:center;mask-repeat:no-repeat;mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;-webkit-mask-size:contain}
 .dash-navitem.active{ background:var(--purple-50); color:var(--purple-700); font-weight:600; }
 .dash-navitem:not(.active):hover{ background:#FAFAFA; }
 .dash-sidebar-bottom{ margin-top:auto; }
@@ -256,8 +258,17 @@ const STYLES = `
 .dash-bell-wrap{ position:relative; display:inline-flex; }
 .dash-bell-count{ position:absolute; top:-8px; right:-11px; min-width:17px; height:17px; padding:0 4px; border:2px solid #fff; border-radius:999px; background:#B42318; color:#fff; display:grid; place-items:center; font-size:9px; font-weight:800; line-height:1; }
 
-.dash-content{ padding:28px 32px 60px; max-width:1180px; }
+.dash-content{ padding:28px 32px 60px; width:100%; max-width:none; }
 @media (max-width:640px){ .dash-content{ padding:20px; } }
+.dash-main{ display:flex; flex-direction:column; min-height:100dvh; }
+.dash-content{ flex:1; }
+.dash-footer{ display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; max-width:none; margin-top:auto; padding:18px 40px; border-top:1px solid var(--line); color:var(--ink-400); font-size:12px; }
+.dash-footer a{ color:var(--purple-700); text-decoration:none; font-weight:600; }
+.dash-footer a:hover{ text-decoration:underline; }
+@media (min-width:1440px){ .dash-footer{ max-width:none; } }
+@media (min-width:1920px){ .dash-footer{ max-width:none; } }
+@media (max-width:1023px){ .dash-footer{ padding-left:max(24px,env(safe-area-inset-left)); padding-right:max(24px,env(safe-area-inset-right)); } }
+@media (max-width:767px){ .dash-footer{ align-items:flex-start; flex-direction:column; gap:8px; padding:16px max(18px,env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left)); } }
 .learning-hub-main{display:flex;flex-direction:column;min-height:100dvh}
 .learning-hub-content{display:flex;flex:1;min-height:0;max-width:none!important;padding:0!important;overflow:hidden}
 .learning-hub-shell{display:flex;flex:1;min-width:0;min-height:0;width:100%}
@@ -295,27 +306,119 @@ const STYLES = `
 .dash-action-card p{ font-size:13px; color:var(--ink-600); line-height:1.5; margin:0 0 12px; }
 .dash-action-card a{ font-size:13px; color:var(--purple-600); font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
 
-.dash-notsure{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;margin-top:0}
-.dash-notsure h3{font-size:16px;margin:0 0 4px;font-weight:700;color:var(--ink-900)}
-.dash-notsure>p{font-size:13.5px;color:var(--ink-600);margin:0 0 18px}
-.dash-notsure-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-@media (max-width:900px){ .dash-notsure-grid{ grid-template-columns:1fr 1fr; } }
-@media (max-width:600px){ .dash-notsure-grid{ grid-template-columns:1fr; } }
-.dash-mini-card{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:0;padding:14px 16px;border:1px solid var(--line);border-radius:10px;text-align:left;background:#fff;font:inherit;cursor:pointer;transition:border-color .16s ease,transform .16s ease}
-.dash-mini-card:hover{border-color:#7C3AED;transform:translateY(-2px)}
-.dash-mini-card:focus-visible{outline:3px solid #C4B5FD;outline-offset:2px}
-.dash-mini-card .q{font-size:13.5px;font-weight:700;color:var(--ink-900);margin:0 0 4px}
-.dash-mini-card .a{font-size:13px;color:var(--ink-600);margin:0 0 6px}
-.dash-mini-card .l{font-size:12.8px;color:var(--purple-600);font-weight:600;display:inline-flex;align-items:center;gap:4px}
-.dash-contact{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:22px;padding:18px 20px;border-top:1px solid var(--line);color:var(--ink-600)}
-.dash-contact h3{margin:0 0 4px;color:var(--ink-900);font-size:14px}
-.dash-contact p{margin:0;font-size:13px}
-.dash-contact a{display:inline-flex;align-items:center;gap:8px;color:#5B21B6;font-size:13px;font-weight:600;text-decoration:none;overflow-wrap:anywhere}
-.restored-homepage-hero{aspect-ratio:3.36/1;padding:0!important;margin-bottom:26px;overflow:hidden;border-radius:14px;background:#F3E8FF}
-.restored-homepage-hero img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
-@media(max-width:760px){.restored-homepage-hero{aspect-ratio:2.7/1}.restored-homepage-hero img{object-fit:contain;background:#F7F7F8}}
-@media(max-width:480px){.restored-homepage-hero{aspect-ratio:2.3/1}}
-.forum-hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:32px;align-items:center;margin:0 0 30px;padding:30px 34px;border-radius:14px;background:transparent;color:#2E1065}
+.dash-home{display:grid;width:100%;gap:clamp(26px,3vw,38px);color:var(--ink-900)}
+.home-dashboard{gap:22px}
+.home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:246px;padding:24px 420px 24px 28px;overflow:visible;border-radius:16px;background:#6D28D9;box-shadow:0 14px 28px rgba(76,29,149,.24);color:#fff}
+.home-dashboard-hero::before,.home-dashboard-hero::after{display:none}
+.home-dashboard-hero-copy{position:relative;z-index:1;min-width:0;max-width:560px}
+.home-dashboard-eyebrow{display:flex;align-items:center;margin:0 0 12px}
+.home-dashboard-logo{display:block;width:168px;height:auto;max-height:30px;object-fit:contain;object-position:left center;filter:brightness(0) invert(1)}
+.home-dashboard-hero h1{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0 0 10px;color:#fff;font-size:clamp(25px,2.4vw,34px);font-weight:750;letter-spacing:-.03em;line-height:1.18;text-shadow:0 1px 2px rgba(46,16,101,.2)}
+.home-dashboard-hero h1 span{font-size:.85em}
+.home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){max-width:440px;margin:0 0 16px;color:#f5f3ff;font-size:15px;font-weight:450;line-height:1.65;text-shadow:0 1px 2px rgba(46,16,101,.16)}
+.home-dashboard-hero-tags{display:flex;flex-wrap:wrap;gap:7px}
+.home-dashboard-hero-tags span{padding:6px 11px;border:1px solid rgba(255,255,255,.52);border-radius:999px;background:rgba(246,242,250,.82);color:#4C1D95;font-size:11px;font-weight:800;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.home-dashboard-hero-art{position:absolute;z-index:2;right:-80px;bottom:0;width:460px;height:460px;pointer-events:none}
+.home-dashboard-hero-art::before{position:absolute;inset:25% 5% 9%;content:'';border-radius:50%;background:rgba(221,214,254,.18);filter:blur(20px);pointer-events:none}
+.home-dashboard-hero-art img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;transform:translateY(11%)}
+.home-dashboard-shortcuts{margin:0}
+.home-dashboard-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 12px}
+.home-dashboard-section-head h2{margin:0;color:#111827;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.home-dashboard-section-head p{margin:3px 0 0;color:#6b7280;font-size:11px;line-height:1.45}
+.home-dashboard-section-head>button{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:6px 0;background:transparent;color:#5b21b6;font-size:11px;font-weight:650}
+.home-dashboard-shortcut-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.home-dashboard-shortcut{display:flex;min-width:0;min-height:126px;flex-direction:column;align-items:flex-start;padding:12px 11px;border:1px solid #e8eaf0;border-radius:11px;background:#fff;text-align:left;box-shadow:0 4px 12px rgba(15,23,42,.04);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.home-dashboard-shortcut--blue{background:#eff6ff}
+.home-dashboard-shortcut--mint{background:#ecfdf5}
+.home-dashboard-shortcut--amber{background:#fffbeb}
+.home-dashboard-shortcut--indigo{background:#eef2ff}
+.home-dashboard-shortcut--violet{background:#f5f3ff}
+.home-dashboard-shortcut:hover{transform:translateY(-2px);border-color:#c7d2fe;box-shadow:0 10px 20px rgba(15,23,42,.09)}
+.home-dashboard-shortcut:focus-visible,.home-dashboard-section-head>button:focus-visible,.home-dashboard-activity-link:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
+.home-dashboard-shortcut-icon{display:grid;width:31px;height:31px;place-items:center;margin-bottom:9px;border-radius:9px;background:transparent;color:#000}
+.home-dashboard-shortcut-icon svg{color:#000}
+.home-dashboard-shortcut-icon .submit-project-nav-icon{width:22px;height:22px;background:#000}
+.home-dashboard-shortcut-label{overflow:hidden;width:100%;color:#1f2937;font-size:10.5px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.home-dashboard-shortcut-count{margin-top:5px;color:#111827;font-size:17px;font-weight:750;line-height:1.2}
+.home-dashboard-shortcut-count small{color:#6b7280;font-size:9px;font-weight:500}
+.home-dashboard-shortcut-detail{margin-top:4px;color:#8b95a5;font-size:9px;line-height:1.3}
+.home-dashboard-shortcut--blue .home-dashboard-shortcut-icon,.home-dashboard-shortcut--mint .home-dashboard-shortcut-icon,.home-dashboard-shortcut--amber .home-dashboard-shortcut-icon,.home-dashboard-shortcut--indigo .home-dashboard-shortcut-icon{color:#000}
+.home-dashboard-activity{overflow:hidden;border:1px solid #e8eaf0;border-radius:13px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.045)}
+.home-dashboard-activity>.home-dashboard-section-head{margin:0;padding:15px 16px 12px}
+.home-dashboard-load-error{margin:0 16px 10px;padding:9px 11px;border-radius:8px;background:#fffbeb;color:#92400e;font-size:11px;line-height:1.45}
+.home-dashboard-table-wrap{overflow-x:auto}
+.home-dashboard-table{width:100%;min-width:545px;border-collapse:collapse;text-align:left}
+.home-dashboard-table th{padding:9px 12px;background:#f8fafc;color:#8791a1;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.home-dashboard-table th:first-child,.home-dashboard-table td:first-child{padding-left:16px}
+.home-dashboard-table th:last-child,.home-dashboard-table td:last-child{padding-right:16px}
+.home-dashboard-table td{padding:10px 12px;border-bottom:1px solid #f0f1f4;color:#667085;font-size:10px;vertical-align:middle}
+.home-dashboard-table tbody tr:last-child td{border-bottom:0}
+.home-dashboard-table tbody tr:hover{background:#fafaff}
+.home-dashboard-activity-link{display:flex;width:100%;align-items:center;gap:9px;padding:0;background:transparent;text-align:left}
+.home-dashboard-activity-icon{display:grid;width:29px;height:29px;flex:0 0 29px;place-items:center;border-radius:8px;background:#f1f0ff;color:#5b21b6}
+.home-dashboard-activity-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
+.home-dashboard-activity-copy strong{overflow:hidden;color:#1f2937;font-size:10.5px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+.home-dashboard-activity-copy small{overflow:hidden;color:#929baa;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.home-dashboard-category{color:#667085;font-size:9px}
+.home-dashboard-status{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:9px;font-weight:650;white-space:nowrap}
+.home-dashboard-activity-time{white-space:nowrap}
+.home-dashboard-empty{padding:25px 16px!important;color:#6b7280!important;text-align:center}
+.platform-search{display:grid;gap:18px}
+.platform-search-head h1{margin:0;color:#111827;font-size:26px}
+.platform-search-head p{margin:6px 0 0;color:#667085;font-size:14px}
+.platform-search-error{padding:12px 14px;border:1px solid #f3d28b;border-radius:10px;background:#fffbeb;color:#92400e;font-size:13px}
+.platform-search-section{overflow:hidden;border:1px solid #e8eaf0;border-radius:13px;background:#fff}
+.platform-search-section h2{margin:0;padding:14px 16px;border-bottom:1px solid #f0f1f4;color:#344054;font-size:14px}
+.platform-search-results{display:grid}
+.platform-search-result{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;border:0;border-bottom:1px solid #f0f1f4;background:#fff;text-align:left;cursor:pointer}
+.platform-search-result:last-child{border-bottom:0}
+.platform-search-result:hover{background:#faf9ff}
+.platform-search-result-copy{display:grid;min-width:0;gap:3px}
+.platform-search-result-copy strong{overflow:hidden;color:#1f2937;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
+.platform-search-result-copy span{overflow:hidden;color:#667085;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.platform-search-result-kind{margin-left:auto;padding:4px 8px;border-radius:999px;background:#f3f0ff;color:#5b21b6;font-size:10px;font-weight:700;white-space:nowrap}
+.platform-search-empty{padding:24px 16px;color:#667085;font-size:13px;text-align:center}
+.platform-search-result:focus-visible{outline:2px solid #4f46e5;outline-offset:-2px}
+@media(max-width:1100px){.home-dashboard-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:680px){.home-dashboard{gap:18px}.home-dashboard-hero{min-height:410px;align-items:flex-start;padding:22px 20px 20px;gap:12px}.home-dashboard-hero-copy{z-index:3;width:58%;max-width:360px}.home-dashboard-hero h1{width:max-content;max-width:calc(100vw - 40px);flex-wrap:nowrap;white-space:nowrap;font-size:25px;letter-spacing:-.03em}.home-dashboard-hero h1 span{flex:0 0 auto}.home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){max-width:100%;font-size:13px}.home-dashboard-hero-tags{position:relative;z-index:3;flex-direction:column;align-items:flex-start;gap:7px;margin-top:8px}.home-dashboard-hero-tags span{max-width:100%;font-size:11px}.home-dashboard-hero-art{right:-74px;bottom:0;width:320px;height:320px}.home-dashboard-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-dashboard-shortcut{min-height:118px}}
+@media(max-width:420px){.home-dashboard-hero{min-height:390px;padding:20px 18px;align-items:flex-start}.home-dashboard-hero-copy{width:57%}.home-dashboard-hero h1{font-size:25px;max-width:calc(100vw - 36px)}.home-dashboard-hero-art{right:-58px;width:270px;height:270px}.home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){font-size:12px}.home-dashboard-hero-tags span{font-size:10px}}
+.home-dashboard .home-dashboard-hero::before,.home-dashboard .home-dashboard-hero::after{display:block}
+.home-dashboard .home-dashboard-section-head h2{color:#111827}
+.home-dashboard .home-dashboard-section-head p{margin:3px 0 0}
+.home-dashboard .home-dashboard-hero-art img{display:block}
+.dash-home .dash-banner.restored-homepage-hero{aspect-ratio:2.94/1;margin:0;padding:0!important;overflow:hidden;border:1px solid rgba(231,231,234,.9);border-radius:24px;background:#F7F5FC;box-shadow:0 18px 46px rgba(46,16,101,.09)}
+.dash-home .restored-homepage-hero img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+.dash-home-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 2px 20px}
+.dash-home-eyebrow{display:inline-flex;align-items:center;gap:9px;margin:0 0 10px;color:#6D28D9;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.dash-home-section-head h1{margin:0;color:#24123D;font-size:clamp(25px,2.4vw,32px);font-weight:750;letter-spacing:-.045em;line-height:1.15}
+.dash-home-section-head p{max-width:620px;margin:9px 0 0;color:#667085;font-size:14px;line-height:1.65}
+.dash-home-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.dash-home .dash-home-card{grid-column:span 2;display:flex;min-height:216px;flex-direction:column;align-items:stretch;width:100%;padding:22px;border:1px solid #E9E7EE;border-radius:18px;background:rgba(255,255,255,.92);box-shadow:0 8px 24px rgba(28,25,35,.035);text-align:left;cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.dash-home .dash-home-card:nth-child(4){grid-column:2/span 2}
+.dash-home .dash-home-card:nth-child(5){grid-column:4/span 2}
+.dash-home .dash-home-card:hover{transform:translateY(-4px);border-color:#D6C4F4;box-shadow:0 18px 34px rgba(46,16,101,.1)}
+.dash-home .dash-home-card:focus-visible{outline:3px solid #C4B5FD;outline-offset:3px}
+.dash-home-card-top{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.dash-home-card-icon{display:grid;width:46px;height:46px;flex:0 0 46px;place-items:center;border-radius:14px;background:transparent!important;color:#111827!important;transition:transform .2s ease}
+.dash-home-card:hover .dash-home-card-icon{transform:rotate(-4deg) scale(1.05)}
+.dash-home-card-category{margin-left:auto;color:#8A8792;font-size:9.5px;font-weight:800;letter-spacing:.11em}
+.dash-home .dash-home-card .q{display:block;margin:0 0 7px;color:#282333;font-size:17px;font-weight:750;letter-spacing:-.025em;line-height:1.3}
+.dash-home .dash-home-card .a{display:block;margin:0 0 20px;color:#6B6874;font-size:13px;line-height:1.6}
+.dash-home .dash-home-card .l{display:inline-flex;align-items:center;gap:7px;margin-top:auto;color:#6D28D9;font-size:12.5px;font-weight:750;line-height:1.4}
+.dash-home-card .l svg{transition:transform .18s ease}
+.dash-home-card:hover .l svg{transform:translateX(3px)}
+.dash-home-contact{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px;margin:0;padding:20px 22px;border:1px solid #E8E1F2;border-radius:20px;background:linear-gradient(112deg,#F6F1FF 0%,#FFFFFF 70%);box-shadow:0 10px 30px rgba(46,16,101,.045)}
+.dash-home-contact-icon{display:grid;width:48px;height:48px;place-items:center;border-radius:15px;background:#EDE5FA;color:#5B21B6}
+.dash-home-contact-copy .kicker{display:block;margin:0 0 4px;color:#7C3AED;font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.dash-home-contact-copy h2{margin:0 0 4px;color:#2E1065;font-size:15px;font-weight:750;letter-spacing:-.02em}
+.dash-home-contact-copy p{margin:0;color:#6B6874;font-size:12.5px;line-height:1.5}
+.dash-home .dash-home-contact-link{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:11px 15px;border:1px solid #E6DDF1;border-radius:12px;background:#fff;color:#5B21B6;font-size:12px;font-weight:750;text-decoration:none;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.dash-home .dash-home-contact-link:hover{transform:translateY(-1px);border-color:#C4B5FD;box-shadow:0 8px 18px rgba(91,33,182,.1);color:#4C1D95}
+@media(max-width:900px){.dash-home-section-head{align-items:flex-start}.dash-home-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.dash-home .dash-home-card{grid-column:span 2}.dash-home .dash-home-card:nth-child(4){grid-column:auto}.dash-home .dash-home-card:nth-child(5){grid-column:2/span 2}}
+@media(max-width:640px){.dash-home{gap:26px}.dash-home .dash-banner.restored-homepage-hero{aspect-ratio:2.7/1;border-radius:18px}.dash-home .restored-homepage-hero img{object-fit:contain;background:#F7F7F8}.dash-home-section-head{display:block;margin-bottom:15px}.dash-home-section-head h1{font-size:25px}.dash-home-section-head p{font-size:13px}.dash-home-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.dash-home .dash-home-card{min-height:198px;padding:18px}.dash-home .dash-home-card:nth-child(5){grid-column:1/-1}.dash-home-card-top{margin-bottom:18px}.dash-home-contact{grid-template-columns:auto minmax(0,1fr);padding:18px}.dash-home-contact-link{grid-column:2;justify-self:start}}
+@media(max-width:480px){.dash-home .dash-banner.restored-homepage-hero{aspect-ratio:2.3/1;border-radius:16px}.dash-home-grid{grid-template-columns:1fr}.dash-home .dash-home-card,.dash-home .dash-home-card:nth-child(5){grid-column:auto;min-height:0}.dash-home-contact{display:flex;align-items:flex-start;flex-direction:column}.dash-home .dash-home-contact-link{width:100%;justify-content:space-between}}
+@media(prefers-reduced-motion:reduce){.dash-home .dash-home-card,.dash-home-card-icon,.dash-home-card .l svg,.dash-home-contact-link{transition:none!important}}
+.forum-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.72fr);gap:clamp(48px,7vw,96px);align-items:center;margin:0 0 30px;padding:30px 34px;border-radius:14px;background:transparent;color:#2E1065}
 .forum-hero-copy{max-width:590px}
 .forum-hero-eyebrow{margin:0 0 14px!important;color:#5B21B6;font-size:11px;font-weight:700;letter-spacing:.08em}
 .forum-hero h1{margin:0 0 12px!important;color:#2E1065;font-size:30px;line-height:1.18}
@@ -323,7 +426,7 @@ const STYLES = `
 .forum-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
 .forum-hero .forum-messaging-action{background:#fff;border:1px solid #C4B5FD;color:#5B21B6}
 .forum-hero .forum-messaging-action:hover{background:#FAF5FF}
-.forum-visual{width:min(100%,340px);min-width:0;border-radius:10px;background:#2E1065;padding:22px 24px}
+.forum-visual{justify-self:end;width:100%;max-width:340px;min-width:0;border-radius:10px;background:#2E1065;padding:22px 24px}
 .forum-visual-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;color:#fff;font-size:13px;font-weight:700}
 .forum-live-tag{padding:4px 8px;border-radius:5px;background:#fff;color:#5B21B6;font-size:10px;font-weight:700;text-transform:uppercase}
 .forum-visual-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.18)}
@@ -346,13 +449,16 @@ const STYLES = `
 .forum-empty-state{display:flex;width:min(100%,760px);min-height:260px;align-self:center;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-color:#DDD6FE!important;background:#FAF5FF!important;text-align:center}
 .forum-empty-icon{display:grid;place-items:center;width:54px;height:54px;border-radius:12px;background:#EDE9FE}
 .forum-empty-state strong{color:#2E1065;font-size:16px}
-@media(max-width:760px){.forum-hero{grid-template-columns:1fr;gap:26px;padding:26px 22px}.forum-visual{width:100%;padding:18px}.forum-hero h1{font-size:25px}}
+@media(max-width:760px){.forum-hero{grid-template-columns:1fr;gap:26px;padding:26px 22px}.forum-visual{justify-self:stretch;width:100%;max-width:none;padding:18px}.forum-hero h1{font-size:25px}}
 @media(max-width:480px){.forum-visual-foot{gap:14px}.forum-post{padding:20px!important}}
 .submit-project-page{max-width:820px;margin:0 auto;padding:28px 0}
 .submit-project-heading{margin-bottom:24px}
 .submit-project-heading>span{font-size:11px;font-weight:700;letter-spacing:.08em;color:#5B21B6}
 .submit-project-heading h1{margin:8px 0;font-size:26px;color:var(--ink-900)}
 .submit-project-heading p{margin:0;color:var(--ink-600);font-size:14px;line-height:1.55}
+.submit-project-alert{margin-bottom:16px;padding:12px 14px;border:1px solid;border-radius:8px;font-size:13px;line-height:1.5}
+.submit-project-alert.error{color:#B42318;background:#FEF3F2;border-color:#FECDCA}
+.submit-project-alert.success{color:#047857;background:#ECFDF3;border-color:#A6F4C5}
 .submit-project-form{display:grid;gap:18px;padding:24px;background:#fff;border:1px solid var(--line);border-radius:12px}
 .submit-project-form label{display:grid;gap:7px;color:var(--ink-700);font-size:13px;font-weight:600}
 .submit-project-form input,.submit-project-form select,.submit-project-form textarea{width:100%;min-width:0;border:1px solid #D0D5DD;border-radius:7px;padding:11px 12px;color:var(--ink-900);font:inherit;font-size:14px;background:#fff}
@@ -363,6 +469,7 @@ const STYLES = `
 .submit-project-actions p{margin:0;color:var(--ink-600);font-size:12px;line-height:1.5}
 .submit-project-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border:0;border-radius:7px;background:#5B21B6;color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .submit-project-actions button:hover{background:#3B0764}
+.submit-project-actions button:disabled{opacity:.65;cursor:wait}
 @media(max-width:600px){.dash-contact,.submit-project-actions{align-items:flex-start;flex-direction:column}.submit-project-row{grid-template-columns:1fr}.submit-project-form{padding:18px}.submit-project-page{padding:18px 0}}
 
 .dash-footer-tag{ text-align:center; color:var(--ink-400); font-size:13px; margin-top:36px; }
@@ -1178,7 +1285,7 @@ const STYLES = `
 .dash-collapse-btn{display:flex;background:none;border:0;padding:7px;color:var(--ink-600);cursor:pointer;border-radius:8px;flex-shrink:0}
 .dash-collapse-btn:hover{background:var(--bg);color:var(--ink-900)}
 .dash-scrim{position:fixed;inset:0;background:rgba(17,17,20,.42);z-index:65}
-.dash-content{padding:40px 40px 80px;max-width:1240px}
+.dash-content{padding:40px 40px 80px;max-width:none}
 
 /* ---- Collapsible desktop sidebar (icon rail), hamburger lives beside the logo ---- */
 .dash-sidebar{transition:width .18s ease}
@@ -1982,9 +2089,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .dash-mobile-menu{display:none;align-items:center;justify-content:center;width:40px;height:40px;margin-left:-8px;background:none;border:0;border-radius:10px;color:var(--ink-700);cursor:pointer;flex-shrink:0}
 .dash-mobile-menu:hover{background:var(--bg)}
 
-/* large screens: keep content centred and readable */
-@media (min-width:1440px){.dash-content{margin-left:0;margin-right:auto;max-width:1300px}}
-@media (min-width:1920px){.dash-content{max-width:1440px}.tca-form-col{max-width:420px}}
+/* Keep dashboard pages full width on large screens. */
+@media (min-width:1440px){.dash-content{margin-left:0;margin-right:0;max-width:none}}
+@media (min-width:1920px){.dash-content{max-width:none}.tca-form-col{max-width:420px}}
 
 /* tablets & small laptops: respect notches / rounded corners in landscape */
 @media (max-width:1023px){
@@ -2393,10 +2500,10 @@ function Toast({ message }) {
 const NAV_ITEMS = [
   { key: 'home', label: 'Home', icon: 'home' },
   { key: 'learning', label: 'Learning', icon: 'book' },
-  { key: 'pipeline', label: 'Portfolio', icon: 'briefcase' },
   { key: 'community', label: 'Forum', icon: 'users' },
   { key: 'events', label: 'Office Hours & Events', icon: 'calendar' },
   { key: 'submit-project', label: 'Submit Your Project', icon: 'upload' },
+  { key: 'pipeline', label: 'Portfolio', icon: 'briefcase' },
 ];
 const INVESTOR_NAV_ITEMS = [
   { key: 'vault', label: 'Due Diligence Vault', icon: 'shield' },
@@ -2532,7 +2639,10 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
   };
   const item = (it) => (
     <button key={it.key} ref={(el) => { navRefs.current[it.key] = el; }} className={`dash-navitem${it.key === activeKey ? ' active' : ''}`} aria-current={it.key === activeKey ? 'page' : undefined} onClick={() => go(it.key)} title={it.label}>
-      <Icon name={it.icon} size={22} color="currentColor" strokeWidth={2.3} /><span className="lbl">{it.label}</span>
+      {it.key === 'submit-project'
+        ? <span aria-hidden="true" className="submit-project-nav-icon" style={{ maskImage: `url(${folderUpIcon})`, WebkitMaskImage: `url(${folderUpIcon})` }} />
+        : <Icon name={it.icon} size={22} color="currentColor" strokeWidth={2.3} />}
+      <span className="lbl">{it.label}</span>
     </button>
   );
   const visibleNavItems = user?.accountType === 'GUEST'
@@ -2568,6 +2678,10 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
           </div>
         </header>
         <main className={`dash-content${activeKey === 'learning' ? ' learning-hub-content' : ''}`}>{children}</main>
+        <footer className="dash-footer">
+          <span>© {new Date().getFullYear()} Tribes Capital</span>
+          <a href="mailto:hello@tribes.capital">Contact us</a>
+        </footer>
       </div>
     </div>
   );
@@ -2577,59 +2691,369 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
    Dashboard home content
    ============================================================ */
 
-const NOTSURE_CARDS = [
-  { q: 'Want to learn?', a: 'Explore courses and resources.', l: 'Go to Learning', nav: 'learning' },
-  { q: 'Want to see projects in the pipeline?', a: 'Browse projects in Portfolio.', l: 'Go to Portfolio', nav: 'pipeline' },
-  { q: 'Want to ask questions or share ideas?', a: 'Join the conversation in Forum.', l: 'Go to Forum', nav: 'community' },
-  { q: 'Want to find upcoming events?', a: 'See office hours and events.', l: 'Go to Office Hours & Events', nav: 'events' },
-  { q: 'Have a project?', a: 'Share it with the Tribes Capital team.', l: 'Go to Submit Your Project', nav: 'submit-project' },
-];
+function PlatformSearchResults({ query, accountType, onOpenResult }) {
+  const [state, setState] = useState({ loading: true, results: [], errors: [] });
 
-function DashboardHomeContent({ onGo }) {
+  useEffect(() => {
+    let isCurrent = true;
+    const term = query.trim().toLocaleLowerCase();
+    const pageEntries = [
+      ...NAV_ITEMS.filter((item) => item.key !== 'home' && (accountType !== 'GUEST' || item.key !== 'submit-project')),
+      ...(accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : []),
+      { key: 'settings', label: 'Settings', icon: 'settings' },
+      { key: 'help', label: 'Help and support', icon: 'help' },
+      { key: 'profile', label: 'My profile', icon: 'users' },
+    ].map((item) => ({
+      key: `page-${item.key}`,
+      title: item.label,
+      detail: `Open ${item.label}`,
+      kind: 'Platform page',
+      page: item.key,
+      searchable: `${item.label} ${item.key} ${item.icon}`,
+    }));
+    const pageMatches = pageEntries.filter((entry) => entry.searchable.toLocaleLowerCase().includes(term));
+
+    const requests = [
+      ['Courses', 'learning', coursesAPI.list({ take: 100 })],
+      ['Events', 'events', eventsAPI.list({ take: 100 })],
+      ['Projects', 'pipeline', projectsAPI.list({ take: 100 })],
+      ['Due diligence', 'vault', dueDiligenceAPI.list({ take: 100 })],
+      ['Documents', 'vault', documentsAPI.list({ take: 100 })],
+      ['Community members', 'community', communityAPI.listMembers({ search: query, take: 25 })],
+      ['Forum posts', 'community', communityAPI.listPosts({ search: query, take: 25 })],
+      ['Contractors', 'contractors', marketplaceAPI.listContractors({ search: query, take: 25 })],
+      ['Messages', 'messaging', messagingAPI.search(query, 25)],
+    ];
+
+    Promise.allSettled(requests.map(([, , request]) => request)).then((responses) => {
+      if (!isCurrent) return;
+      const results = [...pageMatches];
+      const errors = [];
+      const getItems = (response) => {
+        if (response.status !== 'fulfilled') return [];
+        let payload = response.value?.data?.data ?? response.value?.data ?? [];
+        if (!Array.isArray(payload)) payload = payload?.items ?? payload?.results ?? payload?.data ?? [];
+        return Array.isArray(payload) ? payload : [];
+      };
+      const sources = requests.map(([kind, page], index) => ({ kind, page, response: responses[index] }));
+
+      sources.forEach(({ kind, page, response }) => {
+        if (response.status === 'rejected') {
+          errors.push(kind);
+          return;
+        }
+        getItems(response).forEach((item, index) => {
+          const title = item.title || item.name || item.displayName || item.subject || item.fileName || item.firstName && `${item.firstName} ${item.lastName || ''}`.trim();
+          const detail = item.description || item.category || item.location || item.email || item.content || item.body || item.message || item.occupation || item.status || '';
+          const searchable = Object.values(item).filter((value) => typeof value === 'string' || typeof value === 'number').join(' ').toLocaleLowerCase();
+          if (!title || !searchable.includes(term)) return;
+          results.push({
+            key: `${kind}-${item.id || item._id || index}`,
+            title,
+            detail: String(detail || `View ${kind.toLocaleLowerCase()}`),
+            kind,
+            page,
+            query: page === 'contractors' ? query : undefined,
+          });
+        });
+      });
+
+      setState({ loading: false, results, errors });
+    });
+    return () => { isCurrent = false; };
+  }, [query, accountType]);
+
+  const groups = [
+    { title: 'Pages', entries: state.results.filter((result) => result.kind === 'Platform page') },
+    { title: 'Platform content', entries: state.results.filter((result) => result.kind !== 'Platform page') },
+  ];
+
   return (
-    <>
-      <div className="dash-banner restored-homepage-hero" role="img" aria-label="Welcome to the Tribes Capital community: learn, connect, participate and take action.">
-        <img src={homepageHeroImage} alt="" />
-      </div>
-      <div className="dash-notsure">
-        <h3>Not sure where to start?</h3>
-        <p>Tell us what you want to achieve and we'll point you to the right place.</p>
-        <div className="dash-notsure-grid">
-          {NOTSURE_CARDS.map((c) => (
-            <button type="button" className="dash-mini-card" key={c.q} onClick={() => onGo(c.nav)}>
-              <span className="q">{c.q}</span>
-              <span className="a">{c.a}</span>
-              <span className="l">{c.l} <ArrowRight size={12} color="#7C3AED" /></span>
+    <div className="platform-search">
+      <header className="platform-search-head">
+        <h1>Search</h1>
+        <p>Results for <strong>“{query}”</strong></p>
+      </header>
+      {state.errors.length > 0 && (
+        <p className="platform-search-error" role="status">
+          Some sources couldn’t be searched: {state.errors.join(', ')}. Results may be incomplete.
+        </p>
+      )}
+      {groups.map((group) => (
+        <section className="platform-search-section" key={group.title} aria-label={group.title}>
+          <h2>{group.title}</h2>
+          <div className="platform-search-results">
+            {group.entries.map((result) => (
+              <button
+                type="button"
+                className="platform-search-result"
+                key={result.key}
+                onClick={() => onOpenResult(result)}
+              >
+                <Search size={16} aria-hidden="true" />
+                <span className="platform-search-result-copy">
+                  <strong>{result.title}</strong>
+                  <span>{result.detail}</span>
+                </span>
+                <span className="platform-search-result-kind">{result.kind}</span>
+              </button>
+            ))}
+            {!state.loading && group.entries.length === 0 && (
+              <p className="platform-search-empty">{group.title === 'Pages' ? 'No matching pages.' : 'No matching content found.'}</p>
+            )}
+            {state.loading && group.entries.length === 0 && (
+              <p className="platform-search-empty">Searching…</p>
+            )}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function DashboardHomeContent({ onGo, userName, accountType }) {
+  const [greeting, setGreeting] = useState(() => {
+    const hour = new Date().getHours();
+    return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  });
+  const [dashboardData, setDashboardData] = useState({
+    loading: true,
+    courses: [],
+    events: [],
+    projects: [],
+    documents: [],
+    members: null,
+    errors: [],
+  });
+
+  useEffect(() => {
+    const updateGreeting = () => {
+      const hour = new Date().getHours();
+      setGreeting(hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening');
+    };
+    const intervalId = window.setInterval(updateGreeting, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const requests = [
+      coursesAPI.list({ take: 100 }),
+      eventsAPI.list({ take: 100 }),
+      projectsAPI.list({ take: 100 }),
+      dueDiligenceAPI.list({ take: 100 }),
+      documentsAPI.list({ take: 100 }),
+      communityAPI.getStats(),
+    ];
+
+    Promise.allSettled(requests).then((results) => {
+      if (!isCurrent) return;
+      const getItems = (result) => {
+        const payload = result.status === 'fulfilled' ? result.value?.data?.data ?? result.value?.data ?? [] : [];
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.items)) return payload.items;
+        if (Array.isArray(payload?.data)) return payload.data;
+        return [];
+      };
+      const events = getItems(results[1]);
+      const memberPayload = results[5].status === 'fulfilled'
+        ? results[5].value?.data?.data ?? results[5].value?.data ?? {}
+        : null;
+      const memberCount = Number(memberPayload?.memberCount ?? memberPayload?.totalMembers ?? memberPayload?.membersCount);
+      const errors = results
+        .map((result, index) => result.status === 'rejected' ? ['courses', 'events', 'projects', 'due diligence', 'documents', 'community'][index] : null)
+        .filter(Boolean);
+
+      setDashboardData({
+        loading: false,
+        courses: getItems(results[0]),
+        events: events.filter((event) => !event.startDate || new Date(event.startDate).getTime() >= Date.now()),
+        projects: getItems(results[2]),
+        documents: [...getItems(results[3]), ...getItems(results[4])],
+        members: Number.isFinite(memberCount) ? memberCount : null,
+        errors,
+      });
+    });
+
+    return () => { isCurrent = false; };
+  }, []);
+
+  const firstName = String(userName || 'Member').trim().split(/\s+/)[0];
+  const shortcutDetails = {
+    learning: { count: dashboardData.courses.length, unit: 'courses', detail: 'Explore learning resources', tone: 'blue' },
+    community: { count: dashboardData.members, unit: 'members', detail: 'Join the community forum', tone: 'indigo' },
+    events: { count: dashboardData.events.length, unit: 'upcoming', detail: 'Connect at upcoming events', tone: 'amber' },
+    'submit-project': { count: null, unit: '', detail: 'Share a clean energy project', tone: 'mint' },
+    pipeline: { count: dashboardData.projects.length, unit: 'projects', detail: 'Explore the portfolio', tone: 'mint' },
+    vault: { count: dashboardData.documents.length, unit: 'documents', detail: 'Review due diligence files', tone: 'amber' },
+  };
+  const shortcuts = [
+    ...NAV_ITEMS.filter((item) => item.key !== 'home' && (accountType !== 'GUEST' || item.key !== 'submit-project')),
+    ...(accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : []),
+  ].map((item) => ({
+    ...item,
+    ...shortcutDetails[item.key],
+    page: item.key,
+  }));
+  const recentActivity = [
+    ...dashboardData.projects.map((item) => ({
+      id: `project-${item.id}`,
+      title: item.title || item.name || 'Project opportunity',
+      detail: item.location || item.description || item.projectType || 'Clean energy project',
+      category: 'Project',
+      status: item.stage || item.status || 'In pipeline',
+      date: item.updatedAt || item.createdAt,
+      page: 'pipeline',
+    })),
+    ...dashboardData.events.map((item) => ({
+      id: `event-${item.id}`,
+      title: item.title || item.name || 'Community event',
+      detail: item.eventType || item.meetingPlatform || item.description || 'Upcoming community session',
+      category: 'Event',
+      status: 'Upcoming',
+      date: item.startDate || item.updatedAt || item.createdAt,
+      page: 'events',
+    })),
+    ...dashboardData.courses.map((item) => ({
+      id: `course-${item.id}`,
+      title: item.title || item.name || 'Learning resource',
+      detail: item.category || item.description || 'Learning hub',
+      category: 'Learning',
+      status: item.status || 'Available',
+      date: item.updatedAt || item.createdAt || item.publishedAt,
+      page: 'learning',
+    })),
+    ...dashboardData.documents.map((item) => ({
+      id: `document-${item.id}`,
+      title: item.title || item.name || 'Due diligence document',
+      detail: item.targetName || item.category || item.description || 'Due diligence vault',
+      category: 'Document',
+      status: item.status || 'Available',
+      date: item.updatedAt || item.createdAt,
+      page: 'vault',
+    })),
+  ]
+    .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+    .slice(0, 6);
+  const formatActivityDate = (date) => {
+    if (!date) return 'Recently';
+    const parsed = new Date(date);
+    return Number.isNaN(parsed.getTime()) ? 'Recently' : parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
+  return (
+    <div className="dash-home home-dashboard">
+      <section className="home-dashboard-hero" aria-labelledby="dash-home-title">
+        <div className="home-dashboard-hero-copy">
+          <p className="home-dashboard-eyebrow"><img className="home-dashboard-logo" src={LOGO_SRC} alt="Tribes Capital" /></p>
+          <h1 id="dash-home-title">{greeting}, {firstName}<span aria-hidden="true"> 👋</span></h1>
+          <p>Welcome back. Pick up where you left off and see what’s happening across the clean energy community.</p>
+          <div className="home-dashboard-hero-tags">
+            <span>{dashboardData.members ?? '—'} community members</span>
+            <span>{dashboardData.events.length} upcoming events</span>
+            <span>{dashboardData.projects.length} active projects</span>
+          </div>
+        </div>
+        <div className="home-dashboard-hero-art" aria-hidden="true">
+          <img src={dashboardHeroIllustration} alt="" />
+        </div>
+      </section>
+      <section className="home-dashboard-shortcuts" aria-labelledby="home-dashboard-shortcuts-title">
+        <div className="home-dashboard-section-head">
+          <div>
+            <h2 id="home-dashboard-shortcuts-title">Your community at a glance</h2>
+            <p>Quick links and the latest numbers from across Tribes Capital.</p>
+          </div>
+        </div>
+        <div className="home-dashboard-shortcut-grid">
+          {shortcuts.map((card) => (
+            <button
+              type="button"
+              className={`home-dashboard-shortcut home-dashboard-shortcut--${card.tone}`}
+              key={card.page}
+              onClick={() => onGo(card.page)}
+            >
+              <span className="home-dashboard-shortcut-icon">
+                {card.page === 'submit-project'
+                  ? <span aria-hidden="true" className="submit-project-nav-icon" style={{ maskImage: `url(${folderUpIcon})`, WebkitMaskImage: `url(${folderUpIcon})` }} />
+                  : <Icon name={card.icon} size={19} strokeWidth={1.8} />}
+              </span>
+              <span className="home-dashboard-shortcut-label">{card.label}</span>
+              {card.count !== null && <span className="home-dashboard-shortcut-count">{dashboardData.loading ? '…' : (card.count ?? '—')} <small>{card.unit}</small></span>}
+              <span className="home-dashboard-shortcut-detail">{card.detail}</span>
             </button>
           ))}
         </div>
-      </div>
-
-      <section className="dash-contact" aria-labelledby="dash-contact-title">
-        <div><h3 id="dash-contact-title">Contact Tribes Capital</h3><p>Questions about the community or your project?</p></div>
-        <a href="mailto:hello@tribes.capital"><Mail size={17} />hello@tribes.capital</a>
       </section>
-    </>
+      <section className="home-dashboard-activity" aria-labelledby="home-dashboard-activity-title">
+        <div className="home-dashboard-section-head">
+          <div>
+            <h2 id="home-dashboard-activity-title">Recent work</h2>
+            <p>New projects, learning content, events, and resources.</p>
+          </div>
+          <button type="button" onClick={() => onGo('pipeline')}>View pipeline <ArrowRight size={14} /></button>
+        </div>
+        {dashboardData.errors.length > 0 && (
+          <p className="home-dashboard-load-error" role="status">
+            Some dashboard information couldn’t be loaded ({dashboardData.errors.join(', ')}). You can still open each section using the cards above.
+          </p>
+        )}
+        <div className="home-dashboard-table-wrap">
+          <table className="home-dashboard-table">
+            <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Updated</th></tr></thead>
+            <tbody>
+              {recentActivity.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <button type="button" className="home-dashboard-activity-link" onClick={() => onGo(item.page)}>
+                      <span className="home-dashboard-activity-icon"><Icon name={item.category === 'Project' ? 'briefcase' : item.category === 'Event' ? 'calendar' : item.category === 'Document' ? 'folder' : 'book'} size={16} /></span>
+                      <span className="home-dashboard-activity-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
+                    </button>
+                  </td>
+                  <td><span className="home-dashboard-category">{item.category}</span></td>
+                  <td><span className="home-dashboard-status">{item.status}</span></td>
+                  <td className="home-dashboard-activity-time">{formatActivityDate(item.date)}</td>
+                </tr>
+              ))}
+              {!dashboardData.loading && recentActivity.length === 0 && (
+                <tr><td colSpan="4" className="home-dashboard-empty">No recent work to show yet. New projects, events, and learning resources will appear here.</td></tr>
+              )}
+              {dashboardData.loading && recentActivity.length === 0 && (
+                <tr><td colSpan="4" className="home-dashboard-empty">Loading recent work…</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   );
 }
 
 function SubmitYourProjectPage() {
   const [project, setProject] = useState({ name: '', type: '', location: '', capacity: '', overview: '', contact: '' });
+  const [submissionState, setSubmissionState] = useState({ loading: false, error: '', success: '' });
   const update = (field) => (event) => setProject((current) => ({ ...current, [field]: event.target.value }));
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    const subject = encodeURIComponent(`Project submission: ${project.name.trim()}`);
-    const body = encodeURIComponent([
-      `Project name: ${project.name.trim()}`,
-      `Project type: ${project.type || 'Not specified'}`,
-      `Location: ${project.location.trim() || 'Not specified'}`,
-      `Capacity (kWp): ${project.capacity || 'Not specified'}`,
-      `Contact email: ${project.contact.trim() || 'Not specified'}`,
-      '',
-      'Project overview:',
-      project.overview.trim(),
-    ].join('\n'));
-    window.location.href = `mailto:hello@tribes.capital?subject=${subject}&body=${body}`;
+    setSubmissionState({ loading: true, error: '', success: '' });
+    try {
+      await projectsAPI.submit({
+        title: project.name.trim(),
+        projectType: project.type || undefined,
+        location: project.location.trim() || undefined,
+        capacityKwp: project.capacity ? Number(project.capacity) : undefined,
+        contactEmail: project.contact.trim() || undefined,
+        description: project.overview.trim(),
+      });
+      setProject({ name: '', type: '', location: '', capacity: '', overview: '', contact: '' });
+      setSubmissionState({ loading: false, error: '', success: 'Your project has been submitted and is now in the review queue.' });
+    } catch (requestError) {
+      setSubmissionState({
+        loading: false,
+        error: requestError?.response?.data?.message || 'Unable to submit your project. Please try again.',
+        success: '',
+      });
+    }
   };
 
   return (
@@ -2637,12 +3061,14 @@ function SubmitYourProjectPage() {
       <header className="submit-project-heading">
         <span>TRIBES CAPITAL</span>
         <h1>Submit Your Project</h1>
-        <p>Tell us about your clean energy project. Review the prepared email and send it from your email app.</p>
+        <p>Tell us about your clean energy project. Submissions are saved securely for the Tribes Capital team to review.</p>
       </header>
+      {submissionState.error && <div role="alert" className="submit-project-alert error">{submissionState.error}</div>}
+      {submissionState.success && <div role="status" className="submit-project-alert success">{submissionState.success}</div>}
       <form className="submit-project-form" onSubmit={submit}>
         <label>Project name<input required value={project.name} onChange={update('name')} placeholder="e.g. Community solar in Accra" /></label>
         <div className="submit-project-row">
-          <label>Project type<select value={project.type} onChange={update('type')}><option value="">Select a type</option><option>Solar</option><option>Mini-grid</option><option>Wind</option><option>Hydro</option><option>Battery storage</option><option>Other</option></select></label>
+          <label>Project type<select value={project.type} onChange={update('type')}><option value="">Select a type</option><option>Solar</option><option>Mini-grid</option><option>Wind</option><option>Hydro</option><option>Storage</option><option>Battery Storage</option></select></label>
           <label>Location<input value={project.location} onChange={update('location')} placeholder="City, country" /></label>
         </div>
         <div className="submit-project-row">
@@ -2650,7 +3076,7 @@ function SubmitYourProjectPage() {
           <label>Your contact email<input type="email" value={project.contact} onChange={update('contact')} placeholder="you@example.com" /></label>
         </div>
         <label>Project overview<textarea required rows="5" value={project.overview} onChange={update('overview')} placeholder="Describe the project, its current stage, and the support you are looking for." /></label>
-        <div className="submit-project-actions"><p>Submitting opens an email addressed to hello@tribes.capital.</p><button type="submit">Continue to email <ArrowRight size={16} /></button></div>
+        <div className="submit-project-actions"><p>Your submission will be visible to authorized reviewers.</p><button type="submit" disabled={submissionState.loading}>{submissionState.loading ? 'Submitting…' : 'Submit project'} {!submissionState.loading && <ArrowRight size={16} />}</button></div>
       </form>
     </div>
   );
@@ -3755,7 +4181,7 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
         <div className="lb-foot">
           {last && <span className="pj-done">This project is fully operational.</span>}
           {p.managingContractor && <button type="button" className="lb-btn lb-cancel" onClick={onViewContractor}>View {p.k}</button>}
-          {!last && <button type="button" className="lb-btn lb-submit" onClick={onAdvance}>Advance to {STG[p.s + 1][1]} →</button>}
+          {!last && <span className="pj-done">Stage changes are recorded through project review and investment decisions.</span>}
         </div>
       </div>
     </div>
@@ -3782,15 +4208,7 @@ function Pipeline({ toast, go, allowCreate = true }) {
   const p = ps.find(x => x.id === sel);
   const adv = async () => {
     if (!p || p.s >= STG.length - 1) return;
-    try {
-      const response = await projectsAPI.updateStatus(p.id, STG[p.s + 1][0]);
-      const updated = toBoardProject(response?.data?.data ?? response?.data);
-      setPs((current) => current.map((project) => project.id === p.id ? updated : project));
-      setSel(updated.id);
-      toast(`Moved to ${STG[updated.s][1]}`);
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Unable to update project stage.');
-    }
+    setError('Stage changes are recorded through project review and investment decisions.');
   };
   return <>
     <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div>{allowCreate ? <button className="btn bp" onClick={() => setAdd(true)}>+ Add project</button> : <button className="btn bp" type="button" disabled title="Project creation is currently unavailable">Create Project</button>}</div>
@@ -4270,6 +4688,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   const [tourSeen, setTourSeen] = useState(false);
 
   const [contractorQ, setContractorQ] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [communityOpen, setCommunityOpen] = useState(null);
 
   const [siEmail, setSiEmail] = useState('');
@@ -4381,7 +4800,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   function reopenTour() { setTourStep(1); setTourOpen(true); }
   function openHelp() { navigate('help'); }
 
-  const PAGES = ['learning', 'events', 'community', 'contractors', 'messaging', 'vault', 'pipeline', 'submit-project', 'settings'];
+  const PAGES = ['learning', 'events', 'community', 'contractors', 'messaging', 'vault', 'pipeline', 'submit-project', 'settings', 'search'];
   function handleSidebarNav(key) {
     const [k, arg] = key.split(':');
     if (k === 'home') { navigate('dashboard'); return; }
@@ -4398,7 +4817,24 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
     }
     handleSidebarNav(k);
   }
-  function searchContractors(query) { setContractorQ(query); navigate('contractors'); }
+  function searchPlatform(query) {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
+    setSearchQuery(trimmedQuery);
+    navigate('search');
+  }
+  function openSearchResult(result) {
+    if (result.page === 'contractors') {
+      setContractorQ(result.query || searchQuery);
+      navigate('contractors');
+      return;
+    }
+    if (result.page === 'profile' || result.page === 'help') {
+      navigate(result.page);
+      return;
+    }
+    handleSidebarNav(result.page);
+  }
   function logOut() {
     setTourOpen(false);
     if (onAuthenticatedLogout) {
@@ -4424,7 +4860,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
     const back = profileReturn.current;
     navigate(back && back !== 'profile' ? back : 'dashboard');
   }
-  const shellProps = { onSearch: searchContractors, onLogout: logOut, onOpenProfile: () => navigate('profile'), user };
+  const shellProps = { onSearch: searchPlatform, onLogout: logOut, onOpenProfile: () => navigate('profile'), user };
   let bodyEl = null;
 
   if (screen === 'signin') {
@@ -4606,7 +5042,13 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'dashboard') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="home" onNavigate={handleSidebarNav} {...shellProps}>
-        <DashboardHomeContent onGo={handleSidebarNav} />
+        <DashboardHomeContent onGo={handleSidebarNav} userName={user.name} accountType={user.accountType} />
+      </AppShell>
+    );
+  } else if (screen === 'search') {
+    bodyEl = (
+      <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="" onNavigate={handleSidebarNav} {...shellProps}>
+        <PlatformSearchResults query={searchQuery} accountType={user.accountType} onOpenResult={openSearchResult} />
       </AppShell>
     );
   } else if (screen === 'learning') {
@@ -4718,4 +5160,3 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
     </div>
   );
 }
-
