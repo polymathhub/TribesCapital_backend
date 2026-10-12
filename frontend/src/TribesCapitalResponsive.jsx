@@ -253,8 +253,8 @@ const STYLES = `
 @media (max-width:640px){ .dash-topbar{ padding:16px; } }
 .dash-searchbar{ flex:1; max-width:460px; display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 14px; color:var(--ink-400); font-size:13.5px; }
 .dash-topbar-right{ display:flex; align-items:center; gap:16px; flex-shrink:0; }
-.dash-avatar{ width:30px; height:30px; border-radius:50%; background:var(--purple-700); color:#fff; font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-.dash-avatar img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.dash-avatar{ width:30px; height:30px; border:2px solid #fff; border-radius:50%; background:var(--purple-700); color:#fff; font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 0 1px rgba(91,33,182,.18); }
+.dash-avatar img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:center}
 .dash-bell-wrap{ position:relative; display:inline-flex; }
 .dash-bell-count{ position:absolute; top:-8px; right:-11px; min-width:17px; height:17px; padding:0 4px; border:2px solid #fff; border-radius:999px; background:#B42318; color:#fff; display:grid; place-items:center; font-size:9px; font-weight:800; line-height:1; }
 
@@ -2622,7 +2622,9 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [q, setQ] = useState('');
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const go = (k) => { setOpen(false); onNavigate(k); };
+  useEffect(() => setAvatarFailed(false), [user.avatar]);
   useEffect(() => {
     if (!open) return undefined;
     const prevOverflow = document.body.style.overflow;
@@ -2674,7 +2676,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
           </form>
           <div className="dash-topbar-right">
             <NotificationsMenu onOpenMessaging={() => go('messaging')} onNavigate={go} />
-            <button className="dash-user" title={user.name} onClick={onOpenProfile}><span className="dash-avatar">{user.avatar ? <img src={user.avatar} alt="" /> : user.initial}</span><span className="dash-user-name">{user.name.split(' ')[0]}</span></button>
+            <button className="dash-user" title={user.name} onClick={onOpenProfile}><span className="dash-avatar">{user.avatar && !avatarFailed ? <img src={user.avatar} alt="" onError={() => setAvatarFailed(true)} /> : user.initial}</span><span className="dash-user-name">{user.name.split(' ')[0]}</span></button>
           </div>
         </header>
         <main className={`dash-content${activeKey === 'learning' ? ' learning-hub-content' : ''}`}>{children}</main>
