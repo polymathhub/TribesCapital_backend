@@ -871,6 +871,15 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     { label: 'Due diligence', count: sharedDiligenceDocs.length, unit: 'documents', detail: 'Explore resources', icon: 'folder', page: 'vault', tone: 'amber' },
     { label: 'Community updates', count: unreadNotificationCount, unit: 'unread', detail: 'See what’s new', icon: 'bell', page: 'announcements', tone: 'rose' },
   ];
+  const contentOwnsPageGutter = ['admin-dashboard', 'events', 'messages', 'pipeline', 'settings', 'vault'].includes(currentPage);
+  const pageGutterX = isMobile
+    ? 'max(18px, env(safe-area-inset-left), env(safe-area-inset-right))'
+    : isTablet
+      ? 'max(24px, env(safe-area-inset-left), env(safe-area-inset-right))'
+      : '32px';
+  const contentPadding = contentOwnsPageGutter
+    ? 0
+    : `${isMobile ? '24px' : '32px'} var(--tc-page-gutter-x) calc(60px + env(safe-area-inset-bottom))`;
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
     if (!normalizedSearch) return [];
@@ -1036,7 +1045,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', flexShrink:0, background:W, transition:'all .2s ease', boxShadow:'0 1px 3px rgba(17,24,39,0.04)' }}
               aria-label="Open notifications"
             >
-              <Icon name="bell2" size={22} color={T2}/>
+              <Icon name="bell2" size={22} color="#000"/>
             </button>
             {isNotificationsOpen && (
               <div style={{
@@ -1104,7 +1113,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
       {showAnnouncementPopup && announcementPopup && (
         <div className="notification-toast" role="status" aria-live="polite">
-          <div className="notification-toast-icon"><Icon name="bell2" size={20} color="#7C3AED" /></div>
+          <div className="notification-toast-icon"><Icon name="bell2" size={20} color="#000" /></div>
           <div className="notification-toast-content">
             <div className="notification-toast-label"><span>New notification</span></div>
             <strong>{announcementPopup.title}</strong>
@@ -1119,11 +1128,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       )}
 
       {/* SCROLLABLE CONTENT */}
-      <div style={{ flex:1, minHeight:0, overflowY:currentPage === 'messages' ? 'hidden' : 'auto', WebkitOverflowScrolling:'touch', padding:currentPage === 'messages' ? 0 : (isMobile?'16px 14px 60px':'24px 28px 60px') }}>
+      <div style={{ '--tc-page-gutter-x': pageGutterX, flex:1, minHeight:0, overflowY:currentPage === 'messages' ? 'hidden' : 'auto', WebkitOverflowScrolling:'touch', padding:contentPadding }}>
 
           {/* ── HOME PAGE ── */}
           {currentPage === 'admin-dashboard' && isAdminUser(user) && (
-            <AdminOverview isMobile={isMobile} onNavigate={onNavigate} user={user} />
+            <AdminOverview isMobile={isMobile} isTablet={isTablet} onNavigate={onNavigate} user={user} />
           )}
 
           {currentPage === 'home' && !isAdminUser(user) && (
@@ -1454,7 +1463,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         .notification-toast-close:hover{background:#F2F4F7;color:#344054;}
         @keyframes notification-toast-in{from{opacity:0;transform:translate3d(20px,-10px,0) scale(.97)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
         @media (max-width:600px){.notification-toast{top:12px;right:16px;width:calc(100vw - 32px);}.notification-toast-content strong{white-space:normal;}}
-        .home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:190px;margin-bottom:22px;padding:24px 28px;overflow:hidden;border-radius:15px;background:linear-gradient(108deg,#3730a3 0%,#4f46e5 52%,#2563eb 100%);box-shadow:0 14px 28px rgba(49,46,129,.2);color:#fff}
+        .home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:190px;margin-bottom:22px;padding:24px 28px;overflow:hidden;border-radius:15px;background:linear-gradient(108deg,#4C0099 0%,#6D00B5 52%,#8B16E8 100%);box-shadow:0 14px 28px rgba(76,0,153,.3);color:#fff}
         .home-dashboard-hero::before,.home-dashboard-hero::after{position:absolute;content:'';border-radius:50%;pointer-events:none}
         .home-dashboard-hero::before{width:250px;height:250px;right:17%;top:-190px;background:rgba(255,255,255,.09)}
         .home-dashboard-hero::after{width:190px;height:190px;right:-85px;bottom:-125px;background:rgba(255,255,255,.1)}
