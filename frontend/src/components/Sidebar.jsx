@@ -2,7 +2,8 @@ import React from 'react';
 import { COLORS } from '../constants/colors';
 import Icon from './Icon';
 import logoPng from '../assets/image.png';
-import InitialsAvatar from './InitialsAvatar';
+import ProfileAvatar from './ProfileAvatar';
+import { isAdminUser } from '../utils/isAdminUser';
 
 const NAV_ITEMS = [
   { label: 'Admin overview', page: 'admin-dashboard', icon: 'chart', adminOnly: true },
@@ -11,7 +12,7 @@ const NAV_ITEMS = [
   { label: 'Due Diligence Vault', page: 'vault', icon: 'folder' },
   { label: 'Project Pipeline', page: 'pipeline', icon: 'chart' },
   { label: 'Messages', page: 'messages', icon: 'message' },
-  { label: 'Office Hours & Events', page: 'events', icon: 'calendar', hideForAdmin: true },
+  { label: 'Office Hours & Events', page: 'events', icon: 'calendar' },
   { label: 'Event requests', page: 'admin-events', icon: 'calendar', adminOnly: true },
   null,
   { label: 'Announcements & Feedback', page: 'announcements', icon: 'bell' },
@@ -21,8 +22,7 @@ const NAV_ITEMS = [
 function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClose = () => {}, onLogout = () => {}, user, collapsed = false, isOpen = true, isOverlay = false }) {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const displayName = user?.name || user?.email?.split('@')[0] || 'Member';
-  const roles = Array.isArray(user?.roles) ? user.roles : [];
-  const isAdmin = Boolean(user?.isAdmin || user?.role === 'admin' || roles.includes('admin') || roles.includes('super-admin'));
+  const isAdmin = isAdminUser(user);
 
   return (
     <>
@@ -129,7 +129,7 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
       </div>
       {!collapsed && (
         <div style={{ padding: '12px', borderBottom: `1px solid ${COLORS.BD}`, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(245,246,252,0.86)' }}>
-          {user?.avatar ? <img src={user.avatar} alt={`${displayName} profile`} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.8)' }} /> : <InitialsAvatar person={user} alt={`${displayName} profile`} style={{ width: 42, height: 42, border: '1px solid rgba(255,255,255,0.8)' }} />}
+          <ProfileAvatar person={user} alt={`${displayName} profile`} decorative style={{ width: 42, height: 42, border: '1px solid rgba(255,255,255,0.8)' }} />
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.T1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
             <div style={{ fontSize: 11, color: COLORS.T2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email || 'Community member'}</div>

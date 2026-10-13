@@ -8,13 +8,14 @@ import AnnouncementsPage from './AnnouncementsPage';
 import HelpPage from './HelpPage';
 import MessagingPage from './MessagingPage';
 import ProfileSettings from '../components/ProfileSettings';
-import InitialsAvatar from '../components/InitialsAvatar';
+import ProfileAvatar from '../components/ProfileAvatar';
 import { usersAPI, coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
 import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
 import wavingHandIllustration from '../assets/illustrations/waving-hand-skin-4-svgrepo-com.svg';
 import { formatRelativeTime } from '../utils/learningHubProgress';
 import AdminOverview from './AdminOverview';
 import AdminLearningHub from './AdminLearningHub';
+import { isAdminUser } from '../utils/isAdminUser';
 
 /* ─── DESIGN TOKENS ─── */
 const P   = '#5B21B6';
@@ -35,12 +36,6 @@ const T3  = '#9CA3AF';
 const BD  = '#E5E7EB';
 const BG  = '#F8FAFC';
 const W   = '#FFFFFF';
-
-const isAdminUser = (candidate) => {
-  const roles = Array.isArray(candidate?.roles) ? candidate.roles : [];
-  const roleNames = roles.map((role) => typeof role === 'string' ? role : role?.name);
-  return Boolean(candidate?.isAdmin || candidate?.role === 'admin' || roleNames.includes('admin') || roleNames.includes('super-admin'));
-};
 
 const glassCardStyle = (radius = 16, padding = '16px 18px') => ({
   background: W,
@@ -1095,7 +1090,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
             )}
           </div>
           <div title={displayName} className="topbar-avatar" onClick={handleAvatarClick} style={{ width:46, height:46, borderRadius:'50%', overflow:'hidden', flexShrink:0, border:'1.5px solid rgba(255,255,255,0.95)', boxShadow:'0 10px 24px rgba(17,24,39,0.16)', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', padding:0, transition:'transform .2s ease, box-shadow .2s ease', cursor:'pointer', position:'relative' }}>
-            {avatarDataUrl ? <img src={avatarDataUrl} alt={`${displayName} avatar`} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} /> : <InitialsAvatar person={user} alt={`${displayName} avatar`} style={{ width:'100%', height:'100%', borderRadius:0, fontSize:16 }} />}
+            <ProfileAvatar person={{ ...user, avatar: user?.avatar ?? avatarDataUrl }} alt={`${displayName} avatar`} style={{ width:'100%', height:'100%', borderRadius:0, fontSize:16 }} />
             <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', opacity:0, transition:'opacity .16s ease' }} className="avatar-overlay">
               <div style={{ background:'rgba(0,0,0,0.48)', color:'#fff', padding:'6px 8px', borderRadius:8, display:'flex', gap:8, alignItems:'center', fontSize:12 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>

@@ -12,7 +12,7 @@ import React, {
 } from 'react';
 import { communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
 import dashboardHeroIllustration from './assets/hello-cuate.svg';
-import folderUpIcon from './assets/folder-up.svg';
+import ProfileAvatar from './components/ProfileAvatar';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
 const OfficeHoursEvents = lazy(() => import('./pages/OfficeHoursEvents.jsx'));
 const MessagingPage = lazy(() => import('./pages/MessagingPage.jsx'));
@@ -26,7 +26,8 @@ import {
   Mail,
   X,
   LogOut,
-  Menu
+  Menu,
+  FolderUp
 } from 'lucide-react';
 
 /* ============================================================
@@ -235,7 +236,7 @@ const STYLES = `
 .tca-toast .msg{ font-size:12.8px; font-weight:600; color:#1F2937; }
 
 /* ---------- Dashboard shell ---------- */
-.dash-app{ display:flex; min-height:100vh; background:var(--bg); }
+.dash-app{ --tc-page-gutter-x:32px; --tc-page-gutter-y:32px; --tc-page-gutter-bottom:64px; display:flex; min-height:100vh; background:var(--bg); }
 .dash-sidebar{ width:260px; flex-shrink:0; background:#fff; border-right:1px solid var(--line); padding:22px 16px; display:flex; flex-direction:column; position:relative; z-index:1; }
 .dash-brand{ display:flex; align-items:center; gap:9px; padding:0 6px 22px; font-weight:700; font-size:15px; color:var(--ink-900); }
 .dash-brand .mark{ display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -243,14 +244,14 @@ const STYLES = `
 .dash-navgroup{ margin-bottom:18px; }
 .dash-navlabel{ font-size:11px; color:var(--ink-400); font-weight:600; letter-spacing:.06em; padding:0 10px 8px; }
 .dash-navitem{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; color:var(--ink-600); font-size:14px; text-decoration:none; margin-bottom:2px; background:none; border:none; width:100%; text-align:left; cursor:pointer; position:relative; }
-.submit-project-nav-icon{display:block;width:22px;height:22px;flex:0 0 22px;background:currentColor;mask-position:center;mask-repeat:no-repeat;mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;-webkit-mask-size:contain}
+.submit-project-nav-icon{display:block;width:22px;height:22px;flex:0 0 22px}
 .dash-navitem.active{ background:var(--purple-50); color:var(--purple-700); font-weight:600; }
 .dash-navitem:not(.active):hover{ background:#FAFAFA; }
 .dash-sidebar-bottom{ margin-top:auto; }
 
 .dash-main{ flex:1; min-width:0; }
-.dash-topbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 32px; background:#fff; border-bottom:1px solid var(--line); position:relative; z-index:1; }
-@media (max-width:640px){ .dash-topbar{ padding:16px; } }
+.dash-topbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px var(--tc-page-gutter-x); background:#fff; border-bottom:1px solid var(--line); position:relative; z-index:1; }
+@media (max-width:640px){ .dash-topbar{ padding:16px var(--tc-page-gutter-x); } }
 .dash-searchbar{ flex:1; max-width:460px; display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 14px; color:var(--ink-400); font-size:13.5px; }
 .dash-topbar-right{ display:flex; align-items:center; gap:16px; flex-shrink:0; }
 .dash-avatar{ width:30px; height:30px; border:2px solid #fff; border-radius:50%; background:var(--purple-700); color:#fff; font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 0 1px rgba(91,33,182,.18); }
@@ -258,17 +259,15 @@ const STYLES = `
 .dash-bell-wrap{ position:relative; display:inline-flex; }
 .dash-bell-count{ position:absolute; top:-8px; right:-11px; min-width:17px; height:17px; padding:0 4px; border:2px solid #fff; border-radius:999px; background:#B42318; color:#fff; display:grid; place-items:center; font-size:9px; font-weight:800; line-height:1; }
 
-.dash-content{ padding:28px 32px 60px; width:100%; max-width:none; }
-@media (max-width:640px){ .dash-content{ padding:20px; } }
 .dash-main{ display:flex; flex-direction:column; min-height:100dvh; }
 .dash-content{ flex:1; }
-.dash-footer{ display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; max-width:none; margin-top:auto; padding:18px 40px; border-top:1px solid var(--line); color:var(--ink-400); font-size:12px; }
+.dash-footer{ display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; max-width:none; margin-top:auto; padding:18px var(--tc-page-gutter-x); border-top:1px solid var(--line); color:var(--ink-400); font-size:12px; }
 .dash-footer a{ color:var(--purple-700); text-decoration:none; font-weight:600; }
 .dash-footer a:hover{ text-decoration:underline; }
 @media (min-width:1440px){ .dash-footer{ max-width:none; } }
 @media (min-width:1920px){ .dash-footer{ max-width:none; } }
-@media (max-width:1023px){ .dash-footer{ padding-left:max(24px,env(safe-area-inset-left)); padding-right:max(24px,env(safe-area-inset-right)); } }
-@media (max-width:767px){ .dash-footer{ align-items:flex-start; flex-direction:column; gap:8px; padding:16px max(18px,env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left)); } }
+@media (max-width:1023px){ .dash-footer{ padding-left:var(--tc-page-gutter-x); padding-right:var(--tc-page-gutter-x); } }
+@media (max-width:767px){ .dash-footer{ align-items:flex-start; flex-direction:column; gap:8px; padding:16px var(--tc-page-gutter-x) calc(16px + env(safe-area-inset-bottom)); } }
 .learning-hub-main{display:flex;flex-direction:column;min-height:100dvh}
 .learning-hub-content{display:flex;flex:1;min-height:0;max-width:none!important;padding:0!important;overflow:hidden}
 .learning-hub-shell{display:flex;flex:1;min-width:0;min-height:0;width:100%}
@@ -308,7 +307,7 @@ const STYLES = `
 
 .dash-home{display:grid;width:100%;gap:clamp(26px,3vw,38px);color:var(--ink-900)}
 .home-dashboard{gap:22px}
-.home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:246px;padding:24px 420px 24px 28px;overflow:visible;border-radius:16px;background:#6D28D9;box-shadow:0 14px 28px rgba(76,29,149,.24);color:#fff}
+.home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:246px;padding:24px 420px 24px 28px;overflow:visible;border-radius:16px;background:linear-gradient(108deg,#4C0099 0%,#6D00B5 52%,#8B16E8 100%);box-shadow:0 14px 28px rgba(76,0,153,.3);color:#fff}
 .home-dashboard-hero::before,.home-dashboard-hero::after{display:none}
 .home-dashboard-hero-copy{position:relative;z-index:1;min-width:0;max-width:560px}
 .home-dashboard-eyebrow{display:flex;align-items:center;margin:0 0 12px}
@@ -337,7 +336,7 @@ const STYLES = `
 .home-dashboard-shortcut:focus-visible,.home-dashboard-section-head>button:focus-visible,.home-dashboard-activity-link:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
 .home-dashboard-shortcut-icon{display:grid;width:31px;height:31px;place-items:center;margin-bottom:9px;border-radius:9px;background:transparent;color:#000}
 .home-dashboard-shortcut-icon svg{color:#000}
-.home-dashboard-shortcut-icon .submit-project-nav-icon{width:22px;height:22px;background:#000}
+.home-dashboard-shortcut-icon .submit-project-nav-icon{width:22px;height:22px;background:transparent;color:#000}
 .home-dashboard-shortcut-label{overflow:hidden;width:100%;color:#1f2937;font-size:10.5px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
 .home-dashboard-shortcut-count{margin-top:5px;color:#111827;font-size:17px;font-weight:750;line-height:1.2}
 .home-dashboard-shortcut-count small{color:#6b7280;font-size:9px;font-weight:500}
@@ -1275,7 +1274,7 @@ const STYLES = `
 .dash-brand .word{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dash-navitem{font-family:inherit;padding:10px 12px;margin-bottom:4px;gap:14px;color:#475467}
 .dash-navgroup{margin-bottom:24px}
-.dash-topbar{padding:11px 40px;min-height:63px;justify-content:flex-start;position:sticky;top:0;z-index:56}
+.dash-topbar{padding:11px var(--tc-page-gutter-x);min-height:63px;justify-content:flex-start;position:sticky;top:0;z-index:56}
 .dash-searchbar{margin:0}.dash-searchbar input{flex:1;min-width:0;border:0;background:none;outline:none;font:inherit;color:var(--ink-900)}
 .dash-topbar-right{margin-left:auto}
 .dash-user{display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;cursor:pointer;font-family:inherit}
@@ -1285,7 +1284,8 @@ const STYLES = `
 .dash-collapse-btn{display:flex;background:none;border:0;padding:7px;color:var(--ink-600);cursor:pointer;border-radius:8px;flex-shrink:0}
 .dash-collapse-btn:hover{background:var(--bg);color:var(--ink-900)}
 .dash-scrim{position:fixed;inset:0;background:rgba(17,17,20,.42);z-index:65}
-.dash-content{padding:40px 40px 80px;max-width:none}
+.dash-content{padding:var(--tc-page-gutter-y) var(--tc-page-gutter-x) var(--tc-page-gutter-bottom);width:100%;max-width:none}
+.dash-content.dash-content-page-inset{padding:0}
 
 /* ---- Collapsible desktop sidebar (icon rail), hamburger lives beside the logo ---- */
 .dash-sidebar{transition:width .18s ease}
@@ -1303,6 +1303,7 @@ const STYLES = `
 .dash-sidebar.collapsed .dash-brand-row{flex-direction:column;gap:12px;padding-bottom:22px}
 
 @media (max-width:1023px){
+  .dash-app{--tc-page-gutter-x:max(24px,env(safe-area-inset-left),env(safe-area-inset-right))}
   .dash-sidebar{position:fixed;left:0;top:0;bottom:0;width:72px;height:100dvh;overflow-y:auto;flex-shrink:0;transition:width .2s ease}
   .dash-main{width:calc(100% - 72px);margin-left:72px}
   .dash-sidebar.collapsed+.dash-main{width:calc(100% - 72px);margin-left:72px}
@@ -1315,14 +1316,14 @@ const STYLES = `
   .dash-sidebar.open .dash-brand{justify-content:flex-start}
   .dash-sidebar.open .dash-brand .word,.dash-sidebar.open .dash-navitem .lbl,.dash-sidebar.open .dash-navlabel{display:inline}
   .dash-sidebar.open .dash-navitem{justify-content:flex-start;padding:10px 12px}
-  .dash-topbar,.dash-content{padding-left:24px;padding-right:24px}
+  .dash-topbar,.dash-content{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
 }
-@media (max-width:640px){.dash-topbar{padding:12px 16px}.dash-content{padding:28px 18px 64px}.dash-topbar-right{gap:12px}}
+@media (max-width:640px){.dash-topbar{padding:12px var(--tc-page-gutter-x)}.dash-topbar-right{gap:12px}}
 
 
 /* ---- Notifications dropdown ---- */
 .dash-notif-wrap{position:relative}
-.dash-bell-btn{display:grid;place-items:center;width:48px;height:48px;padding:0;margin:-2px;border:0;border-radius:10px;background:transparent;color:#6B7280;cursor:pointer;transition:background .15s ease,color .15s ease}
+.dash-bell-btn{display:grid;place-items:center;width:48px;height:48px;padding:0;margin:-2px;border:0;border-radius:10px;background:transparent;color:#000;cursor:pointer;transition:background .15s ease,color .15s ease}
 .dash-bell-btn:hover{background:var(--bg)}
 .dash-notif-panel{position:fixed;top:calc(75px + env(safe-area-inset-top));right:16px;left:auto;width:min(360px,calc(100vw - 32px));max-height:calc(100dvh - 88px);background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(17,17,20,.18);border:1px solid var(--line);z-index:95;overflow:hidden}
 .dash-notif-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#fbfaff)}
@@ -1341,8 +1342,8 @@ const STYLES = `
 .dash-notif-item:hover{background:#f9f6ff}
 .dash-notif-item:last-child{border-bottom:0}
 .dash-notif-item.unread{border-left-color:var(--purple-600);background:#faf7ff}
-.dash-notif-item .ic{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:44px;height:44px;border:1px solid #e5d6f5;border-radius:12px;background:#f2eafb;color:var(--purple-700)}
-.dash-notif-item .ic svg{width:22px;height:22px}
+.dash-notif-item .ic{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;border:0;border-radius:0;background:transparent;color:#000}
+.dash-notif-item .ic svg{width:22px;height:22px;color:#000;stroke:#000}
 .dash-notif-item .sp{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
 .dash-notif-title{display:block;color:var(--ink-900);font-size:13px;font-weight:700;line-height:1.45}
 .dash-notif-meta{display:block;color:var(--ink-400);font-size:11px;line-height:1.4}
@@ -2095,8 +2096,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
 /* tablets & small laptops: respect notches / rounded corners in landscape */
 @media (max-width:1023px){
-  .dash-topbar{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
-  .dash-content{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right));padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+  .dash-app{--tc-page-gutter-x:max(24px,env(safe-area-inset-left),env(safe-area-inset-right))}
+  .dash-topbar{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
+  .dash-content{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x);padding-bottom:calc(64px + env(safe-area-inset-bottom))}
   .tca-toast{bottom:calc(22px + env(safe-area-inset-bottom));right:max(22px,env(safe-area-inset-right))}
   .dash-sidebar{padding-top:calc(22px + env(safe-area-inset-top));padding-bottom:calc(22px + env(safe-area-inset-bottom))}
   .dash-topbar{padding-top:calc(11px + env(safe-area-inset-top))}
@@ -2104,6 +2106,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
 /* phones: sidebar becomes an off-canvas drawer opened from the top bar */
 @media (max-width:767px){
+  .dash-app{--tc-page-gutter-x:max(18px,env(safe-area-inset-left),env(safe-area-inset-right));--tc-page-gutter-y:24px}
   .dash-main{width:100%;margin-left:0}
   .dash-sidebar.collapsed+.dash-main{width:100%;margin-left:0}
   .dash-mobile-menu{display:flex}
@@ -2116,8 +2119,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .dash-sidebar.open.collapsed .dash-brand .word,.dash-sidebar.open.collapsed .dash-navitem .lbl,.dash-sidebar.open.collapsed .dash-navlabel{display:inline}
   .dash-sidebar.open .dash-navitem,.dash-sidebar.open.collapsed .dash-navitem{justify-content:flex-start;padding:12px}
   .dash-sidebar.open .dash-logo-crop,.dash-sidebar.open.collapsed .dash-logo-crop{width:155px}
-  .dash-topbar{gap:10px;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
-  .dash-content{padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right))}
+  .dash-topbar{gap:10px;padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
+  .dash-content{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
   .dash-searchbar{padding:8px 12px;min-width:0}
   .dash-page-head h1,.tcx .ph h1{font-size:22px}
   .dash-banner h1{font-size:21px}
@@ -2148,11 +2151,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
 /* small phones (<= 360px) */
 @media (max-width:360px){
+  .dash-app{--tc-page-gutter-x:max(14px,env(safe-area-inset-left),env(safe-area-inset-right))}
   .tca-form-panel{padding:36px 16px}
   .tca-h1,.tca-success-h1,.tca-onboard-h1{font-size:23px}
   .tca-otp-box{width:38px;height:46px;font-size:16px}
   .tca-pill{padding:9px 13px}
-  .dash-content{padding-left:14px;padding-right:14px}
+  .dash-content{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
   .dash-topbar-right{gap:8px}
   .dash-stat-card .value{font-size:21px}
 }
@@ -2257,8 +2261,10 @@ function Icon({ name, size = 16, color = 'currentColor', strokeWidth = 2, classN
   );
 }
 
-function Ava({ c = '#5B21B6', t = 'M', s = 36 }) {
-  return <div className="ava" aria-hidden="true" style={{ width: s, height: s, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: c, color: '#fff', fontSize: Math.max(10, Math.round(s * 0.38)), fontWeight: 700 }}>{t || 'M'}</div>;
+function Ava({ c = '#5B21B6', t = 'M', s = 36, person }) {
+  const style = { width: s, height: s, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: c, color: '#fff', fontSize: Math.max(10, Math.round(s * 0.38)), fontWeight: 700 };
+  if (person) return <ProfileAvatar person={person} className="ava" fallbackText={t || 'M'} decorative style={style} />;
+  return <div className="ava" aria-hidden="true" style={style}>{t || 'M'}</div>;
 }
 
 /* Drop-in replacements for the lucide icons the design also defines,
@@ -2622,9 +2628,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [q, setQ] = useState('');
-  const [avatarFailed, setAvatarFailed] = useState(false);
   const go = (k) => { setOpen(false); onNavigate(k); };
-  useEffect(() => setAvatarFailed(false), [user.avatar]);
   useEffect(() => {
     if (!open) return undefined;
     const prevOverflow = document.body.style.overflow;
@@ -2642,7 +2646,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
   const item = (it) => (
     <button key={it.key} ref={(el) => { navRefs.current[it.key] = el; }} className={`dash-navitem${it.key === activeKey ? ' active' : ''}`} aria-current={it.key === activeKey ? 'page' : undefined} onClick={() => go(it.key)} title={it.label}>
       {it.key === 'submit-project'
-        ? <span aria-hidden="true" className="submit-project-nav-icon" style={{ maskImage: `url(${folderUpIcon})`, WebkitMaskImage: `url(${folderUpIcon})` }} />
+        ? <FolderUp aria-hidden="true" className="submit-project-nav-icon" size={22} strokeWidth={2.3} />
         : <Icon name={it.icon} size={22} color="currentColor" strokeWidth={2.3} />}
       <span className="lbl">{it.label}</span>
     </button>
@@ -2651,6 +2655,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
     ? NAV_ITEMS.filter((navItem) => navItem.key !== 'submit-project')
     : NAV_ITEMS;
   const visibleInvestorItems = user?.accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : [];
+  const contentOwnsPageGutter = ['events', 'pipeline', 'vault'].includes(activeKey);
   return (
     <div className={`dash-app${activeKey === 'messaging' ? ' messaging-app' : ''}`}>
       {open && <div className="dash-scrim" onClick={() => setOpen(false)} />}
@@ -2676,10 +2681,10 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
           </form>
           <div className="dash-topbar-right">
             <NotificationsMenu onOpenMessaging={() => go('messaging')} onNavigate={go} />
-            <button className="dash-user" title={user.name} onClick={onOpenProfile}><span className="dash-avatar">{user.avatar && !avatarFailed ? <img src={user.avatar} alt="" onError={() => setAvatarFailed(true)} /> : user.initial}</span><span className="dash-user-name">{user.name.split(' ')[0]}</span></button>
+            <button className="dash-user" title={user.name} onClick={onOpenProfile}><ProfileAvatar person={user} className="dash-avatar" fallbackText={user.initial} decorative /><span className="dash-user-name">{user.name.split(' ')[0]}</span></button>
           </div>
         </header>
-        <main className={`dash-content${activeKey === 'learning' ? ' learning-hub-content' : ''}`}>{children}</main>
+        <main className={`dash-content${activeKey === 'learning' ? ' learning-hub-content' : ''}${contentOwnsPageGutter ? ' dash-content-page-inset' : ''}`}>{children}</main>
         <footer className="dash-footer">
           <span>© {new Date().getFullYear()} Tribes Capital</span>
           <a href="mailto:hello@tribes.capital">Contact us</a>
@@ -2977,7 +2982,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
             >
               <span className="home-dashboard-shortcut-icon">
                 {card.page === 'submit-project'
-                  ? <span aria-hidden="true" className="submit-project-nav-icon" style={{ maskImage: `url(${folderUpIcon})`, WebkitMaskImage: `url(${folderUpIcon})` }} />
+                  ? <FolderUp aria-hidden="true" className="submit-project-nav-icon" size={22} strokeWidth={2.3} />
                   : <Icon name={card.icon} size={19} strokeWidth={1.8} />}
               </span>
               <span className="home-dashboard-shortcut-label">{card.label}</span>
@@ -3453,7 +3458,7 @@ function Contractors({ initQ, go, initProf = null, fromEvent = null }) {
         </div>
       )}
       {list.map((contractor) => <div className="card" key={contractor.id} style={{ display: 'flex', flexDirection: 'column' }}>
-        <div className="row" style={{ alignItems: 'flex-start', marginBottom: 10 }}><Ava c={contractor.c} t={contractor.n[0]} s={38} />
+        <div className="row" style={{ alignItems: 'flex-start', marginBottom: 10 }}><Ava c={contractor.c} t={contractor.n[0]} s={38} person={contractor} />
           <div className="sp"><div className="row" style={{ justifyContent: 'space-between' }}><b style={{ fontSize: 14.5 }}>{contractor.n}</b>{contractor.v && <span className="ver">✓ Verified</span>}</div><div style={{ color: 'var(--p6)', fontSize: 12.5, fontWeight: 600 }}>{contractor.t.join(' · ')}</div></div></div>
         <div className="mut row" style={{ gap: 5, margin: '0 0 10px' }}><Icon name="mapPin" size={13} />{contractor.location || 'Location not provided'}</div>
         <p className="sub sp" style={{ marginBottom: 12 }}>{contractor.d}</p>
@@ -3519,7 +3524,7 @@ function DiscussionDetail({ post, user, liked, saved, onBack, onToggleLike, onTo
         <div className="dd-main">
           <article className="dd-card dd-post">
             <div className="dd-head">
-              <Ava c={post.c} t={post.n[0]} s={44} />
+              <Ava c={post.c} t={post.n[0]} s={44} person={post.creator} />
               <div className="dd-who"><div className="dd-name">{post.n}</div><div className="dd-meta">{post.r} · {post.w}</div></div>
               <span className="dd-tag">{post.tag}</span>
             </div>
@@ -3539,7 +3544,7 @@ function DiscussionDetail({ post, user, liked, saved, onBack, onToggleLike, onTo
           </article>
 
           <div className="dd-card dd-composer">
-            <Ava c="#2457C5" t={user.initial} s={40} />
+            <Ava c="#2457C5" t={user.initial} s={40} person={user} />
             <input ref={inputRef} className="dd-input" placeholder="Write a reply…" value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void submit()} aria-label="Write a reply" />
             <button className="dd-send" onClick={() => void submit()}>Post reply</button>
           </div>
@@ -3551,7 +3556,7 @@ function DiscussionDetail({ post, user, liked, saved, onBack, onToggleLike, onTo
             return (
               <div className={`dd-card dd-reply${rp.best ? " best" : ""}`} key={rp.id}>
                 <div className="dd-head">
-                  <Ava c={rp.c} t={rp.n[0]} s={40} />
+                  <Ava c={rp.c} t={rp.n[0]} s={40} person={rp.creator} />
                   <div className="dd-who">
                     <div className="dd-name">{rp.n}{rp.verified && <span className="dd-pill"><Icon name="check" size={12} strokeWidth={2.2} />Verified</span>}</div>
                     <div className="dd-meta">{rp.r} · {rp.w}</div>
@@ -3969,7 +3974,7 @@ function Community({ open, user, toast, onOpenMessaging }) {
       {loading && <div role="status" className="card sub forum-empty-state">Loading discussions…</div>}
       {!loading && shown.length === 0 && <div className="card forum-empty-state"><span className="forum-empty-icon"><Icon name="message" size={26} color="#5B21B6" /></span><strong>{f === "Following" ? "Your followed conversations will appear here" : "The next good conversation starts here"}</strong><p className="sub">{f === "Following" ? "Follow members whose ideas you want to keep up with." : "Share a question or perspective with the community."}</p></div>}
       {shown.map((p) => <div className="card forum-post" key={p.id}>
-        <div className="row" style={{ justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start" }}><div className="row"><Ava c={p.c} t={p.n[0]} /><div><b style={{ fontSize: 13.5 }}>{p.n} <span className="mut" style={{ fontWeight: 400 }}>· {p.w}</span></b><div className="mut">{p.r}</div></div></div><span className="tp">{p.tag}</span></div>
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start" }}><div className="row"><Ava c={p.c} t={p.n[0]} person={p.creator} /><div><b style={{ fontSize: 13.5 }}>{p.n} <span className="mut" style={{ fontWeight: 400 }}>· {p.w}</span></b><div className="mut">{p.r}</div></div></div><span className="tp">{p.tag}</span></div>
         <button className="disc-title-btn" onClick={() => void openPost(p.id)}><h3 style={{ fontSize: 15, marginBottom: 8 }}>{p.t}</h3></button>
         <p className="sub" style={{ marginBottom: 14 }}>{p.b.split("\n\n")[0]}</p>
         <div className="row wrap" style={{ justifyContent: "space-between", gap: 14 }}>
@@ -3980,7 +3985,7 @@ function Community({ open, user, toast, onOpenMessaging }) {
     </div>
       <div className="rail forum-rail">
         <div className="card forum-topic-panel"><h4 style={{ marginBottom: 12, fontSize: 14 }}>Popular topics</h4>{Object.entries(popularTopics).map(([topic, count]) => <div key={topic} className="row forum-topic-row" style={{ justifyContent: "space-between", fontSize: 13 }}><span className="row" style={{ color: "var(--p9)", fontWeight: 600 }}><i className="forum-topic-swatch" aria-hidden="true" />{topic}</span><span className="mut">{count} posts</span></div>)}</div>
-        <div className="card forum-member-panel"><h4 style={{ marginBottom: 14, fontSize: 14 }}>Active members</h4>{members.map((member) => { const name = [member.firstName, member.lastName].filter(Boolean).join(' ') || 'Member'; return <div key={member.id} className="row" style={{ marginBottom: 14 }}><Ava c="#5B21B6" t={name[0]} s={32} /><div className="sp"><b style={{ fontSize: 13 }}>{name}</b><div className="mut">{member.occupation || 'Community member'}</div></div><button className="btn sm" style={{ background: member.isFollowedByMe ? "var(--bg)" : "var(--p0)", color: member.isFollowedByMe ? "var(--i4)" : "var(--p7)", borderRadius: 999 }} onClick={() => void toggleFollow(member)}>{member.isFollowedByMe ? "Following" : "Follow"}</button></div>; })}</div>
+        <div className="card forum-member-panel"><h4 style={{ marginBottom: 14, fontSize: 14 }}>Active members</h4>{members.map((member) => { const name = [member.firstName, member.lastName].filter(Boolean).join(' ') || 'Member'; return <div key={member.id} className="row" style={{ marginBottom: 14 }}><Ava c="#5B21B6" t={name[0]} s={32} person={member} /><div className="sp"><b style={{ fontSize: 13 }}>{name}</b><div className="mut">{member.occupation || 'Community member'}</div></div><button className="btn sm" style={{ background: member.isFollowedByMe ? "var(--bg)" : "var(--p0)", color: member.isFollowedByMe ? "var(--i4)" : "var(--p7)", borderRadius: 999 }} onClick={() => void toggleFollow(member)}>{member.isFollowedByMe ? "Following" : "Follow"}</button></div>; })}</div>
         <div className="card"><h4 style={{ color: "var(--p9)", marginBottom: 8, fontSize: 14 }}>Community guidelines</h4><p className="sub" style={{ marginBottom: 10 }}>Be respectful, stay on topic and share knowledge that helps others learn and take action.</p><button className="lk" onClick={() => setM("guide")}>Read the guidelines →</button></div>
       </div></div>
     {m === "ask" && <AskQuestionModal categories={CATS} onClose={close} onSubmit={(v) => add(v)} />}

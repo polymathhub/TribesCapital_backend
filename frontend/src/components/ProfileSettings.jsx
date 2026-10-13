@@ -4,6 +4,8 @@ import { InstagramIcon, LinkedinIcon } from '@hugeicons/core-free-icons';
 import { Globe, MessageCircle, MoreHorizontal, Pencil, Plus, X } from 'lucide-react';
 import { usersAPI } from '../api/endpoints';
 import { uploadFileInChunks } from '../utils/chunkedUpload';
+import ProfileAvatar from './ProfileAvatar';
+import { resolveProfileImageUrl } from '../utils/profileImageUrl';
 import './ProfileSettings.css';
 
 const P   = '#5B21B6';
@@ -288,7 +290,11 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
       try { window.dispatchEvent(new CustomEvent('tribes:profile-updated', { detail: payload })); } catch {}
       setEditOpen(false);
     } catch (err) {
-      setMessage({ type: 'error', text: err?.message || 'Save failed. Try again.' });
+      const responseMessage = err?.response?.data?.message ?? err?.response?.data?.error;
+      const errorMessage = Array.isArray(responseMessage)
+        ? responseMessage.filter((item) => typeof item === 'string').join(' ')
+        : typeof responseMessage === 'string' ? responseMessage : err?.message;
+      setMessage({ type: 'error', text: errorMessage || 'Save failed. Try again.' });
     } finally {
       setUploadProgress(null);
       setSaving(false);
@@ -311,13 +317,13 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
     <main className={`profile-settings-page${readOnly ? ' read-only' : ''}`}>
       {message && <div className={`profile-save-notice ${message.type}`} role={message.type === 'error' ? 'alert' : 'status'}>{message.text}</div>}
       <section className="profile-hero-card">
-        <div className="profile-cover" style={coverPhoto ? { backgroundImage: `url("${coverPhoto}")` } : undefined}>
+        <div className="profile-cover" style={coverPhoto ? { backgroundImage: `url("${resolveProfileImageUrl(coverPhoto)}")` } : undefined}>
           {!readOnly && <button type="button" className="profile-cover-edit" aria-label="Edit cover photo" title="Edit cover photo" onClick={() => coverFileRef.current?.click()}><Pencil size={15} /></button>}
           <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden onChange={handleCoverFile} />
         </div>
         <div className="profile-identity">
           <div className="profile-identity-main">
-            <div className="profile-photo-wrap"><div className="profile-photo">{avatar ? <img src={avatar} alt={`${name || 'Member'} profile`} /> : <span>{initials}</span>}</div><button type="button" className="profile-photo-edit" aria-label="Edit profile photo" title="Edit profile photo" onClick={() => { setEditOpen(true); window.setTimeout(() => fileRef.current?.click(), 0); }}><Pencil size={13} /></button></div>
+            <div className="profile-photo-wrap"><div className="profile-photo"><ProfileAvatar person={{ ...user, avatar }} alt={`${name || 'Member'} profile`} style={{ width: '100%', height: '100%' }} /></div><button type="button" className="profile-photo-edit" aria-label="Edit profile photo" title="Edit profile photo" onClick={() => { setEditOpen(true); window.setTimeout(() => fileRef.current?.click(), 0); }}><Pencil size={13} /></button></div>
             <div className="profile-identity-copy"><div className="profile-name-row"><h1>{name || 'Your name'}</h1></div>{headline && <div className="profile-headline-row"><p>{headline}</p></div>}<div className="profile-meta">{location && <span>{location}</span>}{user?.createdAt && <span>Member since {new Date(user.createdAt).getFullYear()}</span>}</div>{!readOnly && <div className="profile-hero-actions"><button type="button" className="profile-message-button" onClick={onMessage}><MessageCircle size={15} />Message</button>{socialLinks[0] ? <a className="profile-website-button" href={/^https?:\/\//i.test(socialLinks[0]) ? socialLinks[0] : `https://${socialLinks[0]}`} target="_blank" rel="noreferrer"><Globe size={15} />Visit my website</a> : <button type="button" className="profile-website-button" onClick={() => setEditOpen(true)} title="Add a professional link to enable this action"><Globe size={15} />Visit my website</button>}<button type="button" className="profile-more-button" onClick={() => setEditOpen(true)}><MoreHorizontal size={17} />More</button></div>}{readOnly && socialLinks[0] && <div className="profile-hero-actions"><a className="profile-website-button" href={/^https?:\/\//i.test(socialLinks[0]) ? socialLinks[0] : `https://${socialLinks[0]}`} target="_blank" rel="noreferrer"><Globe size={15} />Visit my website</a></div>}</div>
           </div>
           <aside className="profile-affiliations" aria-label="Profile details">
@@ -350,7 +356,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
         <section className="profile-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
           <header><div><span className="profile-eyebrow">Profile details</span><h2 id="profile-edit-title">Edit profile</h2></div><button type="button" className="profile-dialog-close" onClick={() => setEditOpen(false)} aria-label="Close edit profile">×</button></header>
           <div className="profile-edit-body">
-            <div className="profile-avatar-editor"><div className="profile-photo large">{avatar ? <img src={avatar} alt="Profile preview" /> : <span>{initials}</span>}</div><div><strong>Profile photo</strong><p>Use a clear image so other members recognize you.</p><div className="profile-avatar-actions"><button type="button" className="profile-secondary-button" onClick={onPickAvatar}>Change photo</button><button type="button" className="profile-text-button" onClick={() => { setAvatar(null); setAvatarFile(null); setAvatarChanged(true); }}>Remove</button></div></div><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden onChange={handleFile} /></div>
+            <div className="profile-avatar-editor"><div className="profile-photo large"><ProfileAvatar person={{ ...user, avatar }} alt="Profile preview" style={{ width: '100%', height: '100%' }} /></div><div><strong>Profile photo</strong><p>Use a clear image so other members recognize you.</p><div className="profile-avatar-actions"><button type="button" className="profile-secondary-button" onClick={onPickAvatar}>Change photo</button><button type="button" className="profile-text-button" onClick={() => { setAvatar(null); setAvatarFile(null); setAvatarChanged(true); }}>Remove</button></div></div><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden onChange={handleFile} /></div>
             <div className="profile-avatar-editor"><div className="profile-cover-preview" style={coverPhoto ? { backgroundImage: `url("${coverPhoto}")` } : undefined} /><div><strong>Cover photo</strong><p>Choose a wide image for the top of your profile.</p><div className="profile-avatar-actions"><button type="button" className="profile-secondary-button" onClick={() => coverFileRef.current?.click()}>Change cover</button>{coverPhoto && <button type="button" className="profile-text-button" onClick={() => { setCoverPhoto(null); setCoverFile(null); setCoverChanged(true); }}>Remove</button>}</div></div></div>
             <label className="profile-field"><span>Display name</span><input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} autoComplete="name" /></label>
             <label className="profile-field"><span>Account type</span><select value={accountType} onChange={(event) => setAccountType(event.target.value)}>{ACCOUNT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>

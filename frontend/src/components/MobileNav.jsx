@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Icon from './Icon';
 import logoPng from '../assets/image.png';
-import InitialsAvatar from './InitialsAvatar';
+import ProfileAvatar from './ProfileAvatar';
 
 const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout }) => {
   const NAV_ITEMS = [
@@ -135,7 +135,7 @@ const MobileNav = ({ isOpen, onClose, currentPage, onNavigate, user, onLogout })
                 backdropFilter: 'blur(4px)',
               }}
             >
-              {user?.avatar ? <img src={user.avatar} alt={user?.name || user?.email?.split('@')[0] || 'Profile'} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(124, 58, 237, 0.16)' }} /> : <InitialsAvatar person={user} alt={user?.name || user?.email?.split('@')[0] || 'Profile'} style={{ width: '32px', height: '32px', border: '1px solid rgba(124, 58, 237, 0.16)' }} />}
+              <ProfileAvatar person={user} alt={user?.name || user?.email?.split('@')[0] || 'Profile'} decorative style={{ width: '32px', height: '32px', border: '1px solid rgba(124, 58, 237, 0.16)' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{

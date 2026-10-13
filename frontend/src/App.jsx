@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import AuthPage from './pages/AuthPage';
 import LoadingScreen from './components/LoadingScreen';
+import AdminConsole from './components/AdminConsole';
 import TribesCapitalResponsive from './TribesCapitalResponsive.jsx';
 import { usersAPI } from './api/endpoints';
 import { clearAuthSession } from './utils/authSession';
+import { isAdminUser } from './utils/isAdminUser';
 import './App.css';
 
 const omitEmbeddedProfileImages = (user) => ({
@@ -174,7 +176,9 @@ function App() {
     <>
       <LoadingScreen isVisible={isLoading && !hasBootstrapped} />
       <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out' }}>
-        <TribesCapitalResponsive initialScreen="dashboard" user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
+        {isAdminUser(user)
+          ? <AdminConsole user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
+          : <TribesCapitalResponsive initialScreen="dashboard" user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />}
       </div>
     </>
   );

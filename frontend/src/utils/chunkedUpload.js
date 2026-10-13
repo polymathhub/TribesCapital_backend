@@ -24,6 +24,23 @@ function saveSession(key, session) {
   }
 }
 
+function unwrapApiResponse(response) {
+  return response?.data?.data ?? response?.data ?? response;
+}
+
+function validateUploadSession(session) {
+  if (
+    !session
+    || typeof session.key !== 'string'
+    || typeof session.uploadId !== 'string'
+    || !Number.isSafeInteger(session.partSize)
+    || session.partSize <= 0
+    || !Array.isArray(session.completedParts)
+  ) {
+    throw new Error('The upload service returned an invalid upload session.');
+  }
+}
+
 function uploadPart(url, blob, onProgress) {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
@@ -44,17 +61,22 @@ function uploadPart(url, blob, onProgress) {
 }
 
 export async function uploadFileInChunks(file, purpose, onProgress = () => {}) {
+  if (!file || !Number.isFinite(file.size) || file.size <= 0) {
+    throw new Error('Choose a non-empty file to upload.');
+  }
+
   const localKey = sessionKey(file, purpose);
   const canResumeFromLocalStorage = !purpose.startsWith('profile-');
   const previous = canResumeFromLocalStorage ? readSession(localKey) : null;
-  const { data: session } = await uploadsAPI.initiate({
+  const session = unwrapApiResponse(await uploadsAPI.initiate({
     purpose,
     fileName: file.name,
     mimeType: file.type || 'application/octet-stream',
     size: file.size,
     key: previous?.key,
     uploadId: previous?.uploadId,
-  });
+  }));
+  validateUploadSession(session);
   if (canResumeFromLocalStorage) saveSession(localKey, session);
 
   const partCount = Math.ceil(file.size / session.partSize);
@@ -69,7 +91,10 @@ export async function uploadFileInChunks(file, purpose, onProgress = () => {}) {
     let lastError;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
       try {
-        const { data: signed } = await uploadsAPI.getPartUrl({ key: session.key, uploadId: session.uploadId, partNumber });
+        const signed = unwrapApiResponse(await uploadsAPI.getPartUrl({ key: session.key, uploadId: session.uploadId, partNumber }));
+        if (typeof signed?.url !== 'string' || !signed.url.trim()) {
+          throw new Error('The upload service did not return a signed URL for this part.');
+        }
         const eTag = await uploadPart(signed.url, chunk, (loaded) => {
           const currentLoaded = uploadedBytes + loaded;
           onProgress({ loaded: currentLoaded, total: file.size, percent: Math.min(99, Math.round(currentLoaded / file.size * 100)) });
@@ -87,13 +112,16 @@ export async function uploadFileInChunks(file, purpose, onProgress = () => {}) {
     if (lastError) throw lastError;
   }
 
-  const { data: result } = await uploadsAPI.complete({
+  const result = unwrapApiResponse(await uploadsAPI.complete({
     ...session,
     parts: [...completed].map(([partNumber, eTag]) => ({ partNumber, eTag })),
     fileName: file.name,
     mimeType: file.type || 'application/octet-stream',
     size: file.size,
-  });
+  }));
+  if (typeof result?.url !== 'string' || !result.url.trim()) {
+    throw new Error('The upload completed without returning a file URL.');
+  }
   if (canResumeFromLocalStorage) {
     try { localStorage.removeItem(localKey); } catch {}
   }
