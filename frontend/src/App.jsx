@@ -8,6 +8,22 @@ import { clearAuthSession } from './utils/authSession';
 import { isAdminUser } from './utils/isAdminUser';
 import './App.css';
 
+const LOCAL_TEST_USER = {
+  id: 'local-test-user',
+  email: 'local-test@tribes.capital',
+  firstName: 'Local',
+  lastName: 'Test',
+  name: 'Local Test',
+  accountType: 'COMMUNITY_MEMBER',
+  roles: ['community_member'],
+  isAdmin: false,
+};
+
+function isLocalTestEnvironment() {
+  return typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+}
+
 const omitEmbeddedProfileImages = (user) => ({
   ...user,
   ...(typeof user?.avatar === 'string' && user.avatar.startsWith('data:') ? { avatar: '' } : {}),
@@ -18,12 +34,15 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     if (typeof window === 'undefined') return false;
 
+    if (isLocalTestEnvironment()) return true;
+
     const token = localStorage.getItem('accessToken');
-    const userEmail = localStorage.getItem('userEmail');
     return Boolean(token);
   });
   const [user, setUser] = useState(() => {
     if (typeof window === 'undefined') return null;
+
+    if (isLocalTestEnvironment()) return LOCAL_TEST_USER;
 
     try {
       const storedUser = localStorage.getItem('user');
@@ -46,6 +65,8 @@ function App() {
 
   useEffect(() => {
     const handleAuthLogout = () => {
+      if (isLocalTestEnvironment()) return;
+
       clearAuthSession();
       setIsAuthenticated(false);
       setUser(null);
@@ -73,6 +94,12 @@ function App() {
 
     const loadSession = async () => {
       try {
+        if (isLocalTestEnvironment()) {
+          setUser(LOCAL_TEST_USER);
+          setIsAuthenticated(true);
+          return;
+        }
+
         if (token) {
           const profileRequest = usersAPI.getProfile();
           const timeoutPromise = new Promise((_, reject) => {

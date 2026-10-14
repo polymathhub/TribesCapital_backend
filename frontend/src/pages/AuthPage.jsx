@@ -668,6 +668,8 @@ function LoginPage({ onNavigate, onSuccess }) {
         userMessage = serverMessage || 'The email or password is incorrect. Please try again.';
       } else if (err.response?.status === 400) {
         userMessage = serverMessage || 'Please check your email and password and try again.';
+      } else if (err.response?.status === 503) {
+        userMessage = 'The sign-in service is temporarily unavailable. Please try again shortly.';
       } else if (err.response?.status === 404) {
         userMessage = 'We couldn\'t reach the sign-in service. Please try again in a moment.';
       } else if (err.response?.status === 500) {
