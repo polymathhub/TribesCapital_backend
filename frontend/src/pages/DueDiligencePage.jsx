@@ -1509,7 +1509,9 @@ export default function DueDiligenceVault() {
   const openWork = docs.length;
   const nextDue  = docs.map(d => d.deadline).filter(Boolean).sort()[0] || '—';
 
-  const pad = isMobile ? '14px 12px 32px' : '24px 28px 44px';
+  const pad = isMobile
+    ? '24px var(--tc-page-gutter-x, 18px) 32px'
+    : '32px var(--tc-page-gutter-x, 32px) 44px';
 
   return (
     <div style={{

@@ -83,4 +83,15 @@ describe('AdminOperationsService investment decisions', () => {
     expect(tx.dueDiligenceApproval.updateMany).not.toHaveBeenCalled();
     expect(tx.project.update).not.toHaveBeenCalled();
   });
+
+  it('moves an approved project from due diligence to structuring', async () => {
+    const { service, tx } = buildService();
+
+    await service.decideInvestmentApproval('diligence-1', 'approval-1', 'approver-1', decisionDto);
+
+    expect(tx.project.update).toHaveBeenCalledWith({
+      where: { id: 'project-1' },
+      data: { status: 'structuring' },
+    });
+  });
 });

@@ -48,8 +48,8 @@ export class ProjectsService {
 
   async create(userId: string, dto: CreateProjectDto) {
     this.ensureDatabase();
-    if (dto.status && dto.status !== 'scoping') {
-      throw new BadRequestException('New projects enter the pipeline at scoping; later stages require an authorized workflow decision');
+    if (dto.status && dto.status !== 'origination') {
+      throw new BadRequestException('New projects enter the pipeline at origination; later stages require an authorized workflow decision');
     }
     this.validateAttachments(userId, dto.attachments);
     return this.prisma.project.create({
@@ -63,7 +63,7 @@ export class ProjectsService {
         notes: dto.notes?.trim(),
         pipelineMetadata: dto.pipelineMetadata as Prisma.InputJsonObject | undefined,
         attachments: dto.attachments as Prisma.InputJsonArray | undefined,
-        status: 'scoping',
+        status: 'origination',
         creatorId: userId,
       },
     });

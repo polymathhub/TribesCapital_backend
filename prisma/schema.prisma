@@ -58,6 +58,9 @@ model User {
   projectTeam           Project[]   @relation("ProjectTeam")
   projectReviews        Project[]   @relation("ProjectReviewer")
   projectAuditEntries   ProjectAuditLog[] @relation("ProjectAuditActor")
+  leadSubmissions       LeadSubmission[] @relation("LeadSubmitter")
+  leadReviews           LeadSubmission[] @relation("LeadReviewer")
+  leadEvents            LeadEvent[] @relation("LeadEventActor")
   adminAuditEntries     AdminAuditLog[] @relation("AdminAuditActor")
   adminAuditTargets     AdminAuditLog[] @relation("AdminAuditTarget")
 
@@ -305,7 +308,7 @@ model Project {
   thumbnail       String?
   pipelineMetadata Json?
   attachments     Json?
-  status          String      @default("planning")
+  status          String      @default("origination")
   contactEmail    String?
   startDate       DateTime?
   endDate         DateTime?
@@ -314,13 +317,14 @@ model Project {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  creatorId       String
-  creator         User        @relation("ProjectCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId       String?
+  creator         User?       @relation("ProjectCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   reviewerId      String?
   reviewer        User?       @relation("ProjectReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
   
   teamMembers     User[]      @relation("ProjectTeam")
   conversations   Conversation[] @relation("ProjectConversations")
+  leadSubmissions LeadSubmission[]
 
   stages          ProjectStage[]
   diligenceCases  DueDiligence[]
@@ -348,6 +352,80 @@ model ProjectAuditLog {
   @@index([projectId, createdAt])
   @@index([actorId])
   @@index([action])
+}
+
+model LeadSubmission {
+  id                    String   @id @default(cuid())
+  leadRef               String   @unique
+  status                String   @default("draft")
+  channel               String?
+  submitterId           String?
+  submitter             User?    @relation("LeadSubmitter", fields: [submitterId], references: [id], onDelete: SetNull)
+  reviewerId            String?
+  reviewer              User?    @relation("LeadReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  projectId             String?
+  project               Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  payload               Json?
+  accessTokenHash       String?
+  magicLinkTokenHash    String?
+  magicLinkExpiresAt    DateTime?
+  submitterName         String?
+  submitterEmail        String?
+  submitterPhone        String?
+  partnerOrganisation   String?
+  partnerCode           String?
+  siteName              String?
+  siteLatitude          Float?
+  siteLongitude         Float?
+  countryCode           String?
+  countryName           String?
+  offtakerLegalName     String?
+  registrationNumber    String?
+  creditStatus          String?
+  creditReason          String?
+  strengthLevel         String?
+  strengthRuleVersion   Int?
+  flags                 Json?
+  submissionFingerprint String?
+  submittedAt           DateTime?
+  clockStartAt          DateTime?
+  firstResponseAt       DateTime?
+  retentionStartAt      DateTime?
+  legalHold             Boolean  @default(false)
+  emailVerified         Boolean  @default(false)
+  emailDeliveryStatus   String?
+  marketingConsent      Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  events LeadEvent[]
+
+  @@index([submitterId, createdAt])
+  @@index([reviewerId, status])
+  @@index([status, submittedAt])
+  @@index([channel, countryCode])
+  @@index([registrationNumber])
+  @@index([siteLatitude, siteLongitude])
+  @@index([retentionStartAt, legalHold])
+}
+
+model LeadEvent {
+  id           String   @id @default(cuid())
+  submissionId String
+  submission   LeadSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  actorId      String?
+  actor        User?    @relation("LeadEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole    String?
+  type         String
+  oldStatus    String?
+  newStatus    String?
+  reason       String?
+  data         Json?
+  createdAt    DateTime @default(now())
+
+  @@index([submissionId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([type, createdAt])
 }
 
 model AdminAuditLog {

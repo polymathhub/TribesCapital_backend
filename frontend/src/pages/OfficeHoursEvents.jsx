@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { eventsAPI, notificationsAPI } from '../api/endpoints';
-import CorporateMemphisIllustration from '../components/CorporateMemphisIllustration';
-import eventsIllustration from '../assets/illustrations/Events-rafiki.svg';
+import { communityAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
 
 /* ─── DESIGN TOKENS ─── */
 const C = {
-  pu:'#5B21B6', puf:'#F3F4F6', pul:'#7C3AED', pud:'#4C1D95',
+  pu:'#6700A6', puf:'#FAF5FF', pul:'#7C3AED', pud:'#4C1D95',
   gr:'#16A34A', grb:'#DCFCE7', am:'#D97706', amb:'#FEF3C7',
   tl:'#0D9488', tlb:'#CCFBF1', rd:'#DC2626', rdb:'#FEF2F2',
   t1:'#111827', t2:'#6B7280', t3:'#9CA3AF',
@@ -98,6 +96,29 @@ function normalizeTimeInput(value) {
   return `${hours}:${minutes}`;
 }
 
+function parseDurationMinutes(value) {
+  const input = String(value || '').trim().toLowerCase();
+  if (!input) return 90;
+
+  const clockDuration = input.match(/^(\d+):([0-5]\d)$/);
+  if (clockDuration) return Number(clockDuration[1]) * 60 + Number(clockDuration[2]);
+  if (/^\d+(?:\.\d+)?$/.test(input)) return Math.round(Number(input));
+
+  const unitPattern = /(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b/g;
+  let minutes = 0;
+  let match;
+  let remaining = input;
+  while ((match = unitPattern.exec(input)) !== null) {
+    const amount = Number(match[1]);
+    const unit = match[2];
+    minutes += /^(?:h|hr|hrs|hour|hours)$/.test(unit) ? amount * 60 : amount;
+    remaining = remaining.replace(match[0], ' ');
+  }
+
+  if (remaining.replace(/[\s,+and]/g, '') || minutes <= 0 || !Number.isFinite(minutes)) return null;
+  return Math.round(minutes);
+}
+
 function formatDateForGoogleCalendar(iso) {
   if (!iso) return '';
   return new Date(iso).toISOString().replace(/[-:]|\.\d{3}/g, '') + 'Z';
@@ -121,7 +142,7 @@ function useBreakpoint() {
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);
-  return { w, isMobile: w < 640, isTablet: w >= 640 && w < 1024, isDesktop: w >= 1024 };
+  return { isMobile: w < 640 };
 }
 
 /* ─── SVG ICONS ─── */
@@ -256,50 +277,6 @@ function TopBar({ onMenuToggle, isMobile, isTablet }) {
 /* ═══════════════════════════════════════════
    CALENDAR WIDGET
 ═══════════════════════════════════════════ */
-function CalWidget({ eventDays, onDayClick }) {
-  const [yr, setYr] = useState(2026);
-  const [mo, setMo] = useState(4);
-  const MNAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const fd = new Date(yr,mo,1).getDay(); const sc=(fd+6)%7;
-  const dim = new Date(yr,mo+1,0).getDate(); const pd=new Date(yr,mo,0).getDate();
-  const cells=[];
-  for(let i=0;i<sc;i++) cells.push({d:pd-sc+1+i,ov:true});
-  for(let d=1;d<=dim;d++) cells.push({d,ov:false});
-  const r=(7-cells.length%7)%7; for(let i=1;i<=r;i++) cells.push({d:i,ov:true});
-  const weeks=[]; for(let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
-  const prev=()=>{if(mo===0){setMo(11);setYr(y=>y-1);}else setMo(m=>m-1);};
-  const nxt =()=>{if(mo===11){setMo(0);setYr(y=>y+1);}else setMo(m=>m+1);};
-  const hasEv=(d,ov)=>!ov&&eventDays.some(e=>e.day===d&&e.month===mo&&e.year===yr);
-  return (
-    <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:'14px',marginBottom:14}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-        <button onClick={prev} style={{background:'none',border:'none',cursor:'pointer',padding:3,display:'flex'}}><I k="chl" s={14} c={C.t3}/></button>
-        <span style={{fontSize:13,fontWeight:600,color:C.t1}}>{MNAMES[mo]}-{yr}</span>
-        <button onClick={nxt} style={{background:'none',border:'none',cursor:'pointer',padding:3,display:'flex'}}><I k="chr" s={14} c={C.t3}/></button>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',marginBottom:2}}>
-        {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=><div key={d} style={{textAlign:'center',fontSize:11,fontWeight:600,color:C.t3,padding:'2px 0'}}>{d}</div>)}
-      </div>
-      {weeks.map((wk,wi)=>(
-        <div key={wi} style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
-          {wk.map((cell,di)=>{
-            const ev=hasEv(cell.d,cell.ov);
-            return (
-              <div key={di} style={{textAlign:'center',padding:'2px 0',cursor:cell.ov?'default':ev?'pointer':'default'}}
-                onClick={()=>!cell.ov&&ev&&onDayClick(cell.d,mo,yr)}>
-                <span style={{display:'inline-flex',flexDirection:'column',alignItems:'center',justifyContent:'center',width:26,height:26,borderRadius:'50%',background:ev?C.pu:'transparent',color:cell.ov?C.t3:ev?C.w:C.t1,fontSize:12,fontWeight:ev?700:400}}>
-                  {cell.d}
-                </span>
-                {ev&&!cell.ov&&<div style={{width:4,height:4,borderRadius:'50%',background:C.pu,margin:'1px auto 0'}}/>}
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /* ═══════════════════════════════════════════
    EVENT CARD — responsive
 ═══════════════════════════════════════════ */
@@ -307,85 +284,36 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onApprove, onRsvp, isMobile, 
   const ec = EV_TYPES[ev.type]||{c:C.t2,b:C.bg,label:(ev.type||'EVENT').toUpperCase()};
   const meetingPlatform = inferMeetingPlatform(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
   const joinHref = buildMeetingHref(ev.meetingPlatform, ev.meetingLink || ev.meetingHandle);
-  const platformIcon = PLATFORM_ICONS[meetingPlatform] || 'monitor';
   return (
-    <div style={{display:'flex',background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden',marginBottom:12}}>
-      {/* Purple date block */}
-      <div style={{width:isMobile?56:64,background:C.pu,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 6px',flexShrink:0}}>
-        <span style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.7)',letterSpacing:1,textTransform:'uppercase',lineHeight:1.6}}>{ev.month}</span>
-        <span style={{fontSize:isMobile?22:28,fontWeight:800,color:C.w,lineHeight:1}}>{ev.day}</span>
-        <span style={{fontSize:9,fontWeight:600,color:'rgba(255,255,255,.65)',letterSpacing:.5,lineHeight:1.6}}>{ev.weekday}</span>
-      </div>
-      {/* Content */}
-      <div style={{flex:1,padding:isMobile?'10px 12px':'13px 16px',minWidth:0}}>
-        {/* Row 1: badge + edit/delete */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6,flexWrap:'wrap',gap:4}}>
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:10,fontWeight:600,color:ec.c,padding:'2px 9px',background:ec.b,borderRadius:20,letterSpacing:.3}}>{ec.label}</span>
-            {isAdmin && !ev.isPublished && <span style={{fontSize:10,fontWeight:600,color:C.am,padding:'2px 8px',background:C.amb,borderRadius:20}}>PENDING</span>}
-          </div>
-          {isAdmin && <div style={{display:'flex',gap:5}}>
-            {!ev.isPublished && <button onClick={e=>{e.stopPropagation();onApprove(ev);}} style={{display:'flex',alignItems:'center',gap:3,padding:isMobile?'4px 8px':'4px 10px',border:'none',borderRadius:7,background:C.grb,color:C.gr,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
-              <I k="check" s={11} c={C.gr} sw={2}/>Approve
-            </button>}
-            <button onClick={e=>{e.stopPropagation();onEdit(ev);}} style={{display:'flex',alignItems:'center',gap:3,padding:isMobile?'4px 8px':'4px 10px',border:`1px solid ${C.bd}`,borderRadius:7,background:C.w,color:C.t2,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>
-              <I k="edit" s={11} c={C.t2}/>Edit
-            </button>
-            <button onClick={e=>{e.stopPropagation();onDelete(ev);}} style={{display:'flex',alignItems:'center',gap:3,padding:isMobile?'4px 8px':'4px 10px',border:`1px solid ${C.bd}`,borderRadius:7,background:C.w,color:C.t2,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>
-              <I k="trash" s={11} c={C.t2}/>Delete
-            </button>
+    <article className="oe-event-card">
+      <div className="oe-date-tile"><span>{ev.month}</span><strong>{ev.day}</strong></div>
+      <div className="oe-event-info">
+        <div className="oe-event-topline">
+          <span className="oe-type-pill" style={{ color: ec.c, background: ec.b }}>{ec.label}</span>
+          {isAdmin && !ev.isPublished && <span className="oe-pending-pill">PENDING</span>}
+          {isAdmin && <div className="oe-admin-actions">
+            {!ev.isPublished && <button type="button" onClick={() => onApprove(ev)}>Approve</button>}
+            <button type="button" onClick={() => onEdit(ev)}>Edit</button>
+            <button type="button" onClick={() => onDelete(ev)}>Delete</button>
           </div>}
         </div>
-        {/* Title */}
-        <div onClick={()=>onOpen(ev)} style={{fontSize:isMobile?13:14,fontWeight:700,color:C.t1,marginBottom:4,lineHeight:1.35,cursor:'pointer'}}>{ev.title}</div>
-        {meetingPlatform ? (
-          <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 8px',borderRadius:999,background:'#F3F4F6',color:C.t2,fontSize:11,fontWeight:600,marginBottom:8}}>
-            <I k={platformIcon} s={12} c={C.t2}/>
-            {meetingPlatform}
-          </div>
-        ) : null}
-        {/* Desc */}
-        <p style={{fontSize:12,color:C.t2,margin:'0 0 8px',lineHeight:1.6,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{ev.desc}</p>
-        {/* Meta + avatars */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:0,flexWrap:'wrap',gap:4}}>
-          <div style={{display:'flex',alignItems:'center',gap:isMobile?8:12,flexWrap:'wrap'}}>
-            {!isMobile && <span style={{display:'flex',alignItems:'center',gap:4,fontSize:12,color:C.t2}}><I k="cal" s={12} c={C.t3}/>{ev.dateShort}</span>}
-            {isMobile  && <span style={{display:'flex',alignItems:'center',gap:4,fontSize:11,color:C.t2}}><I k="cal" s={11} c={C.t3}/>Thu, May 8</span>}
-            <span style={{display:'flex',alignItems:'center',gap:4,fontSize:isMobile?11:12,color:C.t2}}><I k="users" s={11} c={C.t3}/>{ev.speakers.length} speakers</span>
-            <span style={{display:'flex',alignItems:'center',gap:4,fontSize:isMobile?11:12,color:C.t2}}><I k="clock" s={11} c={C.t3}/>{ev.dur}</span>
-          </div>
-          <div style={{display:'flex',alignItems:'center'}}>
-            {(ev.speakers?.length ? ev.speakers : [{ initial: 'T', bg: C.puf, color: C.pu }]).map((s,i)=>(
-              <div key={i} style={{width:22,height:22,borderRadius:'50%',background:s.bg || C.puf,display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,fontWeight:700,color:s.color || C.pu,border:`2px solid ${C.w}`,marginLeft:i>0?-5:0,zIndex:(ev.speakers?.length || 1)-i,flexShrink:0}}>{s.initials || s.initial || 'T'}</div>
-            ))}
-          </div>
+        <button type="button" className="oe-event-title" onClick={() => onOpen(ev)}>{ev.title}</button>
+        <p className="oe-event-host">Hosted by {ev.hostName}</p>
+        <div className="oe-event-meta">
+          <span><I k="clock" s={13} c={C.t3}/>{ev.dateShort}</span>
+          <span><I k={ev.isVirtual ? 'globe' : 'monitor'} s={13} c={C.t3}/>{ev.isVirtual ? 'Online' : ev.location}</span>
+          <span><I k="users" s={13} c={C.t3}/>{ev.rsvpCount} attending</span>
         </div>
-        {/* Separator */}
-        <div style={{height:1,background:C.bd,margin:isMobile?'8px -12px':'10px -16px'}}/>
-        {/* Spots + RSVP */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}>
-          <span style={{fontSize:12,color:C.pu,fontWeight:500}}>{ev.spotsLeft} spots left</span>
-          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-            {joinHref && (
-              <button onClick={(e)=>{e.stopPropagation(); window.open(joinHref, '_blank', 'noopener,noreferrer');}}
-                style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.puf,color:C.pu,border:`1px solid ${C.pu}`}}>
-                <I k="monitor" s={11} c={C.pu}/>Join
-              </button>
-            )}
-            {buildGoogleCalendarLink(ev) && (
-              <button onClick={(e)=>{e.stopPropagation(); window.open(buildGoogleCalendarLink(ev), '_blank', 'noopener,noreferrer');}}
-                style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:C.bg,color:C.t1,border:`1px solid ${C.bd}`}}>
-                <I k="cal" s={11} c={C.t2}/>Add to calendar
-              </button>
-            )}
-            <button onClick={()=>onRsvp(ev.id)}
-              style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:7,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',background:ev.rsvped?C.w:C.pu,color:ev.rsvped?C.gr:C.w,border:ev.rsvped?`1px solid ${C.gr}`:'none'}}>
-              {ev.rsvped&&<I k="check" s={11} c={C.gr} sw={2.5}/>}{ev.rsvped?'RSVPed':'RSVP'}
-            </button>
+        <div className="oe-event-actions">
+          <span className="oe-spots">{ev.spotsLeft} spots left</span>
+          <div>
+            {joinHref && <button type="button" className="oe-secondary-action" onClick={() => window.open(joinHref, '_blank', 'noopener,noreferrer')}>Join</button>}
+            {buildGoogleCalendarLink(ev) && <button type="button" className="oe-secondary-action" onClick={() => window.open(buildGoogleCalendarLink(ev), '_blank', 'noopener,noreferrer')}>Add to calendar</button>}
+            <button type="button" className={`oe-rsvp-action${ev.rsvped ? ' registered' : ''}`} onClick={() => onRsvp(ev.id)}>{ev.rsvped ? 'Registered' : 'Register'}</button>
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -771,18 +699,14 @@ function isStoredAdmin() {
 /* ═══════════════════════════════════════════
    MAIN
 ═══════════════════════════════════════════ */
-export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobileParam, isTabletParam }) {
+export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobileParam }) {
   const bp = useBreakpoint();
-  const isMobile = isMobileParam !== undefined ? isMobileParam : bp.isMobile;
-  const isTablet = isTabletParam !== undefined ? isTabletParam : bp.isTablet;
-  const isDesktop = bp.isDesktop;
+  const isMobile = isMobileProp ?? isMobileParam ?? bp.isMobile;
   const [events,      setEvents]      = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [eventsError, setEventsError] = useState(null);
-  const [activeTab,   setTab]         = useState('upcoming');
+  const [hosts, setHosts] = useState([]);
   const [activeFilter,setFilter]      = useState('all');
-  const [sortBy,      setSort]        = useState('soonest');
-  const [sortOpen,    setSortOpen]    = useState(false);
   const [showCreate,  setCreate]      = useState(false);
   const [editEv,      setEdit]        = useState(null);
   const [deleteEv,    setDel]         = useState(null);
@@ -790,7 +714,6 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   const [viewAll,     setViewAll]     = useState(false);
   const [toast,       setToast]       = useState(null);
   const [notifyLoading, setNotifyLoading] = useState(false);
-  const [calEvDays,   setCalEvDays]   = useState([]);
   const [isAdmin, setIsAdmin] = useState(() => isStoredAdmin());
 
   useEffect(() => {
@@ -815,7 +738,6 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
         if (isMounted) {
           setEvents(mapped);
-          setCalEvDays(mapped.map(event => ({ day: event.calDay, month: event.calMonth, year: event.calYear })));
           setEventsError(null);
         }
 
@@ -852,6 +774,18 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    communityAPI.listMembers({ take: 3 }).then((response) => {
+      const payload = unwrapApiData(response);
+      const members = Array.isArray(payload) ? payload : payload?.data || [];
+      if (isMounted) setHosts(members.slice(0, 3));
+    }).catch(() => {
+      if (isMounted) setHosts([]);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
     const refreshAdminStatus = () => setIsAdmin(isStoredAdmin());
     window.addEventListener('storage', refreshAdminStatus);
     window.addEventListener('tribes:auth-updated', refreshAdminStatus);
@@ -862,6 +796,16 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
   }, []);
 
   const showToast = msg => setToast(msg);
+
+  const handleToggleHostFollow = async (member) => {
+    try {
+      const response = await communityAPI.toggleFollow(member.id);
+      const result = unwrapApiData(response);
+      setHosts((current) => current.map((host) => host.id === member.id ? { ...host, isFollowedByMe: result.following } : host));
+    } catch (error) {
+      showToast(error?.response?.data?.message || 'Unable to update this follow right now.');
+    }
+  };
 
   const handleNotifyMe = async () => {
     if (notifyLoading) return;
@@ -936,11 +880,12 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
     const title = String(form.title || '').trim();
     const normalizedDate = normalizeDateInput(form.date || '');
     const time = String(form.time || '').trim();
+    const durationMinutes = parseDurationMinutes(form.duration);
     const dateString = normalizedDate
       ? `${normalizedDate}T${time || '00:00'}:00`
       : '';
     const startDate = dateString ? new Date(dateString) : new Date();
-    const endDate = new Date(startDate.getTime() + 90 * 60000);
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
     const registrationDeadline = form.registrationDeadline
       ? new Date(`${normalizeDateInput(form.registrationDeadline)}T00:00:00`)
       : null;
@@ -949,6 +894,11 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
 
     if (!title || !form.date || !time || Number.isNaN(startDate.getTime())) {
       showToast('Please provide a valid title, date, and time for this event.');
+      return;
+    }
+
+    if (!durationMinutes || Number.isNaN(durationMinutes)) {
+      showToast('Enter a valid duration, such as 90 min or 1 hour 30 min.');
       return;
     }
 
@@ -993,7 +943,6 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
         if (isAdmin) {
           setEvents(p => [created, ...p]);
         }
-        setCalEvDays(p => [...p, { day: created.calDay, month: created.calMonth, year: created.calYear }]);
         setCreate(false);
         try {
           window.dispatchEvent(new CustomEvent('tribes:data-update', { detail: { type: 'events-updated', id: created.id } }));
@@ -1009,248 +958,81 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
     }
   };
 
-  const addLiveToCalendar = () => {
-    if (!calEvDays.some(e=>e.day===8&&e.month===4&&e.year===2026)) setCalEvDays(p=>[...p,{day:8,month:4,year:2026}]);
-    showToast('Added to your calendar!');
-  };
-
-  const handleCalDayClick = (day,month,year) => {
-    const found = events.find(e=>e.calDay===day&&e.calMonth===month&&e.calYear===year);
-    if (found) setDetail(found);
-  };
-
-  const TABS    = [{id:'upcoming',l:'Upcoming',n:events.length},{id:'rsvps',l:'My RSVPs',n:events.filter(e=>e.rsvped).length},{id:'replays',l:'Replays',n:events.filter(e=>normalizeEventType(e.type)==='Replay').length}];
-  const FILTERS = [{id:'all',l:'All types'},{id:'oh',l:'Office Hours'},{id:'mc',l:'Member Circles'},{id:'ws',l:'Workshops'},{id:'wb',l:'Webinars'}];
-  const SORTS   = [{id:'soonest',l:'Soonest first'},{id:'latest',l:'Latest first'},{id:'popular',l:'Most popular'}];
-  const filteredEvents = useMemo(() => {
-    const base = [...events].filter(event => {
-      if (activeFilter === 'all') return true;
-      if (activeFilter === 'oh') return normalizeEventType(event.type) === 'Office hours';
-      if (activeFilter === 'mc') return normalizeEventType(event.type) === 'Member circle';
-      if (activeFilter === 'ws') return normalizeEventType(event.type) === 'Workshop';
-      if (activeFilter === 'wb') return normalizeEventType(event.type) === 'Webinar';
-      return true;
-    });
-
-    return base.sort((a, b) => {
-      if (sortBy === 'latest') return b.sortTs - a.sortTs;
-      if (sortBy === 'popular') return (b.spotsLeft === a.spotsLeft ? b.sortTs - a.sortTs : (a.spotsLeft - b.spotsLeft));
-      return a.sortTs - b.sortTs;
-    });
-  }, [events, activeFilter, sortBy]);
-  const displayEvents = activeTab === 'rsvps' ? filteredEvents.filter(e => e.rsvped) : filteredEvents;
-  const rsvpedEvents = useMemo(() => events.filter(e => e.rsvped).slice(0, 3), [events]);
-  const stats = [
-    { l: 'Upcoming events', v: String(events.length), badge: 'This month', bc: C.pu, bb: C.puf },
-    { l: "You're RSVPed to", v: String(events.filter(e => e.rsvped).length), badge: 'Confirmed', bc: C.gr, bb: C.grb },
-    { l: 'Replays available', v: String(events.filter(e => normalizeEventType(e.type) === 'Replay').length), badge: 'On demand', bc: C.tl, bb: C.tlb },
-    { l: 'Sessions attended', v: String(Math.max(0, events.filter(e => e.rsvped).length)), badge: 'Your record', bc: C.am, bb: C.amb },
+  const FILTERS = [
+    { id: 'all', l: 'All events' },
+    { id: 'oh', l: 'Office hours', type: 'Office hours' },
+    { id: 'mc', l: 'Member circles', type: 'Member circle' },
+    { id: 'ws', l: 'Workshops', type: 'Workshop' },
+    { id: 'wb', l: 'Webinars', type: 'Webinar' },
+    { id: 'rp', l: 'Replays', type: 'Replay' },
   ];
+  const filteredEvents = useMemo(() => {
+    const selectedFilter = FILTERS.find((filter) => filter.id === activeFilter);
+    return events
+      .filter((event) => !selectedFilter?.type || normalizeEventType(event.type) === selectedFilter.type)
+      .sort((a, b) => a.sortTs - b.sortTs);
+  }, [events, activeFilter]);
+  const displayEvents = filteredEvents;
+  const rsvpedEvents = useMemo(() => events.filter(e => e.rsvped).slice(0, 3), [events]);
+  const featuredEvent = displayEvents[0] || null;
+  const remainingEvents = featuredEvent ? displayEvents.slice(1) : [];
 
-  /* Right-column width responsive */
-  const rightColW = isDesktop ? 285 : isTablet ? 240 : '100%';
-  const twoColGrid = (isMobile) ? '1fr' : isTablet ? `1fr ${rightColW}px` : `1fr ${rightColW}px`;
-  const mainPad = isMobile ? '16px 14px 60px' : '24px 28px 60px';
+  const pageGrid = isMobile ? '1fr' : 'minmax(0, 1fr) 300px';
+  const mainPad = isMobile
+    ? '24px var(--tc-page-gutter-x, 18px) 60px'
+    : '32px var(--tc-page-gutter-x, 32px) 60px';
 
   return (
-    <div style={{display:'flex',flexDirection:'column',height:'100%',minHeight:0,background:C.bg,fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',fontSize:14,overflow:'hidden'}}>
-      <main style={{flex:1,overflowY:'auto',padding:mainPad}}>
-
-          {/* ── Page header ── */}
-          <div style={{display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',marginBottom:20,gap:12,flexDirection:isMobile?'column':'row'}}>
-            <div>
-              {!isMobile && <h1 style={{fontSize:22,fontWeight:700,color:C.t1,margin:'0 0 4px',letterSpacing:-.4}}>Office Hours &amp; Events</h1>}
-              <p style={{fontSize:13,color:C.t2,margin:0,lineHeight:1.5}}>Live sessions, workshops, and replays from the Tribes Capital team and network</p>
-            </div>
-            <div style={{display:'flex',gap:8,flexShrink:0,width:isMobile?'100%':'auto'}}>
-              <button onClick={handleNotifyMe}
-                disabled={notifyLoading}
-                style={{flex:isMobile?1:0,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:`1px solid ${C.bd}`,borderRadius:9,background:C.w,color:C.t1,fontSize:13,fontWeight:500,cursor:notifyLoading?'not-allowed':'pointer',opacity:notifyLoading?0.6:1,fontFamily:'inherit',whiteSpace:'nowrap'}}>
-                <I k="bell" s={14} c={C.t2}/>Notify me
-              </button>
-              <button onClick={()=>setCreate(true)}
-                style={{flex:isMobile?1:0,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 14px',border:'none',borderRadius:9,background:C.pu,color:C.w,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}}>
-                <I k="plus" s={14} c={C.w} sw={2}/>Create event
-              </button>
-            </div>
+    <div className="oe-page" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <main className="oe-page-content" style={{ flex: 1, overflowY: 'auto', padding: mainPad }}>
+        <header className="oe-page-header">
+          <div><h1>Office Hours &amp; Events</h1><p>Join live sessions, workshops and Q&amp;As with contractors and energy experts.</p></div>
+          <div className="oe-page-actions">
+            <button type="button" className="oe-notify-button" onClick={handleNotifyMe} disabled={notifyLoading}>{notifyLoading ? 'Subscribing…' : 'Notify me'}</button>
+            <button type="button" className="oe-create-button" onClick={() => setCreate(true)}><I k="plus" s={15} c="#fff" sw={2}/>Create event</button>
           </div>
+        </header>
 
-          {/* ── Stats row — 2-col on mobile, 4-col on tablet/desktop ── */}
-          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?10:16,marginBottom:20}}>
-            {stats.map(s=>(
-              <div key={s.l} style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:10,padding:isMobile?'12px 14px':'14px 18px'}}>
-                <div style={{fontSize:11,color:C.t2,marginBottom:4}}>{s.l}</div>
-                <div style={{fontSize:isMobile?22:26,fontWeight:700,color:C.t1,marginBottom:6,letterSpacing:-.8}}>{s.v}</div>
-                <span style={{background:s.bb,color:s.bc,fontSize:11,fontWeight:500,padding:'2px 10px',borderRadius:20}}>{s.badge}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* ── Live banner ── */}
-          <div style={{background:'linear-gradient(135deg, #F5F3FF 0%, #FFFFFF 42%, #EEF2FF 100%)',border:`1px solid ${C.bd}`,borderRadius:18,padding:isMobile?'18px 16px':'22px 28px',marginBottom:22,boxShadow:'0 14px 32px rgba(91, 33, 182, 0.07)'}}>
-            {loadingEvents ? (
-              <div style={{color:C.t1,fontSize:13,fontWeight:500}}>Loading upcoming sessions…</div>
-            ) : events.length > 0 ? (
-              <>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,marginBottom:14,flexWrap:'wrap'}}>
-                  <span style={{display:'inline-flex',alignItems:'center',padding:'6px 10px',borderRadius:999,background:'#F3E8FF',color:C.pu,fontSize:11,fontWeight:700,letterSpacing:0.7,textTransform:'uppercase'}}>
-                    Upcoming session
-                  </span>
-                  <span style={{fontSize:12,color:C.t2,fontWeight:500}}>{events[0].spotsLeft} spots left</span>
-                </div>
-                <div style={{display:'grid',gridTemplateColumns:isMobile ? '1fr' : 'minmax(0, 1.8fr) minmax(180px, 0.9fr)',gap:isMobile ? 16 : 20,alignItems:'center'}}>
-                  <div>
-                    <h2 style={{fontSize:isMobile?18:24,fontWeight:700,color:C.t1,margin:'0 0 8px',lineHeight:1.25}}>{events[0].title}</h2>
-                    <p style={{fontSize:13,color:C.t2,margin:'0 0 14px',lineHeight:1.6,maxWidth:580}}>{events[0].desc}</p>
-                    <div style={{display:'flex',alignItems:'center',gap:isMobile?10:16,marginBottom:14,flexWrap:'wrap'}}>
-                      <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:C.t2}}><I k="cal" s={13} c={C.pu}/>{events[0].dateShort}</span>
-                      <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:C.t2}}><I k="users" s={13} c={C.pu}/>{events[0].type}</span>
-                      <span style={{display:'flex',alignItems:'center',gap:5,fontSize:isMobile?12:13,color:C.t2}}><I k="clock" s={13} c={C.pu}/>{events[0].dur}</span>
-                    </div>
-                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                      <button onClick={() => setDetail(events[0])} style={{padding:isMobile?'8px 14px':'8px 18px',borderRadius:10,border:`1px solid ${C.bd}`,background:C.w,color:C.t1,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 8px 18px rgba(15, 23, 42, 0.04)'}}>View details</button>
-                      <button onClick={() => handleRsvp(events[0].id)} style={{display:'flex',alignItems:'center',gap:6,padding:isMobile?'8px 12px':'8px 16px',borderRadius:10,border:'none',background:C.pu,color:C.w,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 12px 24px rgba(91, 33, 182, 0.22)'}}>
-                        <I k="plus" s={13} c={C.w} sw={2}/>{events[0].rsvped ? 'Cancel RSVP' : 'RSVP now'}
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:14,padding:16,boxShadow:'0 12px 24px rgba(17, 24, 39, 0.04)'}}>
-                    <div style={{fontSize:11,fontWeight:700,color:C.t3,letterSpacing:0.7,textTransform:'uppercase',marginBottom:10}}>Session snapshot</div>
-                    <div style={{display:'grid',gap:10}}>
-                      <div style={{padding:'10px 12px',borderRadius:10,background:'#F9FAFB',border:`1px solid ${C.bd}`}}>
-                        <div style={{fontSize:11,color:C.t3,marginBottom:4}}>Format</div>
-                        <div style={{fontSize:13,fontWeight:600,color:C.t1}}>{events[0].format}</div>
-                      </div>
-                      <div style={{padding:'10px 12px',borderRadius:10,background:'#F9FAFB',border:`1px solid ${C.bd}`}}>
-                        <div style={{fontSize:11,color:C.t3,marginBottom:4}}>Location</div>
-                        <div style={{fontSize:13,fontWeight:600,color:C.t1}}>{events[0].location || 'TBD'}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div style={{display:'flex',flexDirection:isMobile ? 'column' : 'row',alignItems:'center',justifyContent:'space-between',gap:18,padding:isMobile ? '18px 16px' : '22px 24px',background:'linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%)',border:`1px solid ${C.bd}`,borderRadius:16,boxShadow:'0 10px 28px rgba(15, 23, 42, 0.04)'}}>
-                <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'flex-start',textAlign:'left',maxWidth:420}}>
-                  <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:999,background:'#EDE9FE',color:C.pu,fontSize:11,fontWeight:700,letterSpacing:0.7,textTransform:'uppercase',marginBottom:8}}>Community calendar</div>
-                  <h3 style={{fontSize:16,fontWeight:700,color:C.t1,margin:'0 0 6px'}}>No published sessions are available yet</h3>
-                  <p style={{fontSize:13,color:C.t2,margin:0,lineHeight:1.6}}>{eventsError || 'Create a published event from the admin flow or check back soon for new live sessions.'}</p>
-                </div>
-                <img src={eventsIllustration} alt="Illustration for an empty community calendar" style={{width:'min(100%, 160px)',maxWidth:160,height:'auto',display:'block',flexShrink:0,opacity:0.96}} />
-              </div>
-            )}
-          </div>
-
-          {/* ── Tabs — horizontally scrollable on mobile ── */}
-          <div style={{borderBottom:`1px solid ${C.bd}`,marginBottom:14,display:'flex',overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
-            {TABS.map(tab=>(
-              <button key={tab.id} onClick={()=>setTab(tab.id)}
-                style={{background:'none',border:'none',padding:isMobile?'10px 16px':'10px 22px',cursor:'pointer',fontSize:14,fontWeight:activeTab===tab.id?500:400,color:activeTab===tab.id?C.pu:C.t2,borderBottom:activeTab===tab.id?`2px solid ${C.pu}`:'2px solid transparent',marginBottom:-1,fontFamily:'inherit',whiteSpace:'nowrap',flexShrink:0}}>
-                {tab.l} ({tab.n})
-              </button>
-            ))}
-          </div>
-
-          {/* ── Filters + Sort ── */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:10}}>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap',overflowX:isMobile?'auto':'visible',WebkitOverflowScrolling:'touch'}}>
-              {FILTERS.map(f=>(
-                <button key={f.id} onClick={()=>setFilter(f.id)}
-                  style={{padding:'5px 12px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:activeFilter===f.id?500:400,background:activeFilter===f.id?C.puf:C.w,color:activeFilter===f.id?C.pu:C.t2,border:activeFilter===f.id?`1.5px solid ${C.pu}`:`1px solid ${C.bd}`,fontFamily:'inherit',whiteSpace:'nowrap',flexShrink:0}}>
-                  {f.l}
-                </button>
-              ))}
+        <section className="oe-nextup" aria-live="polite">
+          {loadingEvents ? <div><span className="oe-eyebrow">NEXT UP</span><h2>Loading sessions…</h2></div> : featuredEvent ? <>
+            <div className="oe-nextup-copy">
+              <span className="oe-eyebrow">NEXT UP · {featuredEvent.type.toUpperCase()}</span>
+              <h2>{featuredEvent.title}</h2>
+              <p>{featuredEvent.dateShort} · {featuredEvent.isVirtual ? 'Online' : featuredEvent.location} · Hosted by {featuredEvent.hostName || 'Tribes Capital'}</p>
             </div>
-            <div style={{position:'relative',flexShrink:0}}>
-              <button onClick={()=>setSortOpen(o=>!o)} style={{display:'flex',alignItems:'center',gap:7,padding:'6px 12px',borderRadius:8,border:`1px solid ${C.bd}`,background:C.w,color:C.t2,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>
-                {SORTS.find(s=>s.id===sortBy)?.l}<I k="chd" s={13} c={C.t3}/>
-              </button>
-              {sortOpen&&(
-                <><div style={{position:'fixed',inset:0,zIndex:9}} onClick={()=>setSortOpen(false)}/>
-                <div style={{position:'absolute',top:'calc(100% + 4px)',right:0,background:C.w,border:`1px solid ${C.bd}`,borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,.1)',minWidth:150,overflow:'hidden',zIndex:10}}>
-                  {SORTS.map(s=>(
-                    <div key={s.id} onClick={()=>{setSort(s.id);setSortOpen(false);}}
-                      style={{padding:'10px 16px',cursor:'pointer',fontSize:13,color:sortBy===s.id?C.pu:C.t1,background:sortBy===s.id?C.puf:'transparent',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      {s.l}{sortBy===s.id&&<I k="check" s={13} c={C.pu} sw={2.5}/>}
-                    </div>
-                  ))}
-                </div></>
-              )}
+            <div className="oe-nextup-actions">
+              <button type="button" className="oe-nextup-primary" onClick={() => handleRsvp(featuredEvent.id)}>{featuredEvent.rsvped ? 'Registered' : 'Register'}</button>
+              <button type="button" className="oe-nextup-secondary" onClick={() => setDetail(featuredEvent)}>View details</button>
             </div>
-          </div>
+          </> : <div><span className="oe-eyebrow">COMMUNITY CALENDAR</span><h2>{eventsError ? 'Events are temporarily unavailable' : 'No upcoming events right now'}</h2><p>{eventsError || 'New sessions with contractors and energy experts are added regularly.'}</p></div>}
+        </section>
 
-          {/* ── Two-column layout — stacks to single column on mobile ── */}
-          <div style={{display:'grid',gridTemplateColumns:twoColGrid,gap:20,alignItems:'start'}}>
+        <div className="oe-filter-row" role="group" aria-label="Filter events by type">
+          {FILTERS.map((filter) => <button type="button" key={filter.id} className={`oe-filter${activeFilter === filter.id ? ' active' : ''}`} aria-pressed={activeFilter === filter.id} onClick={() => setFilter(filter.id)}>{filter.l}</button>)}
+        </div>
 
-            {/* LEFT — event list */}
-            <div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-                <span style={{fontSize:14,fontWeight:600,color:C.t1}}>Upcoming events <span style={{color:C.t3,fontWeight:400,fontSize:13}}>({displayEvents.length})</span></span>
-                <button onClick={()=>setViewAll(true)} style={{fontSize:13,color:C.pu,background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontFamily:'inherit',fontWeight:500}}>
-                  View all <I k="arr" s={13} c={C.pu}/>
-                </button>
-              </div>
-              {loadingEvents ? (
-                <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:'16px',color:C.t2}}>Loading sessions…</div>
-              ) : displayEvents.length === 0 ? (
-                <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,padding:isMobile ? '20px 16px' : '24px 20px',display:'flex',flexDirection:isMobile ? 'column' : 'row',alignItems:'center',justifyContent:'space-between',gap:16,boxShadow:'0 8px 24px rgba(15, 23, 42, 0.04)'}}>
-                  <div style={{flex:1,maxWidth:360}}>
-                    <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:999,background:C.puf,color:C.pu,fontSize:11,fontWeight:700,letterSpacing:0.7,textTransform:'uppercase',marginBottom:8}}>No matches</div>
-                    <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:6}}>{eventsError || 'No sessions match the current filter.'}</div>
-                    <p style={{margin:0,fontSize:13,lineHeight:1.55,color:C.t2}}>Try a broader filter or come back soon for new community sessions and office hours.</p>
-                  </div>
-                  <img src={eventsIllustration} alt="Illustration for an empty event list" style={{width:'min(100%, 150px)',maxWidth:150,height:'auto',display:'block',flexShrink:0}} />
-                </div>
-              ) : displayEvents.map(ev=> (
-                <EventCard key={ev.id} ev={ev} isMobile={isMobile}
-                  onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onApprove={handleApprove} onRsvp={handleRsvp} isAdmin={isAdmin}/>
-              ))}
-            </div>
+        <div className="oe-layout" style={{ gridTemplateColumns: pageGrid }}>
+          <section className="oe-main-list" aria-labelledby="oe-upcoming-title">
+            <div className="oe-list-heading"><h2 id="oe-upcoming-title">Upcoming events <span>({displayEvents.length})</span></h2><button type="button" onClick={() => setViewAll(true)}>View all <I k="arr" s={14} c="#6700A6"/></button></div>
+            {loadingEvents && <div className="oe-list-empty" role="status">Loading events…</div>}
+            {!loadingEvents && displayEvents.length === 0 && <div className="oe-list-empty"><h3>{eventsError ? 'Could not load events' : 'No events in this category yet'}</h3><p>{eventsError || 'Try another category or get notified when a new session is scheduled.'}</p><button type="button" onClick={handleNotifyMe} disabled={notifyLoading}>Notify me about new events</button></div>}
+            {!loadingEvents && displayEvents.length > 0 && remainingEvents.length === 0 && <div className="oe-list-empty"><h3>Your next session is featured above</h3><p>More sessions will appear here as they are scheduled.</p></div>}
+            {remainingEvents.map((event) => <EventCard key={event.id} ev={event} isMobile={isMobile} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onApprove={handleApprove} onRsvp={handleRsvp} isAdmin={isAdmin}/>)}
+          </section>
 
-            {/* RIGHT — calendar + widgets */}
-            <div>
-              <CalWidget eventDays={calEvDays} onDayClick={handleCalDayClick}/>
-              {/* RSVPs */}
-              <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden',marginBottom:14}}>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:`1px solid ${C.bd}`}}>
-                  <span style={{fontSize:13,fontWeight:600,color:C.t1}}>Your upcoming RSVPs</span>
-                  <button onClick={()=>setViewAll(true)} style={{fontSize:12,color:C.pu,background:'none',border:'none',cursor:'pointer',fontFamily:'inherit'}}>View all</button>
-                </div>
-                {rsvpedEvents.length > 0 ? rsvpedEvents.map((event,i)=>(
-                  <div key={event.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:i<rsvpedEvents.length-1?`1px solid ${C.bd}`:'none'}}>
-                    <div style={{width:8,height:8,borderRadius:'50%',background:C.pu,flexShrink:0}}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,color:C.t1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{event.title}</div>
-                      <div style={{fontSize:11,color:C.t3}}>{event.dateShort}</div>
-                    </div>
-                    <span style={{background:C.puf,color:C.pu,fontSize:11,fontWeight:500,padding:'2px 8px',borderRadius:6,flexShrink:0}}>RSVPed</span>
-                  </div>
-                )) : (
-                  <div style={{padding:'14px 14px 16px',fontSize:12,color:C.t2}}>You have not RSVP'd to any sessions yet. Pick one from the event list above to confirm your place.</div>
-                )}
-              </div>
-              {/* Community notes */}
-              <div style={{background:C.w,border:`1px solid ${C.bd}`,borderRadius:12,overflow:'hidden'}}>
-                <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:13,fontWeight:600,color:C.t1}}>What to expect</span></div>
-                <div style={{padding:'12px 16px',display:'grid',gap:10}}>
-                  {[
-                    { title: 'Live expert guidance', text: 'Join thoughtful sessions focused on deal strategy, community insights, and member support.', icon: C.pu },
-                    { title: 'Practical follow-up', text: 'Access event details, join links, and recordings so you can revisit the conversation later.', icon: C.gr },
-                    { title: 'Member-first community', text: 'Bring your questions and connect with the wider Tribes Capital network.', icon: C.am },
-                  ].map((item)=> (
-                    <div key={item.title} style={{display:'flex',gap:10,alignItems:'flex-start'}}>
-                      <div style={{width:8,height:8,borderRadius:'50%',background:item.icon,marginTop:6,flexShrink:0}}/>
-                      <div>
-                        <div style={{fontSize:12,fontWeight:600,color:C.t1,marginBottom:2}}>{item.title}</div>
-                        <div style={{fontSize:11,color:C.t3,lineHeight:1.5}}>{item.text}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
+          <aside className="oe-sidebar">
+            <section className="oe-side-panel">
+              <div className="oe-side-heading"><h2>Your registrations</h2>{rsvpedEvents.length > 0 && <button type="button" onClick={() => setViewAll(true)}>View all</button>}</div>
+              {rsvpedEvents.length ? rsvpedEvents.map((event) => <button type="button" className="oe-registration" key={event.id} onClick={() => setDetail(event)}><span className="oe-small-date"><b>{event.month}</b><strong>{event.day}</strong></span><span className="oe-registration-copy"><b>{event.title}</b><small>{event.dateShort}</small></span><span className="oe-rsvped">Registered</span></button>) : <p className="oe-side-empty">You haven't registered for any upcoming events yet.</p>}
+            </section>
+            <section className="oe-side-panel">
+              <div className="oe-side-heading"><h2>Hosts to follow</h2></div>
+              {hosts.length ? hosts.map((host) => { const name = [host.firstName, host.lastName].filter(Boolean).join(' ') || host.displayName || 'Member'; return <div className="oe-host-row" key={host.id}><span className="oe-host-avatar">{name.slice(0, 1).toUpperCase()}</span><span className="oe-host-copy"><b>{name}</b><small>{host.occupation || 'Community member'}</small></span><button type="button" className="oe-follow-button" onClick={() => void handleToggleHostFollow(host)}>{host.isFollowedByMe ? 'Following' : 'Follow'}</button></div>; }) : <p className="oe-side-empty">Community hosts will appear here.</p>}
+            </section>
+            <section className="oe-side-panel oe-recordings-panel"><h2>Missed a session?</h2><p>Recordings from past webinars and workshops are available to watch on demand.</p><button type="button" onClick={() => setFilter('rp')}>Browse replays <I k="arr" s={13} c="#6700A6"/></button></section>
+          </aside>
+        </div>
+      </main>
 
       {/* ── MODALS ── */}
       {showCreate && <EventFormModal title="Create event" onClose={()=>setCreate(false)} onSave={handleSave} isMobile={isMobile}/>}
@@ -1279,6 +1061,85 @@ export default function OfficeHoursEvents({ onBack, onToggleSidebar, isMobilePar
         @media(max-width:639px){
           .hide-mobile{display:none!important;}
         }
+          .tc-events-nextup{display:flex;align-items:center;justify-content:space-between;gap:28px;min-height:172px;margin-bottom:22px;padding:26px 30px;border-radius:12px;background:linear-gradient(100deg,#6700A6 0%,#8A22C8 100%);color:#fff;}
+          .tc-events-empty{display:flex;min-height:310px;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;border:1px solid #ECECF0;border-radius:12px;background:#fff;}
+          .tc-events-empty-icon{display:grid;place-items:center;width:52px;height:52px;margin-bottom:16px;border-radius:50%;background:#FAF5FF;}
+          .tc-events-empty h3{margin:0 0 8px;color:#1A1A1A;font-size:18px;font-weight:600;}
+          .tc-events-empty p{max-width:460px;margin:0;color:#7A7A85;font-size:13px;line-height:1.6;}
+          .tc-events-empty-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:18px;}
+          .tc-events-button-solid,.tc-events-button-quiet{min-height:38px;padding:0 16px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;}
+          .tc-events-button-solid{border:1px solid #6700A6;background:#6700A6;color:#fff;}
+          .tc-events-button-quiet{border:1px solid #D9D9E0;background:#fff;color:#6700A6;}
+          .tc-events-nextup-copy{min-width:0;max-width:760px;}
+          .tc-events-kicker{display:block;margin-bottom:8px;color:#F1E4FA;font-size:11px;font-weight:700;letter-spacing:.5px;}
+          .tc-events-nextup h2{margin:0 0 6px;color:#fff;font-size:24px;line-height:1.3;font-weight:600;}
+          .tc-events-nextup p{margin:0 0 12px;color:#F1E4FA;font-size:13px;line-height:1.55;}
+          .tc-events-nextup-meta{display:flex;flex-wrap:wrap;gap:8px 18px;color:#F1E4FA;font-size:12px;}
+          .tc-events-nextup-meta span{display:inline-flex;align-items:center;gap:6px;}
+          .tc-events-nextup-actions{display:flex;flex:none;flex-wrap:wrap;align-items:center;gap:10px;}
+          .tc-events-button-light,.tc-events-button-outline{min-height:40px;padding:0 18px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;}
+          .tc-events-button-light{border:1px solid #fff;background:#fff;color:#6700A6;}
+          .tc-events-button-outline{border:1px solid rgba(255,255,255,.65);background:transparent;color:#fff;}
+          .tc-events-calendar-link{width:100%;padding:4px;border:0;background:transparent;color:#F1E4FA;font-family:inherit;font-size:12px;font-weight:500;text-align:center;cursor:pointer;}
+          .tc-events-sidebar{display:grid;gap:16px;min-width:0;}
+          .tc-events-side-card{padding:20px;border:1px solid #ECECF0;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(17,17,20,.04);}
+          .tc-events-side-card h3{margin:0;color:#1A1A1A;font-size:15px;line-height:20px;font-weight:500;}
+          .tc-events-side-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+          .tc-events-side-heading button,.tc-events-info-card button{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:none;color:#6700A6;font:500 12px inherit;cursor:pointer;}
+          .tc-events-registration{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:12px;padding:0;border:0;background:none;text-align:left;cursor:pointer;}
+          .tc-events-registration:last-child{margin-bottom:0;}
+          .tc-events-registration-date{display:flex;flex:none;flex-direction:column;align-items:center;justify-content:center;width:46px;height:43px;border:1px solid #E6D6F2;border-radius:6px;background:#FAF5FF;}
+          .tc-events-registration-date b{color:#6700A6;font-size:9px;font-weight:500;line-height:11px;}
+          .tc-events-registration-date strong{color:#1A1A1A;font-size:17px;font-weight:600;line-height:20px;}
+          .tc-events-registration-copy{display:grid;flex:1;min-width:0;gap:3px;}
+          .tc-events-registration-copy b{overflow:hidden;color:#1A1A1A;font-size:12px;font-weight:500;text-overflow:ellipsis;white-space:nowrap;}
+          .tc-events-registration-copy small{color:#8A8A93;font-size:11px;}
+          .tc-events-rsvped{padding:3px 7px;border-radius:6px;background:#DDF6E8;color:#0F8A5F;font-size:10px;font-weight:500;}
+          .tc-events-empty-registration,.tc-events-info-card p{margin:12px 0 0;color:#8A8A93;font-size:12px;line-height:1.55;}
+          .tc-events-info-card{background:#FAF5FF;border-color:#E9D5FF;}
+          .tc-events-info-card h3{color:#6700A6;font-size:13px;}
+          .tc-events-info-card button{margin-top:14px;font-size:12px;}
+          .tc-events-expect-card ul{display:grid;gap:14px;margin:14px 0 0;padding:0;list-style:none;}
+          .tc-events-expect-card li{display:flex;align-items:flex-start;gap:10px;}
+          .tc-events-expect-card li>span:last-child{display:grid;gap:3px;}
+          .tc-events-expect-card li b{color:#1A1A1A;font-size:12px;font-weight:500;}
+          .tc-events-expect-card li small{color:#8A8A93;font-size:11px;line-height:1.5;}
+          .tc-events-dot{width:8px;height:8px;margin-top:4px;border-radius:50%;background:#6700A6;flex:none;}
+          .tc-events-dot.green{background:#16A34A;}.tc-events-dot.amber{background:#D97706;}
+          @media(max-width:760px){.tc-events-nextup{align-items:flex-start;flex-direction:column;gap:18px;padding:22px 20px}.tc-events-nextup h2{font-size:20px}.tc-events-nextup-actions{width:100%}.tc-events-button-light,.tc-events-button-outline{flex:1}.tc-events-calendar-link{width:auto}.tc-event-card{gap:12px!important;padding:12px!important}.tc-event-date{width:48px!important;min-width:48px!important;height:62px!important}.tc-events-registration{align-items:flex-start}.tc-events-rsvped{margin-top:4px}.tc-events-empty{min-height:260px;padding:22px 16px}.tc-events-empty-actions{width:100%;flex-direction:column}.tc-events-empty-actions button{width:100%}}
+        .oe-page{background:#F7F7F8;color:#1F2937;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}
+        .oe-page-content{max-width:1240px;width:100%;margin:0 auto}
+        .oe-page-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+        .oe-page-header h1{margin:0 0 4px;color:#1F2937;font-size:24px;line-height:32px;font-weight:600}
+        .oe-page-header p{max-width:700px;margin:0;color:#6B6B76;font-size:14px;line-height:20px}
+        .oe-page-actions{display:flex;flex:none;gap:10px}
+        .oe-notify-button,.oe-create-button{display:inline-flex;min-height:40px;align-items:center;justify-content:center;gap:7px;padding:0 16px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
+        .oe-notify-button{border:1px solid #DCDCE2;background:#fff;color:#4A4A55}.oe-create-button{border:1px solid #6700A6;background:#6700A6;color:#fff}
+        .oe-nextup{display:flex;align-items:center;justify-content:space-between;gap:28px;min-height:148px;margin-bottom:22px;padding:24px 28px;border-radius:12px;background:linear-gradient(100deg,#6700A6 0%,#8A22C8 100%);color:#fff}
+        .oe-nextup-copy{min-width:0;max-width:760px}.oe-eyebrow{display:block;margin-bottom:8px;color:#F1E4FA;font-size:11px;font-weight:600;letter-spacing:.04em}
+        .oe-nextup h2{margin:0 0 5px;color:#fff;font-size:22px;line-height:30px;font-weight:600}.oe-nextup p{margin:0;color:#F1E4FA;font-size:13px;line-height:18px}
+        .oe-nextup-actions{display:flex;flex:none;align-items:center;gap:10px}.oe-nextup-primary,.oe-nextup-secondary{min-height:40px;padding:0 18px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+        .oe-nextup-primary{border:1px solid #fff;background:#fff;color:#6700A6}.oe-nextup-secondary{border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff}
+        .oe-filter-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.oe-filter{min-height:32px;padding:0 13px;border:1px solid #DCDCE2;border-radius:999px;background:#fff;color:#4A4A55;font-family:inherit;font-size:12px;cursor:pointer}.oe-filter.active{border-color:#6700A6;background:#6700A6;color:#fff}
+        .oe-layout{display:grid;align-items:start;gap:20px}.oe-main-list{min-width:0}.oe-list-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+        .oe-list-heading h2{margin:0;color:#1A1A1A;font-size:15px;font-weight:500}.oe-list-heading h2 span{color:#8A8A93;font-size:13px;font-weight:400}
+        .oe-list-heading button,.oe-recordings-panel button{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:none;color:#6700A6;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer}
+        .oe-event-card{display:flex;align-items:flex-start;gap:16px;margin-bottom:14px;padding:17px 20px;border:1px solid #ECECF0;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(17,17,20,.05)}
+        .oe-date-tile{display:flex;width:58px;height:66px;flex:none;flex-direction:column;align-items:center;justify-content:center;border:1px solid #E6D6F2;border-radius:8px;background:#FAF5FF}.oe-date-tile span{color:#6700A6;font-size:11px;line-height:14px;text-transform:uppercase}.oe-date-tile strong{color:#1A1A1A;font-size:22px;line-height:28px;font-weight:600}
+        .oe-event-info{flex:1;min-width:0}.oe-event-topline{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:5px}.oe-type-pill,.oe-pending-pill{padding:3px 8px;border-radius:6px;font-size:10px;line-height:14px;font-weight:500}.oe-pending-pill{background:#FEF3C7;color:#B45309}
+        .oe-admin-actions{display:flex;flex-wrap:wrap;gap:5px;margin-left:auto}.oe-admin-actions button{padding:4px 8px;border:1px solid #E5E7EB;border-radius:5px;background:#fff;color:#475467;font-size:10px;cursor:pointer}
+        .oe-event-title{display:block;padding:0;border:0;background:none;color:#1A1A1A;text-align:left;font-family:inherit;font-size:16px;line-height:23px;font-weight:500;cursor:pointer}.oe-event-host{margin:2px 0 8px;color:#7A7A85;font-size:12px}
+        .oe-event-meta{display:flex;flex-wrap:wrap;gap:8px 16px;color:#8A8A93;font-size:12px;line-height:18px}.oe-event-meta span{display:inline-flex;align-items:center;gap:6px}
+        .oe-event-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid #ECECF0}.oe-event-actions>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}.oe-spots{color:#6700A6;font-size:11px;font-weight:500}
+        .oe-secondary-action,.oe-rsvp-action{min-height:32px;padding:0 11px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:500;cursor:pointer}.oe-secondary-action{border:1px solid #D9C2EC;background:#fff;color:#6700A6}.oe-rsvp-action{border:1px solid #6700A6;background:#6700A6;color:#fff}.oe-rsvp-action.registered{border-color:#D9C2EC;background:#fff;color:#6700A6}
+        .oe-list-empty{display:grid;min-height:220px;place-content:center;justify-items:center;gap:9px;padding:24px;border:1px solid #ECECF0;border-radius:12px;background:#fff;text-align:center}.oe-list-empty h3{margin:0;color:#1A1A1A;font-size:16px;font-weight:500}.oe-list-empty p{max-width:460px;margin:0;color:#7A7A85;font-size:12px;line-height:1.6}.oe-list-empty button{min-height:36px;margin-top:5px;padding:0 14px;border:1px solid #6700A6;border-radius:6px;background:#6700A6;color:#fff;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer}
+        .oe-sidebar{display:grid;min-width:0;gap:18px}.oe-side-panel{padding:20px;border:1px solid #ECECF0;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(17,17,20,.04)}.oe-side-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.oe-side-panel h2{margin:0;color:#1A1A1A;font-size:15px;line-height:20px;font-weight:500}.oe-side-heading button{padding:0;border:0;background:none;color:#6700A6;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer}
+        .oe-registration{display:flex;width:100%;align-items:center;gap:10px;margin-bottom:12px;padding:0;border:0;background:none;text-align:left;cursor:pointer}.oe-small-date{display:flex;width:46px;height:43px;flex:none;flex-direction:column;align-items:center;justify-content:center;border:1px solid #E6D6F2;border-radius:6px;background:#FAF5FF}.oe-small-date b{color:#6700A6;font-size:9px;line-height:11px;font-weight:500}.oe-small-date strong{color:#1A1A1A;font-size:17px;line-height:20px}
+        .oe-registration-copy,.oe-host-copy{display:grid;flex:1;min-width:0;gap:3px}.oe-registration-copy b,.oe-host-copy b{overflow:hidden;color:#1A1A1A;font-size:12px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}.oe-registration-copy small,.oe-host-copy small{color:#8A8A93;font-size:11px}.oe-rsvped{padding:3px 7px;border-radius:6px;background:#DDF6E8;color:#0F8A5F;font-size:10px}.oe-side-empty{margin:0;color:#8A8A93;font-size:12px;line-height:1.55}
+        .oe-host-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}.oe-host-row:last-child{margin-bottom:0}.oe-host-avatar{display:grid;width:36px;height:36px;flex:none;place-items:center;border-radius:50%;background:#FAF5FF;color:#6700A6;font-size:13px;font-weight:600}.oe-follow-button{min-height:25px;padding:0 10px;border:0;border-radius:6px;background:#F3E8FF;color:#6700A6;font-size:10px;cursor:pointer}
+        .oe-recordings-panel{border-color:#E9D5FF;background:#FAF5FF}.oe-recordings-panel h2{color:#6700A6;font-size:13px}.oe-recordings-panel p{margin:10px 0;color:#8A8A93;font-size:12px;line-height:1.55}
+        @media(max-width:960px){.oe-layout{grid-template-columns:1fr!important}.oe-sidebar{grid-template-columns:repeat(2,minmax(0,1fr))}.oe-recordings-panel{grid-column:1/-1}}
+        @media(max-width:640px){.oe-page-header{align-items:flex-start;flex-direction:column}.oe-page-header h1{font-size:22px}.oe-page-actions{width:100%}.oe-page-actions button{flex:1}.oe-nextup{align-items:flex-start;flex-direction:column;gap:16px;padding:22px 20px}.oe-nextup-actions{width:100%}.oe-nextup-actions button{flex:1}.oe-layout{gap:16px}.oe-sidebar{grid-template-columns:1fr}.oe-recordings-panel{grid-column:auto}.oe-event-card{gap:12px;padding:13px}.oe-date-tile{width:48px;height:62px}.oe-event-actions{align-items:flex-start;flex-direction:column}.oe-event-actions>div{width:100%;justify-content:flex-start}.oe-spots{padding-top:2px}}
       `}</style>
     </div>
   );

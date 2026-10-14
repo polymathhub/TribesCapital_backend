@@ -218,7 +218,7 @@ export default function AdminLifecyclePanel({ currentUser }) {
 
       {tab === 'submissions' && data.records.map((project) => {
         const canDecide = isProjectReviewer && project.reviewerId === currentUser?.id && ['submitted', 'information_requested'].includes(project.status);
-        const canOpenDiligence = isAdmin && project.status === 'scoping' && !project.diligenceCases?.length;
+        const canOpenDiligence = isAdmin && project.status === 'development' && !project.diligenceCases?.length;
         return <article key={project.id} style={{ borderTop: `1px solid ${COLORS.BD}`, padding: '14px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><div><strong>{project.title}</strong><div style={{ color: COLORS.T2, fontSize: 12, marginTop: 4 }}>{fullName(project.creator)} · {project.creator?.email} · submitted {formatDate(project.createdAt)}</div></div><span style={{ alignSelf: 'flex-start', borderRadius: 99, padding: '4px 9px', background: COLORS.PF, color: COLORS.P, fontSize: 11, fontWeight: 700 }}>{project.status}</span></div>
           <p style={{ color: COLORS.T2, fontSize: 12, lineHeight: 1.5, margin: '8px 0' }}>{project.description || 'No description provided.'}</p>
@@ -231,7 +231,7 @@ export default function AdminLifecyclePanel({ currentUser }) {
           </div>}
           {canDecide && <div style={{ display: 'flex', alignItems: 'end', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
             <input aria-label={`Reason for ${project.title}`} placeholder="Decision reason" value={reasons[`project-${project.id}`] || ''} onChange={(event) => setReasons((current) => ({ ...current, [`project-${project.id}`]: event.target.value }))} style={inputStyle} />
-            <button style={buttonStyle} disabled={Boolean(busy)} onClick={() => decideProject(project, 'approve')}>Approve for scoping</button>
+            <button style={buttonStyle} disabled={Boolean(busy)} onClick={() => decideProject(project, 'approve')}>Approve for development</button>
             <button style={buttonStyle} disabled={Boolean(busy)} onClick={() => decideProject(project, 'return_for_information')}>Return for information</button>
             <button style={buttonStyle} disabled={Boolean(busy)} onClick={() => decideProject(project, 'reject')}>Reject</button>
           </div>}

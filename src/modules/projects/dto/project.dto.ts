@@ -1,6 +1,17 @@
 import { IsArray, IsEmail, IsIn, IsNumber, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
 
-export const PROJECT_STATUSES = ['submitted', 'information_requested', 'rejected', 'scoping', 'due-diligence', 'development', 'operational'] as const;
+export const PROJECT_STATUSES = [
+  'submitted',
+  'information_requested',
+  'rejected',
+  'origination',
+  'development',
+  'due-diligence',
+  'structuring',
+  'funding',
+  'construction',
+  'operating',
+] as const;
 export const PROJECT_TYPES = ['Solar', 'Solar PV', 'C&I Solar', 'Mini-grid', 'Storage', 'Battery Storage', 'Wind', 'Hydro'] as const;
 
 export type ProjectFile = { fileName: string; mimeType: string; size: number; storageKey: string; url: string };

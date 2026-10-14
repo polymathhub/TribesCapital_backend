@@ -13,7 +13,7 @@ function Metric({ label, value, note, color }) {
   </article>;
 }
 
-export default function AdminOverview({ isMobile = false, onNavigate = () => {}, user }) {
+export default function AdminOverview({ isMobile = false, isTablet = false, onNavigate = () => {}, user }) {
   const [metrics, setMetrics] = useState({ loading: true, members: 0, newSignups: 0, publishedVideos: 0, announcementUpdates: 0, publishedCourses: 0, publishedEvents: 0, pendingEvents: 0, periodDays: 30, error: '' });
 
   useEffect(() => {
@@ -37,8 +37,13 @@ export default function AdminOverview({ isMobile = false, onNavigate = () => {},
     ['Published videos', metrics.publishedVideos, 'YouTube lessons live', COLORS.BLU],
     ['Announcement updates', metrics.announcementUpdates, `Broadcasts in ${metrics.periodDays} days`, COLORS.AM],
   ];
+  const pagePadding = isMobile
+    ? '24px var(--tc-page-gutter-x, 18px) 32px'
+    : isTablet
+      ? '32px var(--tc-page-gutter-x, 24px) 44px'
+      : '32px var(--tc-page-gutter-x, 32px) 44px';
 
-  return <main style={{ minHeight: '100%', overflowY: 'auto', background: COLORS.BG, color: COLORS.T1, padding: isMobile ? 16 : 30, fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+  return <main style={{ minHeight: '100%', overflowY: 'auto', background: COLORS.BG, color: COLORS.T1, padding: pagePadding, fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
     <style>{`.overview-action { transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease; } .overview-action:hover, .overview-action:focus-visible { transform: translateY(-2px); border-color: ${COLORS.PL} !important; background: ${COLORS.PF} !important; box-shadow: 0 10px 22px rgba(91, 33, 182, .12); outline: none; }`}</style>
     <div style={{ maxWidth: 1180, margin: '0 auto' }}>
       <header style={{ marginBottom: 26 }}><div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Admin control room</div><h1 style={{ margin: 0, fontSize: isMobile ? 26 : 38, letterSpacing: '-.04em' }}>What is happening across Tribes</h1><p style={{ margin: '10px 0 0', color: COLORS.T2, maxWidth: 620, lineHeight: 1.6 }}>A live view of the community, learning content, events, and review queues.</p></header>

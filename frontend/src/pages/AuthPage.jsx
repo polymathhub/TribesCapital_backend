@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/endpoints';
 import { LogoFull } from '../components/Logo';
+import authDashboardPreview from '../assets/auth-dashboard-preview.png';
 import cardImageOne from '../assets/image.png';
 import cardImageTwo from '../assets/illustrations/Artist Woman (1).png';
 import cardImageThree from '../assets/illustrations/New-York-cuate.svg';
@@ -468,7 +469,7 @@ function Divider() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0', color: COLORS.textMuted, fontSize: 13 }}>
       <div style={{ flex: 1, height: 1, background: COLORS.border }} />
-      Or continue with
+      or
       <div style={{ flex: 1, height: 1, background: COLORS.border }} />
     </div>
   );
@@ -525,109 +526,15 @@ function ExternalAuthButton({ provider, onClick, disabled = false, isMobile = fa
   );
 }
 
-const ENERGY_SLIDES = [
-  {
-    image: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1800&q=85',
-    kicker: 'CLEAN ENERGY',
-    headline: 'Build the transition, together.',
-    copy: 'Learn, connect, and move meaningful energy projects forward with a community built for action.',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1800&q=85',
-    kicker: 'POWERING CHANGE',
-    headline: 'Turn strategy into momentum.',
-    copy: 'Source credible partners, discover new opportunities, and keep capital and climate action aligned.',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1800&q=85',
-    kicker: 'ENERGY NETWORK',
-    headline: 'Connect the next frontier.',
-    copy: 'Bring capital, operators, and innovators together to scale resilient infrastructure and practical impact.',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=1800&q=85',
-    kicker: 'GLOBAL IMPACT',
-    headline: 'Move capital with conviction.',
-    copy: 'Follow trusted signals across energy markets and unlock the relationships that accelerate execution.',
-  },
-];
-
-function TypewriterHeadline({ text }) {
-  const [displayed, setDisplayed] = useState('');
-
-  useEffect(() => {
-    setDisplayed('');
-
-    let index = 0;
-    const timer = setInterval(() => {
-      index += 1;
-      setDisplayed(text.slice(0, index));
-
-      if (index >= text.length) {
-        clearInterval(timer);
-      }
-    }, 45);
-
-    return () => clearInterval(timer);
-  }, [text]);
-
-  return (
-    <h2 className="auth-typewriter-headline">
-      {displayed}
-      <span className="auth-typewriter-cursor" aria-hidden="true" />
-    </h2>
-  );
-}
-
-function FormContainer({ children, isMobile, desktopLayout = false }) {
-  const [activeSlide, setActiveSlide] = useState(0);
-
-  useEffect(() => {
-    if (!desktopLayout) return undefined;
-
-    const interval = window.setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % ENERGY_SLIDES.length);
-    }, 4500);
-
-    return () => window.clearInterval(interval);
-  }, [desktopLayout]);
-
+function FormContainer({ children, isMobile, leftHeading = 'Welcome to the clean energy community.', desktopLayout = typeof window !== 'undefined' && window.innerWidth >= 1024 }) {
   if (desktopLayout) {
-    const activeContent = ENERGY_SLIDES[activeSlide];
-
     return (
       <div className="auth-desktop-shell">
-        <aside className="auth-energy-panel" aria-label="Energy transition community imagery" role="img">
-          {ENERGY_SLIDES.map((slide, index) => (
-            <div
-              key={slide.headline}
-              className={`auth-energy-slide ${index === activeSlide ? 'is-active' : ''}`}
-              style={{ backgroundImage: `linear-gradient(180deg, rgba(10, 31, 29, 0.12) 18%, rgba(10, 31, 29, 0.78) 100%), url("${slide.image}")` }}
-            />
-          ))}
-
-          <div className="auth-energy-overlay" aria-hidden="true" />
-
-          <div className="auth-energy-content">
-            <div className="auth-energy-brand">
-              <LogoFull size="large" variant="light" animate={false} />
-            </div>
-            <div className="auth-energy-copy">
-              <span className="auth-energy-kicker">{activeContent.kicker}</span>
-              <TypewriterHeadline text={activeContent.headline} />
-              <p>{activeContent.copy}</p>
-            </div>
-            <div className="auth-slide-dots" aria-label="Image switcher">
-              {ENERGY_SLIDES.map((slide, index) => (
-                <button
-                  key={`${slide.headline}-dot`}
-                  type="button"
-                  className={`auth-slide-dot ${index === activeSlide ? 'is-active' : ''}`}
-                  onClick={() => setActiveSlide(index)}
-                  aria-label={`Show slide ${index + 1}`}
-                />
-              ))}
-            </div>
+        <aside className="auth-energy-panel" aria-label="Tribes Capital clean energy community">
+          <div className="auth-mockup-wrap"><img className="auth-mockup" src={authDashboardPreview} alt="Preview of the Tribes Capital dashboard" width={562} height={383} /></div>
+          <div className="auth-left-heading">
+            <h2>{leftHeading}</h2>
+            <p>Learn, connect, and move meaningful energy projects forward with a community built for action.</p>
           </div>
         </aside>
         <main className="auth-desktop-form-panel">
@@ -668,7 +575,6 @@ function LoginPage({ onNavigate, onSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [socialLoading, setSocialLoading] = useState('');
   const [error, setError] = useState('');
   const { isMobile, isDesktop } = useBreakpoint();
   
@@ -676,12 +582,6 @@ function LoginPage({ onNavigate, onSuccess }) {
     () => {},
     setError,
   );
-
-  const handleExternalAuth = (provider) => {
-    setError('');
-    setSocialLoading(provider);
-    window.location.assign(buildSocialAuthRedirectUrl(provider));
-  };
 
   useEffect(() => {
     if (!window.location.hash) return;
@@ -785,21 +685,22 @@ function LoginPage({ onNavigate, onSuccess }) {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !loading && !googleLoading && !socialLoading) {
+    if (e.key === 'Enter' && !loading && !googleLoading) {
       handleLogin();
     }
   };
 
   return (
-    <FormContainer isMobile={isMobile} desktopLayout={isDesktop}>
-      <div style={{ marginBottom: 28 }}>
+    <FormContainer isMobile={isMobile} leftHeading="Welcome back to the clean energy community." desktopLayout={isDesktop}>
+      <div className="auth-prototype-form">
+      <div className="auth-prototype-logo">
         <LogoFull size="medium" />
       </div>
-      <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: COLORS.text, margin: '0 0 8px', letterSpacing: -0.5 }}>
+      <h1 className="auth-prototype-title" style={{ fontSize: 26, fontWeight: 700, color: COLORS.text, margin: '0 0 6px' }}>
         Welcome back
       </h1>
-      <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 16px', lineHeight: 1.6 }}>
-        Sign in to access your community
+      <p className="auth-prototype-subtitle" style={{ fontSize: 14, color: COLORS.textSecondary, margin: '0 0 28px', lineHeight: 1.55 }}>
+        Sign in to continue your clean energy journey.
       </p>
 
       {error && <Alert type="error" message={error} />}
@@ -807,7 +708,7 @@ function LoginPage({ onNavigate, onSuccess }) {
       <FormField label="Email address" required>
         <TextInput
           type="email"
-          placeholder="you@example.com"
+          placeholder="you@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
@@ -828,10 +729,10 @@ function LoginPage({ onNavigate, onSuccess }) {
         />
       </FormField>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div className="auth-prototype-options" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 26 }}>
         <CheckboxInput
           id="rememberMe"
-          label="Remember me"
+          label="Keep me signed in"
           checked={rememberMe}
           onChange={(e) => setRememberMe(e.target.checked)}
           disabled={loading}
@@ -853,19 +754,14 @@ function LoginPage({ onNavigate, onSuccess }) {
         </button>
       </div>
 
-      <Button onClick={handleLogin} loading={loading} disabled={loading}>
-        Sign in
-      </Button>
+      <div className="auth-prototype-submit"><Button onClick={handleLogin} loading={loading} disabled={loading}>Sign in</Button></div>
 
       <Divider />
 
-      <GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading || Boolean(socialLoading)} />
-      <div className="auth-other-providers">
-        <ExternalAuthButton provider="linkedin" onClick={() => handleExternalAuth('linkedin')} disabled={loading || googleLoading || Boolean(socialLoading)} />
-      </div>
+      <div className="auth-prototype-google"><GoogleButton onClick={handleGoogleAuth} loading={googleLoading} disabled={googleLoading || loading} /></div>
 
-      <p style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
-        Don't have an account?{' '}
+      <p className="auth-prototype-footer" style={{ textAlign: 'center', fontSize: 14, color: COLORS.textSecondary, marginTop: 24 }}>
+        New to Tribes Capital?{' '}
         <button
           onClick={() => onNavigate('signup')}
           disabled={loading}
@@ -879,7 +775,7 @@ function LoginPage({ onNavigate, onSuccess }) {
             fontFamily: 'inherit',
           }}
         >
-          Create one
+          Create an account
         </button>
       </p>
       <p style={{ textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, marginTop: 12 }}>
@@ -900,6 +796,7 @@ function LoginPage({ onNavigate, onSuccess }) {
           Sign in as admin
         </button>
       </p>
+      </div>
     </FormContainer>
   );
 }
@@ -956,7 +853,7 @@ function LegalPage({ type, onNavigate }) {
   const { isMobile, isDesktop } = useBreakpoint();
 
   return (
-    <FormContainer isMobile={isMobile}>
+    <FormContainer isMobile={isMobile} leftHeading="Join the clean energy community.">
       <button
         onClick={() => onNavigate('signup')}
         style={{
@@ -1878,7 +1775,7 @@ export default function AuthPage({ onLogin }) {
 
   return (
     <div
-      className={isDesktop && page === 'login' ? 'auth-desktop-root' : undefined}
+      className={isDesktop ? 'auth-desktop-root' : undefined}
       style={{
         display: 'flex',
         alignItems: isMobile ? 'flex-start' : 'center',
@@ -1895,30 +1792,28 @@ export default function AuthPage({ onLogin }) {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes blink {
-          0%, 50% { opacity: 1; }
-          51%, 100% { opacity: 0; }
-        }
         body { margin: 0; padding: 0; }
         .auth-desktop-root{display:block!important;width:100%;height:100dvh;min-height:100dvh;padding:0!important;overflow:hidden;background:#fff!important}
-        .auth-desktop-shell{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(520px,1fr);width:100%;height:100%;min-height:100dvh;background:#fff}
-        .auth-energy-panel{position:relative;display:flex;align-items:flex-end;min-width:0;min-height:100%;padding:72px;overflow:hidden;background:#051b19;color:#fff}
-        .auth-energy-slide{position:absolute;inset:0;background-position:center;background-size:cover;opacity:0;transform:scale(1.08);transition:opacity 1.2s ease, transform 8s ease;}
-        .auth-energy-slide.is-active{opacity:1;transform:scale(1.02)}
-        .auth-energy-overlay{position:absolute;inset:0;background:linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, rgba(15, 23, 42, 0.42) 40%, rgba(2, 6, 23, 0.7) 100%);}
-        .auth-energy-content{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-end;gap:18px;max-width:560px}
-        .auth-energy-brand{display:inline-flex;align-items:center;align-self:flex-start;padding:0;margin-bottom:8px}
-        .auth-energy-copy{position:relative;max-width:520px}
-        .auth-energy-kicker{display:block;margin-bottom:14px;color:#fff;font-size:12px;font-weight:700;letter-spacing:1.8px}
-        .auth-typewriter-headline{min-height:128px;max-width:500px;margin:0 0 14px;padding:0;font-size:clamp(2.6rem, 3vw, 4rem);line-height:1.08;font-weight:700;letter-spacing:-0.06em;white-space:normal;color:#fff;word-wrap:break-word}
-        .auth-typewriter-cursor{display:inline-block;width:2px;height:1.02em;background:#fff;margin-left:6px;vertical-align:middle;animation:blink 1s step-end infinite}
-        .auth-energy-copy p{max-width:440px;margin:0;color:rgba(255,255,255,.88);font-size:16px;line-height:1.65}
-        .auth-slide-dots{display:flex;align-items:center;gap:10px;margin-top:6px}
-        .auth-slide-dot{width:10px;height:10px;border:none;border-radius:999px;background:rgba(255,255,255,0.38);cursor:pointer;transition:all 0.2s ease;padding:0}
-        .auth-slide-dot.is-active{width:28px;background:#fff;box-shadow:0 0 14px rgba(255,255,255,0.55)}
-        .auth-desktop-form-panel{display:grid;place-items:center;min-width:0;padding:40px 72px;overflow-y:auto;background:#fff}
+        .auth-desktop-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(480px,1fr);width:100%;height:100%;min-height:100dvh;background:#fff}
+        .auth-energy-panel{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:100%;padding:56px;overflow:hidden;background:linear-gradient(160deg,#6D28D9 0%,#4C1D95 42%,#2E1065 75%,#170729 100%);color:#fff}
+        .auth-mockup-wrap{display:flex;flex:1;align-items:center;justify-content:center;width:100%;min-height:0;padding:24px 0}
+        .auth-mockup{display:block;width:100%;max-width:520px;height:auto;object-fit:contain}
+        .auth-left-heading{position:relative;max-width:420px}
+        .auth-left-heading h2{margin:0 0 14px;color:#fff;font-size:28px;font-weight:700;line-height:1.3}
+        .auth-left-heading p{margin:0;color:#DDD6FE;font-size:14px;line-height:1.6}
+        .auth-desktop-form-panel{display:grid;place-items:center;min-width:0;padding:40px clamp(32px,6vw,88px);overflow-y:auto;background:#fff}
+        .auth-prototype-form{width:100%;max-width:384px;margin:0 auto}
+        .auth-prototype-logo{display:flex;justify-content:center;margin-bottom:32px}
+        .auth-prototype-title{text-align:center!important;letter-spacing:0!important}
+        .auth-prototype-subtitle{text-align:center!important;color:#4B5563!important}
+        .auth-prototype-form label{font-size:13.5px!important;color:#374151!important}
+        .auth-prototype-form input{border-radius:12px!important;padding-left:15px!important;font-size:14px!important}
+        .auth-prototype-submit button{min-height:48px!important;border-radius:12px!important;background:#3B0764!important}
+        .auth-prototype-google button{min-height:48px!important;border-radius:12px!important}
+        .auth-prototype-footer{margin-top:24px!important}
         .auth-other-providers{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
-        @media (max-width:1199px){.auth-energy-panel{padding:48px}.auth-desktop-form-panel{padding:36px 48px}.auth-typewriter-headline{font-size:clamp(2.2rem, 2.8vw, 3.4rem)} }
+        @media (min-width:1280px){.auth-energy-panel{padding:72px}}
+        @media (max-width:1199px){.auth-energy-panel{padding:48px}.auth-desktop-form-panel{padding:36px 48px}}
         @media (max-width:1023px){.auth-desktop-root{display:flex!important;height:auto;min-height:100vh;padding:20px 16px 40px!important;background:#f3f4f6!important}.auth-desktop-shell{display:block;width:100%;height:auto;min-height:0}.auth-energy-panel{display:none}.auth-desktop-form-panel{display:block;padding:0;overflow:visible;background:transparent}.auth-desktop-form-panel>div{max-width:460px!important;margin:0 auto!important;background:#fff!important;border:1px solid #e5e7eb!important;border-radius:16px!important;padding:40px 48px!important;box-shadow:0 12px 32px rgba(15,23,42,.08)!important}.auth-other-providers{grid-template-columns:1fr;gap:10px}}
         @media (max-width:639px){.auth-desktop-root{padding:20px 16px 40px!important}.auth-desktop-form-panel>div{padding:20px 16px 28px!important;border-radius:12px!important}}
       `}</style>

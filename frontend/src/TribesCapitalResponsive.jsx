@@ -10,7 +10,7 @@ import React, {
   forwardRef,
   useImperativeHandle 
 } from 'react';
-import { communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
+import { authAPI, communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
 import dashboardHeroIllustration from './assets/hello-cuate.svg';
 import ProfileAvatar from './components/ProfileAvatar';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
@@ -475,7 +475,8 @@ const STYLES = `
 
 /* ---------- Tour overlay ---------- */
 .tour-click-block{ position:fixed; inset:0; z-index:70; background:transparent; }
-.tour-dim{ position:fixed; z-index:69; background:rgba(15,10,25,.4); transition:all .18s ease; }
+.tour-dim{ position:fixed; z-index:69; background:rgba(15,10,25,.48); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); transition:all .18s ease; }
+.tour-focus-ring{ position:fixed; z-index:70; border:2px solid #fff; border-radius:8px; box-shadow:0 0 0 3px #7C3AED; pointer-events:none; }
 .tour-card{ position:fixed; z-index:71; width:410px; max-width:92vw; box-sizing:border-box; background:#fff; border:1px solid #E5E7EB; border-radius:8px; box-shadow:0 8px 30px rgba(20,10,40,.18); padding:60px 21px 22px; }
 .tour-pointer{ position:absolute; left:-8px; width:16px; height:16px; background:#fff; transform:translateY(-50%) rotate(45deg); box-shadow:-3px 3px 6px rgba(20,10,40,.06); }
 .tour-close{ position:absolute; top:21px; right:21px; width:24px; height:24px; border-radius:50%; background:#8F9BB3; border:0; padding:0; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
@@ -2096,7 +2097,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
 /* tablets & small laptops: respect notches / rounded corners in landscape */
 @media (max-width:1023px){
-  .dash-app{--tc-page-gutter-x:max(24px,env(safe-area-inset-left),env(safe-area-inset-right))}
   .dash-topbar{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
   .dash-content{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x);padding-bottom:calc(64px + env(safe-area-inset-bottom))}
   .tca-toast{bottom:calc(22px + env(safe-area-inset-bottom));right:max(22px,env(safe-area-inset-right))}
@@ -2506,7 +2506,7 @@ function Toast({ message }) {
 const NAV_ITEMS = [
   { key: 'home', label: 'Home', icon: 'home' },
   { key: 'learning', label: 'Learning', icon: 'book' },
-  { key: 'community', label: 'Forum', icon: 'users' },
+  { key: 'community', label: 'Community', icon: 'users' },
   { key: 'events', label: 'Office Hours & Events', icon: 'calendar' },
   { key: 'submit-project', label: 'Submit Your Project', icon: 'upload' },
   { key: 'pipeline', label: 'Portfolio', icon: 'briefcase' },
@@ -3949,25 +3949,9 @@ function Community({ open, user, toast, onOpenMessaging }) {
 
   const popularTopics = posts.reduce((counts, post) => ({ ...counts, [post.tag]: (counts[post.tag] || 0) + 1 }), {});
   return <>
-    <section className="forum-hero" aria-labelledby="forum-title">
-      <div className="forum-hero-copy">
-        <p className="forum-hero-eyebrow">TRIBES CAPITAL / MEMBER FORUM</p>
-        <h1 id="forum-title">Ideas and experience for a stronger energy sector.</h1>
-        <p>Ask thoughtful questions, share what you have learned, and connect with people working across clean energy.</p>
-        <div className="forum-hero-actions">
-          <button className="btn bo" onClick={() => setM("ask")}>Ask a question</button>
-          <button className="btn forum-messaging-action" onClick={() => setM("start")}>Start a discussion</button>
-          {user?.accountType !== 'GUEST' && <button className="btn forum-messaging-action" onClick={onOpenMessaging}>Messaging</button>}
-        </div>
-      </div>
-      <aside className="forum-visual" aria-label="Forum topics">
-        <div className="forum-visual-heading"><span>What brings us together</span><span className="forum-live-tag">Community</span></div>
-        <div className="forum-visual-row"><span className="forum-visual-index">01</span><div><strong>Learn</strong><small>Trade practical knowledge and insight</small></div></div>
-        <div className="forum-visual-row"><span className="forum-visual-index">02</span><div><strong>Connect</strong><small>Meet peers across the energy sector</small></div></div>
-        <div className="forum-visual-row"><span className="forum-visual-index">03</span><div><strong>Build</strong><small>Turn good conversations into action</small></div></div>
-        <div className="forum-visual-foot"><span><strong>{posts.length}</strong> discussions</span><span><strong>{Object.keys(popularTopics).length}</strong> active topics</span></div>
-      </aside>
-    </section>
+    <div className="ph forum-page-head"><div><h1>Community</h1><p>Ask questions, share knowledge and connect with the energy community.</p></div>
+      <div className="row wrap"><button type="button" className="btn bo" onClick={() => setM('ask')}>Ask a question</button><button type="button" className="btn bp" onClick={() => setM('start')}>Start a discussion</button>{user?.accountType !== 'GUEST' && <button type="button" className="btn bo" onClick={onOpenMessaging}>Messaging</button>}</div>
+    </div>
     {error && <p role="alert" className="sub">{error}</p>}
     <div className="pills forum-filters"><span className="forum-filter-label">Browse discussions by topic</span>{FILTER_PILLS.map((x) => <button key={x.key} className={"pl" + (f === x.key ? " on" : "")} onClick={() => setF(x.key)}>{x.label}</button>)}</div>
     <div className="lay"><div className="sp forum-post-list" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -3998,10 +3982,19 @@ function Community({ open, user, toast, onOpenMessaging }) {
 
 /* ---------- Vault ---------- */
 /* ---------- Pipeline ---------- */
-const STG = [["scoping", "Scoping", "#9CA3AF"], ["due-diligence", "Due diligence", "#F59E0B"], ["development", "Development", "#7C3AED"], ["operational", "Operational", "#10B981"]];
+const STG = [
+  ['origination', 'Origination', '#667085', 'We have checked the site and the organisation behind it. Now we are working out if solar makes sense there.', 'G1: Ready to develop'],
+  ['development', 'Development', '#7C3AED', 'Engineers design the system, get prices and agree headline terms with the site.', 'G2: Ready for due diligence'],
+  ['due-diligence', 'Due diligence', '#D97706', "We test every part of the project: the site, the kit, the contracts, the customer's finances, and the effect on people and nature.", 'G3: Approved to structure'],
+  ['structuring', 'Structuring', '#2563EB', 'We set up the company that will own the project and agree how it will be paid for.', 'G4: Approved to raise'],
+  ['funding', 'Funding', '#0D9488', 'The project is open for investment.', 'G5: Financial close'],
+  ['construction', 'Construction', '#DB2777', 'The system is being built and tested on site.', 'G6: Commercial operation'],
+  ['operating', 'Operating', '#16A34A', 'The system is running and producing power. We report on it every month.', null],
+];
+const LEGACY_PROJECT_STAGES = { planning: 'origination', scoping: 'development', submitted: 'origination', information_requested: 'origination', rejected: 'origination', operational: 'operating' };
 const TYC = { Solar: ["#FEF3C7", "#B45309"], "Mini-grid": ["#DBEAFE", "#1D4ED8"], Storage: ["#CCFBF1", "#0F766E"], Wind: ["#E0E7FF", "#4338CA"], Hydro: ["#CFFAFE", "#0E7490"] };
 const toBoardProject = (project) => {
-  const projectStatus = project.status === 'planning' ? 'scoping' : project.status;
+  const projectStatus = LEGACY_PROJECT_STAGES[project.status] || project.status;
   const stageIndex = STG.findIndex(([status]) => status === projectStatus);
   return {
     ...project,
@@ -4017,7 +4010,7 @@ const toBoardProject = (project) => {
 const Ty = ({ t }) => { const colors = TYC[t] || ["#F3F4F6", "#4B5563"]; return <span className="tag" style={{ background: colors[0], color: colors[1], fontWeight: 600, fontSize: 11 }}>{t}</span>; };
 /* "Add project" — built to the design; same content-area overlay as the other modals */
 function AddProjectModal({ types, stages, onClose, onSubmit }) {
-  const [v, setV] = useState({ n: "", t: "", s: "", l: "", c: "", k: "", x: "" });
+  const [v, setV] = useState({ n: "", t: "", s: stages[0] || 'Origination', l: "", c: "", k: "", x: "" });
   const [errs, setErrs] = useState({});
   const [menu, setMenu] = useState(null);
   const [sent, setSent] = useState(false);
@@ -4046,7 +4039,6 @@ function AddProjectModal({ types, stages, onClose, onSubmit }) {
     const e = {};
     if (!v.n.trim()) e.n = "Enter a project name";
     if (!v.t) e.t = "Choose a type";
-    if (!v.s) e.s = "Choose a stage";
     if (!(Number(v.c) > 0)) e.c = "Enter a capacity in kWp";
     setErrs(e);
     if (Object.keys(e).length) return;
@@ -4100,7 +4092,7 @@ function AddProjectModal({ types, stages, onClose, onSubmit }) {
               </div>
               <div className="lb-row">
                 {select("t", "Type *", "e.g Solar", types)}
-                {select("s", "Stage *", "e.g Scoping", stages)}
+                {select("s", "Starting stage", "Origination", stages.slice(0, 1))}
               </div>
               <div className="lb-field">
                 <label className="lb-label" htmlFor="ap-l">Location</label>
@@ -4160,7 +4152,7 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const last = p.s >= 3;
+  const last = p.s >= STG.length - 1;
   return (
     <div className="lb-ov" style={{ left: box.left, top: box.top }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="lb-modal ask pj" role="dialog" aria-modal="true" aria-labelledby="pj-title">
@@ -4174,6 +4166,8 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
           <div className="pj-sec">
             <div className="pj-h">Progress</div>
             <div className="pj-step">{STG.map(([k, l], i) => <div key={k} className={i < p.s ? "d" : i === p.s ? "c" : ""}><i>{i < p.s ? "✓" : i + 1}</i>{l}</div>)}</div>
+            <p className="pipeline-stage-description">{STG[p.s][3]}</p>
+            <div className="pipeline-gate-detail"><b>Gate to leave this stage</b><span>{STG[p.s][4] || 'None; remains here until the contract ends.'}</span></div>
           </div>
           <div className="pj-sec">
             <div className="pj-h">Managing contractor</div>
@@ -4186,7 +4180,7 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
           <button type="button" className="pj-link" onClick={onViewVault}>View related documents in the Due Diligence Vault →</button>
         </div>
         <div className="lb-foot">
-          {last && <span className="pj-done">This project is fully operational.</span>}
+          {last && <span className="pj-done">This project is operating.</span>}
           {p.managingContractor && <button type="button" className="lb-btn lb-cancel" onClick={onViewContractor}>View {p.k}</button>}
           {!last && <span className="pj-done">Stage changes are recorded through project review and investment decisions.</span>}
         </div>
@@ -4220,24 +4214,45 @@ function Pipeline({ toast, go, allowCreate = true }) {
   return <>
     <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div>{allowCreate ? <button className="btn bp" onClick={() => setAdd(true)}>+ Add project</button> : <button className="btn bp" type="button" disabled title="Project creation is currently unavailable">Create Project</button>}</div>
     {error && <p role="alert" className="sub">{error}</p>}
-    <div className="card stats">{[[ps.length, "Visible projects"], [ps.filter(x => x.s === 1 || x.s === 2).length, "In development"], [ps.filter(x => x.s === 3).length, "Operational"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([v, l]) => <div key={l}><b>{v}</b><span className="sub">{l}</span></div>)}</div>
+    <div className="card stats">{[[ps.length, "Visible projects"], [ps.filter(x => x.s >= 1 && x.s <= 2).length, "In development"], [ps.filter(x => x.s === 6).length, "Operating"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([v, l]) => <div key={l}><b>{v}</b><span className="sub">{l}</span></div>)}</div>
     {loading && <p role="status" className="sub">Loading projects…</p>}
-    <div className="board">{STG.map(([k, l, c], i) => <div className="col" key={k}><div className="row"><span style={{ width: 3, height: 16, background: c, borderRadius: 2 }} /><h3 className="sp" style={{ fontSize: 13.5 }}>{l}</h3><span className="tag">{ps.filter(x => x.s === i).length}</span></div>
-      {ps.filter(x => x.s === i).map(x => <div className="pc" key={x.id} onClick={() => setSel(x.id)}><div className="row" style={{ marginBottom: 9 }}><Ty t={x.t} />{i === 3 && <span style={{ color: "var(--mt)", fontSize: 11, fontWeight: 600 }}>● Live</span>}</div><b style={{ fontSize: 13.8 }}>{x.n}</b><div className="mut row" style={{ gap: 5, margin: "6px 0 10px" }}><Icon name="mapPin" size={12} />{x.l}</div><p style={{ fontSize: 13, marginBottom: 12 }}><b style={{ color: "var(--p7)" }}>{x.c || 0} kWp</b> <span className="mut">capacity</span></p><div className="row" style={{ borderTop: "1px solid var(--ln)", paddingTop: 11 }}><Ava c="#6B7280" t={(x.k || 'P')[0]} s={22} /><span className="sub" style={{ fontSize: 12.5 }}>{x.k}</span></div></div>)}
+    <div className="pipeline-seven-stage-scroll"><div className="board pipeline-seven-stage-board">{STG.map(([k, l, c, meaning, gate], i) => <div className="col pipeline-seven-stage-column" key={k}><div className="row pipeline-stage-heading"><span style={{ width: 3, height: 16, background: c, borderRadius: 2, flex: '0 0 3px' }} /><h3 className="sp" style={{ fontSize: 13.5 }}>{l}</h3><span className="tag">{ps.filter(x => x.s === i).length}</span></div><p className="pipeline-stage-meaning">{meaning}</p><div className="pipeline-stage-gate"><b>Gate to leave</b><span>{gate || 'None; stays until the contract ends.'}</span></div>
+      {ps.filter(x => x.s === i).map(x => <div className="pc" key={x.id} onClick={() => setSel(x.id)}><div className="row" style={{ marginBottom: 9 }}><Ty t={x.t} />{i === 6 && <span style={{ color: "var(--mt)", fontSize: 11, fontWeight: 600 }}>● Operating</span>}</div><b style={{ fontSize: 13.8 }}>{x.n}</b><div className="mut row" style={{ gap: 5, margin: "6px 0 10px" }}><Icon name="mapPin" size={12} />{x.l}</div><p style={{ fontSize: 13, marginBottom: 12 }}><b style={{ color: "var(--p7)" }}>{x.c || 0} kWp</b> <span className="mut">capacity</span></p><div className="row" style={{ borderTop: "1px solid var(--ln)", paddingTop: 11 }}><Ava c="#6B7280" t={(x.k || 'P')[0]} s={22} /><span className="sub" style={{ fontSize: 12.5 }}>{x.k}</span></div></div>)}
       {!loading && !error && ps.filter(x => x.s === i).length === 0 && <p className="sub" style={{ padding: 12 }}>No projects in this stage.</p>}
-      </div>)}</div>
+      </div>)}</div></div>
     {p && <ProjectDetailModal p={p} onClose={() => setSel(null)} onAdvance={adv} onViewContractor={() => go("contractors", p.k)} onViewVault={() => go("vault")} />}
-    {add && <AddProjectModal types={Object.keys(TYC)} stages={STG.map(s => s[1])} onClose={() => setAdd(false)}
+    {add && <AddProjectModal types={Object.keys(TYC)} stages={[STG[0][1]]} onClose={() => setAdd(false)}
       onSubmit={async (v) => {
-        const status = STG.find((stage) => stage[1] === v.s)?.[0] || STG[0][0];
+      const status = STG.find((stage) => stage[1] === v.s)?.[0] || STG[0][0];
         const response = await projectsAPI.create({ title: v.n.trim(), projectType: v.t, status, location: v.l.trim() || undefined, capacityKwp: v.c, managingContractor: v.k.trim() || undefined, notes: v.x.trim() || undefined });
         const created = toBoardProject(response?.data?.data ?? response?.data);
         setPs((current) => [created, ...current]);
       }} />}
+    <style>{`
+      .pipeline-seven-stage-scroll{max-width:100%;overflow-x:auto;padding-bottom:8px}
+      .tcx .board.pipeline-seven-stage-board{grid-template-columns:repeat(7,minmax(220px,1fr));min-width:1580px;gap:12px;align-items:stretch}
+      .tcx .pipeline-seven-stage-column{min-width:0;padding:14px}
+      .pipeline-stage-heading{min-height:26px}
+      .pipeline-stage-meaning{min-height:104px;margin:6px 0 12px;color:var(--i6);font-size:11px;line-height:1.45}
+      .pipeline-stage-gate{display:grid;min-height:57px;align-content:start;gap:4px;margin-bottom:12px;padding:9px 0;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);font-size:10px;line-height:1.4}
+      .pipeline-stage-gate b{color:var(--p7);font-size:10px}
+      .pipeline-stage-description{margin:12px 0;color:var(--i6);font-size:12px;line-height:1.55}
+      .pipeline-gate-detail{display:grid;gap:4px;padding:10px;border:1px solid var(--p1);border-radius:7px;background:var(--p0);font-size:12px;line-height:1.45}
+      .pipeline-gate-detail b{color:var(--p9);font-size:11px}
+      @media(max-width:640px){.tcx .board.pipeline-seven-stage-board{min-width:1540px}.pipeline-stage-meaning{min-height:96px}}
+    `}</style>
   </>;
 }
 
 function SettingsPage({ user, onOpenProfile, onOpenNotifications, onLogout }) {
+  const tabs = ['Account', 'Preferences', 'Notifications', 'Privacy & security', 'Connected accounts'];
+  const [tab, setTab] = useState('Account');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetRequested, setResetRequested] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState(null);
   const accountTypes = {
     COMMUNITY_MEMBER: 'Community Member',
     INVESTOR: 'Investor',
@@ -4245,29 +4260,104 @@ function SettingsPage({ user, onOpenProfile, onOpenNotifications, onLogout }) {
     GUEST: 'Read-only Guest',
   };
 
+  const requestPasswordReset = async () => {
+    if (!user?.email) return setNotice({ type: 'error', text: 'An email address is required to reset your password.' });
+    setSaving(true);
+    setNotice(null);
+    try {
+      await authAPI.forgotPassword(user.email);
+      setResetRequested(true);
+      setNotice({ type: 'success', text: 'A password reset code was sent to your email.' });
+    } catch (error) {
+      setNotice({ type: 'error', text: error.response?.data?.message || 'Unable to request a password reset.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+  const resetPassword = async (event) => {
+    event.preventDefault();
+    if (newPassword.length < 12) return setNotice({ type: 'error', text: 'Use at least 12 characters for your new password.' });
+    if (newPassword !== confirmPassword) return setNotice({ type: 'error', text: 'The passwords do not match.' });
+    setSaving(true);
+    setNotice(null);
+    try {
+      await authAPI.resetPassword(user.email, resetCode.trim(), newPassword);
+      setResetCode('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setResetRequested(false);
+      setNotice({ type: 'success', text: 'Your password has been updated.' });
+    } catch (error) {
+      setNotice({ type: 'error', text: error.response?.data?.message || 'Unable to reset your password.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+  const name = user?.displayName || user?.name || 'Member';
+  const socialLinks = Array.isArray(user?.socialLinks) ? user.socialLinks : user?.socialLink ? [user.socialLink] : [];
+
   return <>
-    <div className="ph"><div><h1>Settings</h1></div></div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 16, maxWidth: 960 }}>
-      <section className="card" aria-labelledby="settings-account-title">
-        <h2 id="settings-account-title" style={{ fontSize: 16, marginBottom: 14 }}>Account</h2>
-        <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
-          <div><span className="sub">Name</span><strong style={{ display: 'block', marginTop: 3 }}>{user?.displayName || user?.name || 'Member'}</strong></div>
-          <div><span className="sub">Email</span><strong style={{ display: 'block', marginTop: 3, overflowWrap: 'anywhere' }}>{user?.email || 'No email on file'}</strong></div>
-          <div><span className="sub">Account type</span><strong style={{ display: 'block', marginTop: 3 }}>{accountTypes[user?.accountType] || accountTypes.COMMUNITY_MEMBER}</strong></div>
-        </div>
-        <button type="button" className="btn bo" onClick={onOpenProfile}>View profile</button>
-      </section>
-      <section className="card" aria-labelledby="settings-notifications-title">
-        <h2 id="settings-notifications-title" style={{ fontSize: 16, marginBottom: 6 }}>Notifications</h2>
-        <p className="sub" style={{ marginBottom: 16 }}>Review recent messages, community activity, and account updates.</p>
-        <button type="button" className="btn bo" onClick={onOpenNotifications}>Open notifications</button>
-      </section>
-      <section className="card" aria-labelledby="settings-security-title">
-        <h2 id="settings-security-title" style={{ fontSize: 16, marginBottom: 6 }}>Access and security</h2>
-        <p className="sub" style={{ marginBottom: 16 }}>Sign out of Tribes Capital on this device.</p>
-        <button type="button" className="btn bo" onClick={onLogout}>Sign out</button>
+    <div className="ph"><div><h1>Settings</h1><p>Manage your account, preferences and security.</p></div></div>
+    {notice && <div role={notice.type === 'error' ? 'alert' : 'status'} className={`settings-notice ${notice.type}`}>{notice.text}</div>}
+    <div className="settings-layout">
+      <nav className="settings-tabs" aria-label="Settings sections">
+        {tabs.map((item) => <button type="button" key={item} className={`settings-tab${tab === item ? ' active' : ''}`} aria-current={tab === item ? 'page' : undefined} onClick={() => setTab(item)}>{item}</button>)}
+      </nav>
+      <section className="settings-panel">
+        {tab === 'Account' && <>
+          <div className="settings-panel-heading"><div><span className="settings-eyebrow">PROFILE</span><h2>Account information</h2></div><button type="button" className="btn bo" onClick={onOpenProfile}>Edit profile</button></div>
+          <dl className="settings-account-grid">
+            <div><dt>Full name</dt><dd>{name}</dd></div>
+            <div><dt>Email address</dt><dd>{user?.email || 'No email on file'}</dd></div>
+            <div><dt>Account type</dt><dd>{accountTypes[user?.accountType] || accountTypes.COMMUNITY_MEMBER}</dd></div>
+            <div><dt>Location</dt><dd>{user?.location || user?.address || 'Not added'}</dd></div>
+          </dl>
+        </>}
+        {tab === 'Preferences' && <>
+          <div className="settings-panel-heading"><div><span className="settings-eyebrow">YOUR PROFILE</span><h2>Interests and profile details</h2></div></div>
+          <p className="sub">Your interests help members and content find the right audience.</p>
+          <div className="settings-interest-list">{(user?.interests || []).length ? user.interests.map((interest) => <span className="settings-interest" key={interest}>{interest}</span>) : <span className="sub">No interests selected yet.</span>}</div>
+          <button type="button" className="btn bo" onClick={onOpenProfile}>Manage profile preferences</button>
+        </>}
+        {tab === 'Notifications' && <>
+          <div className="settings-panel-heading"><div><span className="settings-eyebrow">ACTIVITY</span><h2>Notifications</h2></div></div>
+          <p className="sub">Review messages, community activity and account updates in your notification center.</p>
+          <button type="button" className="btn bp" onClick={onOpenNotifications}>Open notification center</button>
+        </>}
+        {tab === 'Privacy & security' && <>
+          <div className="settings-panel-heading"><div><span className="settings-eyebrow">ACCOUNT SECURITY</span><h2>Password</h2></div></div>
+          {!resetRequested ? <><p className="sub">Request a password reset code for {user?.email || 'your account'}.</p><button type="button" className="btn bo" disabled={saving} onClick={() => void requestPasswordReset()}>{saving ? 'Sending code…' : 'Send reset code'}</button></> : <form className="settings-password-form" onSubmit={resetPassword}>
+            <label>Reset code<input autoComplete="one-time-code" value={resetCode} onChange={(event) => setResetCode(event.target.value)} required /></label>
+            <label>New password<input type="password" autoComplete="new-password" minLength={12} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required /></label>
+            <label>Confirm new password<input type="password" autoComplete="new-password" minLength={12} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required /></label>
+            <button type="submit" className="btn bp" disabled={saving}>{saving ? 'Updating…' : 'Update password'}</button>
+          </form>}
+          <div className="settings-signout"><div><strong>Sign out</strong><p className="sub">End your session on this device.</p></div><button type="button" className="btn bo" onClick={onLogout}>Sign out</button></div>
+        </>}
+        {tab === 'Connected accounts' && <>
+          <div className="settings-panel-heading"><div><span className="settings-eyebrow">PROFILE LINKS</span><h2>Connected accounts</h2></div><button type="button" className="btn bo" onClick={onOpenProfile}>Manage links</button></div>
+          {socialLinks.length ? <ul className="settings-social-list">{socialLinks.map((link) => <li key={link}><a href={link} target="_blank" rel="noreferrer">{link}</a></li>)}</ul> : <p className="sub">No social profiles are connected yet.</p>}
+        </>}
       </section>
     </div>
+    <style>{`
+      .settings-notice{max-width:1000px;margin:0 0 16px;padding:11px 14px;border:1px solid #D0D5DD;border-radius:6px;background:#fff;color:#344054;font-size:13px}
+      .settings-notice.success{border-color:#A6F4C5;background:#F6FEF9;color:#05603A}.settings-notice.error{border-color:#FECDCA;background:#FFF5F5;color:#912018}
+      .settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;max-width:1020px;align-items:start}
+      .settings-tabs{display:grid;gap:4px;padding:5px;border:1px solid #E5E7EB;border-radius:8px;background:#fff}
+      .settings-tab{min-height:40px;padding:8px 11px;border:0;border-radius:5px;background:transparent;color:#475467;text-align:left;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
+      .settings-tab.active{background:#FAF5FF;color:#5B21B6;font-weight:700}
+      .settings-panel{min-width:0;padding:24px;border:1px solid #E5E7EB;border-radius:8px;background:#fff}
+      .settings-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}.settings-panel-heading h2{margin:4px 0 0;font-size:18px}
+      .settings-eyebrow{color:#667085;font-size:10px;font-weight:700;letter-spacing:.06em}
+      .settings-account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:0}
+      .settings-account-grid div{min-width:0}.settings-account-grid dt{margin-bottom:5px;color:#667085;font-size:12px}.settings-account-grid dd{margin:0;color:#1D2939;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+      .settings-interest-list{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}.settings-interest{padding:7px 11px;border:1px solid #E9D5FF;border-radius:999px;background:#FAF5FF;color:#5B21B6;font-size:12px;font-weight:600}
+      .settings-password-form{display:grid;max-width:440px;gap:13px;margin-top:18px}.settings-password-form label{display:grid;gap:6px;color:#344054;font-size:12px;font-weight:600}.settings-password-form input{height:40px;padding:8px 11px;border:1px solid #D0D5DD;border-radius:6px;font:inherit}
+      .settings-signout{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:28px;padding-top:18px;border-top:1px solid #E5E7EB}.settings-signout p{margin:4px 0 0}
+      .settings-social-list{display:grid;gap:10px;padding-left:18px}.settings-social-list a{color:#5B21B6;overflow-wrap:anywhere}
+      @media(max-width:760px){.settings-layout{grid-template-columns:1fr;gap:12px}.settings-tabs{display:flex;overflow-x:auto}.settings-tab{flex:none;white-space:nowrap}.settings-panel{padding:18px}.settings-account-grid{grid-template-columns:1fr}}
+    `}</style>
   </>;
 }
 
@@ -4573,9 +4663,10 @@ const TOUR_STEPS = [
 const SIDEBAR_WIDTH = 260;
 const TOPBAR_HEIGHT = 65;
 const TOUR_BREAKPOINT = 1024;
+const TOUR_COMPLETED_KEY = 'tribesCapital:dashboard-tour-completed';
 
 function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
-  const [pos, setPos] = useState({ centered: true, top: 0, left: 0, dimLeft: 0, dimTop: 0 });
+  const [pos, setPos] = useState({ centered: true, top: 0, left: 0, dimLeft: 0, dimTop: 0, focus: null });
   const cardRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -4594,13 +4685,13 @@ function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
         const contentLeft = isNarrow ? 0 : sbRight;
         const centerX = contentLeft + (window.innerWidth - contentLeft) / 2;
         const wantTop = Math.max(tbBottom + 24, window.innerHeight / 2 - cardH / 2);
-        setPos({ centered: true, top: Math.max(8, Math.min(wantTop, window.innerHeight - cardH - 8)), left: centerX, dimLeft: isNarrow ? 0 : dimLeft, dimTop });
+        setPos({ centered: true, top: Math.max(8, Math.min(wantTop, window.innerHeight - cardH - 8)), left: centerX, dimLeft: isNarrow ? 0 : dimLeft, dimTop, focus: null });
         return;
       }
 
       const navEl = navRefs.current[data.navKey];
       if (!navEl) {
-        setPos({ centered: true, top: window.innerHeight / 2 - cardH / 2, left: dimLeft + (window.innerWidth - dimLeft) / 2, dimLeft, dimTop });
+        setPos({ centered: true, top: window.innerHeight / 2 - cardH / 2, left: dimLeft + (window.innerWidth - dimLeft) / 2, dimLeft, dimTop, focus: null });
         return;
       }
 
@@ -4611,7 +4702,15 @@ function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
       if (top > maxTop) top = maxTop;
       if (top < tbBottom + 12) top = tbBottom + 12;
       const pointerTop = Math.max(24, Math.min(navRect.top + navRect.height / 2 - top, cardH - 24));
-      setPos({ centered: false, top, left, pointerTop, dimLeft, dimTop });
+      setPos({
+        centered: false,
+        top,
+        left,
+        pointerTop,
+        dimLeft,
+        dimTop,
+        focus: { top: navRect.top - 5, left: navRect.left - 5, width: navRect.width + 10, height: navRect.height + 10 },
+      });
     }
 
     compute();
@@ -4633,7 +4732,13 @@ function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
   return (
     <>
       <div className="tour-click-block" />
-      <div className="tour-dim" style={{ top: pos.dimTop || TOPBAR_HEIGHT, left: pos.dimLeft || 0, right: 0, bottom: 0 }} />
+      {pos.focus ? <>
+        <div className="tour-dim" style={{ top: 0, left: 0, right: 0, height: pos.focus.top }} />
+        <div className="tour-dim" style={{ top: pos.focus.top, left: 0, width: pos.focus.left, height: pos.focus.height }} />
+        <div className="tour-dim" style={{ top: pos.focus.top, left: pos.focus.left + pos.focus.width, right: 0, height: pos.focus.height }} />
+        <div className="tour-dim" style={{ top: pos.focus.top + pos.focus.height, left: 0, right: 0, bottom: 0 }} />
+        <div className="tour-focus-ring" aria-hidden="true" style={pos.focus} />
+      </> : <div className="tour-dim" style={{ inset: 0 }} />}
       <div className="tour-card" style={cardStyle} ref={cardRef}>
         {!pos.centered && <span className="tour-pointer" style={{ top: pos.pointerTop }} />}
         <button className="tour-close" onClick={onClose} aria-label="Close tour"><X size={13} color="#fff" strokeWidth={2.6} /></button>
@@ -4692,7 +4797,9 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   const sidebarRef = useRef(null);
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStep, setTourStep] = useState(1);
-  const [tourSeen, setTourSeen] = useState(false);
+  const [tourSeen, setTourSeen] = useState(() => {
+    try { return window.localStorage.getItem(TOUR_COMPLETED_KEY) === 'true'; } catch { return false; }
+  });
 
   const [contractorQ, setContractorQ] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -4729,16 +4836,18 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   const [rpShowNew, setRpShowNew] = useState(false);
   const [rpShowConfirm, setRpShowConfirm] = useState(false);
 
+  useEffect(() => {
+    if (screen !== 'dashboard' || tourSeen) return;
+    setTourStep(1);
+    setTourOpen(true);
+    setTourSeen(true);
+    try { window.localStorage.setItem(TOUR_COMPLETED_KEY, 'true'); } catch { /* Storage may be unavailable. */ }
+  }, [screen, tourSeen]);
+
   function navigate(next) {
     if (next === 'profile' && screen !== 'profile') profileReturn.current = screen;
     setScreen(next);
     window.scrollTo(0, 0);
-    // First-time users land on Home and are greeted by the guided tour (Step 1 of 9)
-    if (next === 'dashboard' && !tourSeen) {
-      setTourStep(1);
-      setTourSeen(true);
-      setTimeout(() => setTourOpen(true), 250);
-    }
   }
   function showToast(msg) {
     setToastMsg(msg);

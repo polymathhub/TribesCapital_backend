@@ -20,7 +20,7 @@ function App() {
 
     const token = localStorage.getItem('accessToken');
     const userEmail = localStorage.getItem('userEmail');
-    return Boolean(token || import.meta.env.DEV);
+    return Boolean(token);
   });
   const [user, setUser] = useState(() => {
     if (typeof window === 'undefined') return null;

@@ -414,7 +414,7 @@ export class AdminOperationsService {
         throw new ConflictException('This submission is no longer awaiting an initial review');
       }
       const nextStatus = dto.decision === 'approve'
-        ? 'scoping'
+        ? 'development'
         : dto.decision === 'reject'
           ? 'rejected'
           : 'information_requested';
@@ -441,8 +441,8 @@ export class AdminOperationsService {
         select: { id: true, title: true, description: true, status: true },
       });
       if (!project) throw new NotFoundException('Project not found');
-      if (!['scoping', 'due-diligence'].includes(project.status)) {
-        throw new ConflictException('Only an accepted submission can enter due diligence');
+      if (!['development', 'due-diligence'].includes(project.status)) {
+        throw new ConflictException('A project must pass the development gate before entering due diligence');
       }
       const linkedCase = await tx.dueDiligence.findFirst({ where: { projectId }, select: { id: true } });
       if (linkedCase) throw new ConflictException('A diligence case is already linked to this project');
@@ -603,7 +603,7 @@ export class AdminOperationsService {
           ? 'rejected'
           : 'in_progress';
       const nextProjectStatus = dto.decision === 'approved'
-        ? 'development'
+        ? 'structuring'
         : dto.decision === 'rejected'
           ? 'rejected'
           : 'information_requested';
