@@ -4161,7 +4161,7 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
         <div className="lb-body">
           <div className="pj-sec pj-top">
             <div><span className="pj-k">Capacity</span><b className="pj-cap">{p.c} kWp</b></div>
-            <div><span className="pj-k">Stage</span><b className="pj-stage" style={{ color: STG[p.s][2] === "#9CA3AF" ? "var(--lb-mut)" : STG[p.s][2] }}>● {STG[p.s][1]}</b></div>
+            <div><span className="pj-k">Stage</span><b className="pj-stage" style={{ color: STG[p.s][2] === "#9CA3AF" ? "var(--lb-mut)" : STG[p.s][2] }}>{STG[p.s][1]}</b></div>
           </div>
           <div className="pj-sec">
             <div className="pj-h">Progress</div>
@@ -4191,6 +4191,8 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
 
 function Pipeline({ toast, go, allowCreate = true }) {
   const [ps, setPs] = useState([]), [sel, setSel] = useState(null), [add, setAdd] = useState(false);
+  const [activeStage, setActiveStage] = useState(null);
+  const [expandedStage, setExpandedStage] = useState(null);
   const [loading, setLoading] = useState(true), [error, setError] = useState('');
   useEffect(() => {
     let isCurrent = true;
@@ -4207,6 +4209,8 @@ function Pipeline({ toast, go, allowCreate = true }) {
     return () => { isCurrent = false; };
   }, []);
   const p = ps.find(x => x.id === sel);
+  const stageProjects = activeStage === null ? [] : ps.filter(project => project.s === activeStage);
+  const selectedStage = activeStage === null ? null : STG[activeStage];
   const adv = async () => {
     if (!p || p.s >= STG.length - 1) return;
     setError('Stage changes are recorded through project review and investment decisions.');
@@ -4216,10 +4220,98 @@ function Pipeline({ toast, go, allowCreate = true }) {
     {error && <p role="alert" className="sub">{error}</p>}
     <div className="card stats">{[[ps.length, "Visible projects"], [ps.filter(x => x.s >= 1 && x.s <= 2).length, "In development"], [ps.filter(x => x.s === 6).length, "Operating"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([v, l]) => <div key={l}><b>{v}</b><span className="sub">{l}</span></div>)}</div>
     {loading && <p role="status" className="sub">Loading projects…</p>}
-    <div className="pipeline-seven-stage-scroll"><div className="board pipeline-seven-stage-board">{STG.map(([k, l, c, meaning, gate], i) => <div className="col pipeline-seven-stage-column" key={k}><div className="row pipeline-stage-heading"><span style={{ width: 3, height: 16, background: c, borderRadius: 2, flex: '0 0 3px' }} /><h3 className="sp" style={{ fontSize: 13.5 }}>{l}</h3><span className="tag">{ps.filter(x => x.s === i).length}</span></div><p className="pipeline-stage-meaning">{meaning}</p><div className="pipeline-stage-gate"><b>Gate to leave</b><span>{gate || 'None; stays until the contract ends.'}</span></div>
-      {ps.filter(x => x.s === i).map(x => <div className="pc" key={x.id} onClick={() => setSel(x.id)}><div className="row" style={{ marginBottom: 9 }}><Ty t={x.t} />{i === 6 && <span style={{ color: "var(--mt)", fontSize: 11, fontWeight: 600 }}>● Operating</span>}</div><b style={{ fontSize: 13.8 }}>{x.n}</b><div className="mut row" style={{ gap: 5, margin: "6px 0 10px" }}><Icon name="mapPin" size={12} />{x.l}</div><p style={{ fontSize: 13, marginBottom: 12 }}><b style={{ color: "var(--p7)" }}>{x.c || 0} kWp</b> <span className="mut">capacity</span></p><div className="row" style={{ borderTop: "1px solid var(--ln)", paddingTop: 11 }}><Ava c="#6B7280" t={(x.k || 'P')[0]} s={22} /><span className="sub" style={{ fontSize: 12.5 }}>{x.k}</span></div></div>)}
-      {!loading && !error && ps.filter(x => x.s === i).length === 0 && <p className="sub" style={{ padding: 12 }}>No projects in this stage.</p>}
-      </div>)}</div></div>
+    {activeStage === null ? (
+      <section aria-label="Project stages">
+        <div className="pipeline-stage-overview-heading">
+          <div><h2>Explore by stage</h2><p>Select a stage to browse its projects.</p></div>
+        </div>
+        <div className="pipeline-stage-grid">
+          {STG.map(([k, label, color, meaning, gate], index) => {
+            const count = ps.filter(project => project.s === index).length;
+            const isExpanded = expandedStage === index;
+            return (
+              <div
+                className="pipeline-stage-card"
+                key={k}
+                role="button"
+                tabIndex={0}
+                onClick={() => setActiveStage(index)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setActiveStage(index);
+                  }
+                }}
+              >
+                <span className="pipeline-stage-card-top">
+                  <span className="pipeline-stage-card-title">{label}</span>
+                  <span className="pipeline-stage-card-actions">
+                    <button
+                      type="button"
+                      className="pipeline-stage-card-info"
+                      aria-label={`${isExpanded ? 'Hide' : 'Show'} details for ${label}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setExpandedStage((current) => current === index ? null : index);
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 10.5V16" />
+                        <path d="M12 7.5h.01" />
+                      </svg>
+                    </button>
+                  </span>
+                </span>
+                {isExpanded && <span className="pipeline-stage-card-description">{meaning}</span>}
+                <span className="pipeline-stage-card-footer">
+                  <span>{count === 1 ? '1 project' : `${count} projects`}</span>
+                  <span>{gate ? `Next: ${gate}` : 'Active portfolio'}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    ) : selectedStage && (
+      <section aria-label={`${selectedStage[1]} stage projects`}>
+        <button className="pipeline-back-button" type="button" onClick={() => setActiveStage(null)}>
+          <span aria-hidden="true">←</span> All stages
+        </button>
+        <div className="pipeline-stage-detail-heading">
+          <div>
+            <h2><i style={{ background: selectedStage[2] }} />{selectedStage[1]}</h2>
+            <p>{stageProjects.length} {stageProjects.length === 1 ? 'project' : 'projects'} in this stage</p>
+          </div>
+          <div className="pipeline-stage-detail-copy">
+            <p>{selectedStage[3]}</p>
+            <span><b>Gate to leave:</b> {selectedStage[4] || 'None; remains here until the contract ends.'}</span>
+          </div>
+        </div>
+        {stageProjects.length === 0 ? (
+          !loading && !error && <div className="pipeline-no-projects">No projects in this stage yet.</div>
+        ) : (
+          <div className="pipeline-project-grid">
+            {stageProjects.map(project => (
+              <button className="pipeline-project-card" key={project.id} type="button" onClick={() => setSel(project.id)}>
+                <span className="pipeline-project-card-top">
+                  <Ty t={project.t} />
+                  {project.s === 6 && <span className="pipeline-operating-label">Operating</span>}
+                </span>
+                <b className="pipeline-project-name">{project.n}</b>
+                <span className="pipeline-project-location"><Icon name="mapPin" size={15} />{project.l}</span>
+                {project.c > 0 ? <span className="pipeline-project-capacity"><b>{project.c} kWp</b><span>capacity</span></span> : null}
+                <span className="pipeline-project-card-info" onClick={(e) => { e.stopPropagation(); e.preventDefault(); const card = e.currentTarget.closest(".pipeline-project-card"); if (card) card.classList.toggle("is-expanded"); }} role="button" tabIndex={0} aria-label="More details">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01"></path><path d="M11 12h2v4h-2z"></path></svg>
+                </span>
+                <span className="pipeline-project-owner"><Ava c="#6B7280" t={(project.k || 'P')[0]} s={28} /><span>{project.k}</span></span>
+                <span className="pipeline-project-open">View project details <span aria-hidden="true">→</span></span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    )}
     {p && <ProjectDetailModal p={p} onClose={() => setSel(null)} onAdvance={adv} onViewContractor={() => go("contractors", p.k)} onViewVault={() => go("vault")} />}
     {add && <AddProjectModal types={Object.keys(TYC)} stages={[STG[0][1]]} onClose={() => setAdd(false)}
       onSubmit={async (v) => {
@@ -4229,17 +4321,62 @@ function Pipeline({ toast, go, allowCreate = true }) {
         setPs((current) => [created, ...current]);
       }} />}
     <style>{`
-      .pipeline-seven-stage-scroll{max-width:100%;overflow-x:auto;padding-bottom:8px}
-      .tcx .board.pipeline-seven-stage-board{grid-template-columns:repeat(7,minmax(220px,1fr));min-width:1580px;gap:12px;align-items:stretch}
-      .tcx .pipeline-seven-stage-column{min-width:0;padding:14px}
-      .pipeline-stage-heading{min-height:26px}
-      .pipeline-stage-meaning{min-height:104px;margin:6px 0 12px;color:var(--i6);font-size:11px;line-height:1.45}
-      .pipeline-stage-gate{display:grid;min-height:57px;align-content:start;gap:4px;margin-bottom:12px;padding:9px 0;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);font-size:10px;line-height:1.4}
-      .pipeline-stage-gate b{color:var(--p7);font-size:10px}
-      .pipeline-stage-description{margin:12px 0;color:var(--i6);font-size:12px;line-height:1.55}
+      .pipeline-stage-overview-heading{display:flex;align-items:center;justify-content:space-between;margin:28px 0 16px}
+      .pipeline-stage-overview-heading h2,.pipeline-stage-detail-heading h2{margin:0;color:var(--i9);font-size:22px}
+      .pipeline-stage-overview-heading p,.pipeline-stage-detail-heading p{margin:6px 0 0;color:var(--i6);font-size:14px}
+      .pipeline-stage-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+      .pipeline-stage-card{display:flex;min-width:0;min-height:170px;flex-direction:column;justify-content:space-between;gap:12px;padding:16px 16px 14px;text-align:left;color:var(--i9);background:#fff;border:1px solid var(--ln);border-radius:18px;box-shadow:0 10px 24px rgba(15,23,42,.06);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
+      .pipeline-stage-card:hover{transform:translateY(-2px);box-shadow:0 15px 30px rgba(15,23,42,.1)}
+      .pipeline-stage-card-top,.pipeline-stage-card-title,.pipeline-stage-card-footer,.pipeline-stage-card-actions{display:flex;align-items:center}
+      .pipeline-stage-card-top{justify-content:space-between;gap:12px}
+      .pipeline-stage-card-title{gap:10px;font-size:19px;font-weight:700}
+      .pipeline-stage-card-line,.pipeline-stage-detail-heading h2 i{width:10px;height:10px;flex:0 0 10px;border-radius:2px;display:inline-block}
+      .pipeline-stage-card-actions{gap:10px}
+      .pipeline-stage-card-info{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:none;border-radius:0;background:transparent;color:var(--i7);padding:0;cursor:pointer;transition:transform .15s ease,color .15s ease}
+      .pipeline-stage-card-info:hover{color:var(--p7);transform:translateY(-1px)}
+      .pipeline-stage-card-info svg{width:17px;height:17px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+      .pipeline-stage-card-info svg circle{stroke:currentColor;fill:none}
+      .pipeline-stage-card-info svg path:nth-child(2){stroke:currentColor}
+      .pipeline-stage-card-info svg path:nth-child(3){stroke:currentColor;stroke-linecap:round}
+      .pipeline-stage-count{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:40px;padding:0 10px;border-radius:12px;background:var(--p0);color:var(--p7);font-size:17px;font-weight:700}
+      .pipeline-stage-card-description{color:var(--i6);font-size:14px;line-height:1.55}
+      .pipeline-stage-card-footer{align-items:flex-start;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid var(--ln);color:var(--i6);font-size:12px;line-height:1.45}
+      .pipeline-stage-card-footer span:first-child{color:var(--p7);font-size:13px;font-weight:700}
+      .pipeline-back-button{display:inline-flex;align-items:center;gap:8px;margin:22px 0 18px;padding:0;border:0;background:transparent;color:var(--p7);font-size:14px;font-weight:700;cursor:pointer}
+      .pipeline-stage-detail-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px;padding:22px 24px;background:#fff;border:1px solid var(--ln);border-radius:16px}
+      .pipeline-stage-detail-heading h2{display:flex;align-items:center;gap:10px;font-size:24px}
+      .pipeline-stage-detail-copy{max-width:560px;color:var(--i6);font-size:13px;line-height:1.55}
+      .pipeline-stage-detail-copy p{margin:0 0 9px;font-size:13px}
+      .pipeline-stage-detail-copy span{color:var(--i6)}
+      .pipeline-stage-detail-copy b{color:var(--p7)}
+      .pipeline-project-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+      .pipeline-project-card{display:flex;min-width:0;min-height:280px;flex-direction:column;align-items:stretch;gap:13px;padding:20px 18px 18px;text-align:left;color:var(--i9);background:#fff;border:1px solid var(--ln);border-radius:16px;box-shadow:0 8px 22px rgba(15,23,42,.05);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease;position:relative}
+      .pipeline-project-card:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(15,23,42,.1)}
+      .pipeline-project-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+      .pipeline-project-name{font-size:19px;line-height:1.4}
+      .pipeline-project-location{display:flex;align-items:center;gap:7px;color:var(--i6);font-size:14px}
+      .pipeline-project-capacity{display:flex;align-items:baseline;gap:7px}
+      .pipeline-project-capacity b{color:var(--p7);font-size:17px}
+      .pipeline-project-capacity span{color:var(--i6);font-size:13px}
+      .pipeline-project-owner{display:flex;align-items:center;gap:9px;padding-top:12px;border-top:1px solid var(--ln);color:var(--i6);font-size:13px}
+      .pipeline-project-open{display:flex;justify-content:space-between;margin-top:auto;padding-top:10px;color:var(--p7);font-size:13px;font-weight:700}
+      .pipeline-project-card-top{padding-right:44px}
+      .pipeline-project-card-info{position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:transparent;border:none;color:var(--p7);cursor:pointer}
+      .pipeline-project-card-info:focus{outline:2px solid rgba(124,58,237,.12);outline-offset:2px}
+      .pipeline-project-card-info svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+      .pipeline-project-card-info svg circle{fill:none}
+      .pipeline-project-card-info svg path{stroke:currentColor;stroke-linecap:round}
+      .pipeline-project-card-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+      .pipeline-project-card-text{display:grid;gap:8px}
+      .pipeline-project-card-details{display:none;padding:10px 0 0;color:var(--i6);font-size:12.5px;line-height:1.55}
+      .pipeline-project-card.is-expanded .pipeline-project-card-details{display:block}
+      .pipeline-project-card.is-expanded .pipeline-project-open{margin-top:4px}
+      .pipeline-operating-label{color:var(--mt);font-size:12px;font-weight:700}
+      .pipeline-no-projects{padding:56px 20px;text-align:center;color:var(--i6);background:#fff;border:1px solid var(--ln);border-radius:16px}
       .pipeline-gate-detail{display:grid;gap:4px;padding:10px;border:1px solid var(--p1);border-radius:7px;background:var(--p0);font-size:12px;line-height:1.45}
       .pipeline-gate-detail b{color:var(--p9);font-size:11px}
-      @media(max-width:640px){.tcx .board.pipeline-seven-stage-board{min-width:1540px}.pipeline-stage-meaning{min-height:96px}}
+      @media(max-width:1080px){.pipeline-stage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pipeline-project-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:700px){.pipeline-stage-grid,.pipeline-project-grid{grid-template-columns:1fr}.pipeline-stage-card{min-height:180px;padding:20px}.pipeline-stage-detail-heading{flex-direction:column;padding:18px}.pipeline-stage-detail-copy{max-width:none}.pipeline-project-card{min-height:200px;padding:19px}}
     `}</style>
   </>;
 }
