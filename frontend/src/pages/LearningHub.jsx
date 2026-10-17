@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { coursesAPI, lessonsAPI, usersAPI } from '../api/endpoints';
 import apiClient from '../api/client';
 import learningIllustration from '../assets/illustrations/Learning-cuate.svg';
+import { LEARNING_HUB_VIDEOS } from '../data/learningHubVideos';
 import { readStoredCourseProgress, persistCourseProgress, getResumeLessonIndex, COURSE_PROGRESS_STORAGE_PREFIX, formatRelativeTime } from '../utils/learningHubProgress';
 import { buildLearningHubStats } from '../utils/dashboardMetrics';
 
@@ -1291,120 +1292,7 @@ function HubView({ onPlay, isMobile, isTablet, onMenuToggle, savedCourseIds = {}
   const FILTERS = [{id:'thisMonth',label:'This month'},{id:'energyFinance',label:'Energy Finance'},{id:'solarStorage',label:'Solar & Storage'},{id:'riskFX',label:'Risk & FX'},{id:'policyESG',label:'Policy & ESG'}];
   const SORTS   = [{id:'progress',label:'Progress'},{id:'newest',label:'Newest'},{id:'az',label:'A–Z'}];
   const FILTER_CAT = { energyFinance:'Energy Finance', solarStorage:'Solar & Storage', riskFX:'Risk & FX', policyESG:'Policy & ESG' };
-  const channelCourseVideos = [
-    {
-      id: 'channel-9',
-      title: "Africa's Energy Challenge Is Bigger Than the Grid | Tribes Capital",
-      subtitle: 'A Tribes Capital perspective on the wider energy access challenge across Africa',
-      videoId: 'I9DBUsKJ-eI',
-      cat: 'Course',
-      level: 'Beginner',
-      dur: 'Video',
-      lessons: 1,
-    },
-    {
-      id: 'channel-10',
-      title: 'Join the Tribes Capital Community | Africa\'s Clean Energy Network',
-      subtitle: 'An introduction to the Tribes Capital community and its clean energy network',
-      videoId: '6R9E5kuwEl4',
-      cat: 'Course',
-      level: 'Beginner',
-      dur: 'Video',
-      lessons: 1,
-    },
-    {
-      id: 'channel-11',
-      title: 'Tribes Capital: Making Sustainable Energy Accessible Through Innovative Finance',
-      subtitle: 'How innovative finance can expand sustainable energy access',
-      videoId: 'wtEb_1Pf0aU',
-      cat: 'Course',
-      level: 'Intermediate',
-      dur: 'Video',
-      lessons: 1,
-    },
-    {
-      id: 'channel-1',
-      title: 'How Clean Energy Is Transforming Schools & Communities in Africa',
-      subtitle: 'A short Tribes Capital video on practical community impact',
-      videoId: 'wMQDsjS9WC4',
-      cat: 'Course',
-      level: 'Beginner',
-      dur: '1 min',
-      lessons: 4,
-    },
-    {
-      id: 'channel-2',
-      title: 'Hospitals Are Going Dark in Africa — Tribes Capital is Fixing It',
-      subtitle: 'A focused look at energy resilience in healthcare settings',
-      videoId: 'Jdmt9BaYHnw',
-      cat: 'Course',
-      level: 'Intermediate',
-      dur: '31 sec',
-      lessons: 3,
-    },
-    {
-      id: 'channel-3',
-      title: 'How Clean Energy Powers Africa',
-      subtitle: 'A fast-paced overview of the sector opportunity and momentum',
-      videoId: 'DnjMO5L5QgI',
-      cat: 'Course',
-      level: 'Beginner',
-      dur: '45 sec',
-      lessons: 3,
-    },
-    {
-      id: 'channel-4',
-      title: 'Financing resilient energy projects',
-      subtitle: 'Insights into project finance and structured deals for Africa',
-      videoId: 'byMAFK-2szg',
-      cat: 'Course',
-      level: 'Intermediate',
-      dur: '2 min',
-      lessons: 4,
-    },
-    {
-      id: 'channel-5',
-      title: 'The business case for community solar',
-      subtitle: 'How local generation changes the economics for communities',
-      videoId: 'bNMeYzFtnCI',
-      cat: 'Course',
-      level: 'Beginner',
-      dur: '1 min',
-      lessons: 3,
-    },
-    {
-      id: 'channel-6',
-      title: 'From concept to commissioning: project development explained',
-      subtitle: 'A practical walkthrough of clean energy development stages',
-      videoId: 'XtgP-D04bAI',
-      cat: 'Course',
-      level: 'Intermediate',
-      dur: '2 min',
-      lessons: 4,
-    },
-    {
-      id: 'channel-7',
-      title: 'Renewable energy and community impact',
-      subtitle: 'A short case study on social benefits and resilience',
-      videoId: 'HdHUoRx-4ig',
-      cat: 'Course',
-      level: 'Beginner',
-      dur: '1 min',
-      lessons: 3,
-    },
-    {
-      id: 'channel-8',
-      title: 'Scaling energy access with smart partnerships',
-      subtitle: 'Key lessons from partnerships that accelerate deployment',
-      videoId: 'u3sUE2dY7x0',
-      cat: 'Course',
-      level: 'Advanced',
-      dur: '1 min',
-      lessons: 4,
-    },
-  ];
-
-  const channelCourseEntries = channelCourseVideos.map((course) => ({
+  const channelCourseEntries = LEARNING_HUB_VIDEOS.map((course) => ({
     id: course.id,
     cat: course.cat,
     title: course.title,

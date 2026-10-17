@@ -21,6 +21,8 @@ describe('EventsService', () => {
           meetingLink: null,
           meetingHandle: null,
           meetingInstructions: null,
+          whatYoullLearn: ['Understand the funding process'],
+          agenda: [{ time: '10:00', item: 'Founder introductions' }],
           registrationDeadline: null,
           capacity: 100,
           isPublished: false,
@@ -38,11 +40,13 @@ describe('EventsService', () => {
 
     const service = new EventsService(prisma as any, notificationsService as any);
 
-    await service.create('user-1', {
+    const result = await service.create('user-1', {
       title: 'Launch Session',
       slug: 'launch-session',
       startDate: '2026-01-01T10:00:00.000Z',
       endDate: '2026-01-01T11:00:00.000Z',
+      whatYoullLearn: ['Understand the funding process'],
+      agenda: [{ time: '10:00', item: 'Founder introductions' }],
     } as any);
 
     expect(prisma.event.create).toHaveBeenCalledWith(
@@ -50,9 +54,15 @@ describe('EventsService', () => {
         data: expect.objectContaining({
           isPublished: false,
           creatorId: 'user-1',
+          whatYoullLearn: ['Understand the funding process'],
+          agenda: [{ time: '10:00', item: 'Founder introductions' }],
         }),
       }),
     );
+    expect(result).toEqual(expect.objectContaining({
+      whatYoullLearn: ['Understand the funding process'],
+      agenda: [{ time: '10:00', item: 'Founder introductions' }],
+    }));
     expect(notificationsService.createForAllUsers).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'event_created',
@@ -153,5 +163,32 @@ describe('EventsService', () => {
     const errors = await validate(dto);
 
     expect(errors.some(error => error.property === 'capacity')).toBe(true);
+  });
+
+  it('validates learning outcomes and structured agenda items', async () => {
+    const dto = plainToInstance(CreateEventDto, {
+      title: 'Working Session',
+      startDate: '2026-01-01T10:00:00.000Z',
+      endDate: '2026-01-01T11:00:00.000Z',
+      whatYoullLearn: ['Prepare for investor conversations'],
+      agenda: [{ time: '10:00', item: 'Introductions' }],
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(0);
+  });
+
+  it('rejects agenda entries without a time or item string', async () => {
+    const dto = plainToInstance(CreateEventDto, {
+      title: 'Working Session',
+      startDate: '2026-01-01T10:00:00.000Z',
+      endDate: '2026-01-01T11:00:00.000Z',
+      agenda: [{ time: '10:00', item: 123 }],
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.some(error => error.property === 'agenda')).toBe(true);
   });
 });

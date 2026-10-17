@@ -3,15 +3,15 @@ import { communityAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
 
 /* ─── DESIGN TOKENS ─── */
 const C = {
-  pu:'#6700A6', puf:'#FAF5FF', pul:'#7C3AED', pud:'#4C1D95',
+  pu:'#5B21B6', puf:'#F4F0FB', pul:'#7C3AED', pud:'#4C1D95',
   gr:'#16A34A', grb:'#DCFCE7', am:'#D97706', amb:'#FEF3C7',
   tl:'#0D9488', tlb:'#CCFBF1', rd:'#DC2626', rdb:'#FEF2F2',
   t1:'#111827', t2:'#6B7280', t3:'#9CA3AF',
   bd:'#E5E7EB', bg:'#F9FAFB', w:'#FFFFFF',
 };
 const EV_TYPES = {
-  'Office hours' : { c:'#7C3AED', b:'#EDE9FE', label:'OFFICE HOURS'  },
-  'Member circle': { c:'#7C3AED', b:'#F5F3FF', label:'MEMBER CIRCLE' },
+  'Office hours' : { c:C.pu, b:C.puf, label:'OFFICE HOURS'  },
+  'Member circle': { c:C.pu, b:C.puf, label:'MEMBER CIRCLE' },
   'Workshop'     : { c:'#2563EB', b:'#EFF6FF', label:'WORKSHOP'      },
   'Webinar'      : { c:'#0D9488', b:'#F0FDFA', label:'WEBINAR'       },
   'Replay'       : { c:'#16A34A', b:'#DCFCE7', label:'REPLAY'        },
@@ -299,6 +299,7 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onApprove, onRsvp, isMobile, 
         </div>
         <button type="button" className="oe-event-title" onClick={() => onOpen(ev)}>{ev.title}</button>
         <p className="oe-event-host">Hosted by {ev.hostName}</p>
+        <p className="oe-event-description">{ev.desc}</p>
         <div className="oe-event-meta">
           <span><I k="clock" s={13} c={C.t3}/>{ev.dateShort}</span>
           <span><I k={ev.isVirtual ? 'globe' : 'monitor'} s={13} c={C.t3}/>{ev.isVirtual ? 'Online' : ev.location}</span>
@@ -321,7 +322,7 @@ function EventCard({ ev, onOpen, onEdit, onDelete, onApprove, onRsvp, isMobile, 
    EVENT FORM MODAL — responsive width
 ═══════════════════════════════════════════ */
 function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
-  const blank = {title:'',speakers:'',type:'',duration:'',date:'',time:'',maxCap:'',desc:'',agenda:[], location:'', isVirtual:false, registrationDeadline:'', meetingPlatform:'', meetingLink:'', meetingInstructions:''};
+  const blank = {title:'',speakers:'',type:'',duration:'',date:'',time:'',maxCap:'',desc:'',whatYoullLearn:[],agenda:[], location:'', isVirtual:false, registrationDeadline:'', meetingPlatform:'', meetingLink:'', meetingInstructions:''};
   const hydrateForm = (source) => {
     if (!source) return blank;
     const dateValue = normalizeDateInput(source.date || source.startIso || source.startDate || '');
@@ -335,7 +336,11 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
       time: timeValue,
       maxCap: source.maxCap ?? source.capacity ?? '',
       desc: source.desc || source.description || '',
-      agenda: Array.isArray(source.agenda) ? source.agenda : [],
+      whatYoullLearn: Array.isArray(source.whatYoullLearn) ? source.whatYoullLearn : [],
+      agenda: Array.isArray(source.agenda) ? source.agenda.map(item => ({
+        t: item.time || item.t || '',
+        d: item.item || item.d || '',
+      })) : [],
       location: source.location || '',
       isVirtual: Boolean(source.isVirtual),
       registrationDeadline: normalizeDateInput(source.registrationDeadline || ''),
@@ -458,6 +463,7 @@ function EventFormModal({ title, initial, onClose, onSave, isMobile }) {
             </div>
           </div>
           <div style={GP}><label htmlFor="event-meeting-instructions" style={LB}>Meeting instructions <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label><textarea id="event-meeting-instructions" name="meetingInstructions" value={f.meetingInstructions} onChange={set('meetingInstructions')} placeholder="Share access notes, passwords, or Slack channel details" rows={3} style={{...IN,resize:'vertical',lineHeight:1.6}}/></div>
+          <div style={GP}><label htmlFor="event-learning-outcomes" style={LB}>What attendees will learn <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional, one item per line)</span></label><textarea id="event-learning-outcomes" name="whatYoullLearn" value={f.whatYoullLearn.join('\n')} onChange={event => setV('whatYoullLearn', event.target.value.split('\n'))} placeholder={'Understanding the fundraising process\nPreparing for investor conversations'} rows={3} style={{...IN,resize:'vertical',lineHeight:1.6}}/></div>
           <div style={GP}>
             <label style={LB}>Agenda items <span style={{fontSize:12,fontWeight:400,color:C.t3}}>(optional)</span></label>
             {f.agenda.map((a,i)=>(
@@ -512,7 +518,10 @@ function DetailModal({ ev, onClose, onRsvp, isMobile }) {
             </div>
           )}
           <h2 style={{fontSize:16,fontWeight:700,color:C.t1,margin:'0 0 10px',lineHeight:1.4}}>{ev.title}</h2>
-          <p style={{fontSize:13,color:C.t2,margin:'0 0 18px',lineHeight:1.7}}>{ev.desc}</p>
+          <section style={{marginBottom:18}}>
+            <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 7px'}}>About this session</h3>
+            <p style={{fontSize:13,color:C.t2,margin:0,lineHeight:1.7}}>{ev.desc}</p>
+          </section>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
             {[{l:'Date',v:ev.dateLabel},{l:'Time',v:ev.time},{l:'Duration',v:ev.dur},{l:'Format',v:ev.format}].map(it=>(
               <div key={it.l} style={{padding:'11px 12px',background:C.bg,border:`1px solid ${C.bd}`,borderRadius:10}}>
@@ -521,22 +530,49 @@ function DetailModal({ ev, onClose, onRsvp, isMobile }) {
               </div>
             ))}
           </div>
-          <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 12px'}}>Speaker notes</h3>
-          {ev.speakers?.length ? ev.speakers.map((s,i)=>(
+          {ev.whatYoullLearn.length > 0 && (
+            <section style={{marginBottom:18}}>
+              <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 9px'}}>What you’ll learn</h3>
+              <ul style={{display:'grid',gap:8,margin:0,paddingLeft:18,color:C.t2,fontSize:13,lineHeight:1.5}}>
+                {ev.whatYoullLearn.map((item, index) => <li key={index}>{item}</li>)}
+              </ul>
+            </section>
+          )}
+          {ev.speakers.length > 0 && (
+            <section style={{marginBottom:14}}>
+              <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 12px'}}>Speakers</h3>
+              {ev.speakers.map((s,i)=>(
             <div key={i} style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
               <div style={{width:34,height:34,borderRadius:'50%',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:s.color,flexShrink:0}}>{s.initials}</div>
               <div><div style={{fontSize:13,fontWeight:600,color:C.t1}}>{s.name}</div><div style={{fontSize:12,color:C.t3}}>{s.role}</div></div>
             </div>
-          )) : <div style={{fontSize:13,color:C.t2,marginBottom:14}}>The session host will share details and introductions before the event begins.</div>}
-          {ev.agenda&&ev.agenda.length>0&&<>
-            <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'14px 0 10px'}}>Agenda</h3>
+              ))}
+            </section>
+          )}
+          {(ev.hostRole || ev.hostBio) && (
+            <section style={{marginBottom:14}}>
+              <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 7px'}}>Your host</h3>
+              <p style={{fontSize:13,fontWeight:600,color:C.t1,margin:'0 0 4px'}}>{ev.hostName}{ev.hostRole ? ` · ${ev.hostRole}` : ''}</p>
+              {ev.hostBio && <p style={{fontSize:13,color:C.t2,margin:0,lineHeight:1.6}}>{ev.hostBio}</p>}
+            </section>
+          )}
+          {ev.agenda.length > 0 && (
+            <section style={{marginBottom:14}}>
+            <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 10px'}}>Agenda</h3>
             {ev.agenda.map((a,i)=>(
               <div key={i} style={{display:'flex',gap:14,marginBottom:9,alignItems:'baseline'}}>
-                <span style={{fontSize:12,fontWeight:600,color:C.t3,flexShrink:0,width:30}}>{a.t}</span>
-                <span style={{fontSize:13,color:C.t1,lineHeight:1.4}}>{a.d}</span>
+                <span style={{fontSize:12,fontWeight:600,color:C.t3,flexShrink:0,minWidth:56}}>{a.time}</span>
+                <span style={{fontSize:13,color:C.t1,lineHeight:1.4}}>{a.item}</span>
               </div>
             ))}
-          </>}
+            </section>
+          )}
+          {ev.meetingInstructions && (
+            <section style={{marginBottom:14}}>
+              <h3 style={{fontSize:14,fontWeight:700,color:C.t1,margin:'0 0 7px'}}>Joining instructions</h3>
+              <p style={{fontSize:13,color:C.t2,margin:0,lineHeight:1.6}}>{ev.meetingInstructions}</p>
+            </section>
+          )}
         </div>
         <div style={{padding:'14px 20px 18px',borderTop:`1px solid ${C.bd}`,flexShrink:0}}>
           <div style={{fontSize:13,color:C.t2,marginBottom:10}}>{ev.spotsLeft} spots remaining</div>
@@ -642,7 +678,7 @@ function formatEventForUi(event) {
   const time = start.toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit', hour12: true });
   const dateLabel = start.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const dateShort = start.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' }) + ` · ${time}`;
-  const type = normalizeEventType(event.eventType);
+  const type = normalizeEventType(event.eventType || event.type);
   const meetingPlatform = inferMeetingPlatform(event.meetingPlatform, event.meetingLink || event.meetingHandle);
   const meetingLink = event.meetingLink || event.meetingHandle || '';
   const spotsLeft = Math.max(0, (event.capacity || 0) - (event.rsvpCount || 0));
@@ -651,7 +687,7 @@ function formatEventForUi(event) {
     id: event.id,
     isPublished: event.isPublished !== false,
     title: event.title,
-    desc: event.description || 'Join this live session with the Tribes Capital team.',
+    desc: event.description || event.desc || event.about || 'Join this live session with the Tribes Capital team.',
     dateLabel,
     dateShort,
     time,
@@ -670,8 +706,15 @@ function formatEventForUi(event) {
     totalSpots: event.capacity || 0,
     rsvped: false,
     type,
-    speakers: [],
-    agenda: [],
+    speakers: Array.isArray(event.speakers) ? event.speakers : [],
+    whatYoullLearn: Array.isArray(event.whatYoullLearn) ? event.whatYoullLearn : [],
+    agenda: Array.isArray(event.agenda) ? event.agenda.map((item) => ({
+      time: item.time || item.t || '',
+      item: item.item || item.d || item.title || '',
+    })).filter((item) => item.item) : [],
+    hostName: event.host?.name || event.hostName || event.organizerName || 'Tribes Capital',
+    hostRole: event.host?.role || event.hostRole || '',
+    hostBio: event.host?.bio || event.hostBio || '',
     meetingPlatform,
     meetingLink,
     meetingInstructions: event.meetingInstructions || '',
@@ -922,6 +965,12 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
       meetingLink: meetingLinkValue || undefined,
       meetingHandle: meetingLinkValue || undefined,
       meetingInstructions: String(form.meetingInstructions || '').trim() || undefined,
+      whatYoullLearn: (Array.isArray(form.whatYoullLearn) ? form.whatYoullLearn : [])
+        .map(item => String(item || '').trim())
+        .filter(Boolean),
+      agenda: (Array.isArray(form.agenda) ? form.agenda : [])
+        .map(item => ({ time: String(item.t || '').trim(), item: String(item.d || '').trim() }))
+        .filter(item => item.item),
       registrationDeadline: registrationDeadline ? registrationDeadline.toISOString() : undefined,
     };
 
@@ -1013,7 +1062,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
 
         <div className="oe-layout" style={{ gridTemplateColumns: pageGrid }}>
           <section className="oe-main-list" aria-labelledby="oe-upcoming-title">
-            <div className="oe-list-heading"><h2 id="oe-upcoming-title">Upcoming events <span>({displayEvents.length})</span></h2><button type="button" onClick={() => setViewAll(true)}>View all <I k="arr" s={14} c="#6700A6"/></button></div>
+            <div className="oe-list-heading"><h2 id="oe-upcoming-title">Upcoming events <span>({displayEvents.length})</span></h2><button type="button" onClick={() => setViewAll(true)}>View all <I k="arr" s={14} c={C.pu}/></button></div>
             {loadingEvents && <div className="oe-list-empty" role="status">Loading events…</div>}
             {!loadingEvents && displayEvents.length === 0 && <div className="oe-list-empty"><h3>{eventsError ? 'Could not load events' : 'No events in this category yet'}</h3><p>{eventsError || 'Try another category or get notified when a new session is scheduled.'}</p><button type="button" onClick={handleNotifyMe} disabled={notifyLoading}>Notify me about new events</button></div>}
             {!loadingEvents && displayEvents.length > 0 && remainingEvents.length === 0 && <div className="oe-list-empty"><h3>Your next session is featured above</h3><p>More sessions will appear here as they are scheduled.</p></div>}
@@ -1029,7 +1078,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
               <div className="oe-side-heading"><h2>Hosts to follow</h2></div>
               {hosts.length ? hosts.map((host) => { const name = [host.firstName, host.lastName].filter(Boolean).join(' ') || host.displayName || 'Member'; return <div className="oe-host-row" key={host.id}><span className="oe-host-avatar">{name.slice(0, 1).toUpperCase()}</span><span className="oe-host-copy"><b>{name}</b><small>{host.occupation || 'Community member'}</small></span><button type="button" className="oe-follow-button" onClick={() => void handleToggleHostFollow(host)}>{host.isFollowedByMe ? 'Following' : 'Follow'}</button></div>; }) : <p className="oe-side-empty">Community hosts will appear here.</p>}
             </section>
-            <section className="oe-side-panel oe-recordings-panel"><h2>Missed a session?</h2><p>Recordings from past webinars and workshops are available to watch on demand.</p><button type="button" onClick={() => setFilter('rp')}>Browse replays <I k="arr" s={13} c="#6700A6"/></button></section>
+            <section className="oe-side-panel oe-recordings-panel"><h2>Missed a session?</h2><p>Recordings from past webinars and workshops are available to watch on demand.</p><button type="button" onClick={() => setFilter('rp')}>Browse replays <I k="arr" s={13} c={C.pu}/></button></section>
           </aside>
         </div>
       </main>
@@ -1140,6 +1189,14 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
         .oe-recordings-panel{border-color:#E9D5FF;background:#FAF5FF}.oe-recordings-panel h2{color:#6700A6;font-size:13px}.oe-recordings-panel p{margin:10px 0;color:#8A8A93;font-size:12px;line-height:1.55}
         @media(max-width:960px){.oe-layout{grid-template-columns:1fr!important}.oe-sidebar{grid-template-columns:repeat(2,minmax(0,1fr))}.oe-recordings-panel{grid-column:1/-1}}
         @media(max-width:640px){.oe-page-header{align-items:flex-start;flex-direction:column}.oe-page-header h1{font-size:22px}.oe-page-actions{width:100%}.oe-page-actions button{flex:1}.oe-nextup{align-items:flex-start;flex-direction:column;gap:16px;padding:22px 20px}.oe-nextup-actions{width:100%}.oe-nextup-actions button{flex:1}.oe-layout{gap:16px}.oe-sidebar{grid-template-columns:1fr}.oe-recordings-panel{grid-column:auto}.oe-event-card{gap:12px;padding:13px}.oe-date-tile{width:48px;height:62px}.oe-event-actions{align-items:flex-start;flex-direction:column}.oe-event-actions>div{width:100%;justify-content:flex-start}.oe-spots{padding-top:2px}}
+        .oe-page .oe-nextup{background:linear-gradient(100deg,#5B21B6 0%,#7C3AED 100%)}
+        .oe-page .oe-create-button,.oe-page .oe-filter.active,.oe-page .oe-rsvp-action:not(.registered),.oe-page .oe-list-empty button{border-color:#5B21B6;background:#5B21B6;color:#fff}
+        .oe-page .oe-nextup-primary,.oe-page .oe-list-heading button,.oe-page .oe-recordings-panel button,.oe-page .oe-side-heading button,.oe-page .oe-spots,.oe-page .oe-secondary-action,.oe-page .oe-rsvp-action.registered{color:#5B21B6}
+        .oe-page .oe-rsvp-action.registered,.oe-page .oe-secondary-action{border-color:#DDD6EA}
+        .oe-page .oe-date-tile,.oe-page .oe-small-date,.oe-page .oe-host-avatar{border-color:#DDD6EA;background:#F4F0FB;color:#5B21B6}
+        .oe-page .oe-date-tile span,.oe-page .oe-small-date b,.oe-page .oe-follow-button,.oe-page .oe-recordings-panel h2{color:#5B21B6}
+        .oe-page .oe-recordings-panel{border-color:#E4DDF0;background:#F4F0FB}
+        .oe-page .oe-event-description{margin:5px 0 0;color:#6B7280;font-size:12px;line-height:1.5}
       `}</style>
     </div>
   );

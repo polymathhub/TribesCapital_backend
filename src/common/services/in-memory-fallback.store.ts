@@ -10,6 +10,8 @@ type EventRecord = {
   meetingLink?: string | null;
   meetingHandle?: string | null;
   meetingInstructions?: string | null;
+  whatYoullLearn: string[];
+  agenda: Array<{ time: string; item: string }>;
   startDate: Date;
   endDate: Date;
   capacity: number;
@@ -66,6 +68,8 @@ class InMemoryFallbackStore {
       meetingLink: eventData.meetingLink || null,
       meetingHandle: eventData.meetingHandle || eventData.meetingLink || null,
       meetingInstructions: eventData.meetingInstructions || null,
+      whatYoullLearn: eventData.whatYoullLearn || [],
+      agenda: eventData.agenda || [],
       startDate: new Date(eventData.startDate),
       endDate: new Date(eventData.endDate),
       capacity: Number(eventData.capacity || 100),

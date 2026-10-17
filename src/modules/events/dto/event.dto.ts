@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsDateString, IsNumber, IsBoolean, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsOptional, IsDateString, IsNumber, IsBoolean, Min, Max, IsArray, ValidateNested } from 'class-validator';
+
+export class EventAgendaItemDto {
+  @IsString()
+  time!: string;
+
+  @IsString()
+  item!: string;
+}
 
 export class CreateEventDto {
   @IsString()
@@ -53,6 +62,17 @@ export class CreateEventDto {
   meetingInstructions?: string;
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  whatYoullLearn?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EventAgendaItemDto)
+  agenda?: EventAgendaItemDto[];
+
+  @IsOptional()
   @IsDateString()
   registrationDeadline?: string;
 }
@@ -83,6 +103,8 @@ export class EventResponseDto {
   meetingLink?: string;
   meetingHandle?: string;
   meetingInstructions?: string;
+  whatYoullLearn!: string[];
+  agenda!: EventAgendaItemDto[];
   registrationDeadline?: Date;
   capacity?: number;
   rsvpCount!: number;

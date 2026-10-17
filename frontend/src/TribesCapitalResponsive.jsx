@@ -11,6 +11,7 @@ import React, {
   useImperativeHandle 
 } from 'react';
 import { authAPI, communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
+import { LEARNING_HUB_VIDEOS } from './data/learningHubVideos';
 import ProfileAvatar from './components/ProfileAvatar';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
 const OfficeHoursEvents = lazy(() => import('./pages/OfficeHoursEvents.jsx'));
@@ -26,7 +27,8 @@ import {
   X,
   LogOut,
   Menu,
-  FolderUp
+  FolderUp,
+  Play,
 } from 'lucide-react';
 
 /* ============================================================
@@ -398,6 +400,8 @@ const STYLES = `
 .member-home-course-image{position:relative;display:grid;min-height:108px;place-items:center;overflow:hidden;background:#f1edff;color:#5b21b6}
 .member-home-course-image img{position:absolute;width:100%;height:100%;object-fit:cover}
 .member-home-course-image>span{position:absolute;left:8px;top:8px;max-width:calc(100% - 16px);overflow:hidden;padding:5px 7px;border:1px solid rgba(255,255,255,.45);border-radius:6px;background:rgba(17,24,39,.62);color:#fff;font-size:8px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.member-home-course-image>.member-home-course-play{inset:0;display:grid;max-width:none;place-items:center;padding:0;border:0;border-radius:0;background:linear-gradient(180deg,transparent 45%,rgba(15,23,42,.42));color:#fff}
+.member-home-course-image>.member-home-course-play svg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))}
 .member-home-course-body{display:flex;min-width:0;flex:1;flex-direction:column;align-items:flex-start;padding:11px}
 .member-home-course-body>strong{display:-webkit-box;overflow:hidden;min-height:32px;color:#1f2937;font-size:11px;font-weight:700;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 .member-home-course-description{display:-webkit-box;overflow:hidden;min-height:30px;margin-top:5px;color:#7b8494;font-size:9px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2}
@@ -419,6 +423,7 @@ const STYLES = `
 .member-home-event-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
 .member-home-event-copy>strong{overflow:hidden;color:#263143;font-size:10px;font-weight:680;text-overflow:ellipsis;white-space:nowrap}
 .member-home-event-copy small{overflow:hidden;color:#8992a1;font-size:8.5px;text-overflow:ellipsis;white-space:nowrap}
+.member-home-event-description{display:-webkit-box;overflow:hidden;margin:7px 0 0;color:#6b7280;font-size:11px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 .member-home-event>svg{flex:0 0 14px;color:#98a2b3}
 .member-home-event:hover .member-home-event-copy>strong{color:#5b21b6}
 .member-home-events-empty{min-height:100px}
@@ -2997,7 +3002,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
     .filter((course) => course.enrolled && Number(course.progress || 0) < 100)
     .sort((a, b) => Number(b.progress || 0) - Number(a.progress || 0))
     .slice(0, 3);
-  const learningCourses = (inProgressCourses.length > 0 ? inProgressCourses : dashboardData.courses.slice(0, 3));
+  const featuredLearningVideos = LEARNING_HUB_VIDEOS.slice(0, 3);
   const upcomingEvents = dashboardData.events
     .filter((event) => event.startDate && new Date(event.startDate).getTime() >= Date.now())
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
@@ -3096,32 +3101,38 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
         <section className="member-home-panel" aria-labelledby="member-home-learning-title">
           <div className="home-dashboard-section-head">
             <div>
-              <h2 id="member-home-learning-title">{inProgressCourses.length > 0 ? 'Continue learning' : 'Explore learning'}</h2>
-              <p>{inProgressCourses.length > 0 ? 'Pick up where you left off.' : 'Explore practical knowledge for the clean energy transition.'}</p>
+              <h2 id="member-home-learning-title">Explore learning</h2>
+              <p>Watch real videos from the Learning Hub.</p>
             </div>
             <button type="button" onClick={() => onGo('learning')}>Learning hub <ArrowRight size={14} /></button>
           </div>
-          {learningCourses.length > 0 ? (
+          {featuredLearningVideos.length > 0 ? (
             <div className="member-home-course-grid">
-              {learningCourses.map((course) => {
-                const progress = Math.min(100, Math.max(0, Number(course.progress || 0)));
-                const title = course.title || course.name || 'Learning resource';
-                const thumbnail = course.thumbnail || course.imageUrl || course.coverImage;
+              {featuredLearningVideos.map((video) => {
+                const thumbnail = `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`;
                 return (
-                  <button key={course.id || course.courseId || title} type="button" className="member-home-course-card" onClick={() => onGo('learning')}>
+                  <button key={video.id} type="button" className="member-home-course-card" onClick={() => onGo('learning')}>
                     <span className="member-home-course-image">
-                      {thumbnail ? <img src={thumbnail} alt="" /> : <Icon name="book" size={24} />}
-                      <span>{course.category || course.topic || 'Clean energy'}</span>
+                      <img
+                        src={thumbnail}
+                        alt=""
+                        loading="lazy"
+                        onError={(event) => {
+                          if (!event.currentTarget.dataset.fallback) {
+                            event.currentTarget.dataset.fallback = 'true';
+                            event.currentTarget.src = `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`;
+                          } else {
+                            event.currentTarget.style.display = 'none';
+                          }
+                        }}
+                      />
+                      <span>{video.dur}</span>
+                      <span className="member-home-course-play"><Play size={18} fill="currentColor" aria-hidden="true" /></span>
                     </span>
                     <span className="member-home-course-body">
-                      <strong>{title}</strong>
-                      <span className="member-home-course-description">{course.description || course.subtitle || 'Build your knowledge with this learning resource.'}</span>
-                      {course.enrolled ? (
-                        <span className="member-home-progress">
-                          <span className="member-home-progress-track"><span style={{ width: `${progress}%` }} /></span>
-                          <small>{progress}% complete</small>
-                        </span>
-                      ) : <span className="member-home-course-cta">Explore course <ArrowRight size={12} /></span>}
+                      <strong>{video.title}</strong>
+                      <span className="member-home-course-description">{video.subtitle}</span>
+                      <span className="member-home-course-cta">Watch in Learning Hub <ArrowRight size={12} /></span>
                     </span>
                   </button>
                 );
@@ -3155,6 +3166,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
                 <span className="member-home-event-copy">
                   <strong>{event.title || event.name || 'Community event'}</strong>
                   <small>{event.meetingPlatform || event.eventType || 'Community session'} · {new Date(event.startDate).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</small>
+                  {(event.description || event.desc) && <span className="member-home-event-description">{event.description || event.desc}</span>}
                 </span>
                 <ArrowRight size={14} aria-hidden="true" />
               </button>

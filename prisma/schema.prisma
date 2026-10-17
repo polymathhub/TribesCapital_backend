@@ -256,6 +256,8 @@ model Event {
   meetingLink     String?
   meetingHandle   String?
   meetingInstructions String?
+  whatYoullLearn String[]    @default([])
+  agenda          Json?
   startDate       DateTime
   endDate         DateTime
   capacity        Int

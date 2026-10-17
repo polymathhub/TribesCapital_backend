@@ -1,0 +1,3 @@
+ALTER TABLE "Event"
+  ADD COLUMN "whatYoullLearn" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+  ADD COLUMN "agenda" JSONB;
