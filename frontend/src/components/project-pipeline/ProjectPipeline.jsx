@@ -621,14 +621,22 @@ function EmptyState() {
 }
 
 function PipelineCard({ p, onOpen, onEdit, onDownload }) {
-  const meta = { background: BG, borderRadius: 8, padding: '9px 11px' };
-  const ml   = { fontSize: 11, color: T3, marginBottom: 3 };
-  const mv   = { fontSize: 13, fontWeight: 500, color: T1 };
+  const meta = { background: BG, borderRadius: 10, padding: '12px 14px' };
+  const ml   = { fontSize: 12, color: T3, marginBottom: 4 };
+  const mv   = { fontSize: 14, fontWeight: 500, color: T1 };
   const documentPreview = p.documentPreview ? (p.documentPreview.startsWith('http') || p.documentPreview.startsWith('data:') ? p.documentPreview : `${window.location.origin}${p.documentPreview}`) : null;
   return (
-    <div onClick={() => onOpen(p)}
-      style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12, padding: 16, cursor: 'pointer' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+    <article onClick={() => onOpen(p)}
+      aria-label={`View details for ${p.name}`} tabIndex={0} onKeyDown={event => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen(p);
+        }
+      }}
+      style={{ background: W, border: `1px solid ${BD}`, borderRadius: 16, padding: 22, cursor: 'pointer',
+        boxShadow: '0 8px 22px rgba(15,23,42,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
         <Tag>{p.type}</Tag>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <button onClick={e => { e.stopPropagation(); onDownload(p); }} aria-label={`Download ${p.name}`}
@@ -647,7 +655,7 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
         </div>
       </div>
 
-      <div style={{ fontSize: 15, fontWeight: 600, color: T1, lineHeight: 1.35, marginBottom: 5 }}>{p.name}</div>
+      <div style={{ fontSize: 19, fontWeight: 600, color: T1, lineHeight: 1.4, marginBottom: 8 }}>{p.name}</div>
       
       {/* Document preview for approved diligence */}
       {p.dueDiligenceId && documentPreview && (
@@ -669,22 +677,22 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
           <Tag tone="green">Approved diligence</Tag>
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: T2, marginBottom: 12 }}>
-        <I k="pin" s={13} c={T3} />{[p.city, p.country].filter(Boolean).join(', ') || '—'}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: T2, marginBottom: 16 }}>
+        <I k="pin" s={14} c={T3} />{[p.city, p.country].filter(Boolean).join(', ') || '—'}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
         <div style={meta}><div style={ml}>Capacity</div><div style={mv}>{p.capacity !== null && p.capacity !== undefined ? p.capacity.toFixed(1) + ' MW' : '—'}</div></div>
         <div style={meta}><div style={ml}>Deal value</div><div style={mv}>{money(p.value)}</div></div>
         <div style={meta}><div style={ml}>IRR target</div><div style={mv}>{p.irr !== null && p.irr !== undefined ? p.irr + '%' : '—'}</div></div>
         <div style={meta}><div style={ml}>Sponsor</div><div style={{ ...mv, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.sponsor || '—'}</div></div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T2, marginBottom: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: T2, marginBottom: 7 }}>
         <span>Progress</span><span style={{ fontWeight: 600, color: T1 }}>{p.progress !== null && p.progress !== undefined ? p.progress + '%' : '—'}</span>
       </div>
-      <div style={{ height: 4, background: BG, borderRadius: 3, overflow: 'hidden', marginBottom: 14 }}>
-        <div style={{ height: 4, width: p.progress !== null && p.progress !== undefined ? `${p.progress}%` : '0%', background: p.progress === 100 ? GRN : P, borderRadius: 3 }} />
+      <div style={{ height: 6, background: BG, borderRadius: 3, overflow: 'hidden', marginBottom: 18 }}>
+        <div style={{ height: 6, width: p.progress !== null && p.progress !== undefined ? `${p.progress}%` : '0%', background: p.progress === 100 ? GRN : P, borderRadius: 3 }} />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -695,7 +703,7 @@ function PipelineCard({ p, onOpen, onEdit, onDownload }) {
         </div>
         <span style={{ fontSize: 12, color: T3 }}>Updated {p.updated}</span>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -707,8 +715,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
 
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
-  const [view, setView] = useState('kanban');
-  const [stage, setStage] = useState('All stages');
+  const [activeStage, setActiveStage] = useState(null);
   const [fType, setFType] = useState('');
   const [topSearch, setTop] = useState('');
 
@@ -912,7 +919,6 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const filtered = useMemo(() => {
     const q = topSearch.trim().toLowerCase();
     const base = projects.filter(p => {
-      if (stage !== 'All stages' && p.stage !== stage) return false;
       if (fType && p.type !== fType) return false;
       if (q && ![p.name, p.sponsor, p.city, p.country, p.description].join(' ').toLowerCase().includes(q)) return false;
       return true;
@@ -921,7 +927,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     // Compute prioritization score and sort descending
     return base.map(p => ({ ...p, priorityScore: computeProjectScore(p) }))
       .sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
-  }, [projects, stage, fType, topSearch]);
+  }, [projects, fType, topSearch]);
 
   const exportCsv = () => {
     if (!PERMS.canExport) {
@@ -958,7 +964,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const pad = isMobile
     ? '24px var(--tc-page-gutter-x, 18px) 32px'
     : '32px var(--tc-page-gutter-x, 32px) 44px';
-  const visibleStages = stage === 'All stages' ? STAGES : [stage];
+  const stageProjects = activeStage ? filtered.filter(project => project.stage === activeStage) : [];
 
   return (
     <div style={{ display: 'flex', minHeight: '100%', width: '100%', background: PAGE,
@@ -1031,141 +1037,101 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               ))}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', flex: 1, minWidth: 0, paddingBottom: 2 }}>
-                {['All stages', ...STAGES].map(s => {
-                  const on = stage === s;
-                  return (
-                    <button key={s} onClick={() => setStage(s)}
-                      style={{ padding: '10px 20px', borderRadius: 999, whiteSpace: 'nowrap', cursor: 'pointer',
-                        fontSize: 14, fontWeight: on ? 600 : 500, fontFamily: 'inherit',
-                        background: on ? '#EEF2FF' : W, color: on ? P : T2,
-                        border: `1px solid ${on ? '#C7D2FE' : BD}`, boxShadow: on ? '0 6px 18px rgba(91,33,182,0.12)' : 'none' }}>
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={{ width: isMobile ? '100%' : 160, flexShrink: 0 }}>
-                <Select value={fType} onChange={setFType} options={TYPES} placeholder="All types" />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-              <span style={{ fontSize: 17, fontWeight: 600 }}>
-                All projects <span style={{ color: T3, fontWeight: 400 }}>({filtered.length})</span>
-              </span>
-              <div style={{ display: 'flex', background: W, border: `1px solid ${BD}`, borderRadius: 10, overflow: 'hidden' }}>
-                {[['kanban', 'grid'], ['list', 'list']].map(([v, icon]) => (
-                  <button key={v} onClick={() => setView(v)} aria-label={`${v} view`}
-                    style={{ padding: '9px 12px', border: 'none', cursor: 'pointer', display: 'flex',
-                      background: view === v ? PF : W }}>
-                    <I k={icon} s={18} c={view === v ? PL : T3} />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {projects.length === 0 && !loadingProjects ? (
-              <EmptyState />
-            ) : filtered.length === 0 ? (
-              <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12, padding: '60px 20px', textAlign: 'center' }}>
-                <p style={{ color: T2, margin: 0, fontSize: 15 }}>No projects match your filters.</p>
-              </div>
-            ) : view === 'kanban' ? (
-              <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
-                <div style={{ display: 'flex', gap: 16, minWidth: 'min-content' }}>
-                  {visibleStages.map(st => {
-                    const items = filtered.filter(p => p.stage === st);
-                    return (
-                      <div key={st} style={{ flex: `0 0 ${isMobile ? 280 : 320}px`, minWidth: isMobile ? 280 : 320 }}>
-                        <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12,
-                          padding: '14px 16px', marginBottom: 12,
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          borderBottom: `2px solid ${PL}` }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: PL }} />
-                            <span style={{ fontSize: 14.5, fontWeight: 600 }}>{st}</span>
-                          </div>
-                          <span style={{ minWidth: 24, height: 24, borderRadius: 999, background: BG, color: T2,
-                            fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', padding: '0 7px' }}>{items.length}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                          {items.map(p => (
-                            <PipelineCard key={p.id} p={p} onOpen={setDetail} onEdit={setEditP} onDownload={download} />
-                          ))}
-                          {items.length === 0 && (
-                            <div style={{ border: `1.5px dashed ${BD}`, borderRadius: 12, padding: '28px 14px',
-                              textAlign: 'center', fontSize: 13, color: T3 }}>
-                              No projects
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+            {!activeStage ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '28px 0 16px', flexWrap: 'wrap' }}>
+                  <div>
+                    <h2 style={{ fontSize: 21, fontWeight: 600, margin: '0 0 5px' }}>Explore by stage</h2>
+                    <p style={{ margin: 0, color: T2, fontSize: 14 }}>Choose a stage to browse its projects.</p>
+                  </div>
+                  <span style={{ color: T2, fontSize: 14 }}>{projects.length} total projects</span>
                 </div>
-              </div>
-            ) : isMobile ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {filtered.map(p => (
-                  <PipelineCard key={p.id} p={p} onOpen={setDetail} onEdit={setEditP} onDownload={download} />
-                ))}
-              </div>
+                {projects.length === 0 && !loadingProjects ? (
+                  <EmptyState />
+                ) : (
+                  <div style={{ display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
+                    gap: isMobile ? 12 : 18 }}>
+                    {STAGES.map(stageName => {
+                      const items = projects.filter(project => project.stage === stageName);
+                      const value = items.reduce((total, project) => total + (Number(project.value) || 0), 0);
+                      return (
+                        <button key={stageName} type="button" onClick={() => setActiveStage(stageName)}
+                          style={{ minHeight: isMobile ? 164 : 196, textAlign: 'left', padding: isMobile ? 20 : 24,
+                            border: `1px solid ${BD}`, borderRadius: 18, background: W, color: T1,
+                            boxShadow: '0 10px 24px rgba(15,23,42,0.06)', cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                            transition: 'transform 160ms ease, box-shadow 160ms ease' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                            <span style={{ fontSize: isMobile ? 19 : 21, fontWeight: 600 }}>{stageName}</span>
+                            <span style={{ minWidth: 38, height: 38, borderRadius: 12, background: PF, color: P,
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 16, fontWeight: 700 }}>{items.length}</span>
+                          </span>
+                          <span>
+                            <span style={{ display: 'block', color: T2, fontSize: 14, marginBottom: 8 }}>
+                              {items.length === 1 ? '1 project' : `${items.length} projects`}
+                            </span>
+                            <span style={{ display: 'block', color: T3, fontSize: 13 }}>
+                              {value > 0 ? `${money(value)} total deal value` : 'Open this stage to view projects'}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             ) : (
-              <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
-                    <thead>
-                      <tr style={{ background: BG }}>
-                        {['Project','Type','Stage','Capacity','Deal value','IRR','Progress',''].map((h, i) => (
-                          <th key={i} style={{ textAlign: 'left', padding: '14px 18px', fontSize: 13.5,
-                            fontWeight: 600, color: T1, borderBottom: `1px solid ${BD}`, whiteSpace: 'nowrap' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filtered.map(p => (
-                        <tr key={p.id} onClick={() => setDetail(p)}
-                          style={{ cursor: 'pointer', borderBottom: `1px solid ${BD}` }}>
-                          <td style={{ padding: '14px 18px' }}>
-                            <div style={{ fontSize: 14.5, fontWeight: 600 }}>{p.name}</div>
-                            <div style={{ fontSize: 12.5, color: T3, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                              <I k="pin" s={12} c={T3} />{[p.city, p.country].filter(Boolean).join(', ')}
-                            </div>
-                          </td>
-                          <td style={{ padding: '14px 18px' }}><Tag>{p.type}</Tag></td>
-                          <td style={{ padding: '14px 18px' }}><Tag tone="teal">{p.stage}</Tag></td>
-                          <td style={{ padding: '14px 18px', fontSize: 14, color: T2, whiteSpace: 'nowrap' }}>{p.capacity ? p.capacity.toFixed(1) + ' MW' : '—'}</td>
-                          <td style={{ padding: '14px 18px', fontSize: 14, color: T2, whiteSpace: 'nowrap' }}>{money(p.value)}</td>
-                          <td style={{ padding: '14px 18px', fontSize: 14, color: T2 }}>{p.irr ? p.irr + '%' : '—'}</td>
-                          <td style={{ padding: '14px 18px', minWidth: 120 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                              <div style={{ flex: 1, height: 5, background: BG, borderRadius: 3, overflow: 'hidden' }}>
-                                <div style={{ height: 5, width: `${p.progress}%`, background: p.progress === 100 ? GRN : P }} />
-                              </div>
-                              <span style={{ fontSize: 12.5, color: T2, width: 32 }}>{p.progress}%</span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '14px 18px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <button onClick={e => { e.stopPropagation(); download(p); }} aria-label={`Download ${p.name}`}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, marginRight: 2 }}>
-                              <I k="download" s={17} c={T2} />
-                            </button>
-                            {PERMS.canEdit && (
-                              <button onClick={e => { e.stopPropagation(); setEditP(p); }} aria-label={`Edit ${p.name}`}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                                <I k="edit" s={17} c={PL} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <>
+                <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'center',
+                  justifyContent: 'space-between', gap: 16, margin: '28px 0 20px',
+                  flexDirection: isMobile ? 'column' : 'row' }}>
+                  <div>
+                    <button type="button" onClick={() => { setActiveStage(null); setFType(''); setTop(''); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none',
+                        background: 'transparent', color: P, padding: 0, marginBottom: 12,
+                        cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+                      <span aria-hidden="true">←</span> All stages
+                    </button>
+                    <h2 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 600, margin: '0 0 5px' }}>
+                      {activeStage}
+                    </h2>
+                    <p style={{ margin: 0, color: T2, fontSize: 14 }}>
+                      {stageProjects.length} {stageProjects.length === 1 ? 'project' : 'projects'} in this stage
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row' }}>
+                    <input aria-label="Search projects" value={topSearch} onChange={event => setTop(event.target.value)}
+                      placeholder="Search projects"
+                      style={{ ...inputStyle, width: isMobile ? '100%' : 220 }} />
+                    <div style={{ width: isMobile ? '100%' : 180, flexShrink: 0 }}>
+                      <Select value={fType} onChange={setFType} options={TYPES} placeholder="All types" />
+                    </div>
+                  </div>
                 </div>
-              </div>
+                {projects.length === 0 && !loadingProjects ? (
+                  <EmptyState />
+                ) : stageProjects.length === 0 ? (
+                  <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 16,
+                    padding: '56px 20px', textAlign: 'center' }}>
+                    <p style={{ color: T2, margin: 0, fontSize: 15 }}>
+                      {projects.some(project => project.stage === activeStage)
+                        ? 'No projects match your search or type filter.'
+                        : `No projects are in the ${activeStage} stage yet.`}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+                    gap: isMobile ? 14 : 20 }}>
+                    {stageProjects.map(project => (
+                      <PipelineCard key={project.id} p={project} onOpen={setDetail}
+                        onEdit={setEditP} onDownload={download} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>

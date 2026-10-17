@@ -7,6 +7,7 @@ import { isAdminUser } from '../utils/isAdminUser';
 
 const NAV_ITEMS = [
   { label: 'Admin overview', page: 'admin-dashboard', icon: 'chart', adminOnly: true },
+  { label: 'Analytics', page: 'admin-analytics', icon: 'chart', adminOnly: true },
   { label: 'Home', page: 'home', icon: 'home', hideForAdmin: true },
   { label: 'Learning Hub', page: 'learning', icon: 'book' },
   { label: 'Due Diligence Vault', page: 'vault', icon: 'folder' },

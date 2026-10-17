@@ -9,11 +9,11 @@ import HelpPage from './HelpPage';
 import MessagingPage from './MessagingPage';
 import ProfileSettings from '../components/ProfileSettings';
 import ProfileAvatar from '../components/ProfileAvatar';
-import { usersAPI, coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
-import newYorkIllustration from '../assets/illustrations/New-York-cuate.svg';
+import { coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
 import wavingHandIllustration from '../assets/illustrations/waving-hand-skin-4-svgrepo-com.svg';
 import { formatRelativeTime } from '../utils/learningHubProgress';
 import AdminOverview from './AdminOverview';
+import AdminAnalytics from './AdminAnalytics';
 import AdminLearningHub from './AdminLearningHub';
 import { isAdminUser } from '../utils/isAdminUser';
 
@@ -328,12 +328,8 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [tourActive, setTourActive] = useState(() => getTourVisitCount() < 2);
   const [spotlight,  setSpotlight]  = useState(null);
   const [tipPos,     setTipPos]     = useState({ top:'50%', left:'50%', transform:'translate(-50%,-50%)' });
-  const [memberCount, setMemberCount] = useState(0);
   const [dashboardCourses, setDashboardCourses] = useState([]);
   const [dashboardEvents, setDashboardEvents] = useState([]);
-  const [enrolledCourses, setEnrolledCourses] = useState([]);
-  const [sharedPipelineProjects, setSharedPipelineProjects] = useState([]);
-  const [sharedDiligenceDocs, setSharedDiligenceDocs] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -348,12 +344,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [announcementPopup, setAnnouncementPopup] = useState(null);
   const [watchedVideos, setWatchedVideos] = useState([]);
-  const [activeMetricIndex, setActiveMetricIndex] = useState(0);
   const notifRef = useRef(null);
   const lastNotificationIdRef = useRef(null);
   const searchRef = useRef(null);
   const searchInputRef = useRef(null);
-  const unreadNotificationCount = notifications.filter((item) => !item.read).length;
   const getAvatarSeed = (profile) => profile?.id || profile?.email || profile?.name || displayName || 'user';
   const getProfileAvatar = (profile) => {
     const seed = String(getAvatarSeed(profile));
@@ -403,19 +397,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     reader.readAsDataURL(f);
   };
 
-  const achievementImages = [
-    'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=1200&q=80',
-  ];
-
-  useEffect(() => {
-    const metricTimer = window.setInterval(() => {
-      setActiveMetricIndex((prev) => (prev + 1) % 4);
-    }, 3200);
-    return () => window.clearInterval(metricTimer);
-  }, []);
+  const heroImage = 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80';
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -451,40 +433,16 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     setActiveVideo(video);
   }, []);
 
-  useEffect(() => {
-    const readSharedAppState = () => {
-      if (typeof window === 'undefined') return;
-      try {
-        const pipelineValue = window.localStorage.getItem('tribes-pipeline-projects');
-        const diligenceValue = window.localStorage.getItem('tribes-diligence-docs');
-        const parsedPipeline = pipelineValue ? JSON.parse(pipelineValue) : [];
-        const parsedDiligence = diligenceValue ? JSON.parse(diligenceValue) : [];
-        setSharedPipelineProjects(Array.isArray(parsedPipeline) ? parsedPipeline : []);
-        setSharedDiligenceDocs(Array.isArray(parsedDiligence) ? parsedDiligence : []);
-      } catch {
-        setSharedPipelineProjects([]);
-        setSharedDiligenceDocs([]);
-      }
-    };
-
-    const handleStorage = (event) => {
-      if (event?.key === 'tribes-pipeline-projects' || event?.key === 'tribes-diligence-docs') {
-        readSharedAppState();
-      }
-    };
-
-    readSharedAppState();
-    window.addEventListener('tribes:app-state-update', readSharedAppState);
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      window.removeEventListener('tribes:app-state-update', readSharedAppState);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
+  const upcomingEvents = useMemo(() => (dashboardEvents || [])
+    .filter((event) => {
+      const startTime = new Date(event.startDate).getTime();
+      return Number.isFinite(startTime) && startTime >= Date.now();
+    })
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+    .slice(0, 3), [dashboardEvents]);
 
   const updatesFeed = useMemo(() => {
-    const eventItems = (dashboardEvents || []).slice(0, 2).map((event) => ({
+    const eventItems = upcomingEvents.slice(0, 2).map((event) => ({
       id: `event-${event.id}`,
       kind: 'event',
       title: event.title,
@@ -493,13 +451,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       timestamp: new Date(event.startDate).getTime(),
     }));
 
-    const courseItems = (dashboardCourses || []).slice(0, 2).map((course) => ({
+    const courseItems = (dashboardCourses || []).filter((course) => course.lastAccessedAt).slice(0, 2).map((course) => ({
       id: `course-${course.id}`,
       kind: 'course',
       title: course.title,
       detail: course.description || 'Recently added on the platform',
-      time: formatRelativeTime(course.lastAccessedAt || Date.now()),
-      timestamp: Number(course.lastAccessedAt || Date.now()),
+      time: formatRelativeTime(course.lastAccessedAt),
+      timestamp: new Date(course.lastAccessedAt).getTime(),
     }));
 
     const announcementItems = (notifications || []).slice(0, 2).map((item) => ({
@@ -523,7 +481,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
     return [...eventItems, ...courseItems, ...announcementItems, ...videoItems]
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .slice(0, 6);
-  }, [dashboardCourses, dashboardEvents, notifications, watchedVideos]);
+  }, [dashboardCourses, upcomingEvents, notifications, watchedVideos]);
 
   const isMountedRef = React.useRef(true);
 
@@ -545,22 +503,11 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       };
     }));
 
-    setEnrolledCourses((prev) => prev.map((enrollment) => {
-      const enrollmentCourseId = enrollment?.courseId || enrollment?.course?.id;
-      if (String(enrollmentCourseId) !== String(courseId)) return enrollment;
-      const nextStatus = progressValue >= 100 ? 'completed' : progressValue > 0 ? 'inProgress' : 'notStarted';
-      return {
-        ...enrollment,
-        progress: progressValue,
-        status: nextStatus,
-      };
-    }));
   }, []);
 
   const loadDashboardData = React.useCallback(async () => {
     try {
-      const [membersRes, coursesRes, eventsRes, enrolledRes] = await Promise.all([
-        usersAPI.getAll({ skip: 0, take: 100 }).catch(() => ({ data: [] })),
+      const [coursesRes, eventsRes, enrolledRes] = await Promise.all([
         coursesAPI.list({ skip: 0, take: 8 }).catch(() => ({ data: [] })),
         eventsAPI.list({ skip: 0, take: 6 }).catch(() => ({ data: [] })),
         coursesAPI.getEnrolled().catch(() => ({ data: [] })),
@@ -569,7 +516,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
       if (!isMountedRef.current) return;
 
       const enrolledMap = new Map((Array.isArray(enrolledRes?.data) ? enrolledRes.data : []).map((enrollment) => [String(enrollment.courseId || enrollment.course?.id || ''), enrollment]));
-      const enrolledCoursesList = Array.isArray(enrolledRes?.data) ? enrolledRes.data : [];
       const normalizedCourses = (Array.isArray(coursesRes?.data) ? coursesRes.data : []).map((course) => {
         const enrollment = enrolledMap.get(String(course.id));
         const storedProgress = readStoredCourseProgress(course.id);
@@ -593,13 +539,10 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         };
       });
 
-      setMemberCount(Number(membersRes?.total ?? (Array.isArray(membersRes?.data) ? membersRes.data.length : 0)));
       setDashboardCourses(normalizedCourses);
       setDashboardEvents(Array.isArray(eventsRes?.data) ? eventsRes.data : []);
-      setEnrolledCourses(enrolledCoursesList);
     } catch (error) {
       if (isMountedRef.current) {
-        setMemberCount(0);
         setDashboardCourses([]);
         setDashboardEvents([]);
       }
@@ -830,16 +773,6 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
 
   const greeting = getTimeGreeting();
 
-  const heroChips = useMemo(() => {
-    const enrolledCount = enrolledCourses.length;
-    const completedCount = enrolledCourses.filter((enrollment) => String(enrollment?.status || '').toLowerCase() === 'completed' || Number(enrollment?.progress || 0) >= 100).length;
-    return [
-      `${enrolledCount} ${enrolledCount === 1 ? 'course enrolled' : 'courses enrolled'}`,
-      `${completedCount} completed`,
-      `${memberCount || 0} community ${memberCount === 1 ? 'member' : 'members'}`,
-    ];
-  }, [enrolledCourses, memberCount]);
-
   const courseVideos = dashboardCourses
     .filter((course) => course.videoId)
     .slice(0, 3)
@@ -860,18 +793,20 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const buildYouTubeEmbedUrl = (videoId) => `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&modestbranding=1&controls=1&rel=0&fs=1`;
 
   const latestCourses = useMemo(() => {
-    return [...dashboardCourses]
-      .sort((a, b) => (Number(b.progress || 0) - Number(a.progress || 0)) || ((Number(b.lastAccessedAt || 0) - Number(a.lastAccessedAt || 0))))
+    const inProgressCourses = dashboardCourses.filter((course) => course.enrolled && Number(course.progress || 0) < 100);
+    return [...(inProgressCourses.length > 0 ? inProgressCourses : dashboardCourses)]
+      .sort((a, b) => (new Date(b.lastAccessedAt || 0).getTime() - new Date(a.lastAccessedAt || 0).getTime()) || (Number(b.progress || 0) - Number(a.progress || 0)))
       .slice(0, 3);
   }, [dashboardCourses]);
+  const hasInProgressCourses = dashboardCourses.some((course) => course.enrolled && Number(course.progress || 0) < 100);
   const dashboardShortcuts = [
-    { label: 'Learning hub', count: dashboardCourses.length, unit: 'courses', detail: 'Build your knowledge', icon: 'book', page: 'learning', tone: 'violet' },
-    { label: 'Events', count: dashboardEvents.length, unit: 'sessions', detail: 'Meet the community', icon: 'calendar', page: 'events', tone: 'blue' },
-    { label: 'Project pipeline', count: sharedPipelineProjects.length, unit: 'projects', detail: 'Follow opportunities', icon: 'chart', page: 'pipeline', tone: 'teal' },
-    { label: 'Due diligence', count: sharedDiligenceDocs.length, unit: 'documents', detail: 'Explore resources', icon: 'folder', page: 'vault', tone: 'amber' },
-    { label: 'Community updates', count: unreadNotificationCount, unit: 'unread', detail: 'See what’s new', icon: 'bell', page: 'announcements', tone: 'rose' },
+    { label: 'Learning hub', detail: 'Build your knowledge', icon: 'book', page: 'learning', tone: 'violet' },
+    { label: 'Events', detail: 'Meet the community', icon: 'calendar', page: 'events', tone: 'blue' },
+    { label: 'Project pipeline', detail: 'Follow opportunities', icon: 'chart', page: 'pipeline', tone: 'teal' },
+    { label: 'Due diligence', detail: 'Explore resources', icon: 'folder', page: 'vault', tone: 'amber' },
+    { label: 'Community updates', detail: 'See what’s new', icon: 'bell', page: 'announcements', tone: 'rose' },
   ];
-  const contentOwnsPageGutter = ['admin-dashboard', 'events', 'messages', 'pipeline', 'settings', 'vault'].includes(currentPage);
+  const contentOwnsPageGutter = ['admin-dashboard', 'admin-analytics', 'events', 'messages', 'pipeline', 'settings', 'vault'].includes(currentPage);
   const pageGutterX = isMobile
     ? 'max(18px, env(safe-area-inset-left), env(safe-area-inset-right))'
     : isTablet
@@ -1134,189 +1069,189 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
           {currentPage === 'admin-dashboard' && isAdminUser(user) && (
             <AdminOverview isMobile={isMobile} isTablet={isTablet} onNavigate={onNavigate} user={user} />
           )}
+          {currentPage === 'admin-analytics' && isAdminUser(user) && (
+            <AdminAnalytics isMobile={isMobile} isTablet={isTablet} />
+          )}
 
           {currentPage === 'home' && !isAdminUser(user) && (
-          <>
-          <section ref={bannerRef} className="home-dashboard-hero" aria-labelledby="home-dashboard-title">
-            <div className="home-dashboard-hero-copy">
-              <p className="home-dashboard-eyebrow">YOUR TRIBES CAPITAL DASHBOARD</p>
-              <h1 id="home-dashboard-title">
-                {greeting}, {displayName}
-                <img src={wavingHandIllustration} alt="" aria-hidden="true" />
-              </h1>
-              <p>Discover opportunities, build your clean energy knowledge, and stay connected to the community.</p>
-              <div className="home-dashboard-hero-tags">
-                {heroChips.map((chip) => <span key={chip}>{chip}</span>)}
-              </div>
-            </div>
-            <div className="home-dashboard-hero-art" aria-hidden="true">
-              <img src={achievementImages[activeMetricIndex]} alt="" />
-              <span className="home-dashboard-hero-orbit" />
-            </div>
-          </section>
+            <div className="home-dashboard">
+              <section ref={bannerRef} className="home-dashboard-hero" aria-labelledby="home-dashboard-title">
+                <div className="home-dashboard-hero-copy">
+                  <p className="home-dashboard-eyebrow">TRIBES CAPITAL · YOUR COMMUNITY</p>
+                  <h1 id="home-dashboard-title">
+                    {greeting}, {displayName}
+                    <img src={wavingHandIllustration} alt="" aria-hidden="true" />
+                  </h1>
+                  <p>Build your clean energy expertise, discover investment opportunities, and make your next move with the community.</p>
+                  <div className="home-dashboard-hero-actions">
+                    <button type="button" className="home-dashboard-primary-action" onClick={() => onNavigate('learning')}>
+                      {hasInProgressCourses ? 'Continue learning' : 'Explore the Learning Hub'}
+                      <Icon name="arrow" size={14} color="currentColor" />
+                    </button>
+                    <button type="button" className="home-dashboard-secondary-action" onClick={() => onNavigate('pipeline')}>Explore projects</button>
+                  </div>
+                </div>
+                <div className="home-dashboard-hero-art" aria-hidden="true">
+                  <img src={heroImage} alt="" />
+                  <span className="home-dashboard-hero-orbit" />
+                  <span className="home-dashboard-hero-caption">Powering a brighter future</span>
+                </div>
+              </section>
 
-          <section ref={statsRef} className="home-dashboard-shortcuts" aria-labelledby="home-dashboard-shortcuts-title">
-            <div className="home-dashboard-section-head">
-              <div>
-                <h2 id="home-dashboard-shortcuts-title">Explore your community</h2>
-                <p>Quick access to what matters most.</p>
-              </div>
-              <button type="button" onClick={() => onNavigate('pipeline')}>Explore all <Icon name="arrow" size={13} color={P} /></button>
-            </div>
-            <div className="home-dashboard-shortcut-grid">
-              {dashboardShortcuts.map((shortcut) => (
-                <button
-                  type="button"
-                  key={shortcut.page}
-                  className={`home-dashboard-shortcut home-dashboard-shortcut--${shortcut.tone}`}
-                  onClick={() => onNavigate(shortcut.page)}
-                >
-                  <span className="home-dashboard-shortcut-icon"><Icon name={shortcut.icon} size={19} color="currentColor" /></span>
-                  <span className="home-dashboard-shortcut-label">{shortcut.label}</span>
-                  <span className="home-dashboard-shortcut-count">{shortcut.count} <small>{shortcut.unit}</small></span>
-                  <span className="home-dashboard-shortcut-detail">{shortcut.detail}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* ── TWO-COLUMN GRID ── */}
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':isTablet?'1fr 240px':'1fr 290px', gap:isMobile?16:24 }}>
-
-            {/* CENTER DASHBOARD */}
-            <div className="home-dashboard-center">
-              <section ref={activityRef} className="home-dashboard-activity" aria-labelledby="home-dashboard-activity-title">
+              <section ref={statsRef} className="home-dashboard-shortcuts" aria-labelledby="home-dashboard-shortcuts-title">
                 <div className="home-dashboard-section-head">
                   <div>
-                    <h2 id="home-dashboard-activity-title">Recent activity</h2>
-                    <p>Stay up to date with what’s happening across the community.</p>
+                    <h2 id="home-dashboard-shortcuts-title">Explore Tribes Capital</h2>
+                    <p>Go straight to a space in your community.</p>
+                  </div>
+                </div>
+                <div className="home-dashboard-shortcut-grid">
+                  {dashboardShortcuts.map((shortcut) => (
+                    <button
+                      type="button"
+                      key={shortcut.page}
+                      className={`home-dashboard-shortcut home-dashboard-shortcut--${shortcut.tone}`}
+                      onClick={() => onNavigate(shortcut.page)}
+                    >
+                      <span className="home-dashboard-shortcut-icon"><Icon name={shortcut.icon} size={18} color="currentColor" /></span>
+                      <span className="home-dashboard-shortcut-copy">
+                        <span className="home-dashboard-shortcut-label">{shortcut.label}</span>
+                        <span className="home-dashboard-shortcut-detail">{shortcut.detail}</span>
+                      </span>
+                      <Icon name="arrow" size={13} color={T3} />
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <div className="home-dashboard-content-grid">
+                <section className="home-dashboard-panel home-dashboard-courses" aria-labelledby="home-dashboard-courses-title">
+                  <div className="home-dashboard-section-head">
+                    <div>
+                      <h2 id="home-dashboard-courses-title">{hasInProgressCourses ? 'Continue learning' : 'Explore learning'}</h2>
+                      <p>{hasInProgressCourses ? 'Pick up where you left off.' : 'Discover practical knowledge for the clean energy transition.'}</p>
+                    </div>
+                    <button type="button" onClick={() => onNavigate('learning')}>Learning hub <Icon name="arrow" size={13} color={P} /></button>
+                  </div>
+                  {latestCourses.length > 0 ? (
+                    <div className="home-dashboard-course-grid">
+                      {latestCourses.map((course) => {
+                        const progress = Math.min(100, Math.max(0, Number(course.progress || 0)));
+                        return (
+                          <button key={course.id} type="button" className="home-dashboard-course-card" onClick={() => onNavigate('learning')}>
+                            <span className="home-dashboard-course-image">
+                              {course.thumbnail
+                                ? <img src={course.thumbnail} alt="" />
+                                : <Icon name="book" size={24} color={P} />}
+                              <span className="home-dashboard-course-category">{course.category}</span>
+                            </span>
+                            <span className="home-dashboard-course-body">
+                              <strong>{course.title}</strong>
+                              <span className="home-dashboard-course-description">{course.description}</span>
+                              {course.enrolled ? (
+                                <span className="home-dashboard-progress">
+                                  <span className="home-dashboard-progress-track"><span style={{ width:`${progress}%` }} /></span>
+                                  <span>{progress}% complete</span>
+                                </span>
+                              ) : (
+                                <span className="home-dashboard-course-cta">Explore course <Icon name="arrow" size={12} color={P} /></span>
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="home-dashboard-empty-state">
+                      <span className="home-dashboard-empty-icon"><Icon name="book" size={22} color={P} /></span>
+                      <strong>{dashboardLoading ? 'Loading your learning space…' : 'Your next learning opportunity starts here'}</strong>
+                      <span>{dashboardLoading ? 'Courses will appear as soon as they are ready.' : 'Explore the Learning Hub to find courses and resources.'}</span>
+                      {!dashboardLoading && <button type="button" onClick={() => onNavigate('learning')}>Visit Learning Hub <Icon name="arrow" size={13} color={P} /></button>}
+                    </div>
+                  )}
+                </section>
+
+                <section className="home-dashboard-panel home-dashboard-events" aria-labelledby="home-dashboard-events-title">
+                  <div className="home-dashboard-section-head">
+                    <div>
+                      <h2 id="home-dashboard-events-title">Connect with the community</h2>
+                      <p>Upcoming events and live conversations.</p>
+                    </div>
+                    <button type="button" onClick={() => onNavigate('events')}>All events <Icon name="arrow" size={13} color={P} /></button>
+                  </div>
+                  <div className="home-dashboard-event-list">
+                    {upcomingEvents.length > 0 ? upcomingEvents.map((event) => (
+                      <button key={event.id} type="button" className="home-dashboard-event" onClick={() => onNavigate('events')}>
+                        <span className="home-dashboard-event-date">
+                          <strong>{new Date(event.startDate).toLocaleDateString('en', { day:'2-digit' })}</strong>
+                          <small>{new Date(event.startDate).toLocaleDateString('en', { month:'short' })}</small>
+                        </span>
+                        <span className="home-dashboard-event-copy">
+                          <strong>{event.title}</strong>
+                          <small>{event.meetingPlatform || 'Community session'} · {new Date(event.startDate).toLocaleTimeString('en', { hour:'numeric', minute:'2-digit' })}</small>
+                        </span>
+                        <Icon name="arrow" size={13} color={T3} />
+                      </button>
+                    )) : (
+                      <div className="home-dashboard-event-empty">
+                        <span>{dashboardLoading ? 'Finding upcoming events…' : 'There are no upcoming events to show right now.'}</span>
+                        {!dashboardLoading && <button type="button" onClick={() => onNavigate('events')}>Browse events <Icon name="arrow" size={13} color={P} /></button>}
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="home-dashboard-panel home-dashboard-videos" aria-labelledby="home-dashboard-videos-title">
+                  <div className="home-dashboard-section-head">
+                    <div>
+                      <h2 id="home-dashboard-videos-title">Stories from the transition</h2>
+                      <p>Short films and ideas from across the sector.</p>
+                    </div>
+                    <button type="button" onClick={() => onNavigate('learning')}>More to watch <Icon name="arrow" size={13} color={P} /></button>
+                  </div>
+                  <div className="home-dashboard-video-list">
+                    {demoVideos.slice(0, 2).map((video, index) => (
+                      <article key={`${video.title}-${index}`} className="home-dashboard-video">
+                        <button type="button" className="home-dashboard-video-thumb" onClick={() => recordWatchedVideo(video)} aria-label={`Play ${video.title}`}>
+                          {video.thumbnail && <img src={video.thumbnail} alt="" />}
+                          <span><Icon name="play" size={15} color="#fff" /></span>
+                        </button>
+                        <div className="home-dashboard-video-copy">
+                          <strong>{video.title}</strong>
+                          <small>{video.tag} · {video.duration}</small>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <section ref={activityRef} className="home-dashboard-panel home-dashboard-activity" aria-labelledby="home-dashboard-activity-title">
+                <div className="home-dashboard-section-head">
+                  <div>
+                    <h2 id="home-dashboard-activity-title">A pulse on the community</h2>
+                    <p>Courses, events, and updates to help you stay in the loop.</p>
                   </div>
                   <button type="button" onClick={() => onNavigate('announcements')}>View updates <Icon name="arrow" size={13} color={P} /></button>
                 </div>
-                <div className="home-dashboard-table-wrap">
-                  <table className="home-dashboard-table">
-                    <thead>
-                      <tr><th>Activity</th><th>Category</th><th>When</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                      {updatesFeed.slice(0, 5).map((item) => {
-                        const itemIcon = item.kind === 'event' ? 'calendar' : item.kind === 'announcement' ? 'bell' : item.kind === 'video' ? 'play' : 'book';
-                        const status = item.kind === 'event' ? 'Upcoming' : item.kind === 'announcement' ? 'New' : item.kind === 'video' ? 'Watched' : 'Available';
-                        const targetPage = item.kind === 'event' ? 'events' : item.kind === 'announcement' ? 'announcements' : 'learning';
-                        return (
-                          <tr key={item.id}>
-                            <td>
-                              <button type="button" className="home-dashboard-activity-link" onClick={() => onNavigate(targetPage)}>
-                                <span className="home-dashboard-activity-icon"><Icon name={itemIcon} size={16} color={P} /></span>
-                                <span className="home-dashboard-activity-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
-                              </button>
-                            </td>
-                            <td><span className={`home-dashboard-category home-dashboard-category--${item.kind}`}>{item.kind === 'announcement' ? 'Update' : item.kind === 'video' ? 'Video' : item.kind === 'event' ? 'Event' : 'Learning'}</span></td>
-                            <td className="home-dashboard-activity-time">{item.time}</td>
-                            <td><span className={`home-dashboard-status home-dashboard-status--${item.kind}`}>{status}</span></td>
-                          </tr>
-                        );
-                      })}
-                      {!dashboardLoading && updatesFeed.length === 0 && (
-                        <tr><td colSpan="4" className="home-dashboard-empty">No recent activity yet. New courses, events, and community updates will appear here.</td></tr>
-                      )}
-                      {dashboardLoading && updatesFeed.length === 0 && (
-                        <tr><td colSpan="4" className="home-dashboard-empty">Loading your latest community activity…</td></tr>
-                      )}
-                    </tbody>
-                  </table>
+                <div className="home-dashboard-activity-list">
+                  {updatesFeed.slice(0, 4).map((item) => {
+                    const itemIcon = item.kind === 'event' ? 'calendar' : item.kind === 'announcement' ? 'bell' : item.kind === 'video' ? 'play' : 'book';
+                    const targetPage = item.kind === 'event' ? 'events' : item.kind === 'announcement' ? 'announcements' : 'learning';
+                    return (
+                      <button key={item.id} type="button" className="home-dashboard-activity-link" onClick={() => onNavigate(targetPage)}>
+                        <span className={`home-dashboard-activity-icon home-dashboard-activity-icon--${item.kind}`}><Icon name={itemIcon} size={16} color={P} /></span>
+                        <span className="home-dashboard-activity-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
+                        <span className="home-dashboard-activity-time">{item.time}</span>
+                        <Icon name="arrow" size={13} color={T3} />
+                      </button>
+                    );
+                  })}
+                  {!dashboardLoading && updatesFeed.length === 0 && <div className="home-dashboard-empty-state">New courses, events, and community updates will appear here.</div>}
+                  {dashboardLoading && updatesFeed.length === 0 && <div className="home-dashboard-empty-state">Loading your latest community activity…</div>}
                 </div>
               </section>
             </div>
-
-            {/* RIGHT COLUMN */}
-            <div style={{ display:'flex', flexDirection:'column', gap:isMobile?10:20 }}>
-
-              {/* Recently added */}
-              <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?8:12, gap:8, flexWrap:'wrap' }}>
-                  <h3 style={{ fontSize:isMobile?12.5:14, fontWeight:600, color:T1, margin:0 }}>Recently added</h3>
-                  <button onClick={() => onNavigate('vault')} style={{ fontSize:isMobile?11:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Open vault</button>
-                </div>
-                <div style={{ marginBottom:12, display:'flex', justifyContent:'center', width:'100%' }}>
-                  <img src={newYorkIllustration} alt="Recently added illustration" style={{ width:'100%', maxWidth:320, height:'auto', display:'block' }} />
-                </div>
-                {latestCourses.length > 0 ? (
-                  <div>
-                    {latestCourses.map((course, index, arr) => (
-                      <div key={course.id} style={{ display:'flex', alignItems:'center', gap:isMobile?7:10, padding:isMobile?'8px 10px':'11px 14px',
-                        borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', width:'100%' }}>
-                        <div style={{ width:isMobile?28:32, height:isMobile?28:32, background:PF, borderRadius:7, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:isMobile?12:14 }}>📘</div>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <p style={{ fontSize:isMobile?10.5:12, fontWeight:500, color:T1, margin:'0 0 1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{course.title}</p>
-                          <p style={{ fontSize:isMobile?9:10, color:T3, margin:0, lineHeight:1.3 }}>{course.description || 'Published course'}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Demo videos */}
-              <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:isMobile?8:12, gap:8, flexWrap:'wrap' }}>
-                  <h3 style={{ fontSize:isMobile?12.5:14, fontWeight:600, color:T1, margin:0 }}>Videos</h3>
-                  <button onClick={() => onNavigate('learning')} style={{ fontSize:isMobile?11:12, color:P, background:'transparent', border:'none', cursor:'pointer', whiteSpace:'nowrap' }}>Watch more</button>
-                </div>
-                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
-                  <div style={{ display:isMobile ? 'grid' : 'block', gridTemplateColumns:isMobile ? 'repeat(2, minmax(0, 1fr))' : undefined, gap:isMobile ? 8 : 0, padding:isMobile ? 8 : 0 }}>
-                    {demoVideos.map((video, index) => (
-                      <div key={`${video.title}-${index}`} style={{ display:'flex', flexDirection:'column', gap:8, padding:isMobile?'10px':'12px 14px', borderBottom:isMobile? 'none' : index < demoVideos.length - 1 ? `1px solid ${BD}` : 'none', width:'100%', background:isMobile ? 'rgba(255,255,255,0.7)' : 'transparent', borderRadius:isMobile ? 10 : 0 }}>
-                        <div style={{ width:'100%', aspectRatio:'16 / 9', borderRadius:10, background:PF, display:'flex', alignItems:'center', justifyContent:'center', fontSize:isMobile?13:16, flexShrink:0, overflow:'hidden', position:'relative' }}>
-                          {video.thumbnail ? (
-                            <img src={video.thumbnail} alt={video.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-                          ) : (
-                            <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:18, height:18 }}>
-                              <Icon name="play" size={12} color={P}/>
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ minWidth:0 }}>
-                          <p style={{ fontSize:isMobile?10.5:12, fontWeight:600, color:T1, margin:'0 0 1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{video.title}</p>
-                          <p style={{ fontSize:isMobile?9:11, color:T3, margin:'0 0 8px', lineHeight:1.3 }}>{video.tag} · {video.duration}</p>
-                          <button
-                            type="button"
-                            onClick={() => recordWatchedVideo(video)}
-                            style={{ ...btnStyle('none', P, W, 11), padding:'6px 10px', borderRadius:7, flexShrink:0, width:'100%', boxShadow:'0 8px 16px rgba(91, 33, 182, 0.12)', transition:'transform 0.2s ease, box-shadow 0.2s ease' }}>
-                            Play
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent activity */}
-              <div>
-                <h3 style={{ fontSize:14, fontWeight:600, color:T1, margin:'0 0 12px' }}>Recent activity</h3>
-                <div style={{ ...glassCardStyle(14), overflow:'hidden' }}>
-                  {dashboardEvents.length > 0 ? dashboardEvents.slice(0,3).map((event, index, arr) => (
-                    <div key={event.id} style={{ display:'flex', alignItems:'center', gap:isMobile?8:10, padding:isMobile?'8px 10px':'11px 14px',
-                      borderBottom:index<arr.length-1?`1px solid ${BD}`:'none', flexWrap:isMobile?'wrap':'nowrap' }}>
-                      <div style={{ width:isMobile?26:30, height:isMobile?26:30, borderRadius:'50%', background:PF, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <div style={{ width:isMobile?7:9, height:isMobile?7:9, borderRadius:'50%', background:P }}/>
-                      </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:isMobile?11.5:12, fontWeight:500, color:T1, margin:'0 0 2px' }}>{event.title}</p>
-                        <p style={{ fontSize:isMobile?10.5:11, color:T3, margin:0 }}>{event.meetingPlatform || 'Live session'}</p>
-                      </div>
-                      <span style={{ fontSize:isMobile?11:12, color:P, fontWeight:500, flexShrink:0, marginTop:isMobile?4:0 }}>{new Date(event.startDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
-                    </div>
-                  )) : (
-                    <div style={{ padding:'12px 14px', color:T2, lineHeight:1.55 }}>No recent activity yet. Your most recent events and lesson activity will appear here.</div>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </div>
-          </>
           )}
 
           {/* ── LEARNING HUB PAGE ── */}
@@ -1463,65 +1398,97 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
         .notification-toast-close:hover{background:#F2F4F7;color:#344054;}
         @keyframes notification-toast-in{from{opacity:0;transform:translate3d(20px,-10px,0) scale(.97)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
         @media (max-width:600px){.notification-toast{top:12px;right:16px;width:calc(100vw - 32px);}.notification-toast-content strong{white-space:normal;}}
-        .home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:190px;margin-bottom:22px;padding:24px 28px;overflow:hidden;border-radius:15px;background:linear-gradient(108deg,#4C0099 0%,#6D00B5 52%,#8B16E8 100%);box-shadow:0 14px 28px rgba(76,0,153,.3);color:#fff}
+        .home-dashboard{max-width:1500px;margin:0 auto}
+        .home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:32px;min-height:220px;margin-bottom:25px;padding:30px 34px;overflow:hidden;border:1px solid rgba(255,255,255,.18);border-radius:20px;background:linear-gradient(112deg,#35106F 0%,#5B21B6 58%,#7C3AED 100%);box-shadow:0 18px 38px rgba(76,29,149,.2);color:#fff}
         .home-dashboard-hero::before,.home-dashboard-hero::after{position:absolute;content:'';border-radius:50%;pointer-events:none}
-        .home-dashboard-hero::before{width:250px;height:250px;right:17%;top:-190px;background:rgba(255,255,255,.09)}
-        .home-dashboard-hero::after{width:190px;height:190px;right:-85px;bottom:-125px;background:rgba(255,255,255,.1)}
-        .home-dashboard-hero-copy{position:relative;z-index:1;min-width:0;max-width:560px}
-        .home-dashboard-eyebrow{margin:0 0 8px;color:rgba(255,255,255,.75);font-size:9px;font-weight:800;letter-spacing:.13em}
-        .home-dashboard-hero h1{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 8px;color:#fff;font-size:clamp(21px,2vw,29px);font-weight:750;letter-spacing:-.03em;line-height:1.15}
-        .home-dashboard-hero h1 img{width:23px;height:23px;object-fit:contain;animation:wave 1.4s ease-in-out infinite;transform-origin:70% 60%}
-        .home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){max-width:440px;margin:0 0 14px;color:rgba(255,255,255,.86);font-size:12px;line-height:1.6}
-        .home-dashboard-hero-tags{display:flex;flex-wrap:wrap;gap:7px}
-        .home-dashboard-hero-tags span{padding:5px 9px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:10px;font-weight:600}
-        .home-dashboard-hero-art{position:relative;z-index:1;flex:0 0 174px;height:126px;overflow:hidden;border:1px solid rgba(255,255,255,.34);border-radius:12px;background:rgba(255,255,255,.14);box-shadow:0 14px 26px rgba(15,23,42,.18);transform:rotate(2deg)}
-        .home-dashboard-hero-art img{width:100%;height:100%;object-fit:cover;opacity:.9}
-        .home-dashboard-hero-orbit{position:absolute;right:-20px;bottom:-37px;width:92px;height:92px;border:12px solid rgba(255,255,255,.23);border-radius:50%}
-        .home-dashboard-shortcuts{margin-bottom:22px}
-        .home-dashboard-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-        .home-dashboard-section-head h2{margin:0;color:#111827;font-size:15px;font-weight:700;letter-spacing:-.01em}
-        .home-dashboard-section-head p{margin:3px 0 0;color:#6b7280;font-size:11px;line-height:1.45}
-        .home-dashboard-section-head>button{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:6px 0;background:transparent;color:#5b21b6;font-size:11px;font-weight:650}
+        .home-dashboard-hero::before{width:360px;height:360px;right:20%;top:-280px;background:rgba(255,255,255,.08)}
+        .home-dashboard-hero::after{width:230px;height:230px;right:-100px;bottom:-165px;background:rgba(255,255,255,.08)}
+        .home-dashboard-hero-copy{position:relative;z-index:1;min-width:0;max-width:600px}
+        .home-dashboard-eyebrow{margin:0 0 10px;color:rgba(255,255,255,.72);font-size:10px;font-weight:750;letter-spacing:.13em}
+        .home-dashboard-hero h1{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 9px;color:#fff;font-size:clamp(24px,2.3vw,34px);font-weight:750;letter-spacing:-.035em;line-height:1.15}
+        .home-dashboard-hero h1 img{width:25px;height:25px;object-fit:contain;animation:wave 1.4s ease-in-out infinite;transform-origin:70% 60%}
+        .home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){max-width:480px;margin:0 0 20px;color:rgba(255,255,255,.82);font-size:13px;line-height:1.65}
+        .home-dashboard-hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+        .home-dashboard-hero-actions button{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:8px;padding:0 14px;border:1px solid transparent;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;transition:transform .18s ease,background .18s ease}
+        .home-dashboard-hero-actions button:hover{transform:translateY(-1px)}
+        .home-dashboard-primary-action{background:#fff;color:#4C1D95}
+        .home-dashboard-secondary-action{border-color:rgba(255,255,255,.28)!important;background:rgba(255,255,255,.1);color:#fff}
+        .home-dashboard-hero-art{position:relative;z-index:1;flex:0 0 245px;height:154px;overflow:hidden;border:1px solid rgba(255,255,255,.32);border-radius:15px;background:rgba(255,255,255,.1);box-shadow:0 16px 30px rgba(15,23,42,.2);transform:rotate(1deg)}
+        .home-dashboard-hero-art img{width:100%;height:100%;object-fit:cover;opacity:.92}
+        .home-dashboard-hero-orbit{position:absolute;right:-22px;bottom:-43px;width:110px;height:110px;border:13px solid rgba(255,255,255,.28);border-radius:50%}
+        .home-dashboard-hero-caption{position:absolute;right:10px;bottom:10px;padding:6px 9px;border:1px solid rgba(255,255,255,.25);border-radius:7px;background:rgba(35,13,66,.58);color:#fff;font-size:9px;font-weight:650}
+        .home-dashboard-shortcuts{margin-bottom:26px}
+        .home-dashboard-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+        .home-dashboard-section-head h2{margin:0;color:#111827;font-size:16px;font-weight:720;letter-spacing:-.02em}
+        .home-dashboard-section-head p{margin:4px 0 0;color:#6b7280;font-size:11px;line-height:1.5}
+        .home-dashboard-section-head>button{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:6px 0;background:transparent;color:#5b21b6;font-size:11px;font-weight:680;cursor:pointer}
         .home-dashboard-section-head>button:hover{text-decoration:underline}
-        .home-dashboard-shortcut-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-        .home-dashboard-shortcut{display:flex;min-width:0;min-height:131px;flex-direction:column;align-items:flex-start;padding:12px 11px;border:1px solid #e8eaf0;border-radius:11px;background:#fff;text-align:left;box-shadow:0 4px 12px rgba(15,23,42,.04);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
-        .home-dashboard-shortcut:hover{transform:translateY(-2px);border-color:#c7d2fe;box-shadow:0 10px 20px rgba(15,23,42,.09)}
-        .home-dashboard-shortcut:focus-visible,.home-dashboard-section-head>button:focus-visible,.home-dashboard-activity-link:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
-        .home-dashboard-shortcut-icon{display:grid;width:31px;height:31px;place-items:center;margin-bottom:10px;border-radius:9px;background:#eef2ff;color:#4338ca}
+        .home-dashboard-shortcut-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+        .home-dashboard-shortcut{display:flex;min-width:0;min-height:76px;align-items:center;gap:11px;padding:12px;border:1px solid #e8eaf0;border-radius:13px;background:#fff;text-align:left;box-shadow:0 5px 14px rgba(15,23,42,.035);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+        .home-dashboard-shortcut:hover{transform:translateY(-2px);border-color:#c7d2fe;box-shadow:0 10px 20px rgba(15,23,42,.08)}
+        .home-dashboard-shortcut:focus-visible,.home-dashboard-section-head>button:focus-visible,.home-dashboard-activity-link:focus-visible,.home-dashboard-course-card:focus-visible,.home-dashboard-event:focus-visible,.home-dashboard-video-thumb:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
+        .home-dashboard-shortcut-icon{display:grid;width:36px;height:36px;flex:0 0 36px;place-items:center;border-radius:10px;background:#f1edff;color:#5b21b6}
+        .home-dashboard-shortcut-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
         .home-dashboard-shortcut-label{overflow:hidden;width:100%;color:#1f2937;font-size:10.5px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
-        .home-dashboard-shortcut-count{margin-top:5px;color:#111827;font-size:17px;font-weight:750;line-height:1.2}
-        .home-dashboard-shortcut-count small{color:#6b7280;font-size:9px;font-weight:500}
-        .home-dashboard-shortcut-detail{margin-top:4px;color:#8b95a5;font-size:9px;line-height:1.3}
+        .home-dashboard-shortcut-detail{overflow:hidden;color:#8b95a5;font-size:9px;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
         .home-dashboard-shortcut--blue .home-dashboard-shortcut-icon{background:#eff6ff;color:#2563eb}
         .home-dashboard-shortcut--teal .home-dashboard-shortcut-icon{background:#ecfdf5;color:#059669}
         .home-dashboard-shortcut--amber .home-dashboard-shortcut-icon{background:#fffbeb;color:#d97706}
         .home-dashboard-shortcut--rose .home-dashboard-shortcut-icon{background:#fdf2f8;color:#db2777}
-        .home-dashboard-activity{overflow:hidden;border:1px solid #e8eaf0;border-radius:13px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.045)}
-        .home-dashboard-activity>.home-dashboard-section-head{margin:0;padding:15px 16px 12px}
-        .home-dashboard-table-wrap{overflow-x:auto}
-        .home-dashboard-table{width:100%;min-width:545px;border-collapse:collapse;text-align:left}
-        .home-dashboard-table th{padding:9px 12px;background:#f8fafc;color:#8791a1;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-        .home-dashboard-table th:first-child,.home-dashboard-table td:first-child{padding-left:16px}
-        .home-dashboard-table th:last-child,.home-dashboard-table td:last-child{padding-right:16px}
-        .home-dashboard-table td{padding:10px 12px;border-bottom:1px solid #f0f1f4;color:#667085;font-size:10px;vertical-align:middle}
-        .home-dashboard-table tbody tr:last-child td{border-bottom:0}
-        .home-dashboard-table tbody tr:hover{background:#fafaff}
-        .home-dashboard-activity-link{display:flex;width:100%;align-items:center;gap:9px;padding:0;background:transparent;text-align:left}
-        .home-dashboard-activity-icon{display:grid;width:29px;height:29px;flex:0 0 29px;place-items:center;border-radius:8px;background:#f1f0ff}
-        .home-dashboard-activity-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
-        .home-dashboard-activity-copy strong{overflow:hidden;color:#1f2937;font-size:10.5px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+        .home-dashboard-content-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(290px,1fr);align-items:start;gap:18px;margin-bottom:20px}
+        .home-dashboard-panel{min-width:0;overflow:hidden;border:1px solid #e8eaf0;border-radius:15px;background:#fff;box-shadow:0 7px 20px rgba(15,23,42,.045)}
+        .home-dashboard-panel>.home-dashboard-section-head{margin:0;padding:17px 18px 14px}
+        .home-dashboard-course-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 16px 16px}
+        .home-dashboard-course-card{display:flex;min-width:0;flex-direction:column;overflow:hidden;padding:0;border:1px solid #eceef3;border-radius:12px;background:#fff;text-align:left;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+        .home-dashboard-course-card:hover{transform:translateY(-2px);border-color:#d7cef7;box-shadow:0 10px 20px rgba(15,23,42,.08)}
+        .home-dashboard-course-image{position:relative;display:grid;min-height:108px;place-items:center;overflow:hidden;background:#f1edff;color:#5b21b6}
+        .home-dashboard-course-image img{position:absolute;width:100%;height:100%;object-fit:cover}
+        .home-dashboard-course-category{position:absolute;left:8px;top:8px;max-width:calc(100% - 16px);overflow:hidden;padding:5px 7px;border:1px solid rgba(255,255,255,.45);border-radius:6px;background:rgba(17,24,39,.62);color:#fff;font-size:8px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+        .home-dashboard-course-body{display:flex;min-width:0;flex:1;flex-direction:column;align-items:flex-start;padding:11px}
+        .home-dashboard-course-body>strong{display:-webkit-box;overflow:hidden;min-height:32px;color:#1f2937;font-size:11px;font-weight:700;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+        .home-dashboard-course-description{display:-webkit-box;overflow:hidden;min-height:30px;margin-top:5px;color:#7b8494;font-size:9px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+        .home-dashboard-progress{display:flex;width:100%;align-items:center;gap:7px;margin-top:11px;color:#6b7280;font-size:8.5px;white-space:nowrap}
+        .home-dashboard-progress-track{height:5px;flex:1;overflow:hidden;border-radius:99px;background:#eeeaf7}
+        .home-dashboard-progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5b21b6,#8b5cf6)}
+        .home-dashboard-course-cta{display:flex;align-items:center;gap:5px;margin-top:11px;color:#5b21b6;font-size:9px;font-weight:700}
+        .home-dashboard-empty-state{display:flex;min-height:152px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;color:#717b8b;text-align:center;font-size:10px;line-height:1.5}
+        .home-dashboard-empty-state strong{color:#1f2937;font-size:11px}
+        .home-dashboard-empty-icon{display:grid;width:40px;height:40px;place-items:center;border-radius:12px;background:#f1edff}
+        .home-dashboard-empty-state button,.home-dashboard-event-empty button{display:inline-flex;align-items:center;gap:5px;margin-top:2px;padding:5px 0;background:transparent;color:#5b21b6;font-size:10px;font-weight:700;cursor:pointer}
+        .home-dashboard-event-list{padding:0 16px 10px}
+        .home-dashboard-event{display:flex;width:100%;align-items:center;gap:10px;padding:11px 2px;border:0;border-bottom:1px solid #f0f1f4;background:transparent;text-align:left;cursor:pointer}
+        .home-dashboard-event:last-child{border-bottom:0}
+        .home-dashboard-event:hover .home-dashboard-event-copy>strong,.home-dashboard-video:hover .home-dashboard-video-copy strong{color:#5b21b6}
+        .home-dashboard-event-date{display:flex;width:39px;height:43px;flex:0 0 39px;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;background:#f1edff;color:#5b21b6}
+        .home-dashboard-event-date strong{font-size:14px;line-height:1.1}
+        .home-dashboard-event-date small{margin-top:3px;font-size:8px;font-weight:700;text-transform:uppercase}
+        .home-dashboard-event-copy,.home-dashboard-video-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
+        .home-dashboard-event-copy>strong,.home-dashboard-video-copy strong{overflow:hidden;color:#263143;font-size:10px;font-weight:680;text-overflow:ellipsis;white-space:nowrap;transition:color .15s ease}
+        .home-dashboard-event-copy small,.home-dashboard-video-copy small{overflow:hidden;color:#8992a1;font-size:8.5px;text-overflow:ellipsis;white-space:nowrap}
+        .home-dashboard-event-empty{display:flex;min-height:94px;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7b8494;font-size:10px;text-align:center}
+        .home-dashboard-videos{margin-top:16px}
+        .home-dashboard-video-list{padding:0 16px 7px}
+        .home-dashboard-video{display:flex;align-items:center;gap:10px;padding:0 0 10px}
+        .home-dashboard-video+.home-dashboard-video{padding-top:10px;border-top:1px solid #f0f1f4}
+        .home-dashboard-video-thumb{position:relative;display:grid;width:78px;height:48px;flex:0 0 78px;place-items:center;overflow:hidden;padding:0;border:0;border-radius:8px;background:#f1edff;cursor:pointer}
+        .home-dashboard-video-thumb img{position:absolute;width:100%;height:100%;object-fit:cover}
+        .home-dashboard-video-thumb>span{position:relative;display:grid;width:26px;height:26px;place-items:center;border:1px solid rgba(255,255,255,.65);border-radius:50%;background:rgba(50,20,90,.65)}
+        .home-dashboard-video-copy strong{display:-webkit-box;white-space:normal;line-height:1.4;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+        .home-dashboard-activity{margin-bottom:12px}
+        .home-dashboard-activity-list{padding:0 18px 8px}
+        .home-dashboard-activity-link{display:flex;width:100%;align-items:center;gap:10px;padding:11px 0;border:0;border-top:1px solid #f0f1f4;background:transparent;text-align:left;cursor:pointer}
+        .home-dashboard-activity-icon{display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;border-radius:10px;background:#f1edff}
+        .home-dashboard-activity-icon--event{background:#eff6ff}
+        .home-dashboard-activity-icon--announcement{background:#fff7ed}
+        .home-dashboard-activity-icon--video{background:#ecfdf5}
+        .home-dashboard-activity-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
+        .home-dashboard-activity-copy strong{overflow:hidden;color:#263143;font-size:10px;font-weight:680;text-overflow:ellipsis;white-space:nowrap}
         .home-dashboard-activity-copy small{overflow:hidden;color:#929baa;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
-        .home-dashboard-category,.home-dashboard-status{display:inline-flex;align-items:center;white-space:nowrap}
-        .home-dashboard-category{color:#667085;font-size:9px}
-        .home-dashboard-status{padding:4px 7px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:9px;font-weight:650}
-        .home-dashboard-status--event{background:#eff6ff;color:#2563eb}
-        .home-dashboard-status--announcement{background:#fff7ed;color:#c2410c}
-        .home-dashboard-status--video{background:#ecfdf5;color:#047857}
-        .home-dashboard-activity-time{white-space:nowrap}
-        .home-dashboard-empty{padding:25px 16px!important;color:#6b7280!important;text-align:center}
-        @media (max-width:1100px){.home-dashboard-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-        @media (max-width:680px){.home-dashboard-hero{min-height:0;padding:20px;gap:12px}.home-dashboard-hero-art{flex-basis:112px;height:100px}.home-dashboard-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-dashboard-shortcut{min-height:118px}}
-        @media (max-width:420px){.home-dashboard-hero{align-items:flex-start}.home-dashboard-hero-art{flex-basis:76px;height:76px}.home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){font-size:11px}.home-dashboard-hero-tags span{font-size:9px}}
+        .home-dashboard-activity-time{flex-shrink:0;color:#8992a1;font-size:9px;white-space:nowrap}
+        @media (max-width:1100px){.home-dashboard-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.home-dashboard-content-grid{grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr)}.home-dashboard-course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media (max-width:760px){.home-dashboard-content-grid{grid-template-columns:1fr}.home-dashboard-course-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.home-dashboard-hero-art{flex-basis:190px;height:132px}}
+        @media (max-width:600px){.home-dashboard-hero{min-height:0;padding:22px;gap:15px}.home-dashboard-hero-art{flex-basis:110px;height:92px}.home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){font-size:11px}.home-dashboard-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.home-dashboard-shortcut{min-height:68px;padding:9px}.home-dashboard-shortcut-icon{width:32px;height:32px;flex-basis:32px}.home-dashboard-course-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 11px 12px}.home-dashboard-panel>.home-dashboard-section-head{padding:14px 13px 11px}.home-dashboard-event-list,.home-dashboard-video-list{padding-right:12px;padding-left:12px}.home-dashboard-activity-list{padding-right:13px;padding-left:13px}}
+        @media (max-width:420px){.home-dashboard-hero{align-items:flex-start;padding:18px}.home-dashboard-hero-art{flex-basis:72px;height:72px}.home-dashboard-hero-caption{right:5px;bottom:5px;padding:4px 5px;font-size:7px}.home-dashboard-hero h1{font-size:22px}.home-dashboard-hero-actions button{min-height:35px;padding:0 10px;font-size:10px}.home-dashboard-course-grid{gap:8px}.home-dashboard-course-image{min-height:86px}.home-dashboard-activity-time{font-size:8px}}
         @keyframes softDrift { 0%, 100% { transform: translate(0,0) scale(1); opacity:1; } 50% { transform: translate(6px,-4px) scale(1.01); opacity:0.94; } }
         @keyframes floatPulse { 0%, 100% { transform: translate(0,0) scale(1); opacity:1; } 30% { transform: translate(0,-4px) scale(1.04); opacity:0.88; } 60% { transform: translate(0,2px) scale(1.02); opacity:0.92; } }
         @keyframes wave { 0% { transform: rotate(0deg) scale(0.96); } 15% { transform: rotate(12deg) scale(1.04); } 30% { transform: rotate(-8deg) scale(1.02); } 45% { transform: rotate(10deg) scale(1.06); } 60% { transform: rotate(-4deg) scale(1.03); } 75% { transform: rotate(6deg) scale(1.05); } 100% { transform: rotate(0deg) scale(0.96); } }

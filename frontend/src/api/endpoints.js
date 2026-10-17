@@ -15,6 +15,7 @@ export const authAPI = {
 
 export const usersAPI = {
   getProfile: () => apiClient.get('/users/me'),
+  getTierProgress: () => apiClient.get('/users/me/tier-progress'),
   connectSocialProfile: (provider) => apiClient.get(`/users/social-profiles/connect/${encodeURIComponent(provider)}`),
   getAll: (params) => apiClient.get('/users', { params }),
   updateProfile: (data) => apiClient.patch('/users/me', data),
@@ -91,6 +92,7 @@ export const analyticsAPI = {
   getDashboard: () => apiClient.get('/analytics/dashboard'),
   getUserStats: () => apiClient.get('/analytics/user-stats'),
   getAdminOverview: () => apiClient.get('/analytics/admin/overview'),
+  getAdminReport: (params, config = {}) => apiClient.get('/analytics/admin/report', { ...config, params }),
 };
 
 export const adminOperationsAPI = {

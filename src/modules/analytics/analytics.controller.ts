@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -13,6 +13,19 @@ export class AnalyticsController {
   @Roles('admin')
   getAdminOverview() {
     return this.analyticsService.getAdminOverview();
+  }
+
+  @Get('admin/report')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  getAdminReport(
+    @Query('range') range?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('contentType') contentType?: string,
+    @Query('eventType') eventType?: string,
+  ) {
+    return this.analyticsService.getAdminReport({ range, from, to, contentType, eventType });
   }
 
   @Get('dashboard')

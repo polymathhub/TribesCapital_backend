@@ -11,7 +11,6 @@ import React, {
   useImperativeHandle 
 } from 'react';
 import { authAPI, communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
-import dashboardHeroIllustration from './assets/hello-cuate.svg';
 import ProfileAvatar from './components/ProfileAvatar';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
 const OfficeHoursEvents = lazy(() => import('./pages/OfficeHoursEvents.jsx'));
@@ -261,6 +260,7 @@ const STYLES = `
 
 .dash-main{ display:flex; flex-direction:column; min-height:100dvh; }
 .dash-content{ flex:1; }
+.dash-main :is(p,span,small,label,li,button,a,input,textarea,select,td,th):not(h1 *):not(h2 *):not(h3 *):not(h4 *):not(h5 *):not(h6 *){font-size:max(13px,1em)!important}
 .dash-footer{ display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; max-width:none; margin-top:auto; padding:18px var(--tc-page-gutter-x); border-top:1px solid var(--line); color:var(--ink-400); font-size:12px; }
 .dash-footer a{ color:var(--purple-700); text-decoration:none; font-weight:600; }
 .dash-footer a:hover{ text-decoration:underline; }
@@ -362,6 +362,81 @@ const STYLES = `
 .home-dashboard-status{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:9px;font-weight:650;white-space:nowrap}
 .home-dashboard-activity-time{white-space:nowrap}
 .home-dashboard-empty{padding:25px 16px!important;color:#6b7280!important;text-align:center}
+.member-home{gap:22px}
+.member-home-hero{position:relative;display:flex;min-height:190px;align-items:center;justify-content:flex-start;gap:28px;margin:0;padding:28px 32px;overflow:hidden;border-radius:20px;background:linear-gradient(112deg,#35106F 0%,#5B21B6 58%,#7C3AED 100%);box-shadow:0 18px 38px rgba(76,29,149,.2);color:#fff}
+.member-home-hero::before,.member-home-hero::after{position:absolute;content:'';border-radius:50%;pointer-events:none}
+.member-home-hero::before{width:330px;height:330px;right:18%;top:-265px;background:rgba(255,255,255,.08)}
+.member-home-hero::after{width:220px;height:220px;right:-90px;bottom:-155px;background:rgba(255,255,255,.08)}
+.member-home-hero-copy{position:relative;z-index:1;max-width:720px}
+.member-home-brand{margin:0 0 16px}
+.member-home-hero h1{margin:0 0 10px;color:#fff;font-size:clamp(25px,2.4vw,35px);font-weight:750;letter-spacing:-.035em;line-height:1.18}
+.member-home-hero h1 span{font-size:.82em}
+.member-home-hero-copy>p:not(.member-home-eyebrow){max-width:590px;margin:0 0 20px;color:rgba(255,255,255,.84);font-size:13px;line-height:1.65}
+.member-home-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.member-home-actions button{display:inline-flex;min-height:39px;align-items:center;justify-content:center;gap:8px;padding:0 14px;border:1px solid transparent;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;transition:transform .18s ease}
+.member-home-actions button:hover{transform:translateY(-1px)}
+.member-home-primary-action{background:#fff;color:#4C1D95}
+.member-home-secondary-action{border-color:rgba(255,255,255,.3)!important;background:rgba(255,255,255,.1);color:#fff}
+.member-home .home-dashboard-section-head{margin:0 2px 13px}
+.member-home .home-dashboard-section-head h2{font-size:16px;letter-spacing:-.02em}
+.member-home .home-dashboard-shortcuts{margin:0}
+.member-home .home-dashboard-shortcut-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.member-home .home-dashboard-shortcut{min-height:62px;flex-direction:row;align-items:center;gap:9px;padding:9px 11px;background:#fff}
+.member-home .home-dashboard-shortcut--blue,.member-home .home-dashboard-shortcut--mint,.member-home .home-dashboard-shortcut--amber,.member-home .home-dashboard-shortcut--indigo,.member-home .home-dashboard-shortcut--violet{background:#fff}
+.member-home .home-dashboard-shortcut-icon{width:23px;height:23px;flex:0 0 23px;margin:0;border-radius:0;background:transparent!important;color:#5b21b6}
+.member-home .home-dashboard-shortcut-icon svg{background:transparent!important;color:currentColor}
+.member-home .home-dashboard-shortcut-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
+.member-home .home-dashboard-shortcut-label{font-size:14px;font-weight:650;line-height:1.35}
+.member-home .home-dashboard-shortcut-detail{overflow:hidden;margin:0;text-overflow:ellipsis;white-space:nowrap}
+.member-home .home-dashboard-shortcut>svg{flex:0 0 14px;color:#98a2b3;background:transparent}
+.member-home-content-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(290px,1fr);align-items:start;gap:18px}
+.member-home-panel{min-width:0;overflow:hidden;border:1px solid #e8eaf0;border-radius:15px;background:#fff;box-shadow:0 7px 20px rgba(15,23,42,.045)}
+.member-home-panel>.home-dashboard-section-head{margin:0;padding:17px 18px 14px}
+.member-home-course-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 16px 16px}
+.member-home-course-card{display:flex;min-width:0;flex-direction:column;overflow:hidden;padding:0;border:1px solid #eceef3;border-radius:12px;background:#fff;text-align:left;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.member-home-course-card:hover{transform:translateY(-2px);border-color:#d7cef7;box-shadow:0 10px 20px rgba(15,23,42,.08)}
+.member-home-course-image{position:relative;display:grid;min-height:108px;place-items:center;overflow:hidden;background:#f1edff;color:#5b21b6}
+.member-home-course-image img{position:absolute;width:100%;height:100%;object-fit:cover}
+.member-home-course-image>span{position:absolute;left:8px;top:8px;max-width:calc(100% - 16px);overflow:hidden;padding:5px 7px;border:1px solid rgba(255,255,255,.45);border-radius:6px;background:rgba(17,24,39,.62);color:#fff;font-size:8px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.member-home-course-body{display:flex;min-width:0;flex:1;flex-direction:column;align-items:flex-start;padding:11px}
+.member-home-course-body>strong{display:-webkit-box;overflow:hidden;min-height:32px;color:#1f2937;font-size:11px;font-weight:700;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.member-home-course-description{display:-webkit-box;overflow:hidden;min-height:30px;margin-top:5px;color:#7b8494;font-size:9px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.member-home-progress{display:flex;width:100%;align-items:center;gap:7px;margin-top:11px}
+.member-home-progress-track{height:5px;flex:1;overflow:hidden;border-radius:99px;background:#eeeaf7}
+.member-home-progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5b21b6,#8b5cf6)}
+.member-home-progress small{color:#6b7280;font-size:8.5px;white-space:nowrap}
+.member-home-course-cta{display:flex;align-items:center;gap:5px;margin-top:11px;color:#5b21b6;font-size:9px;font-weight:700}
+.member-home-empty{display:flex;min-height:145px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;color:#717b8b;text-align:center;font-size:10px;line-height:1.5}
+.member-home-empty strong{color:#1f2937;font-size:11px}
+.member-home-empty-icon{display:grid;width:40px;height:40px;place-items:center;border-radius:0;background:transparent;color:#5b21b6}
+.member-home-empty button,.member-home-event-empty button{display:inline-flex;align-items:center;gap:5px;margin-top:2px;padding:5px 0;background:transparent;color:#5b21b6;font-size:10px;font-weight:700;cursor:pointer}
+.member-home-event-list{padding:0 16px 10px}
+.member-home-event{display:flex;width:100%;align-items:center;gap:10px;padding:11px 2px;border:0;border-bottom:1px solid #f0f1f4;background:transparent;text-align:left;cursor:pointer}
+.member-home-event:last-child{border-bottom:0}
+.member-home-event-date{display:flex;width:39px;height:43px;flex:0 0 39px;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;background:#f1edff;color:#5b21b6}
+.member-home-event-date strong{font-size:14px;line-height:1.1}
+.member-home-event-date small{margin-top:3px;font-size:8px;font-weight:700;text-transform:uppercase}
+.member-home-event-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
+.member-home-event-copy>strong{overflow:hidden;color:#263143;font-size:10px;font-weight:680;text-overflow:ellipsis;white-space:nowrap}
+.member-home-event-copy small{overflow:hidden;color:#8992a1;font-size:8.5px;text-overflow:ellipsis;white-space:nowrap}
+.member-home-event>svg{flex:0 0 14px;color:#98a2b3}
+.member-home-event:hover .member-home-event-copy>strong{color:#5b21b6}
+.member-home-events-empty{min-height:100px}
+.member-home-recent{grid-column:1/-1}
+.member-home-recent-list{padding:0 18px 8px}
+.member-home-recent-item{display:flex;width:100%;align-items:center;gap:10px;padding:11px 0;border:0;border-top:1px solid #f0f1f4;background:transparent;text-align:left;cursor:pointer}
+.member-home-recent-item>svg{flex:0 0 14px;color:#98a2b3}
+.member-home-recent-item:hover .home-dashboard-activity-copy strong{color:#5b21b6}
+.member-home .home-dashboard-activity-icon{width:34px;height:34px;flex:0 0 34px;border-radius:0;background:transparent}
+.member-home .home-dashboard-activity-copy{flex:1}
+.member-home .home-dashboard-activity-copy strong{font-size:10px}
+.member-home .home-dashboard-activity-time{flex:0 0 auto;color:#8992a1;font-size:9px}
+.member-home button:focus-visible{outline:2px solid #6d28d9;outline-offset:2px}
+@media(max-width:1100px){.member-home .home-dashboard-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.member-home-content-grid{grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr)}.member-home-course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.member-home-content-grid{grid-template-columns:1fr}.member-home-course-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.member-home{gap:18px}.member-home-hero{width:calc(100% + 2 * var(--tc-page-gutter-x));min-height:0;margin-right:calc(0px - var(--tc-page-gutter-x));margin-left:calc(0px - var(--tc-page-gutter-x));padding:22px;border-radius:0}.member-home-hero-copy>p:not(.member-home-eyebrow){font-size:11px}.member-home .home-dashboard-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.member-home .home-dashboard-shortcut{min-height:58px;padding:8px 9px}.member-home .home-dashboard-shortcut-icon{width:22px;height:22px;flex-basis:22px}.member-home-course-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 11px 12px}.member-home-panel>.home-dashboard-section-head{padding:14px 13px 11px}.member-home-event-list,.member-home-recent-list{padding-right:12px;padding-left:12px}.member-home .home-dashboard-section-head{align-items:flex-start}}
+@media(max-width:420px){.member-home-hero{align-items:flex-start;padding:18px}.member-home-hero h1{font-size:22px}.member-home-actions button{min-height:35px;padding:0 10px;font-size:10px}.member-home-course-grid{gap:8px}.member-home-course-image{min-height:86px}.member-home .home-dashboard-activity-time{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.member-home *{scroll-behavior:auto!important;transition:none!important}}
 .platform-search{display:grid;gap:18px}
 .platform-search-head h1{margin:0;color:#111827;font-size:26px}
 .platform-search-head p{margin:6px 0 0;color:#667085;font-size:14px}
@@ -2826,11 +2901,11 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
   const [dashboardData, setDashboardData] = useState({
     loading: true,
     courses: [],
+    enrolledCourses: [],
     events: [],
     projects: [],
     documents: [],
     members: null,
-    errors: [],
   });
 
   useEffect(() => {
@@ -2846,6 +2921,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
     let isCurrent = true;
     const requests = [
       coursesAPI.list({ take: 100 }),
+      coursesAPI.getEnrolled(),
       eventsAPI.list({ take: 100 }),
       projectsAPI.list({ take: 100 }),
       dueDiligenceAPI.list({ take: 100 }),
@@ -2862,23 +2938,37 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
         if (Array.isArray(payload?.data)) return payload.data;
         return [];
       };
-      const events = getItems(results[1]);
-      const memberPayload = results[5].status === 'fulfilled'
-        ? results[5].value?.data?.data ?? results[5].value?.data ?? {}
+      const events = getItems(results[2]);
+      const memberPayload = results[6].status === 'fulfilled'
+        ? results[6].value?.data?.data ?? results[6].value?.data ?? {}
         : null;
       const memberCount = Number(memberPayload?.memberCount ?? memberPayload?.totalMembers ?? memberPayload?.membersCount);
-      const errors = results
-        .map((result, index) => result.status === 'rejected' ? ['courses', 'events', 'projects', 'due diligence', 'documents', 'community'][index] : null)
-        .filter(Boolean);
+      const enrolledCourses = getItems(results[1]);
+      const enrolledByCourseId = new Map(enrolledCourses.map((enrollment) => [
+        String(enrollment.courseId || enrollment.course?.id || enrollment.id || ''),
+        enrollment,
+      ]));
+      const courses = getItems(results[0]).map((course) => {
+        const enrollment = enrolledByCourseId.get(String(course.id));
+        const storedProgress = (() => {
+          try {
+            return JSON.parse(window.localStorage.getItem(`tribes-course-progress:${course.id}`) || '{}');
+          } catch {
+            return {};
+          }
+        })();
+        const progress = Math.max(Number(enrollment?.progress || 0), Number(storedProgress.progress || 0));
+        return { ...course, enrolled: Boolean(enrollment), progress };
+      });
 
       setDashboardData({
         loading: false,
-        courses: getItems(results[0]),
+        courses,
+        enrolledCourses,
         events: events.filter((event) => !event.startDate || new Date(event.startDate).getTime() >= Date.now()),
-        projects: getItems(results[2]),
-        documents: [...getItems(results[3]), ...getItems(results[4])],
+        projects: getItems(results[3]),
+        documents: [...getItems(results[4]), ...getItems(results[5])],
         members: Number.isFinite(memberCount) ? memberCount : null,
-        errors,
       });
     });
 
@@ -2899,9 +2989,19 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
     ...(accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : []),
   ].map((item) => ({
     ...item,
+    label: item.key === 'events' ? 'Events' : item.key === 'submit-project' ? 'Submit Projects' : item.label,
     ...shortcutDetails[item.key],
     page: item.key,
   }));
+  const inProgressCourses = dashboardData.courses
+    .filter((course) => course.enrolled && Number(course.progress || 0) < 100)
+    .sort((a, b) => Number(b.progress || 0) - Number(a.progress || 0))
+    .slice(0, 3);
+  const learningCourses = (inProgressCourses.length > 0 ? inProgressCourses : dashboardData.courses.slice(0, 3));
+  const upcomingEvents = dashboardData.events
+    .filter((event) => event.startDate && new Date(event.startDate).getTime() >= Date.now())
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+    .slice(0, 3);
   const recentActivity = [
     ...dashboardData.projects.map((item) => ({
       id: `project-${item.id}`,
@@ -2912,7 +3012,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
       date: item.updatedAt || item.createdAt,
       page: 'pipeline',
     })),
-    ...dashboardData.events.map((item) => ({
+    ...upcomingEvents.map((item) => ({
       id: `event-${item.id}`,
       title: item.title || item.name || 'Community event',
       detail: item.eventType || item.meetingPlatform || item.description || 'Upcoming community session',
@@ -2921,13 +3021,13 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
       date: item.startDate || item.updatedAt || item.createdAt,
       page: 'events',
     })),
-    ...dashboardData.courses.map((item) => ({
+    ...dashboardData.enrolledCourses.map((item) => ({
       id: `course-${item.id}`,
       title: item.title || item.name || 'Learning resource',
-      detail: item.category || item.description || 'Learning hub',
+      detail: item.course?.category || item.category || item.course?.description || item.description || 'Learning hub',
       category: 'Learning',
       status: item.status || 'Available',
-      date: item.updatedAt || item.createdAt || item.publishedAt,
+      date: item.updatedAt || item.createdAt || item.lastAccessedAt || item.publishedAt,
       page: 'learning',
     })),
     ...dashboardData.documents.map((item) => ({
@@ -2949,27 +3049,26 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
   };
 
   return (
-    <div className="dash-home home-dashboard">
-      <section className="home-dashboard-hero" aria-labelledby="dash-home-title">
-        <div className="home-dashboard-hero-copy">
-          <p className="home-dashboard-eyebrow"><img className="home-dashboard-logo" src={LOGO_SRC} alt="Tribes Capital" /></p>
+    <div className="dash-home member-home">
+      <section className="member-home-hero" aria-labelledby="dash-home-title">
+        <div className="member-home-hero-copy">
+          <img className="home-dashboard-logo member-home-brand" src={LOGO_SRC} alt="Tribes Capital" />
           <h1 id="dash-home-title">{greeting}, {firstName}<span aria-hidden="true"> 👋</span></h1>
-          <p>Welcome back. Pick up where you left off and see what’s happening across the clean energy community.</p>
-          <div className="home-dashboard-hero-tags">
-            <span>{dashboardData.members ?? '—'} community members</span>
-            <span>{dashboardData.events.length} upcoming events</span>
-            <span>{dashboardData.projects.length} active projects</span>
+          <p>Grow your clean energy expertise, discover investment opportunities, and connect with people moving the transition forward.</p>
+          <div className="member-home-actions">
+            <button type="button" className="member-home-primary-action" onClick={() => onGo('learning')}>
+              {inProgressCourses.length > 0 ? 'Continue learning' : 'Explore the Learning Hub'}
+              <ArrowRight size={15} aria-hidden="true" />
+            </button>
+            <button type="button" className="member-home-secondary-action" onClick={() => onGo('pipeline')}>Explore projects</button>
           </div>
-        </div>
-        <div className="home-dashboard-hero-art" aria-hidden="true">
-          <img src={dashboardHeroIllustration} alt="" />
         </div>
       </section>
       <section className="home-dashboard-shortcuts" aria-labelledby="home-dashboard-shortcuts-title">
         <div className="home-dashboard-section-head">
           <div>
-            <h2 id="home-dashboard-shortcuts-title">Your community at a glance</h2>
-            <p>Quick links and the latest numbers from across Tribes Capital.</p>
+            <h2 id="home-dashboard-shortcuts-title">Explore Tribes Capital</h2>
+            <p>Quick links to the spaces and resources you need.</p>
           </div>
         </div>
         <div className="home-dashboard-shortcut-grid">
@@ -2985,53 +3084,111 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
                   ? <FolderUp aria-hidden="true" className="submit-project-nav-icon" size={22} strokeWidth={2.3} />
                   : <Icon name={card.icon} size={19} strokeWidth={1.8} />}
               </span>
-              <span className="home-dashboard-shortcut-label">{card.label}</span>
-              {card.count !== null && <span className="home-dashboard-shortcut-count">{dashboardData.loading ? '…' : (card.count ?? '—')} <small>{card.unit}</small></span>}
-              <span className="home-dashboard-shortcut-detail">{card.detail}</span>
+              <span className="member-home-shortcut-copy">
+                <span className="home-dashboard-shortcut-label">{card.label}</span>
+              </span>
+              <ArrowRight size={14} aria-hidden="true" />
             </button>
           ))}
         </div>
       </section>
-      <section className="home-dashboard-activity" aria-labelledby="home-dashboard-activity-title">
-        <div className="home-dashboard-section-head">
-          <div>
-            <h2 id="home-dashboard-activity-title">Recent work</h2>
-            <p>New projects, learning content, events, and resources.</p>
+      <div className="member-home-content-grid">
+        <section className="member-home-panel" aria-labelledby="member-home-learning-title">
+          <div className="home-dashboard-section-head">
+            <div>
+              <h2 id="member-home-learning-title">{inProgressCourses.length > 0 ? 'Continue learning' : 'Explore learning'}</h2>
+              <p>{inProgressCourses.length > 0 ? 'Pick up where you left off.' : 'Explore practical knowledge for the clean energy transition.'}</p>
+            </div>
+            <button type="button" onClick={() => onGo('learning')}>Learning hub <ArrowRight size={14} /></button>
           </div>
-          <button type="button" onClick={() => onGo('pipeline')}>View pipeline <ArrowRight size={14} /></button>
-        </div>
-        {dashboardData.errors.length > 0 && (
-          <p className="home-dashboard-load-error" role="status">
-            Some dashboard information couldn’t be loaded ({dashboardData.errors.join(', ')}). You can still open each section using the cards above.
-          </p>
-        )}
-        <div className="home-dashboard-table-wrap">
-          <table className="home-dashboard-table">
-            <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Updated</th></tr></thead>
-            <tbody>
-              {recentActivity.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <button type="button" className="home-dashboard-activity-link" onClick={() => onGo(item.page)}>
-                      <span className="home-dashboard-activity-icon"><Icon name={item.category === 'Project' ? 'briefcase' : item.category === 'Event' ? 'calendar' : item.category === 'Document' ? 'folder' : 'book'} size={16} /></span>
-                      <span className="home-dashboard-activity-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
-                    </button>
-                  </td>
-                  <td><span className="home-dashboard-category">{item.category}</span></td>
-                  <td><span className="home-dashboard-status">{item.status}</span></td>
-                  <td className="home-dashboard-activity-time">{formatActivityDate(item.date)}</td>
-                </tr>
-              ))}
-              {!dashboardData.loading && recentActivity.length === 0 && (
-                <tr><td colSpan="4" className="home-dashboard-empty">No recent work to show yet. New projects, events, and learning resources will appear here.</td></tr>
-              )}
-              {dashboardData.loading && recentActivity.length === 0 && (
-                <tr><td colSpan="4" className="home-dashboard-empty">Loading recent work…</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          {learningCourses.length > 0 ? (
+            <div className="member-home-course-grid">
+              {learningCourses.map((course) => {
+                const progress = Math.min(100, Math.max(0, Number(course.progress || 0)));
+                const title = course.title || course.name || 'Learning resource';
+                const thumbnail = course.thumbnail || course.imageUrl || course.coverImage;
+                return (
+                  <button key={course.id || course.courseId || title} type="button" className="member-home-course-card" onClick={() => onGo('learning')}>
+                    <span className="member-home-course-image">
+                      {thumbnail ? <img src={thumbnail} alt="" /> : <Icon name="book" size={24} />}
+                      <span>{course.category || course.topic || 'Clean energy'}</span>
+                    </span>
+                    <span className="member-home-course-body">
+                      <strong>{title}</strong>
+                      <span className="member-home-course-description">{course.description || course.subtitle || 'Build your knowledge with this learning resource.'}</span>
+                      {course.enrolled ? (
+                        <span className="member-home-progress">
+                          <span className="member-home-progress-track"><span style={{ width: `${progress}%` }} /></span>
+                          <small>{progress}% complete</small>
+                        </span>
+                      ) : <span className="member-home-course-cta">Explore course <ArrowRight size={12} /></span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="member-home-empty">
+              <span className="member-home-empty-icon"><Icon name="book" size={22} /></span>
+              <strong>{dashboardData.loading ? 'Loading your learning space…' : 'Your next learning opportunity starts here'}</strong>
+              <span>{dashboardData.loading ? 'Courses will appear as soon as they are ready.' : 'Explore the Learning Hub to find courses and resources.'}</span>
+              {!dashboardData.loading && <button type="button" onClick={() => onGo('learning')}>Visit Learning Hub <ArrowRight size={13} /></button>}
+            </div>
+          )}
+        </section>
+
+        <section className="member-home-panel" aria-labelledby="member-home-events-title">
+          <div className="home-dashboard-section-head">
+            <div>
+              <h2 id="member-home-events-title">Connect with the community</h2>
+              <p>Upcoming events and live conversations.</p>
+            </div>
+            <button type="button" onClick={() => onGo('events')}>All events <ArrowRight size={14} /></button>
+          </div>
+          <div className="member-home-event-list">
+            {upcomingEvents.length > 0 ? upcomingEvents.map((event) => (
+              <button key={event.id || event.title} type="button" className="member-home-event" onClick={() => onGo('events')}>
+                <span className="member-home-event-date">
+                  <strong>{new Date(event.startDate).toLocaleDateString(undefined, { day: '2-digit' })}</strong>
+                  <small>{new Date(event.startDate).toLocaleDateString(undefined, { month: 'short' })}</small>
+                </span>
+                <span className="member-home-event-copy">
+                  <strong>{event.title || event.name || 'Community event'}</strong>
+                  <small>{event.meetingPlatform || event.eventType || 'Community session'} · {new Date(event.startDate).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</small>
+                </span>
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            )) : (
+              <div className="member-home-empty member-home-events-empty">
+                <span>{dashboardData.loading ? 'Finding upcoming events…' : 'There are no upcoming events to show right now.'}</span>
+                {!dashboardData.loading && <button type="button" onClick={() => onGo('events')}>Browse events <ArrowRight size={13} /></button>}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="member-home-panel member-home-recent" aria-labelledby="home-dashboard-activity-title">
+          <div className="home-dashboard-section-head">
+            <div>
+              <h2 id="home-dashboard-activity-title">A pulse on the community</h2>
+              <p>Projects, events, and resources to keep you in the loop.</p>
+            </div>
+            <button type="button" onClick={() => onGo('pipeline')}>Explore pipeline <ArrowRight size={14} /></button>
+          </div>
+          <div className="member-home-recent-list">
+            {recentActivity.slice(0, 4).map((item) => (
+              <button key={item.id} type="button" className="member-home-recent-item" onClick={() => onGo(item.page)}>
+                <span className="home-dashboard-activity-icon"><Icon name={item.category === 'Project' ? 'briefcase' : item.category === 'Event' ? 'calendar' : item.category === 'Document' ? 'folder' : 'book'} size={16} /></span>
+                <span className="home-dashboard-activity-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
+                <span className="home-dashboard-activity-time">{formatActivityDate(item.date)}</span>
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            ))}
+            {!dashboardData.loading && recentActivity.length === 0 && <div className="member-home-empty">New projects, events, and learning resources will appear here.</div>}
+            {dashboardData.loading && recentActivity.length === 0 && <div className="member-home-empty">Loading your latest community activity…</div>}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -4189,7 +4346,7 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
   );
 }
 
-function Pipeline({ toast, go, allowCreate = true }) {
+function Pipeline({ go }) {
   const [ps, setPs] = useState([]), [sel, setSel] = useState(null), [add, setAdd] = useState(false);
   const [activeStage, setActiveStage] = useState(null);
   const [expandedStage, setExpandedStage] = useState(null);
@@ -4215,10 +4372,14 @@ function Pipeline({ toast, go, allowCreate = true }) {
     if (!p || p.s >= STG.length - 1) return;
     setError('Stage changes are recorded through project review and investment decisions.');
   };
-  return <>
-    <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div>{allowCreate ? <button className="btn bp" onClick={() => setAdd(true)}>+ Add project</button> : <button className="btn bp" type="button" disabled title="Project creation is currently unavailable">Create Project</button>}</div>
+  return <div className="pipeline-page">
+    <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div></div>
     {error && <p role="alert" className="sub">{error}</p>}
-    <div className="card stats">{[[ps.length, "Visible projects"], [ps.filter(x => x.s >= 1 && x.s <= 2).length, "In development"], [ps.filter(x => x.s === 6).length, "Operating"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([v, l]) => <div key={l}><b>{v}</b><span className="sub">{l}</span></div>)}</div>
+    <div className="pipeline-stats-grid" aria-label="Portfolio summary">
+      {[[ps.length, "Visible projects"], [ps.filter(x => x.s >= 1 && x.s <= 2).length, "In development"], [ps.filter(x => x.s === 6).length, "Operating"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([value, label]) => (
+        <div className="pipeline-stat-card" key={label}><b>{value}</b><span>{label}</span></div>
+      ))}
+    </div>
     {loading && <p role="status" className="sub">Loading projects…</p>}
     {activeStage === null ? (
       <section aria-label="Project stages">
@@ -4321,6 +4482,11 @@ function Pipeline({ toast, go, allowCreate = true }) {
         setPs((current) => [created, ...current]);
       }} />}
     <style>{`
+      .pipeline-page{box-sizing:border-box;width:100%;min-width:0;padding:28px 32px 40px}
+      .pipeline-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:20px}
+      .pipeline-stat-card{display:flex;min-width:0;flex-direction:column;gap:5px;padding:18px 20px;background:#fff;border:1px solid var(--ln);border-radius:14px;box-shadow:0 5px 16px rgba(15,23,42,.04)}
+      .pipeline-stat-card b{color:var(--i9);font-size:22px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+      .pipeline-stat-card span{color:var(--i6);font-size:13px;line-height:1.4}
       .pipeline-stage-overview-heading{display:flex;align-items:center;justify-content:space-between;margin:28px 0 16px}
       .pipeline-stage-overview-heading h2,.pipeline-stage-detail-heading h2{margin:0;color:var(--i9);font-size:22px}
       .pipeline-stage-overview-heading p,.pipeline-stage-detail-heading p{margin:6px 0 0;color:var(--i6);font-size:14px}
@@ -4375,10 +4541,11 @@ function Pipeline({ toast, go, allowCreate = true }) {
       .pipeline-no-projects{padding:56px 20px;text-align:center;color:var(--i6);background:#fff;border:1px solid var(--ln);border-radius:16px}
       .pipeline-gate-detail{display:grid;gap:4px;padding:10px;border:1px solid var(--p1);border-radius:7px;background:var(--p0);font-size:12px;line-height:1.45}
       .pipeline-gate-detail b{color:var(--p9);font-size:11px}
-      @media(max-width:1080px){.pipeline-stage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pipeline-project-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:700px){.pipeline-stage-grid,.pipeline-project-grid{grid-template-columns:1fr}.pipeline-stage-card{min-height:180px;padding:20px}.pipeline-stage-detail-heading{flex-direction:column;padding:18px}.pipeline-stage-detail-copy{max-width:none}.pipeline-project-card{min-height:200px;padding:19px}}
+      @media(max-width:1080px){.pipeline-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pipeline-stage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pipeline-project-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:700px){.pipeline-page{padding:24px 18px 32px}.pipeline-stage-grid,.pipeline-project-grid{grid-template-columns:1fr}.pipeline-stage-card{min-height:180px;padding:20px}.pipeline-stage-detail-heading{flex-direction:column;padding:18px}.pipeline-stage-detail-copy{max-width:none}.pipeline-project-card{min-height:200px;padding:19px}}
+      @media(max-width:420px){.pipeline-page{padding-left:14px;padding-right:14px}.pipeline-stats-grid{grid-template-columns:1fr}}
     `}</style>
-  </>;
+  </div>;
 }
 
 function SettingsPage({ user, onOpenProfile, onOpenNotifications, onLogout }) {
@@ -4785,31 +4952,34 @@ function initialCourseProgress() {
   return init;
 }
 
-const TOUR_STEPS = [
-  { icon: 'wave', title: 'Welcome to Tribes Capital', desc: "You're now part of a community for people building and investing in clean energy. Let's show you around in 6 quick steps.", navKey: null },
-  { icon: 'home', title: 'Your home', desc: "Your starting point. Tell us your goal here and we'll take you straight to the right place — contractors, learning, community and more.", navKey: 'home' },
-  { icon: 'book', title: 'Your learning', desc: 'Build your knowledge of renewable energy at your own pace, from the basics through to advanced topics.', navKey: 'learning' },
-  { icon: 'users', title: 'Community', desc: 'Ask questions, join discussions and share what you know with other members across the network.', navKey: 'community' },
-  { icon: 'grid', title: 'Contractors', desc: 'Find and compare verified energy professionals, filtered by location and the service you need.', navKey: 'contractors' },
-  { icon: 'message', title: 'Messaging', desc: "Message members directly once you've made a connection — introduce yourself and take it from there.", navKey: 'messaging' },
-  { icon: 'shield', title: 'Due Diligence Vault', desc: 'Investor tool — access verified project documentation, audits and compliance materials to support your investment decisions.', navKey: 'vault' },
-  { icon: 'briefcase', title: 'Project Pipeline', desc: 'Investor tool — track clean energy projects seeking investment, from early stage through to fully funded.', navKey: 'pipeline' },
-  { icon: 'calendar', title: 'Office Hours & Events', desc: 'Investor tool — book time with the team, or join upcoming webinars and community events.', navKey: 'events' },
-];
+function getTourSteps(accountType) {
+  const steps = [
+    { icon: 'wave', title: 'Welcome to Tribes Capital', desc: 'Your home for clean energy learning, community, and opportunities. This short tour shows you where to start and what you can do here.', navKey: null },
+    { icon: 'home', title: 'Your home base', desc: 'Find your learning progress, upcoming events, useful links, and recent activity here whenever you sign in.', navKey: 'home' },
+    { icon: 'book', title: 'Learn at your pace', desc: 'Explore clean energy courses and resources, continue lessons, and build practical knowledge of the energy transition.', navKey: 'learning' },
+    { icon: 'users', title: 'Meet the community', desc: 'Ask questions, join discussions, and share what you know with people across the clean energy network.', navKey: 'community' },
+    { icon: 'calendar', title: 'Join events and Office Hours', desc: 'Find upcoming webinars, community sessions, and Office Hours, then connect with the people behind them.', navKey: 'events' },
+    { icon: 'briefcase', title: 'Explore project opportunities', desc: 'Browse the Project Pipeline and follow clean energy projects as they move through development stages.', navKey: 'pipeline' },
+  ];
+  if (accountType === 'INVESTOR') {
+    steps.push({ icon: 'shield', title: 'Review project documents', desc: 'Use the Due Diligence Vault to review project files and supporting materials for investment decisions.', navKey: 'vault' });
+  } else if (accountType !== 'GUEST') {
+    steps.push({ icon: 'upload', title: 'Bring a project to the network', desc: 'Have a clean energy project to share? Submit it for review and follow its progress through the pipeline.', navKey: 'submit-project' });
+  }
+  return steps;
+}
 
 const SIDEBAR_WIDTH = 260;
 const TOPBAR_HEIGHT = 65;
 const TOUR_BREAKPOINT = 1024;
-const TOUR_COMPLETED_KEY = 'tribesCapital:dashboard-tour-completed';
-
-function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
+function TourOverlay({ step, steps, navRefs, onNext, onBack, onSkip, onClose }) {
   const [pos, setPos] = useState({ centered: true, top: 0, left: 0, dimLeft: 0, dimTop: 0, focus: null });
   const cardRef = useRef(null);
 
   useLayoutEffect(() => {
     function compute() {
       const isNarrow = window.innerWidth < TOUR_BREAKPOINT;
-      const data = TOUR_STEPS[step - 1];
+      const data = steps[step - 1];
       const cardH = cardRef.current ? cardRef.current.offsetHeight : 300;
       const sb = document.querySelector('.dash-sidebar');
       const tb = document.querySelector('.dash-topbar');
@@ -4857,10 +5027,10 @@ function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
       window.removeEventListener('resize', compute);
       clearTimeout(id);
     };
-  }, [step, navRefs]);
+  }, [step, navRefs, steps]);
 
-  const data = TOUR_STEPS[step - 1];
-  const isLast = step === TOUR_STEPS.length;
+  const data = steps[step - 1];
+  const isLast = step === steps.length;
   const isFirst = step === 1;
   const cardStyle = pos.centered
     ? { top: pos.top, left: pos.left, transform: 'translateX(-50%)' }
@@ -4880,7 +5050,7 @@ function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
         {!pos.centered && <span className="tour-pointer" style={{ top: pos.pointerTop }} />}
         <button className="tour-close" onClick={onClose} aria-label="Close tour"><X size={13} color="#fff" strokeWidth={2.6} /></button>
         <div className="tour-top-row">
-          <span className="tour-step-label">Step {step} of {TOUR_STEPS.length}</span>
+          <span className="tour-step-label">Step {step} of {steps.length}</span>
           <button className="tour-skip" onClick={onSkip}>Skip tour</button>
         </div>
         <div className={`tour-icon${data.icon === 'wave' ? ' emoji' : ''}`}>
@@ -4890,7 +5060,7 @@ function TourOverlay({ step, navRefs, onNext, onBack, onSkip, onClose }) {
         <p className="tour-desc">{data.desc}</p>
         <div className="tour-bottom-row">
           <div className="tour-dots">
-            {TOUR_STEPS.map((_, i) => (<span key={i} className={`tour-dot${i + 1 === step ? ' active' : ''}`} />))}
+            {steps.map((_, i) => (<span key={i} className={`tour-dot${i + 1 === step ? ' active' : ''}`} />))}
           </div>
           <div className="tour-btns">
             {!isFirst && <button className="tour-back-btn" onClick={onBack}><ArrowLeft size={13} color="#374151" /> Back</button>}
@@ -4932,11 +5102,9 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   // Dashboard / tour
   const navRefs = useRef({});
   const sidebarRef = useRef(null);
-  const [tourOpen, setTourOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(initialScreen === 'dashboard');
   const [tourStep, setTourStep] = useState(1);
-  const [tourSeen, setTourSeen] = useState(() => {
-    try { return window.localStorage.getItem(TOUR_COMPLETED_KEY) === 'true'; } catch { return false; }
-  });
+  const tourSteps = useMemo(() => getTourSteps(authenticatedUser?.accountType), [authenticatedUser?.accountType]);
 
   const [contractorQ, setContractorQ] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -4972,14 +5140,6 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   const [rpConfirm, setRpConfirm] = useState('');
   const [rpShowNew, setRpShowNew] = useState(false);
   const [rpShowConfirm, setRpShowConfirm] = useState(false);
-
-  useEffect(() => {
-    if (screen !== 'dashboard' || tourSeen) return;
-    setTourStep(1);
-    setTourOpen(true);
-    setTourSeen(true);
-    try { window.localStorage.setItem(TOUR_COMPLETED_KEY, 'true'); } catch { /* Storage may be unavailable. */ }
-  }, [screen, tourSeen]);
 
   function navigate(next) {
     if (next === 'profile' && screen !== 'profile') profileReturn.current = screen;
@@ -5030,11 +5190,25 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
     setInterests((prev) => (prev.includes(label) ? prev.filter((x) => x !== label) : [...prev, label]));
   }
 
-  function handleSignIn() { if (signInValid) navigate('dashboard'); }
+  function handleSignIn() {
+    if (!signInValid) return;
+    setTourStep(1);
+    setTourOpen(true);
+    navigate('dashboard');
+  }
+  function handleGoogleSignIn() {
+    setTourStep(1);
+    setTourOpen(true);
+    navigate('dashboard');
+  }
   function handleCreateAccount() { if (createValid) navigate('verify-email'); }
   function handleVerifyEmail() { if (otpComplete) navigate('complete-profile'); }
   function handleResendCode() { if (resendSeconds > 0) return; setResendSeconds(28); showToast('A new code has been sent'); }
-  function finishOnboarding() { navigate('dashboard'); }
+  function finishOnboarding() {
+    setTourStep(1);
+    setTourOpen(true);
+    navigate('dashboard');
+  }
   function handleForgotSubmit() { if (forgotValid) navigate('check-email'); }
   function handleResendLink() { showToast('Reset link resent'); }
   function handleOpenEmailApp() {
@@ -5045,7 +5219,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   function handleResetPassword() { if (resetValid) navigate('reset-success'); }
 
   function tourNext() {
-    if (tourStep >= TOUR_STEPS.length) { setTourOpen(false); return; }
+    if (tourStep >= tourSteps.length) { setTourOpen(false); return; }
     setTourStep((s) => s + 1);
   }
   function tourBack() { setTourStep((s) => Math.max(1, s - 1)); }
@@ -5132,7 +5306,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
         </div>
         <PrimaryButton enabled={signInValid} onClick={handleSignIn}>Sign in</PrimaryButton>
         <Divider />
-        <GoogleButton onClick={() => navigate('dashboard')}>Continue with Google</GoogleButton>
+        <GoogleButton onClick={handleGoogleSignIn}>Continue with Google</GoogleButton>
         <p className="tca-footer-text">
           New to Tribes Capital? <button type="button" className="tca-link" onClick={() => navigate('create-account')}>Create an account</button>
         </p>
@@ -5343,7 +5517,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   } else if (screen === 'pipeline') {
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="pipeline" onNavigate={handleSidebarNav} {...shellProps}>
-        <div className="tcx"><Pipeline toast={showToast} go={goApp} allowCreate={false} /></div>
+        <div className="tcx"><Pipeline go={goApp} /></div>
       </AppShell>
     );
   } else if (screen === 'submit-project') {
@@ -5402,6 +5576,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
       {tourOpen && (
         <TourOverlay
           step={tourStep}
+          steps={tourSteps}
           navRefs={navRefs}
           onNext={tourNext}
           onBack={tourBack}

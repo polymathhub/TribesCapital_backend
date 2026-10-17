@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma.service';
 import { UpdateUserDto } from './dto/user.dto';
+import { buildTierProgress } from './tier-progress';
 
 const DEFAULT_TAKE = 10;
 const MAX_TAKE = 100;
@@ -40,6 +41,31 @@ export class UsersService {
     }
 
     return this.sanitizeUser(user);
+  }
+
+  async getTierProgress(id: string) {
+    if (!this.prisma.isDatabaseAvailable()) {
+      throw new ServiceUnavailableException('Tier progress is unavailable while the database is offline.');
+    }
+
+    const [projects, coursesEnrolled, eventRegistrations, communityPosts, communityComments] = await Promise.all([
+      this.prisma.project.findMany({
+        where: { creatorId: id },
+        select: { id: true, title: true, status: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.enrollment.count({ where: { userId: id } }),
+      this.prisma.rSVP.count({ where: { userId: id, cancelledAt: null } }),
+      this.prisma.communityPost.count({ where: { creatorId: id } }),
+      this.prisma.communityComment.count({ where: { creatorId: id } }),
+    ]);
+
+    return buildTierProgress(projects, {
+      coursesEnrolled,
+      eventRegistrations,
+      communityPosts,
+      communityComments,
+    });
   }
 
   async getPublicProfileById(id: string) {

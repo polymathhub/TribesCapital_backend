@@ -19,6 +19,12 @@ export class UsersController {
     return this.usersService.getUserById(user.id);
   }
 
+  @Get('me/tier-progress')
+  @ApiOperation({ summary: 'Get the authenticated member’s tier progress' })
+  async getTierProgress(@CurrentUser() user: any) {
+    return this.usersService.getTierProgress(user.id);
+  }
+
   @Get()
   async getAll(@Query('skip') skip?: string, @Query('take') take?: string) {
     return this.usersService.getAllUsers(

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { InstagramIcon, LinkedinIcon } from '@hugeicons/core-free-icons';
-import { Globe, MessageCircle, MoreHorizontal, Pencil, Plus, X } from 'lucide-react';
+import { Activity, Check, Globe, LockKeyhole, MessageCircle, MoreHorizontal, Pencil, Plus, ShieldCheck, X } from 'lucide-react';
 import { usersAPI } from '../api/endpoints';
 import { uploadFileInChunks } from '../utils/chunkedUpload';
 import ProfileAvatar from './ProfileAvatar';
@@ -65,6 +65,9 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
   const [editingSection, setEditingSection] = useState(null);
   const [sectionSaving, setSectionSaving] = useState(false);
   const [socialConnecting, setSocialConnecting] = useState(false);
+  const [tierProgress, setTierProgress] = useState(null);
+  const [tierProgressLoading, setTierProgressLoading] = useState(!readOnly);
+  const [tierProgressError, setTierProgressError] = useState('');
   const [avatar, setAvatar] = useState(user?.avatar || null);
   const [coverPhoto, setCoverPhoto] = useState(user?.coverPhoto || null);
   const [editOpen, setEditOpen] = useState(false);
@@ -98,6 +101,26 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
     setAvatar(user?.avatar || null);
     setCoverPhoto(user?.coverPhoto || null);
   }, [user?.avatar, user?.coverPhoto]);
+
+  useEffect(() => {
+    if (readOnly) return undefined;
+    let isCurrent = true;
+    setTierProgressLoading(true);
+    setTierProgressError('');
+    usersAPI.getTierProgress()
+      .then((response) => {
+        if (isCurrent) setTierProgress(response?.data?.data ?? response?.data ?? null);
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setTierProgressError(error?.response?.data?.message || 'Tier progress could not be loaded. Please try again later.');
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setTierProgressLoading(false);
+      });
+    return () => { isCurrent = false; };
+  }, [readOnly, user?.id]);
 
   useEffect(() => {
     const handleSocialProfileConnected = async (event) => {
@@ -332,6 +355,68 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
           </aside>
         </div>
       </section>
+
+      {!readOnly && <section className="profile-tier-card" aria-labelledby="profile-tier-title">
+        <header className="profile-tier-header">
+          <div>
+            <span className="profile-eyebrow">Member journey</span>
+            <h2 id="profile-tier-title">Your tier progress</h2>
+            <p>Your activity and the progress of projects you submit shape your tier.</p>
+          </div>
+          {tierProgress && <span className="profile-tier-current-badge">Tier {tierProgress.currentTier}</span>}
+        </header>
+        {tierProgressLoading ? <p className="profile-tier-loading" role="status">Loading your tier progress…</p>
+          : tierProgressError ? <p className="profile-tier-error" role="alert">{tierProgressError}</p>
+            : tierProgress && <>
+              <div className="profile-tier-track" aria-label={`Tier ${tierProgress.currentTier} of 3`}>
+                {tierProgress.tiers.map((tier) => (
+                  <div key={tier.level} className={`profile-tier-step ${tier.status}`}>
+                    <span className="profile-tier-step-icon">
+                      {tier.status === 'complete' ? <Check size={16} aria-hidden="true" />
+                        : tier.status === 'current' ? <Activity size={16} aria-hidden="true" />
+                          : tier.status === 'kyc_required' ? <LockKeyhole size={16} aria-hidden="true" />
+                            : <span>{tier.level}</span>}
+                    </span>
+                    <span className="profile-tier-step-copy">
+                      <strong>Tier {tier.level}</strong>
+                      <span>{tier.name}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="profile-tier-next">
+                <div className="profile-tier-progress-copy">
+                  <strong>{tierProgress.currentTier === 3 ? 'Journey complete' : `Progress to Tier ${tierProgress.nextTier}`}</strong>
+                  <span>{tierProgress.nextStep}</span>
+                </div>
+                <div className="profile-tier-progress-bar" role="progressbar" aria-label="Progress to next tier" aria-valuemin="0" aria-valuemax="100" aria-valuenow={tierProgress.progressPercent}>
+                  <span style={{ width: `${tierProgress.progressPercent}%` }} />
+                </div>
+              </div>
+              {tierProgress.kyc.required && <div className="profile-tier-kyc" role="status">
+                <ShieldCheck size={20} aria-hidden="true" />
+                <div>
+                  <strong>KYC verification is required for Tier 2</strong>
+                  <p>Your project has reached the qualifying stage. Identity verification will be available here when the KYC provider is integrated. No identity documents are collected yet.</p>
+                </div>
+                <span className="profile-tier-kyc-status">Required</span>
+              </div>}
+              <div className="profile-tier-stats" aria-label="Activity counted toward your tier">
+                <div><strong>{tierProgress.activity.coursesEnrolled}</strong><span>Courses joined</span></div>
+                <div><strong>{tierProgress.activity.eventRegistrations}</strong><span>Event registrations</span></div>
+                <div><strong>{tierProgress.activity.communityPosts + tierProgress.activity.communityComments}</strong><span>Community contributions</span></div>
+                <div><strong>{tierProgress.projectProgress.projectCount}</strong><span>Projects submitted</span></div>
+              </div>
+              {tierProgress.projectProgress.projects.length > 0 && <div className="profile-tier-projects">
+                <h3>Your project progress</h3>
+                <ul>
+                  {tierProgress.projectProgress.projects.map((project) => <li key={project.id}>
+                    <span>{project.title}</span><span className="profile-tier-project-stage">{project.status}</span>
+                  </li>)}
+                </ul>
+              </div>}
+            </>}
+      </section>}
 
       <div className="profile-settings-grid">
         <div className="profile-settings-main">

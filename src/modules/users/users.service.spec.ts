@@ -10,10 +10,18 @@ describe('UsersService profile data', () => {
       count: jest.fn(),
       update: jest.fn(),
     },
+    project: { findMany: jest.fn() },
+    enrollment: { count: jest.fn() },
+    rSVP: { count: jest.fn() },
+    communityPost: { count: jest.fn() },
+    communityComment: { count: jest.fn() },
   } as any;
   const service = new UsersService(prisma);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma.isDatabaseAvailable.mockReturnValue(true);
+  });
 
   it('removes credentials and provider identifiers from the current-user profile', async () => {
     prisma.user.findUnique.mockResolvedValue({
@@ -101,5 +109,38 @@ describe('UsersService profile data', () => {
 
     await expect(service.getPublicProfileById('user-2')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('derives tier progress from member activity and submitted-project stages', async () => {
+    prisma.project.findMany.mockResolvedValue([
+      { id: 'project-1', title: 'Community solar', status: 'development', updatedAt: new Date('2026-10-17') },
+    ]);
+    prisma.enrollment.count.mockResolvedValue(2);
+    prisma.rSVP.count.mockResolvedValue(1);
+    prisma.communityPost.count.mockResolvedValue(1);
+    prisma.communityComment.count.mockResolvedValue(3);
+
+    const result = await service.getTierProgress('user-1');
+
+    expect(result).toEqual(expect.objectContaining({
+      currentTier: 1,
+      eligibleTier: 2,
+      nextTier: 2,
+      kyc: { required: true, status: 'not_started', providerAvailable: false },
+      activity: {
+        coursesEnrolled: 2,
+        eventRegistrations: 1,
+        communityPosts: 1,
+        communityComments: 3,
+        total: 7,
+      },
+      projectProgress: expect.objectContaining({
+        projectCount: 1,
+        highestStage: 'Development',
+      }),
+    }));
+    expect(prisma.project.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { creatorId: 'user-1' },
+    }));
   });
 });
