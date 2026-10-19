@@ -13,6 +13,8 @@ import React, {
 import { authAPI, communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
 import { LEARNING_HUB_VIDEOS } from './data/learningHubVideos';
 import ProfileAvatar from './components/ProfileAvatar';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Activity01Icon, Calendar01Icon, CheckmarkCircle01Icon, EnergyIcon, Location01Icon, UserCircleIcon } from '@hugeicons/core-free-icons';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
 const OfficeHoursEvents = lazy(() => import('./pages/OfficeHoursEvents.jsx'));
 const MessagingPage = lazy(() => import('./pages/MessagingPage.jsx'));
@@ -390,7 +392,6 @@ const STYLES = `
 .member-home .home-dashboard-shortcut-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
 .member-home .home-dashboard-shortcut-label{font-size:14px;font-weight:650;line-height:1.35}
 .member-home .home-dashboard-shortcut-detail{overflow:hidden;margin:0;text-overflow:ellipsis;white-space:nowrap}
-.member-home .home-dashboard-shortcut>svg{flex:0 0 14px;color:#98a2b3;background:transparent}
 .member-home-content-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(290px,1fr);align-items:start;gap:18px}
 .member-home-panel{min-width:0;overflow:hidden;border:1px solid #e8eaf0;border-radius:15px;background:#fff;box-shadow:0 7px 20px rgba(15,23,42,.045)}
 .member-home-panel>.home-dashboard-section-head{margin:0;padding:17px 18px 14px}
@@ -404,7 +405,7 @@ const STYLES = `
 .member-home-course-image>.member-home-course-play svg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))}
 .member-home-course-body{display:flex;min-width:0;flex:1;flex-direction:column;align-items:flex-start;padding:11px}
 .member-home-course-body>strong{display:-webkit-box;overflow:hidden;min-height:32px;color:#1f2937;font-size:11px;font-weight:700;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-.member-home-course-description{display:-webkit-box;overflow:hidden;min-height:30px;margin-top:5px;color:#7b8494;font-size:9px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.member-home-course-description{display:-webkit-box;overflow:hidden;min-height:14px;margin-top:5px;color:#7b8494;font-size:9px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:1}
 .member-home-progress{display:flex;width:100%;align-items:center;gap:7px;margin-top:11px}
 .member-home-progress-track{height:5px;flex:1;overflow:hidden;border-radius:99px;background:#eeeaf7}
 .member-home-progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5b21b6,#8b5cf6)}
@@ -423,14 +424,12 @@ const STYLES = `
 .member-home-event-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
 .member-home-event-copy>strong{overflow:hidden;color:#263143;font-size:10px;font-weight:680;text-overflow:ellipsis;white-space:nowrap}
 .member-home-event-copy small{overflow:hidden;color:#8992a1;font-size:8.5px;text-overflow:ellipsis;white-space:nowrap}
-.member-home-event-description{display:-webkit-box;overflow:hidden;margin:7px 0 0;color:#6b7280;font-size:11px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-.member-home-event>svg{flex:0 0 14px;color:#98a2b3}
+.member-home-event-description{display:-webkit-box;overflow:hidden;margin:5px 0 0;color:#6b7280;font-size:10px;line-height:1.4;-webkit-box-orient:vertical;-webkit-line-clamp:1}
 .member-home-event:hover .member-home-event-copy>strong{color:#5b21b6}
 .member-home-events-empty{min-height:100px}
 .member-home-recent{grid-column:1/-1}
 .member-home-recent-list{padding:0 18px 8px}
 .member-home-recent-item{display:flex;width:100%;align-items:center;gap:10px;padding:11px 0;border:0;border-top:1px solid #f0f1f4;background:transparent;text-align:left;cursor:pointer}
-.member-home-recent-item>svg{flex:0 0 14px;color:#98a2b3}
 .member-home-recent-item:hover .home-dashboard-activity-copy strong{color:#5b21b6}
 .member-home .home-dashboard-activity-icon{width:34px;height:34px;flex:0 0 34px;border-radius:0;background:transparent}
 .member-home .home-dashboard-activity-copy{flex:1}
@@ -2125,32 +2124,45 @@ button.lb-control{cursor:pointer;justify-content:space-between;gap:10px}
 .tcx .hp-contact .ic{width:36px;height:36px;border-radius:9px;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .tcx .hp-contact b{display:block;font-size:13.5px;color:var(--i9)}
 .tcx .hp-contact span{font-size:12.5px;color:var(--i6)}
-.tcx .profile-card{background:#fff;border:1px solid var(--ln);border-radius:16px;overflow:hidden;margin-bottom:24px;position:relative}
+.tcx .profile-card{background:transparent;border:0;border-bottom:1px solid var(--ln);border-radius:0;overflow:hidden;margin-bottom:24px;padding-bottom:20px;position:relative}
 .tcx .profile-close{position:absolute;top:14px;right:14px;z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.22);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px);transition:background .15s ease}
 .tcx .profile-close:hover{background:rgba(255,255,255,.38)}
 .tcx .profile-close:focus-visible{outline:2px solid #fff;outline-offset:2px}
-.tcx .profile-banner{height:120px;background:linear-gradient(120deg,var(--p7) 0%,#9B4DD6 100%)}
-.tcx .profile-header{padding:0 28px 24px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-top:-34px}
+.tcx .profile-banner{height:124px;border-radius:12px;background:linear-gradient(115deg,#245e58 0%,#398879 56%,#8ab7a7 100%)}
+.tcx .profile-header{padding:0 18px 0;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-top:-34px}
 .tcx .profile-avatar{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:var(--p7);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;flex-shrink:0}
 .tcx .profile-name{font-size:19px;font-weight:700;margin:14px 0 2px}
 .tcx .profile-tagline{color:var(--p6);font-weight:600;font-size:13.5px;margin-bottom:6px}
 .tcx .profile-meta{color:var(--i4);font-size:12.5px;display:flex;gap:16px;flex-wrap:wrap}
 .tcx .profile-meta span{display:inline-flex;align-items:center;gap:5px}
-.tcx .profile-grid{display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start}
-.tcx .profile-progress-bar{height:8px;background:#fff;border:1px solid var(--p1);border-radius:999px;overflow:hidden;margin:10px 0 16px}
-.tcx .profile-progress-bar span{display:block;height:100%;background:var(--p7)}
-.tcx .profile-step{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px;color:var(--i6)}
-.tcx .profile-step:last-child{margin-bottom:0}
-.tcx .profile-step .dot{width:20px;height:20px;border-radius:50%;border:2px solid #fff;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
-.tcx .profile-step.done .dot{background:#10B981;border-color:#10B981;color:#fff}
-.tcx .profile-step.pending{color:var(--p7);font-weight:600;cursor:pointer}
-.tcx .profile-step.pending .dot{border-color:var(--p6)}
+.tcx .profile-grid{display:grid;grid-template-columns:2fr 1fr;gap:34px;align-items:start}
+.tcx .profile-section{margin:0 0 22px;padding:0 0 22px;border:0;border-bottom:1px solid var(--ln);border-radius:0;background:transparent;box-shadow:none}
+.tcx .profile-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.tcx .profile-section-title{display:flex;align-items:center;gap:9px;margin:0 0 13px;font-size:15px;color:var(--i9)}
+.tcx .profile-section-title svg{color:var(--p7)}
+.tcx .profile-body-copy{margin:0;color:var(--i6);font-size:13.5px;line-height:1.7}
+.tcx .profile-journey-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.tcx .profile-journey-heading h4{margin:0 0 4px;font-size:15px;color:var(--i9)}
+.tcx .profile-journey-heading p{margin:0;color:var(--i6);font-size:12px}
+.tcx .profile-journey-remaining{color:var(--i5);font-size:11px;white-space:nowrap}
+.tcx .profile-journey-track{height:3px;margin:18px 8% 0;background:#e5e7eb}
+.tcx .profile-journey-track span{display:block;height:100%;background:#16a34a;transition:width .2s ease}
+.tcx .profile-journey{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 -8px;padding-top:0}
+.tcx .profile-step{position:relative;display:flex;min-width:0;flex-direction:column;align-items:center;gap:8px;margin:-11px 0 0;padding:0 4px;border:0;background:transparent;color:#9ca3af;text-align:center;font:inherit}
+.tcx .profile-step.pending{cursor:pointer}
+.tcx .profile-step:focus-visible{outline:2px solid var(--p6);outline-offset:3px;border-radius:8px}
+.tcx .profile-step-marker{display:grid;width:24px;height:24px;place-items:center;border:2px solid #d1d5db;border-radius:50%;background:#fff;color:#9ca3af}
+.tcx .profile-step.done .profile-step-marker{border-color:#16a34a;background:#16a34a;color:#fff}
+.tcx .profile-step-label{max-width:100%;font-size:11px;line-height:1.35}
+.tcx .profile-step.done .profile-step-label{color:var(--i7)}
+.tcx .profile-step.pending:hover .profile-step-marker{border-color:#9ca3af;background:#f3f4f6}
 .tcx .profile-activity-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--ln);font-size:13.3px;color:var(--i6)}
 .tcx .profile-activity-row:last-child{border-bottom:0;padding-bottom:0}
 .tcx .profile-stats{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 .tcx .profile-stats > div b{font-size:24px;display:block;margin-bottom:4px;color:var(--i9)}
 @media (max-width:900px){.tcx .profile-grid{grid-template-columns:1fr}}
-@media (max-width:480px){.tcx .profile-header{flex-direction:column;align-items:flex-start}.tcx .profile-header > .btn{width:100%}}
+@media (max-width:600px){.tcx .profile-grid{gap:8px}.tcx .profile-journey{gap:3px;margin-right:-4px;margin-left:-4px}.tcx .profile-step-label{font-size:10px}.tcx .profile-journey-remaining{max-width:92px;text-align:right;white-space:normal}}
+@media (max-width:480px){.tcx .profile-header{flex-direction:column;align-items:flex-start;padding-right:0;padding-left:0}.tcx .profile-header > .btn{width:100%}.tcx .profile-journey{grid-template-columns:repeat(5,minmax(68px,1fr));overflow-x:auto;padding-bottom:6px}.tcx .profile-journey-track{margin-right:12%;margin-left:12%}}
 
 /* ================= Responsive layer: phones, tablets, laptops, large & touch screens ================= */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -2982,12 +2994,12 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
 
   const firstName = String(userName || 'Member').trim().split(/\s+/)[0];
   const shortcutDetails = {
-    learning: { count: dashboardData.courses.length, unit: 'courses', detail: 'Explore learning resources', tone: 'blue' },
-    community: { count: dashboardData.members, unit: 'members', detail: 'Join the community forum', tone: 'indigo' },
-    events: { count: dashboardData.events.length, unit: 'upcoming', detail: 'Connect at upcoming events', tone: 'amber' },
-    'submit-project': { count: null, unit: '', detail: 'Share a clean energy project', tone: 'mint' },
-    pipeline: { count: dashboardData.projects.length, unit: 'projects', detail: 'Explore the portfolio', tone: 'mint' },
-    vault: { count: dashboardData.documents.length, unit: 'documents', detail: 'Review due diligence files', tone: 'amber' },
+    learning: { count: dashboardData.courses.length, unit: 'courses', detail: 'Courses', tone: 'blue' },
+    community: { count: dashboardData.members, unit: 'members', detail: 'Community', tone: 'indigo' },
+    events: { count: dashboardData.events.length, unit: 'upcoming', detail: 'Events', tone: 'amber' },
+    'submit-project': { count: null, unit: '', detail: 'Submit a project', tone: 'mint' },
+    pipeline: { count: dashboardData.projects.length, unit: 'projects', detail: 'Projects', tone: 'mint' },
+    vault: { count: dashboardData.documents.length, unit: 'documents', detail: 'Documents', tone: 'amber' },
   };
   const shortcuts = [
     ...NAV_ITEMS.filter((item) => item.key !== 'home' && (accountType !== 'GUEST' || item.key !== 'submit-project')),
@@ -3059,11 +3071,10 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
         <div className="member-home-hero-copy">
           <img className="home-dashboard-logo member-home-brand" src={LOGO_SRC} alt="Tribes Capital" />
           <h1 id="dash-home-title">{greeting}, {firstName}<span aria-hidden="true"> 👋</span></h1>
-          <p>Grow your clean energy expertise, discover investment opportunities, and connect with people moving the transition forward.</p>
+          <p>Learn about clean energy, explore projects, and connect with the community.</p>
           <div className="member-home-actions">
             <button type="button" className="member-home-primary-action" onClick={() => onGo('learning')}>
               {inProgressCourses.length > 0 ? 'Continue learning' : 'Explore the Learning Hub'}
-              <ArrowRight size={15} aria-hidden="true" />
             </button>
             <button type="button" className="member-home-secondary-action" onClick={() => onGo('pipeline')}>Explore projects</button>
           </div>
@@ -3072,8 +3083,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
       <section className="home-dashboard-shortcuts" aria-labelledby="home-dashboard-shortcuts-title">
         <div className="home-dashboard-section-head">
           <div>
-            <h2 id="home-dashboard-shortcuts-title">Explore Tribes Capital</h2>
-            <p>Quick links to the spaces and resources you need.</p>
+            <h2 id="home-dashboard-shortcuts-title">Your community</h2>
           </div>
         </div>
         <div className="home-dashboard-shortcut-grid">
@@ -3092,7 +3102,6 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
               <span className="member-home-shortcut-copy">
                 <span className="home-dashboard-shortcut-label">{card.label}</span>
               </span>
-              <ArrowRight size={14} aria-hidden="true" />
             </button>
           ))}
         </div>
@@ -3101,10 +3110,9 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
         <section className="member-home-panel" aria-labelledby="member-home-learning-title">
           <div className="home-dashboard-section-head">
             <div>
-              <h2 id="member-home-learning-title">Explore learning</h2>
-              <p>Watch real videos from the Learning Hub.</p>
+              <h2 id="member-home-learning-title">Learning</h2>
             </div>
-            <button type="button" onClick={() => onGo('learning')}>Learning hub <ArrowRight size={14} /></button>
+            <button type="button" onClick={() => onGo('learning')}>All learning</button>
           </div>
           {featuredLearningVideos.length > 0 ? (
             <div className="member-home-course-grid">
@@ -3132,7 +3140,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
                     <span className="member-home-course-body">
                       <strong>{video.title}</strong>
                       <span className="member-home-course-description">{video.subtitle}</span>
-                      <span className="member-home-course-cta">Watch in Learning Hub <ArrowRight size={12} /></span>
+                      <span className="member-home-course-cta">Watch video</span>
                     </span>
                   </button>
                 );
@@ -3141,9 +3149,9 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
           ) : (
             <div className="member-home-empty">
               <span className="member-home-empty-icon"><Icon name="book" size={22} /></span>
-              <strong>{dashboardData.loading ? 'Loading your learning space…' : 'Your next learning opportunity starts here'}</strong>
-              <span>{dashboardData.loading ? 'Courses will appear as soon as they are ready.' : 'Explore the Learning Hub to find courses and resources.'}</span>
-              {!dashboardData.loading && <button type="button" onClick={() => onGo('learning')}>Visit Learning Hub <ArrowRight size={13} /></button>}
+              <strong>{dashboardData.loading ? 'Loading learning…' : 'Ready to learn?'}</strong>
+              <span>{dashboardData.loading ? 'Courses are on the way.' : 'Browse courses and resources.'}</span>
+              {!dashboardData.loading && <button type="button" onClick={() => onGo('learning')}>Browse learning</button>}
             </div>
           )}
         </section>
@@ -3151,10 +3159,9 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
         <section className="member-home-panel" aria-labelledby="member-home-events-title">
           <div className="home-dashboard-section-head">
             <div>
-              <h2 id="member-home-events-title">Connect with the community</h2>
-              <p>Upcoming events and live conversations.</p>
+              <h2 id="member-home-events-title">Events</h2>
             </div>
-            <button type="button" onClick={() => onGo('events')}>All events <ArrowRight size={14} /></button>
+            <button type="button" onClick={() => onGo('events')}>All events</button>
           </div>
           <div className="member-home-event-list">
             {upcomingEvents.length > 0 ? upcomingEvents.map((event) => (
@@ -3168,12 +3175,11 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
                   <small>{event.meetingPlatform || event.eventType || 'Community session'} · {new Date(event.startDate).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</small>
                   {(event.description || event.desc) && <span className="member-home-event-description">{event.description || event.desc}</span>}
                 </span>
-                <ArrowRight size={14} aria-hidden="true" />
               </button>
             )) : (
               <div className="member-home-empty member-home-events-empty">
-                <span>{dashboardData.loading ? 'Finding upcoming events…' : 'There are no upcoming events to show right now.'}</span>
-                {!dashboardData.loading && <button type="button" onClick={() => onGo('events')}>Browse events <ArrowRight size={13} /></button>}
+                <span>{dashboardData.loading ? 'Loading events…' : 'No upcoming events.'}</span>
+                {!dashboardData.loading && <button type="button" onClick={() => onGo('events')}>Browse events</button>}
               </div>
             )}
           </div>
@@ -3182,10 +3188,9 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
         <section className="member-home-panel member-home-recent" aria-labelledby="home-dashboard-activity-title">
           <div className="home-dashboard-section-head">
             <div>
-              <h2 id="home-dashboard-activity-title">A pulse on the community</h2>
-              <p>Projects, events, and resources to keep you in the loop.</p>
+              <h2 id="home-dashboard-activity-title">Recent activity</h2>
             </div>
-            <button type="button" onClick={() => onGo('pipeline')}>Explore pipeline <ArrowRight size={14} /></button>
+            <button type="button" onClick={() => onGo('pipeline')}>Projects</button>
           </div>
           <div className="member-home-recent-list">
             {recentActivity.slice(0, 4).map((item) => (
@@ -3193,11 +3198,10 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
                 <span className="home-dashboard-activity-icon"><Icon name={item.category === 'Project' ? 'briefcase' : item.category === 'Event' ? 'calendar' : item.category === 'Document' ? 'folder' : 'book'} size={16} /></span>
                 <span className="home-dashboard-activity-copy"><strong>{item.title}</strong><small>{item.detail}</small></span>
                 <span className="home-dashboard-activity-time">{formatActivityDate(item.date)}</span>
-                <ArrowRight size={14} aria-hidden="true" />
               </button>
             ))}
-            {!dashboardData.loading && recentActivity.length === 0 && <div className="member-home-empty">New projects, events, and learning resources will appear here.</div>}
-            {dashboardData.loading && recentActivity.length === 0 && <div className="member-home-empty">Loading your latest community activity…</div>}
+            {!dashboardData.loading && recentActivity.length === 0 && <div className="member-home-empty">Recent activity will appear here.</div>}
+            {dashboardData.loading && recentActivity.length === 0 && <div className="member-home-empty">Loading activity…</div>}
           </div>
         </section>
       </div>
@@ -4361,8 +4365,16 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
 function Pipeline({ go }) {
   const [ps, setPs] = useState([]), [sel, setSel] = useState(null), [add, setAdd] = useState(false);
   const [activeStage, setActiveStage] = useState(null);
-  const [expandedStage, setExpandedStage] = useState(null);
+  const [infoStage, setInfoStage] = useState(null);
   const [loading, setLoading] = useState(true), [error, setError] = useState('');
+  useEffect(() => {
+    if (infoStage === null) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setInfoStage(null);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [infoStage]);
   useEffect(() => {
     let isCurrent = true;
     projectsAPI.list({ skip: 0, take: 100 })
@@ -4385,13 +4397,15 @@ function Pipeline({ go }) {
     setError('Stage changes are recorded through project review and investment decisions.');
   };
   return <div className="pipeline-page">
-    <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div></div>
+    {activeStage === null && <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div></div>}
     {error && <p role="alert" className="sub">{error}</p>}
-    <div className="pipeline-stats-grid" aria-label="Portfolio summary">
-      {[[ps.length, "Visible projects"], [ps.filter(x => x.s >= 1 && x.s <= 2).length, "In development"], [ps.filter(x => x.s === 6).length, "Operating"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([value, label]) => (
-        <div className="pipeline-stat-card" key={label}><b>{value}</b><span>{label}</span></div>
-      ))}
-    </div>
+    {activeStage === null && (
+      <div className="pipeline-stats-grid" aria-label="Portfolio summary">
+        {[[ps.length, "Visible projects"], [ps.filter(x => x.s >= 1 && x.s <= 2).length, "In development"], [ps.filter(x => x.s === 6).length, "Operating"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([value, label]) => (
+          <div className="pipeline-stat-card" key={label}><b>{value}</b><span>{label}</span></div>
+        ))}
+      </div>
+    )}
     {loading && <p role="status" className="sub">Loading projects…</p>}
     {activeStage === null ? (
       <section aria-label="Project stages">
@@ -4401,7 +4415,6 @@ function Pipeline({ go }) {
         <div className="pipeline-stage-grid">
           {STG.map(([k, label, color, meaning, gate], index) => {
             const count = ps.filter(project => project.s === index).length;
-            const isExpanded = expandedStage === index;
             return (
               <div
                 className="pipeline-stage-card"
@@ -4422,10 +4435,11 @@ function Pipeline({ go }) {
                     <button
                       type="button"
                       className="pipeline-stage-card-info"
-                      aria-label={`${isExpanded ? 'Hide' : 'Show'} details for ${label}`}
+                      aria-label={`Show details for ${label}`}
+                      aria-expanded={infoStage === index}
                       onClick={(event) => {
                         event.stopPropagation();
-                        setExpandedStage((current) => current === index ? null : index);
+                        setInfoStage(index);
                       }}
                     >
                       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -4436,10 +4450,8 @@ function Pipeline({ go }) {
                     </button>
                   </span>
                 </span>
-                {isExpanded && <span className="pipeline-stage-card-description">{meaning}</span>}
                 <span className="pipeline-stage-card-footer">
                   <span>{count === 1 ? '1 project' : `${count} projects`}</span>
-                  <span>{gate ? `Next: ${gate}` : 'Active portfolio'}</span>
                 </span>
               </div>
             );
@@ -4485,6 +4497,28 @@ function Pipeline({ go }) {
         )}
       </section>
     )}
+    {infoStage !== null && (
+      <div className="pipeline-stage-info-backdrop" onClick={() => setInfoStage(null)}>
+        <section
+          className="pipeline-stage-info-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pipeline-stage-info-title"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button type="button" className="pipeline-stage-info-close" aria-label="Close stage details" autoFocus onClick={() => setInfoStage(null)}>
+            <Icon name="close" size={16} />
+          </button>
+          <p className="pipeline-stage-info-eyebrow">Stage details</p>
+          <h2 id="pipeline-stage-info-title" style={{ color: STG[infoStage][2] }}>{STG[infoStage][1]}</h2>
+          <p className="pipeline-stage-info-meaning">{STG[infoStage][3]}</p>
+          <div className="pipeline-stage-info-gate">
+            <strong>Next gate</strong>
+            <span>{STG[infoStage][4] || 'Active portfolio'}</span>
+          </div>
+        </section>
+      </div>
+    )}
     {p && <ProjectDetailModal p={p} onClose={() => setSel(null)} onAdvance={adv} onViewContractor={() => go("contractors", p.k)} onViewVault={() => go("vault")} />}
     {add && <AddProjectModal types={Object.keys(TYC)} stages={[STG[0][1]]} onClose={() => setAdd(false)}
       onSubmit={async (v) => {
@@ -4503,7 +4537,7 @@ function Pipeline({ go }) {
       .pipeline-stage-overview-heading h2,.pipeline-stage-detail-heading h2{margin:0;color:var(--i9);font-size:22px}
       .pipeline-stage-overview-heading p,.pipeline-stage-detail-heading p{margin:6px 0 0;color:var(--i6);font-size:14px}
       .pipeline-stage-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
-      .pipeline-stage-card{display:flex;min-width:0;min-height:170px;flex-direction:column;justify-content:space-between;gap:12px;padding:16px 16px 14px;text-align:left;color:var(--i9);background:#fff;border:1px solid var(--ln);border-radius:18px;box-shadow:0 10px 24px rgba(15,23,42,.06);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
+      .pipeline-stage-card{display:flex;min-width:0;min-height:118px;flex-direction:column;justify-content:space-between;gap:12px;padding:16px 16px 14px;text-align:left;color:var(--i9);background:#fff;border:1px solid var(--ln);border-radius:18px;box-shadow:0 10px 24px rgba(15,23,42,.06);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
       .pipeline-stage-card:hover{transform:translateY(-2px);box-shadow:0 15px 30px rgba(15,23,42,.1)}
       .pipeline-stage-card-top,.pipeline-stage-card-title,.pipeline-stage-card-footer,.pipeline-stage-card-actions{display:flex;align-items:center}
       .pipeline-stage-card-top{justify-content:space-between;gap:12px}
@@ -4517,9 +4551,17 @@ function Pipeline({ go }) {
       .pipeline-stage-card-info svg path:nth-child(2){stroke:currentColor}
       .pipeline-stage-card-info svg path:nth-child(3){stroke:currentColor;stroke-linecap:round}
       .pipeline-stage-count{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:40px;padding:0 10px;border-radius:12px;background:var(--p0);color:var(--p7);font-size:17px;font-weight:700}
-      .pipeline-stage-card-description{color:var(--i6);font-size:14px;line-height:1.55}
       .pipeline-stage-card-footer{align-items:flex-start;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid var(--ln);color:var(--i6);font-size:12px;line-height:1.45}
       .pipeline-stage-card-footer span:first-child{color:var(--p7);font-size:13px;font-weight:700}
+      .pipeline-stage-info-backdrop{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:20px;background:rgba(17,24,39,.28);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+      .pipeline-stage-info-dialog{position:relative;width:min(100%,440px);max-height:calc(100dvh - 40px);overflow:auto;padding:24px;border:1px solid var(--ln);border-radius:14px;background:#fff;box-shadow:0 20px 60px rgba(15,23,42,.2);color:var(--i9)}
+      .pipeline-stage-info-close{position:absolute;top:14px;right:14px;display:grid;width:30px;height:30px;place-items:center;border:0;border-radius:50%;background:#f3f4f6;color:var(--i6);cursor:pointer}
+      .pipeline-stage-info-close:hover{background:#e9eaf0;color:var(--i9)}
+      .pipeline-stage-info-eyebrow{margin:0 38px 8px 0;color:var(--i6);font-size:11px;font-weight:700;text-transform:uppercase}
+      .pipeline-stage-info-dialog h2{margin:0 38px 12px 0;font-size:22px;line-height:1.3}
+      .pipeline-stage-info-meaning{margin:0;color:var(--i7);font-size:14px;line-height:1.6}
+      .pipeline-stage-info-gate{display:grid;gap:5px;margin-top:18px;padding:12px 14px;border:1px solid var(--ln);border-radius:9px;background:#f8fafc;font-size:13px;line-height:1.45}
+      .pipeline-stage-info-gate strong{color:var(--i9);font-size:11px}
       .pipeline-back-button{display:inline-flex;align-items:center;gap:8px;margin:22px 0 18px;padding:0;border:0;background:transparent;color:var(--p7);font-size:14px;font-weight:700;cursor:pointer}
       .pipeline-stage-detail-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px;padding:22px 24px;background:#fff;border:1px solid var(--ln);border-radius:16px}
       .pipeline-stage-detail-heading h2{display:flex;align-items:center;gap:10px;font-size:24px}
@@ -4554,7 +4596,7 @@ function Pipeline({ go }) {
       .pipeline-gate-detail{display:grid;gap:4px;padding:10px;border:1px solid var(--p1);border-radius:7px;background:var(--p0);font-size:12px;line-height:1.45}
       .pipeline-gate-detail b{color:var(--p9);font-size:11px}
       @media(max-width:1080px){.pipeline-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pipeline-stage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pipeline-project-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:700px){.pipeline-page{padding:24px 18px 32px}.pipeline-stage-grid,.pipeline-project-grid{grid-template-columns:1fr}.pipeline-stage-card{min-height:180px;padding:20px}.pipeline-stage-detail-heading{flex-direction:column;padding:18px}.pipeline-stage-detail-copy{max-width:none}.pipeline-project-card{min-height:200px;padding:19px}}
+      @media(max-width:700px){.pipeline-page{padding:24px 18px 32px}.pipeline-stage-grid,.pipeline-project-grid{grid-template-columns:1fr}.pipeline-stage-card{min-height:118px;padding:18px}.pipeline-stage-detail-heading{flex-direction:column;padding:18px}.pipeline-stage-detail-copy{max-width:none}.pipeline-project-card{min-height:200px;padding:19px}}
       @media(max-width:420px){.pipeline-page{padding-left:14px;padding-right:14px}.pipeline-stats-grid{grid-template-columns:1fr}}
     `}</style>
   </div>;
@@ -4893,11 +4935,11 @@ function Profile({ user, profile, onSave, onClose }) {
       <button type="button" className="profile-close" onClick={onClose} aria-label="Close profile" title="Close"><X size={16} strokeWidth={2.4} /></button>
       <div className="profile-header">
         <div className="row" style={{ alignItems: "flex-end", gap: 16 }}>
-          <div className="profile-avatar">{user.initial}</div>
+          <ProfileAvatar person={user} className="profile-avatar" fallbackText={user.initial} decorative />
           <div>
             <div className="profile-name">{user.name}</div>
             {tagline && <div className="profile-tagline">{tagline}</div>}
-            <div className="profile-meta"><span><Icon name="mapPin" size={12} /> {user.location}</span><span>Member since Jan 2025</span></div>
+            <div className="profile-meta">{user.location && <span><HugeiconsIcon icon={Location01Icon} size={15} color="currentColor" strokeWidth={1.8} /> {user.location}</span>}<span><HugeiconsIcon icon={Calendar01Icon} size={15} color="currentColor" strokeWidth={1.8} /> Member since Jan 2025</span></div>
           </div>
         </div>
         <button className="btn bo" onClick={() => setEditing(true)}>Edit profile</button>
@@ -4905,37 +4947,38 @@ function Profile({ user, profile, onSave, onClose }) {
     </div>
     <div className="profile-grid">
       <div>
-        <div className="card" style={{ marginBottom: 24 }}>
-          <h4 style={{ marginBottom: 10, fontSize: 14.5 }}>About</h4>
-          {bio.trim() ? <p className="sub" style={{ whiteSpace: "pre-line" }}>{bio}</p> : <p className="sub mut">Add a short bio so others know who you are.</p>}
-        </div>
-        <div className="card" style={{ marginBottom: 24 }}>
-          <h4 style={{ marginBottom: 14, fontSize: 14.5 }}>Energy interests</h4>
+        <section className="profile-section">
+          <h4 className="profile-section-title"><HugeiconsIcon icon={UserCircleIcon} size={19} strokeWidth={1.8} />About</h4>
+          {bio.trim() ? <p className="profile-body-copy" style={{ whiteSpace: "pre-line" }}>{bio}</p> : <p className="profile-body-copy mut">Add a short bio to introduce yourself.</p>}
+        </section>
+        <section className="profile-section">
+          <h4 className="profile-section-title"><HugeiconsIcon icon={EnergyIcon} size={19} strokeWidth={1.8} />Energy interests</h4>
           {interests.length
             ? <div className="row wrap" style={{ gap: 10 }}>{interests.map((i) => <span key={i} className="tag" style={{ padding: "8px 14px", fontSize: 13 }}>{i}</span>)}</div>
             : <p className="sub mut">No interests selected yet.</p>}
-        </div>
-        <div className="card">
-          <h4 style={{ marginBottom: 6, fontSize: 14.5 }}>Recent activity</h4>
+        </section>
+        <section className="profile-section">
+          <h4 className="profile-section-title"><HugeiconsIcon icon={Activity01Icon} size={19} strokeWidth={1.8} />Recent activity</h4>
           {activity.map((a, i) => <div className="profile-activity-row" key={i}><span><b style={{ color: "var(--i6)", fontWeight: 600 }}>{a.k}</b> {a.t}</span><span className="mut">{a.w}</span></div>)}
-        </div>
+        </section>
       </div>
       <div>
-        <div className="card" style={{ marginBottom: 24, background: "var(--p0)", borderColor: "var(--p1)" }}>
-          <h4 style={{ color: "var(--p9)", marginBottom: 2, fontSize: 14.5 }}>Complete your profile</h4>
-          <div className="row" style={{ justifyContent: "space-between", fontSize: 12.5, marginBottom: 4 }}><b>{pct}% complete</b><span className="mut">{steps.length - doneCount === 0 ? "All done 🎉" : `${steps.length - doneCount} step${steps.length - doneCount === 1 ? "" : "s"} left`}</span></div>
-          <div className="profile-progress-bar"><span style={{ width: pct + "%" }} /></div>
-          {steps.map((s) => <div key={s.label} className={`profile-step${s.done ? " done" : " pending"}`} onClick={s.done ? undefined : () => setEditing(true)} role={s.done ? undefined : "button"} tabIndex={s.done ? undefined : 0} onKeyDown={s.done ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(true); } }}><span className="dot">{s.done ? "✓" : ""}</span>{s.label}</div>)}
-        </div>
-        <div className="card">
-          <h4 style={{ marginBottom: 16, fontSize: 14.5 }}>Your activity</h4>
+        <section className="profile-section profile-journey-section">
+          <div className="profile-journey-heading"><div><h4>Profile journey</h4><p>{pct}% complete</p></div><span className="profile-journey-remaining">{steps.length - doneCount === 0 ? 'Complete' : `${steps.length - doneCount} left`}</span></div>
+          <div className="profile-journey-track" aria-hidden="true"><span style={{ width: `${Math.max(0, ((doneCount - 1) / (steps.length - 1)) * 100)}%` }} /></div>
+          <div className="profile-journey" aria-label={`Profile ${pct}% complete`}>
+            {steps.map((s) => <div key={s.label} className={`profile-step${s.done ? " done" : " pending"}`} onClick={s.done ? undefined : () => setEditing(true)} role={s.done ? undefined : "button"} tabIndex={s.done ? undefined : 0} onKeyDown={s.done ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(true); } }}><span className="profile-step-marker" aria-hidden="true">{s.done ? <HugeiconsIcon icon={CheckmarkCircle01Icon} size={22} color="currentColor" strokeWidth={2} /> : null}</span><span className="profile-step-label">{s.label}</span></div>)}
+          </div>
+        </section>
+        <section className="profile-section">
+          <h4 className="profile-section-title"><HugeiconsIcon icon={Activity01Icon} size={19} strokeWidth={1.8} />Your activity</h4>
           <div className="profile-stats">
             <div><b>8</b><span className="mut">Questions asked</span></div>
             <div><b>34</b><span className="mut">Replies posted</span></div>
             <div><b>5</b><span className="mut">Contractors saved</span></div>
             <div><b>12</b><span className="mut">Members followed</span></div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
     {editing && <EditProfileModal user={user} profile={profile} onClose={() => setEditing(false)} onSave={(v) => { onSave(v); setEditing(false); }} />}

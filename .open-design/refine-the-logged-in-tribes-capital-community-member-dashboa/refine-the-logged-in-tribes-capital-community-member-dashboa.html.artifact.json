@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "Tribes Capital Member Dashboard",
+  "entry": ".open-design/refine-the-logged-in-tribes-capital-community-member-dashboa/refine-the-logged-in-tribes-capital-community-member-dashboa.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "standalone",
+    "site",
+    "png",
+    "jpeg",
+    "pdf"
+  ],
+  "createdAt": "2026-10-19T04:55:10.030Z",
+  "updatedAt": "2026-10-19T04:55:10.030Z",
+  "sourceSkillId": "od:prototype:dashboard"
+}

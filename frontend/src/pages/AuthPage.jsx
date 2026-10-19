@@ -531,6 +531,9 @@ function FormContainer({ children, isMobile, leftHeading = 'Welcome to the clean
     return (
       <div className="auth-desktop-shell">
         <aside className="auth-energy-panel" aria-label="Tribes Capital clean energy community">
+          <video className="auth-banner-video" autoPlay muted loop playsInline preload="metadata" poster={authDashboardPreview} aria-hidden="true">
+            <source src="/auth-banner.mp4" type="video/mp4" />
+          </video>
           <div className="auth-mockup-wrap"><img className="auth-mockup" src={authDashboardPreview} alt="Preview of the Tribes Capital dashboard" width={562} height={383} /></div>
           <div className="auth-left-heading">
             <h2>{leftHeading}</h2>
@@ -1798,6 +1801,9 @@ export default function AuthPage({ onLogin }) {
         .auth-desktop-root{display:block!important;width:100%;height:100dvh;min-height:100dvh;padding:0!important;overflow:hidden;background:#fff!important}
         .auth-desktop-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(480px,1fr);width:100%;height:100%;min-height:100dvh;background:#fff}
         .auth-energy-panel{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:100%;padding:56px;overflow:hidden;background:linear-gradient(160deg,#6D28D9 0%,#4C1D95 42%,#2E1065 75%,#170729 100%);color:#fff}
+        .auth-banner-video{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover}
+        .auth-energy-panel::after{position:absolute;inset:0;z-index:0;content:"";background:linear-gradient(180deg,rgba(24,10,48,.38),rgba(23,7,41,.72))}
+        .auth-energy-panel>*:not(.auth-banner-video){position:relative;z-index:1}
         .auth-mockup-wrap{display:flex;flex:1;align-items:center;justify-content:center;width:100%;min-height:0;padding:24px 0}
         .auth-mockup{display:block;width:100%;max-width:520px;height:auto;object-fit:contain}
         .auth-left-heading{position:relative;max-width:420px}

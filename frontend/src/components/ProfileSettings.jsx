@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { InstagramIcon, LinkedinIcon } from '@hugeicons/core-free-icons';
+import { CheckmarkCircle01Icon, LinkedinIcon } from '@hugeicons/core-free-icons';
+import { siInstagram, siX } from 'simple-icons';
 import { Activity, Check, Globe, LockKeyhole, MessageCircle, MoreHorizontal, Pencil, Plus, ShieldCheck, X } from 'lucide-react';
 import { usersAPI } from '../api/endpoints';
 import { uploadFileInChunks } from '../utils/chunkedUpload';
@@ -23,6 +24,7 @@ const ACCOUNT_TYPES = [
 ];
 const INTEREST_OPTIONS = ['Solar Energy', 'Battery Storage', 'Renewable Energy', 'Energy Efficiency', 'Clean Energy', 'Sustainability', 'Mini-grids', 'Energy Policy', 'Electric Mobility', 'Climate Finance', 'Wind Energy', 'Green Buildings'];
 const SOCIAL_PLATFORMS = [['linkedin', 'LinkedIn'], ['x', 'X'], ['instagram', 'Instagram']];
+const SOCIAL_BRAND_COLORS = { linkedin: '#0A66C2', instagram: '#FF0069', x: '#000000' };
 
 const normalizeSocialLinks = (user) => Array.isArray(user?.socialLinks) && user.socialLinks.length
   ? user.socialLinks
@@ -30,11 +32,20 @@ const normalizeSocialLinks = (user) => Array.isArray(user?.socialLinks) && user.
 
 const socialIcon = (url) => {
   const value = String(url || '').toLowerCase();
-  if (value.includes('linkedin.com')) return LinkedinIcon;
-  if (value.includes('instagram.com')) return InstagramIcon;
+  if (value.includes('linkedin.com')) return 'linkedin';
+  if (value.includes('instagram.com')) return 'instagram';
   if (value.includes('x.com') || value.includes('twitter.com')) return 'x';
   return null;
 };
+
+function SocialPlatformIcon({ platform, size = 20 }) {
+  if (platform === 'linkedin') {
+    return <HugeiconsIcon icon={LinkedinIcon} size={size} color={SOCIAL_BRAND_COLORS.linkedin} strokeWidth={2} aria-hidden="true" />;
+  }
+  const icon = platform === 'instagram' ? siInstagram : platform === 'x' ? siX : null;
+  if (!icon) return null;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, color: `#${icon.hex}` }} aria-hidden="true"><path d={icon.path} /></svg>;
+}
 
 const btnStyle = (border, bg, color, fs) => ({
   border, background: bg, color, fontSize: fs,
@@ -60,8 +71,9 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
   const [socialLink, setSocialLink] = useState(user?.socialLink || '');
   const [socialLinks, setSocialLinks] = useState(() => normalizeSocialLinks(user));
   const [newSocialLink, setNewSocialLink] = useState('');
-  const [newSocialPlatform, setNewSocialPlatform] = useState('linkedin.com');
+  const [newSocialPlatform, setNewSocialPlatform] = useState('linkedin');
   const [showSocialForm, setShowSocialForm] = useState(false);
+  const [platformSelected, setPlatformSelected] = useState(false);
   const [editingSection, setEditingSection] = useState(null);
   const [sectionSaving, setSectionSaving] = useState(false);
   const [socialConnecting, setSocialConnecting] = useState(false);
@@ -223,7 +235,8 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
       setSocialLinks(next);
       setSocialLink(next[0] || '');
       setNewSocialLink('');
-      setNewSocialPlatform('linkedin.com');
+      setNewSocialPlatform('linkedin');
+      setPlatformSelected(false);
       setShowSocialForm(false);
       onSaved?.({ ...user, socialLinks: next, socialLink: next[0] || '' });
       window.dispatchEvent(new CustomEvent('tribes:profile-updated', { detail: { socialLinks: next, socialLink: next[0] || '' } }));
@@ -372,15 +385,15 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
                 {tierProgress.tiers.map((tier) => (
                   <div key={tier.level} className={`profile-tier-step ${tier.status}`}>
                     <span className="profile-tier-step-icon">
-                      {tier.status === 'complete' ? <Check size={16} aria-hidden="true" />
-                        : tier.status === 'current' ? <Activity size={16} aria-hidden="true" />
-                          : tier.status === 'kyc_required' ? <LockKeyhole size={16} aria-hidden="true" />
-                            : <span>{tier.level}</span>}
+                      {tier.status === 'current' ? <Activity size={16} aria-hidden="true" />
+                        : tier.status === 'kyc_required' ? <LockKeyhole size={16} aria-hidden="true" />
+                          : <span>{tier.level}</span>}
                     </span>
                     <span className="profile-tier-step-copy">
                       <strong>Tier {tier.level}</strong>
                       <span>{tier.name}</span>
                     </span>
+                    {tier.status === 'complete' && <HugeiconsIcon className="profile-tier-step-complete" icon={CheckmarkCircle01Icon} size={22} color="currentColor" strokeWidth={2} aria-label="Completed" />}
                   </div>
                 ))}
               </div>
@@ -428,10 +441,25 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
             <header><h3>Energy interests</h3>{!readOnly && <button type="button" className="profile-section-edit" onClick={(event) => { event.stopPropagation(); setEditingSection('interests'); }}>Edit</button>}</header>
             {editingSection === 'interests' && !readOnly ? <><div className="profile-interest-list">{INTEREST_OPTIONS.map((interest) => { const selected = interests.includes(interest); return <button type="button" key={interest} aria-pressed={selected} className={`profile-interest-option${selected ? ' selected' : ''}`} onClick={(event) => { event.stopPropagation(); toggleInterest(interest); }}>{interest}</button>; })}</div><div className="profile-inline-actions"><button type="button" className="profile-text-button" onClick={(event) => { event.stopPropagation(); setInterests(Array.isArray(user?.interests) ? user.interests : []); setEditingSection(null); }}>Cancel</button><button type="button" className="profile-inline-save" disabled={sectionSaving} onClick={(event) => { event.stopPropagation(); void saveSection('interests'); }}>{sectionSaving ? 'Saving…' : 'Save'}</button></div></> : interests.length ? <div className="profile-interest-list">{interests.map((interest) => <span className="profile-interest" key={interest}>{interest}</span>)}</div> : <p>{readOnly ? 'No interests shared yet.' : 'Choose the topics you follow across clean energy and sustainability.'}</p>}
           </section>
-          <section id="profile-social-section" className="profile-section profile-social-section"><header><h3>Professional profiles</h3></header>
-            <div className="profile-social-links">{socialLinks.map((url) => { const PlatformIcon = socialIcon(url); return <div className="profile-social-item" key={url}><a href={/^https?:\/\//i.test(url) ? url : `https://${url}`} target="_blank" rel="noreferrer" aria-label={`Open ${url}`} title={url}>{PlatformIcon === 'x' ? <X size={17} /> : PlatformIcon ? <HugeiconsIcon icon={PlatformIcon} size={17} color="currentColor" strokeWidth={2} /> : <Globe size={17} />}<span>{url.includes('linkedin.com') ? 'LinkedIn' : url.includes('instagram.com') ? 'Instagram' : url.includes('x.com') || url.includes('twitter.com') ? 'X' : 'Website'}</span></a>{!readOnly && <button type="button" onClick={() => void removeSocialLink(url)} disabled={sectionSaving} aria-label={`Remove ${url}`} title="Remove profile"><X size={13} /></button>}</div>; })}</div>
-            {!readOnly && showSocialForm && <div className="profile-social-add-form"><label><span>Professional platform</span><select value={newSocialPlatform} onChange={(event) => setNewSocialPlatform(event.target.value)}>{SOCIAL_PLATFORMS.map(([provider, label]) => <option key={provider} value={provider}>{label}</option>)}</select></label><button type="button" className="profile-inline-save" disabled={socialConnecting} onClick={() => void connectSocialProfile()}>{socialConnecting ? 'Waiting for authorization…' : 'Connect and import'}</button><label><span>Or add profile URL</span><input value={newSocialLink} onChange={(event) => setNewSocialLink(event.target.value)} placeholder="Profile URL or username" /></label><button type="button" className="profile-inline-save" disabled={sectionSaving || !newSocialLink.trim()} onClick={() => void addSocialLink()}>{sectionSaving ? 'Saving…' : 'Add manually'}</button></div>}
-            {!readOnly && <button type="button" className="profile-social-add" aria-label="Add professional profile" title="Add professional profile" onClick={() => setShowSocialForm((visible) => !visible)}><Plus size={17} /><span>Add profile</span></button>}
+          <section id="profile-social-section" className="profile-section profile-social-section"><header><h3>Professional profiles</h3>{!readOnly && <button type="button" className="profile-social-add" aria-expanded={showSocialForm} onClick={() => setShowSocialForm((visible) => !visible)}><Plus size={16} aria-hidden="true" /><span>Add profile</span></button>}</header>
+            <div className="profile-social-links">{socialLinks.map((url) => { const platform = socialIcon(url); return <div className="profile-social-item" key={url}><a href={/^https?:\/\//i.test(url) ? url : `https://${url}`} target="_blank" rel="noreferrer" aria-label={`Open ${url}`} title={url}>{platform ? <SocialPlatformIcon platform={platform} size={17} /> : <Globe size={17} />}<span>{url.includes('linkedin.com') ? 'LinkedIn' : url.includes('instagram.com') ? 'Instagram' : url.includes('x.com') || url.includes('twitter.com') ? 'X' : 'Website'}</span></a>{!readOnly && <button type="button" onClick={() => void removeSocialLink(url)} disabled={sectionSaving} aria-label={`Remove ${url}`} title="Remove profile"><X size={13} /></button>}</div>; })}</div>
+            {!readOnly && showSocialForm && <div className="profile-social-add-form">
+              <div className="profile-social-platforms" role="group" aria-label="Choose a professional profile">
+                {SOCIAL_PLATFORMS.map(([provider, label]) => {
+                  return <button type="button" key={provider} className={`profile-social-platform${newSocialPlatform === provider ? ' selected' : ''}`} style={{ '--social-brand-color': SOCIAL_BRAND_COLORS[provider] }} aria-pressed={newSocialPlatform === provider} onClick={() => { setNewSocialPlatform(provider); setPlatformSelected(true); }}>
+                    <SocialPlatformIcon platform={provider} size={21} />
+                    <span>{label}</span>
+                  </button>;
+                })}
+              </div>
+              {platformSelected && <>
+                <label><span>Profile URL or username</span><input value={newSocialLink} onChange={(event) => setNewSocialLink(event.target.value)} placeholder={newSocialPlatform === 'linkedin' ? 'linkedin.com/in/yourname' : newSocialPlatform === 'x' ? '@yourname or x.com/yourname' : 'instagram.com/yourname'} /></label>
+                <div className="profile-social-form-actions">
+                  <button type="button" className="profile-text-button" disabled={socialConnecting} onClick={() => void connectSocialProfile()}>{socialConnecting ? 'Waiting for authorization…' : 'Connect account'}</button>
+                  <button type="button" className="profile-inline-save" disabled={sectionSaving || !newSocialLink.trim()} onClick={() => void addSocialLink()}>{sectionSaving ? 'Saving…' : 'Add profile'}</button>
+                </div>
+              </>}
+            </div>}
           </section>
         </div>
         {!readOnly && <aside className="profile-completion-card"><div className="profile-completion-header"><div><span className="profile-eyebrow">Profile strength</span><h3>{completionPercent}% complete</h3></div><span className="profile-completion-number">{completedCount}/{completion.length}</span></div><div className="profile-progress"><span style={{ width: `${completionPercent}%` }} /></div><div className="profile-completion-list">{profileSections.map(([label, done]) => <div className={`profile-completion-item${done ? ' done' : ''}`} key={label}><span aria-hidden="true">{done ? '✓' : ''}</span>{label}</div>)}</div></aside>}
