@@ -530,9 +530,11 @@ function FormContainer({ children, isMobile, leftHeading = 'Welcome to the clean
     return (
       <div className="auth-desktop-shell">
         <aside className="auth-energy-panel" aria-label="Tribes Capital clean energy community">
-          <video className="auth-banner-video" autoPlay muted loop playsInline preload="metadata" aria-hidden="true">
-            <source src="/auth-banner.mp4" type="video/mp4" />
-          </video>
+          <div className="auth-banner-video-wrap">
+            <video className="auth-banner-video" autoPlay muted loop playsInline preload="metadata" aria-hidden="true">
+              <source src="/auth-banner.mp4" type="video/mp4" />
+            </video>
+          </div>
           <div className="auth-left-heading">
             <h2>{leftHeading}</h2>
             <p>Learn, connect, and move meaningful energy projects forward with a community built for action.</p>
@@ -1798,13 +1800,11 @@ export default function AuthPage({ onLogin }) {
         body { margin: 0; padding: 0; }
         .auth-desktop-root{display:block!important;width:100%;height:100dvh;min-height:100dvh;padding:0!important;overflow:hidden;background:#fff!important}
         .auth-desktop-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(480px,1fr);width:100%;height:100%;min-height:100dvh;background:#fff}
-        .auth-energy-panel{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:100%;padding:56px;overflow:hidden;background:linear-gradient(160deg,#6D28D9 0%,#4C1D95 42%,#2E1065 75%,#170729 100%);color:#fff}
-        .auth-banner-video{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover}
-        .auth-energy-panel::after{position:absolute;inset:0;z-index:0;content:"";background:linear-gradient(180deg,rgba(24,10,48,.38),rgba(23,7,41,.72))}
-        .auth-energy-panel>*:not(.auth-banner-video){position:relative;z-index:1}
-        .auth-mockup-wrap{display:flex;flex:1;align-items:center;justify-content:center;width:100%;min-height:0;padding:24px 0}
+        .auth-energy-panel{--auth-panel-padding:56px;position:relative;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:100%;padding:var(--auth-panel-padding);overflow:hidden;background:linear-gradient(160deg,#6D28D9 0%,#4C1D95 42%,#2E1065 75%,#170729 100%);color:#fff}
+        .auth-banner-video-wrap{position:absolute;top:50%;left:50%;z-index:0;display:flex;align-items:center;justify-content:center;width:min(calc(100% + var(--auth-panel-padding) + var(--auth-panel-padding)),720px);aspect-ratio:16/11;transform:translate(-50%,-50%);overflow:hidden;border-radius:12px;background:linear-gradient(160deg,#6D28D9 0%,#4C1D95 42%,#2E1065 75%,#170729 100%);box-shadow:0 20px 48px rgba(14,5,32,.2);-webkit-mask-image:radial-gradient(ellipse at center,#000 72%,transparent 100%);mask-image:radial-gradient(ellipse at center,#000 72%,transparent 100%)}
+        .auth-banner-video{display:block;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;mix-blend-mode:normal}
         .auth-mockup{display:block;width:100%;max-width:520px;height:auto;object-fit:contain}
-        .auth-left-heading{position:relative;max-width:420px;transform:translateY(24px)}
+        .auth-left-heading{position:relative;z-index:1;max-width:420px;margin-top:auto}
         .auth-left-heading h2{margin:0 0 14px;color:#fff;font-size:28px;font-weight:700;line-height:1.3}
         .auth-left-heading p{margin:0;color:#DDD6FE;font-size:14px;line-height:1.6}
         .auth-desktop-form-panel{display:grid;place-items:center;min-width:0;padding:40px clamp(32px,6vw,88px);overflow-y:auto;background:#fff}
@@ -1818,8 +1818,8 @@ export default function AuthPage({ onLogin }) {
         .auth-prototype-google button{min-height:48px!important;border-radius:12px!important}
         .auth-prototype-footer{margin-top:24px!important}
         .auth-other-providers{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
-        @media (min-width:1280px){.auth-energy-panel{padding:72px}}
-        @media (max-width:1199px){.auth-energy-panel{padding:48px}.auth-desktop-form-panel{padding:36px 48px}}
+        @media (min-width:1280px){.auth-energy-panel{--auth-panel-padding:72px}}
+        @media (max-width:1199px){.auth-energy-panel{--auth-panel-padding:48px}.auth-desktop-form-panel{padding:36px 48px}}
         @media (max-width:1023px){.auth-desktop-root{display:flex!important;height:auto;min-height:100vh;padding:20px 16px 40px!important;background:#f3f4f6!important}.auth-desktop-shell{display:block;width:100%;height:auto;min-height:0}.auth-energy-panel{display:none}.auth-desktop-form-panel{display:block;padding:0;overflow:visible;background:transparent}.auth-desktop-form-panel>div{max-width:460px!important;margin:0 auto!important;background:#fff!important;border:1px solid #e5e7eb!important;border-radius:16px!important;padding:40px 48px!important;box-shadow:0 12px 32px rgba(15,23,42,.08)!important}.auth-other-providers{grid-template-columns:1fr;gap:10px}}
         @media (max-width:639px){.auth-desktop-root{padding:20px 16px 40px!important}.auth-desktop-form-panel>div{padding:20px 16px 28px!important;border-radius:12px!important}}
       `}</style>
