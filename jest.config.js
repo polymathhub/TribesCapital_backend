@@ -10,6 +10,11 @@ module.exports = {
     '^@modules/(.*)$': '<rootDir>/src/modules/$1',
   },
   testMatch: ['**/?(*.)+(spec|test).[tj]s?(x)'],
+  modulePathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/frontend/',
+    '<rootDir>/TribesCapital_backend/',
+  ],
   testPathIgnorePatterns: [
     '/node_modules/',
     '/frontend/',
