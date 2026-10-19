@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { CheckmarkCircle01Icon, LinkedinIcon } from '@hugeicons/core-free-icons';
-import { siInstagram, siX } from 'simple-icons';
+import { CheckmarkCircle01Icon } from '@hugeicons/core-free-icons';
 import { Activity, Check, Globe, LockKeyhole, MessageCircle, MoreHorizontal, Pencil, Plus, ShieldCheck, X } from 'lucide-react';
 import { usersAPI } from '../api/endpoints';
 import { uploadFileInChunks } from '../utils/chunkedUpload';
@@ -25,6 +24,11 @@ const ACCOUNT_TYPES = [
 const INTEREST_OPTIONS = ['Solar Energy', 'Battery Storage', 'Renewable Energy', 'Energy Efficiency', 'Clean Energy', 'Sustainability', 'Mini-grids', 'Energy Policy', 'Electric Mobility', 'Climate Finance', 'Wind Energy', 'Green Buildings'];
 const SOCIAL_PLATFORMS = [['linkedin', 'LinkedIn'], ['x', 'X'], ['instagram', 'Instagram']];
 const SOCIAL_BRAND_COLORS = { linkedin: '#0A66C2', instagram: '#FF0069', x: '#000000' };
+const SOCIAL_ICON_URLS = {
+  instagram: 'https://s.magecdn.com/social/tc-instagram.svg',
+  linkedin: 'https://s.magecdn.com/social/tc-linkedin.svg',
+  x: 'https://s.magecdn.com/social/tc-x.svg',
+};
 
 const normalizeSocialLinks = (user) => Array.isArray(user?.socialLinks) && user.socialLinks.length
   ? user.socialLinks
@@ -39,12 +43,9 @@ const socialIcon = (url) => {
 };
 
 function SocialPlatformIcon({ platform, size = 20 }) {
-  if (platform === 'linkedin') {
-    return <HugeiconsIcon icon={LinkedinIcon} size={size} color={SOCIAL_BRAND_COLORS.linkedin} strokeWidth={2} aria-hidden="true" />;
-  }
-  const icon = platform === 'instagram' ? siInstagram : platform === 'x' ? siX : null;
-  if (!icon) return null;
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, color: `#${icon.hex}` }} aria-hidden="true"><path d={icon.path} /></svg>;
+  const src = SOCIAL_ICON_URLS[platform];
+  if (!src) return null;
+  return <img src={src} width={size} height={size} alt="" aria-hidden="true" style={{ display: 'block', flexShrink: 0, objectFit: 'contain' }} />;
 }
 
 const btnStyle = (border, bg, color, fs) => ({
@@ -442,12 +443,12 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
             {editingSection === 'interests' && !readOnly ? <><div className="profile-interest-list">{INTEREST_OPTIONS.map((interest) => { const selected = interests.includes(interest); return <button type="button" key={interest} aria-pressed={selected} className={`profile-interest-option${selected ? ' selected' : ''}`} onClick={(event) => { event.stopPropagation(); toggleInterest(interest); }}>{interest}</button>; })}</div><div className="profile-inline-actions"><button type="button" className="profile-text-button" onClick={(event) => { event.stopPropagation(); setInterests(Array.isArray(user?.interests) ? user.interests : []); setEditingSection(null); }}>Cancel</button><button type="button" className="profile-inline-save" disabled={sectionSaving} onClick={(event) => { event.stopPropagation(); void saveSection('interests'); }}>{sectionSaving ? 'Saving…' : 'Save'}</button></div></> : interests.length ? <div className="profile-interest-list">{interests.map((interest) => <span className="profile-interest" key={interest}>{interest}</span>)}</div> : <p>{readOnly ? 'No interests shared yet.' : 'Choose the topics you follow across clean energy and sustainability.'}</p>}
           </section>
           <section id="profile-social-section" className="profile-section profile-social-section"><header><h3>Professional profiles</h3>{!readOnly && <button type="button" className="profile-social-add" aria-expanded={showSocialForm} onClick={() => setShowSocialForm((visible) => !visible)}><Plus size={16} aria-hidden="true" /><span>Add profile</span></button>}</header>
-            <div className="profile-social-links">{socialLinks.map((url) => { const platform = socialIcon(url); return <div className="profile-social-item" key={url}><a href={/^https?:\/\//i.test(url) ? url : `https://${url}`} target="_blank" rel="noreferrer" aria-label={`Open ${url}`} title={url}>{platform ? <SocialPlatformIcon platform={platform} size={17} /> : <Globe size={17} />}<span>{url.includes('linkedin.com') ? 'LinkedIn' : url.includes('instagram.com') ? 'Instagram' : url.includes('x.com') || url.includes('twitter.com') ? 'X' : 'Website'}</span></a>{!readOnly && <button type="button" onClick={() => void removeSocialLink(url)} disabled={sectionSaving} aria-label={`Remove ${url}`} title="Remove profile"><X size={13} /></button>}</div>; })}</div>
+            <div className="profile-social-links">{socialLinks.map((url) => { const platform = socialIcon(url); return <div className="profile-social-item" key={url}><a href={/^https?:\/\//i.test(url) ? url : `https://${url}`} target="_blank" rel="noreferrer" aria-label={`Open ${url}`} title={url}>{platform ? <SocialPlatformIcon platform={platform} size={28} /> : <Globe size={17} />}<span>{url.includes('linkedin.com') ? 'LinkedIn' : url.includes('instagram.com') ? 'Instagram' : url.includes('x.com') || url.includes('twitter.com') ? 'X' : 'Website'}</span></a>{!readOnly && <button type="button" onClick={() => void removeSocialLink(url)} disabled={sectionSaving} aria-label={`Remove ${url}`} title="Remove profile"><X size={13} /></button>}</div>; })}</div>
             {!readOnly && showSocialForm && <div className="profile-social-add-form">
               <div className="profile-social-platforms" role="group" aria-label="Choose a professional profile">
                 {SOCIAL_PLATFORMS.map(([provider, label]) => {
                   return <button type="button" key={provider} className={`profile-social-platform${newSocialPlatform === provider ? ' selected' : ''}`} style={{ '--social-brand-color': SOCIAL_BRAND_COLORS[provider] }} aria-pressed={newSocialPlatform === provider} onClick={() => { setNewSocialPlatform(provider); setPlatformSelected(true); }}>
-                    <SocialPlatformIcon platform={provider} size={21} />
+                    <SocialPlatformIcon platform={provider} size={34} />
                     <span>{label}</span>
                   </button>;
                 })}

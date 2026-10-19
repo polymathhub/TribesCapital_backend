@@ -1633,12 +1633,17 @@ button.lb-control{cursor:pointer;justify-content:space-between;gap:10px}
 .pj-cap{font-size:24px;line-height:1.1;font-weight:700;color:var(--lb-purple)}
 .pj-stage{font-size:15px;font-weight:600;display:block;padding-top:6px}
 .pj-h{font-size:12.5px;line-height:15px;color:var(--lb-ink);font-weight:600;margin-bottom:12px}
-.pj-step{display:flex}
-.pj-step div{flex:1;text-align:center;font-size:11.5px;font-weight:600;color:#9CA3AF;min-width:0}
-.pj-step i{display:block;width:24px;height:24px;border-radius:50%;border:2px solid #E5E5E5;margin:0 auto 7px;font-style:normal;font-size:11px;line-height:20px}
-.pj-step .d,.pj-step .c{color:var(--lb-purple)}
-.pj-step .d i{background:var(--lb-purple);border-color:var(--lb-purple);color:#fff}
-.pj-step .c i{border-color:var(--lb-purple)}
+.lb-modal.pj{width:min(820px,calc(100vw - 64px))}
+.pj-step-scroll{overflow-x:auto;padding:7px 6px 8px;margin:0 -6px}
+.pj-step{display:flex;align-items:center;min-width:690px;list-style:none;padding:0;margin:0}
+.pj-step-item{position:relative;display:flex;flex:1;min-width:0;padding-right:12px}
+.pj-step-item:last-child{padding-right:0}
+.pj-step-item:not(:last-child)::after{content:"";position:absolute;z-index:0;top:50%;left:calc(100% - 12px);right:0;height:2px;background:#55438C;transform:translateY(-50%)}
+.pj-step-box{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:42px;padding:6px 5px;border:1px solid #A6A6B0;border-radius:4px;background:#fff;color:#3F3F46;text-align:center;font-size:11.5px;font-weight:600;line-height:1.15}
+.pj-step-item.done .pj-step-box{border-color:#5B4B8A;color:#39266F}
+.pj-step-item.current .pj-step-box{border:2px solid #4C288B;background:#F8F5FF;color:#3B176E;font-weight:700}
+.pj-step-item.upcoming .pj-step-box{color:#686873}
+.pj-step-check{position:absolute;top:-7px;right:-6px;display:flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #fff;border-radius:50%;background:#3DB982;color:#fff;font-size:9px;font-style:normal;font-weight:700;line-height:1}
 .pj-row{display:flex;align-items:center;gap:12px}
 .pj-row b{display:block;font-size:14px;color:var(--lb-ink)}
 .pj-row span{display:block;font-size:12.5px;color:var(--lb-mut);margin-top:2px}
@@ -4338,7 +4343,19 @@ function ProjectDetailModal({ p, onClose, onAdvance, onViewContractor, onViewVau
           </div>
           <div className="pj-sec">
             <div className="pj-h">Progress</div>
-            <div className="pj-step">{STG.map(([k, l], i) => <div key={k} className={i < p.s ? "d" : i === p.s ? "c" : ""}><i>{i < p.s ? "✓" : i + 1}</i>{l}</div>)}</div>
+            <div className="pj-step-scroll">
+              <ol className="pj-step" aria-label="Project stage progress">
+                {STG.map(([k, label], i) => (
+                  <li key={k} className={`pj-step-item ${i < p.s ? "done" : i === p.s ? "current" : "upcoming"}`}
+                    aria-current={i === p.s ? "step" : undefined}>
+                    <span className="pj-step-box">
+                      {label}
+                      {i < p.s && <i className="pj-step-check" aria-label="Completed">✓</i>}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
             <p className="pipeline-stage-description">{STG[p.s][3]}</p>
             <div className="pipeline-gate-detail"><b>Gate to leave this stage</b><span>{STG[p.s][4] || 'None; remains here until the contract ends.'}</span></div>
           </div>
