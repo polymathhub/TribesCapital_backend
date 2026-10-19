@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/endpoints';
 import { LogoFull } from '../components/Logo';
-import authDashboardPreview from '../assets/auth-dashboard-preview.png';
 import cardImageOne from '../assets/image.png';
 import cardImageTwo from '../assets/illustrations/Artist Woman (1).png';
 import cardImageThree from '../assets/illustrations/New-York-cuate.svg';
@@ -531,10 +530,9 @@ function FormContainer({ children, isMobile, leftHeading = 'Welcome to the clean
     return (
       <div className="auth-desktop-shell">
         <aside className="auth-energy-panel" aria-label="Tribes Capital clean energy community">
-          <video className="auth-banner-video" autoPlay muted loop playsInline preload="metadata" poster={authDashboardPreview} aria-hidden="true">
+          <video className="auth-banner-video" autoPlay muted loop playsInline preload="metadata" aria-hidden="true">
             <source src="/auth-banner.mp4" type="video/mp4" />
           </video>
-          <div className="auth-mockup-wrap"><img className="auth-mockup" src={authDashboardPreview} alt="Preview of the Tribes Capital dashboard" width={562} height={383} /></div>
           <div className="auth-left-heading">
             <h2>{leftHeading}</h2>
             <p>Learn, connect, and move meaningful energy projects forward with a community built for action.</p>
@@ -1806,7 +1804,7 @@ export default function AuthPage({ onLogin }) {
         .auth-energy-panel>*:not(.auth-banner-video){position:relative;z-index:1}
         .auth-mockup-wrap{display:flex;flex:1;align-items:center;justify-content:center;width:100%;min-height:0;padding:24px 0}
         .auth-mockup{display:block;width:100%;max-width:520px;height:auto;object-fit:contain}
-        .auth-left-heading{position:relative;max-width:420px}
+        .auth-left-heading{position:relative;max-width:420px;transform:translateY(24px)}
         .auth-left-heading h2{margin:0 0 14px;color:#fff;font-size:28px;font-weight:700;line-height:1.3}
         .auth-left-heading p{margin:0;color:#DDD6FE;font-size:14px;line-height:1.6}
         .auth-desktop-form-panel{display:grid;place-items:center;min-width:0;padding:40px clamp(32px,6vw,88px);overflow-y:auto;background:#fff}
