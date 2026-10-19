@@ -50,11 +50,11 @@ The browser saves the S3 upload ID, object key, and completed part ETags in loca
 
 ## Database migration
 
-Apply the checked-in migration before deploying the updated backend:
+Production startup applies pending checked-in Prisma migrations automatically. To apply the migration manually before deploying the updated backend:
 
 ```sh
 npx prisma migrate deploy
 npx prisma generate
 ```
 
-The migration adds the S3 key for diligence documents, multi-profile links for users, and pipeline metadata and attachments for projects. No database migration was run as part of the local code changes.
+The migration adds the S3 key for diligence documents, multi-profile links for users, and pipeline metadata and attachments for projects.

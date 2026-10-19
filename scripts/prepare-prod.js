@@ -1,20 +1,25 @@
 #!/usr/bin/env node
 const { spawnSync } = require('child_process');
 
-function shouldSkipPrismaDbPush(env = process.env) {
+function shouldSkipPrismaBootstrap(env = process.env) {
   const value = env.DB_SKIP || env.NO_DATABASE_MODE || env.DATABASE_SKIP || env.NO_DB || '';
-  const isExplicitlyDisabled = ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
-  const isProduction = String(env.NODE_ENV || '').toLowerCase() === 'production';
-  return isExplicitlyDisabled || isProduction;
+  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
 }
 
-function run() {
-  if (shouldSkipPrismaDbPush()) {
-    console.log('Skipping prisma db push because database bootstrap is disabled.');
+function getPrismaBootstrapArgs(env = process.env) {
+  return String(env.NODE_ENV || '').toLowerCase() === 'production'
+    ? ['prisma', 'migrate', 'deploy']
+    : ['prisma', 'db', 'push'];
+}
+
+function run(env = process.env, spawn = spawnSync) {
+  if (shouldSkipPrismaBootstrap(env)) {
+    console.log('Skipping Prisma database bootstrap because it is disabled.');
     return;
   }
 
-  const result = spawnSync('npx', ['prisma', 'db', 'push'], {
+  const args = getPrismaBootstrapArgs(env);
+  const result = spawn('npx', args, {
     stdio: 'inherit',
     shell: false,
   });
@@ -28,4 +33,4 @@ if (require.main === module) {
   run();
 }
 
-module.exports = { shouldSkipPrismaDbPush, run };
+module.exports = { shouldSkipPrismaBootstrap, getPrismaBootstrapArgs, run };

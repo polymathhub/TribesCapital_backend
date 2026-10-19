@@ -25,7 +25,7 @@ After starting the backend, open `http://localhost:3000/api/docs` (or replace th
 
 ## Database Changes
 
-Apply both migrations before deploying the backend against an existing database:
+Production startup applies pending checked-in Prisma migrations with `prisma migrate deploy`. For a manual migration step, run:
 
 - `20261001120000_add_user_cover_photo`
 - `20261001130000_add_user_account_type`
