@@ -536,7 +536,21 @@ const STYLES = `
 .submit-project-heading p{margin:0;color:var(--ink-600);font-size:14px;line-height:1.55}
 .submit-project-alert{margin-bottom:16px;padding:12px 14px;border:1px solid;border-radius:8px;font-size:13px;line-height:1.5}
 .submit-project-alert.error{color:#B42318;background:#FEF3F2;border-color:#FECDCA}
-.submit-project-alert.success{color:#047857;background:#ECFDF3;border-color:#A6F4C5}
+.project-submission-lightbox{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(17,17,20,.48);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);animation:project-submission-fade-in .18s ease-out both}
+.project-submission-dialog{width:min(100%,440px);padding:40px 32px 32px;border:1px solid #E7E7EA;border-radius:16px;background:#fff;box-shadow:0 24px 70px rgba(20,10,40,.24);text-align:center;animation:project-submission-dialog-in .3s cubic-bezier(.2,.8,.2,1) both}
+.project-submission-icon{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 20px;border-radius:50%;background:#ECFDF3;color:#047857;box-shadow:inset 0 0 0 1px #A6F4C5;animation:project-submission-icon-in .34s cubic-bezier(.2,.8,.2,1) .08s both}
+.project-submission-icon svg{width:48px;height:48px;overflow:visible}
+.project-submission-check{fill:none;stroke:currentColor;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:36;stroke-dashoffset:36;animation:project-submission-check-draw .42s cubic-bezier(.2,.8,.2,1) .2s forwards}
+.project-submission-dialog h2{margin:0 0 8px;color:#1F2937;font-size:20px;line-height:1.3;font-weight:700}
+.project-submission-dialog p{margin:0 0 26px;color:#4B5563;font-size:14px;line-height:1.6}
+.project-submission-dialog button{width:100%;min-height:44px;padding:0 18px;border:0;border-radius:8px;background:#5B21B6;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.project-submission-dialog button:hover{background:#3B0764}
+.project-submission-dialog button:focus-visible{outline:3px solid #C4B5FD;outline-offset:3px}
+@keyframes project-submission-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes project-submission-dialog-in{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes project-submission-icon-in{from{transform:scale(.7)}to{transform:scale(1)}}
+@keyframes project-submission-check-draw{to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){.project-submission-lightbox,.project-submission-dialog,.project-submission-icon{animation:none}.project-submission-check{stroke-dashoffset:0;animation:none}}
 .submit-project-form{display:grid;gap:18px;padding:24px;background:#fff;border:1px solid var(--line);border-radius:12px}
 .submit-project-form label{display:grid;gap:7px;color:var(--ink-700);font-size:13px;font-weight:600}
 .submit-project-form input,.submit-project-form select,.submit-project-form textarea{width:100%;min-width:0;border:1px solid #D0D5DD;border-radius:7px;padding:11px 12px;color:var(--ink-900);font:inherit;font-size:14px;background:#fff}
@@ -3214,9 +3228,67 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
   );
 }
 
+function ProjectSubmissionSuccessLightbox({ message, onClose }) {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const previouslyFocusedElement = document.activeElement;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.querySelector('button')?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        dialogRef.current?.querySelector('button')?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      previouslyFocusedElement?.focus?.();
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="project-submission-lightbox"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        ref={dialogRef}
+        className="project-submission-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="project-submission-success-title"
+        aria-describedby="project-submission-success-message"
+      >
+        <div className="project-submission-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" focusable="false">
+            <path className="project-submission-check" d="M12 25.5 20 33.5 36 17" />
+          </svg>
+        </div>
+        <h2 id="project-submission-success-title">Project submitted successfully</h2>
+        <p id="project-submission-success-message">{message}</p>
+        <button type="button" onClick={onClose}>Done</button>
+      </section>
+    </div>
+  );
+}
+
 function SubmitYourProjectPage() {
   const [project, setProject] = useState({ name: '', type: '', location: '', capacity: '', overview: '', contact: '' });
   const [submissionState, setSubmissionState] = useState({ loading: false, error: '', success: '' });
+  const closeSuccess = useCallback(() => {
+    setSubmissionState((current) => ({ ...current, success: '' }));
+  }, []);
   const update = (field) => (event) => setProject((current) => ({ ...current, [field]: event.target.value }));
   const submit = async (event) => {
     event.preventDefault();
@@ -3249,7 +3321,7 @@ function SubmitYourProjectPage() {
         <p>Tell us about your clean energy project. Submissions are saved securely for the Tribes Capital team to review.</p>
       </header>
       {submissionState.error && <div role="alert" className="submit-project-alert error">{submissionState.error}</div>}
-      {submissionState.success && <div role="status" className="submit-project-alert success">{submissionState.success}</div>}
+      {submissionState.success && <ProjectSubmissionSuccessLightbox message={submissionState.success} onClose={closeSuccess} />}
       <form className="submit-project-form" onSubmit={submit}>
         <label>Project name<input required value={project.name} onChange={update('name')} placeholder="e.g. Community solar in Accra" /></label>
         <div className="submit-project-row">

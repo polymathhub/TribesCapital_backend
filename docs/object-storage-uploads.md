@@ -31,8 +31,8 @@ Add a bucket CORS rule for each real application origin and the local Vite origi
 [
   {
     "AllowedOrigins": [
-      "http://localhost:5173",
-      "https://app.example.com"
+      "http://community.tribes.capital",
+      "https://community.tribes.capital"
     ],
     "AllowedMethods": ["GET", "HEAD", "PUT"],
     "AllowedHeaders": ["*"],
@@ -42,7 +42,7 @@ Add a bucket CORS rule for each real application origin and the local Vite origi
 ]
 ```
 
-Replace `https://app.example.com` with the deployed frontend origin. If the API and frontend use additional origins, list each explicitly.
+Replace `https://community.tribes.capital` with the deployed frontend origin. If the API and frontend use additional origins, list each explicitly.
 
 ## Interrupted uploads
 
@@ -57,4 +57,4 @@ npx prisma migrate deploy
 npx prisma generate
 ```
 
-The migration adds the S3 key for diligence documents, multi-profile links for users, and pipeline metadata and attachments for projects.
+The migration adds the S3 key for portfolio documents, multi-profile links for users, and pipeline metadata and attachments for projects.
