@@ -143,7 +143,20 @@ export class ProjectsService {
   private validateAttachments(userId: string, attachments?: Array<{ storageKey: string; url: string }>) {
     if (!attachments) return;
     for (const attachment of attachments) {
-      if (!attachment.storageKey?.startsWith(`uploads/${userId}/project-pipeline/`) || !attachment.url?.startsWith('https://')) {
+      let localUrl = false;
+      if (attachment.storageKey?.startsWith(`uploads/${userId}/project-pipeline/`) && attachment.url?.startsWith('/')) {
+        try {
+          const parsedUrl = new URL(attachment.url, 'https://local.invalid');
+          localUrl = parsedUrl.pathname.endsWith('/uploads/multipart/file')
+            && parsedUrl.searchParams.get('key') === attachment.storageKey;
+        } catch {
+          localUrl = false;
+        }
+      }
+      if (
+        !attachment.storageKey?.startsWith(`uploads/${userId}/project-pipeline/`)
+        || (!attachment.url?.startsWith('https://') && !localUrl)
+      ) {
         throw new BadRequestException('Invalid project attachment location');
       }
     }

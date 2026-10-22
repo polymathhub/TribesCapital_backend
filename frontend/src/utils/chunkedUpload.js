@@ -45,13 +45,17 @@ function uploadPart(url, blob, onProgress) {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open('PUT', url);
+    if (url.startsWith('/')) {
+      const token = localStorage.getItem('accessToken');
+      if (token) request.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
     request.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress(event.loaded);
     };
     request.onload = () => {
-      if (request.status < 200 || request.status >= 300) return reject(new Error(`S3 rejected upload part (${request.status}).`));
+      if (request.status < 200 || request.status >= 300) return reject(new Error(`Upload server rejected part (${request.status}).`));
       const eTag = request.getResponseHeader('ETag');
-      if (!eTag) return reject(new Error('S3 CORS must expose the ETag response header to complete uploads.'));
+      if (!eTag) return reject(new Error('The upload server did not return an ETag for this part.'));
       resolve(eTag);
     };
     request.onerror = () => reject(new Error('Network connection interrupted during upload.'));

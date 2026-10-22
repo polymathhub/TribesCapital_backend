@@ -1373,6 +1373,7 @@ const STYLES = `
 .dash-topbar-right{margin-left:auto}
 .dash-user{display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;cursor:pointer;font-family:inherit}
 .dash-user .dash-avatar{width:34px;height:34px;font-size:14px}
+.dash-topbar .dash-bell-count{top:-5px;right:-7px;min-width:14px;height:14px;padding:0 3px;border-width:1px;font-size:8px!important}
 .dash-user-name{font-size:14px;font-weight:500;color:var(--ink-900)}
 @media (max-width:640px){.dash-user-name{display:none}}
 .dash-collapse-btn{display:flex;background:none;border:0;padding:7px;color:var(--ink-600);cursor:pointer;border-radius:8px;flex-shrink:0}

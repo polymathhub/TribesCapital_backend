@@ -1,16 +1,24 @@
-# Object Storage Uploads
+# File Upload Storage
 
-Profile images, chat attachments, due-diligence files, and project-pipeline files use private S3 multipart uploads. The browser sends 8 MiB parts directly to S3; the API issues short-lived URLs, verifies ownership of each object key, completes the multipart upload, and stores the resulting key with its owning record.
+Profile images, chat attachments, due-diligence files, and project-pipeline files use multipart uploads. S3 remains the default provider: the browser sends 8 MiB parts directly to S3 and the API issues short-lived URLs. Deployments without cloud-storage credentials can instead store uploads on the application server.
 
 ## Application settings
 
-Configure these backend environment variables:
+For S3 storage, configure these backend environment variables:
 
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_REGION`
 - `AWS_S3_BUCKET`
 - `AWS_S3_URL` (optional custom asset base URL)
+
+To use local disk storage, set:
+
+- `UPLOAD_STORAGE_PROVIDER=local`
+- `UPLOADS_STORAGE_PATH` (optional absolute path; defaults to `<application-root>/storage/uploads`)
+
+The application process must be able to write to `UPLOADS_STORAGE_PATH`. Choose a persistent directory that is not removed during deployments, monitor available disk space, and include it in regular backups. Local storage does not require AWS credentials. Files are stored outside the directory served as legacy `/uploads` static content. Profile images and messaging attachments use public routes; due-diligence and project-pipeline downloads require an authenticated API request. Protect server access and backups accordingly. Incomplete multipart sessions are stored under `.multipart` and should be removed periodically after confirming they are no longer active.
+
 - `API_PUBLIC_URL` (public backend origin used to build OAuth callback URLs)
 - `SOCIAL_PROFILE_CALLBACK_URL` (optional exact OAuth callback URL override)
 - `SOCIAL_PROFILE_FRONTEND_URL` (frontend origin allowed to receive OAuth popup completion messages)
@@ -19,13 +27,13 @@ Configure these backend environment variables:
 - `INSTAGRAM_CLIENT_ID` and `INSTAGRAM_CLIENT_SECRET`
 - `INSTAGRAM_GRAPH_VERSION` (optional, defaults to `v23.0`)
 
-The runtime identity needs `s3:PutObject`, `s3:AbortMultipartUpload`, `s3:ListMultipartUploadParts`, `s3:GetObject`, and `s3:DeleteObject` for the configured bucket. Keep the bucket private; file download routes issue short-lived signed URLs after checking record access. Profile image URLs use a stable public API path that redirects to a short-lived S3 signature, so the URL stored in a user record does not expire.
+For S3 storage, the runtime identity needs `s3:PutObject`, `s3:AbortMultipartUpload`, `s3:ListMultipartUploadParts`, `s3:GetObject`, and `s3:DeleteObject` for the configured bucket. Keep the bucket private; file download routes issue short-lived signed URLs after checking record access. Profile image URLs use a stable public API path that redirects to a short-lived S3 signature, so the URL stored in a user record does not expire.
 
 Register `SOCIAL_PROFILE_CALLBACK_URL` as the exact redirect URI in all three provider apps. LinkedIn requests OpenID Connect `openid profile email`; this normally supplies name and profile picture, not headline or location. X requests `users.read users.email offline.access` and can supply name, bio, location, profile image, and website where available. Instagram requires an eligible professional account and the `instagram_business_basic` permission; it can supply name, username, biography, profile image, and website where the API returns them. Imported values fill empty Tribes Capital fields only. Provider tokens are exchanged and discarded on the backend.
 
-## Bucket CORS
+## S3 bucket CORS
 
-Add a bucket CORS rule for each real application origin and the local Vite origin used by developers. Do not use `*` for production origins. S3 must expose `ETag` so the browser can complete a multipart upload, and `Content-Length` so the download UI can report byte progress.
+When using S3, add a bucket CORS rule for each real application origin and the local Vite origin used by developers. Do not use `*` for production origins. S3 must expose `ETag` so the browser can complete a multipart upload, and `Content-Length` so the download UI can report byte progress.
 
 ```json
 [
@@ -46,7 +54,7 @@ Replace `https://community.tribes.capital` with the deployed frontend origin. If
 
 ## Interrupted uploads
 
-The browser saves the S3 upload ID, object key, and completed part ETags in local storage, scoped to the selected file and upload purpose. If a transfer is interrupted, select the same file again to resume completed parts. S3 multipart uploads that are never completed should be removed automatically; add a bucket lifecycle rule to abort incomplete multipart uploads after seven days.
+The browser saves the upload ID, object key, and completed part ETags in local storage, scoped to the selected file and upload purpose. If a transfer is interrupted, select the same file again to resume completed parts. For S3, add a bucket lifecycle rule to abort incomplete multipart uploads after seven days. For local storage, periodically remove abandoned directories under `.multipart` only after confirming they are older than the maximum upload-resume window.
 
 ## Database migration
 

@@ -466,7 +466,8 @@ export class MessagingService {
         throw new BadRequestException('Invalid attachment metadata');
       }
       const legacyLocation = /^messaging\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(attachment.storageKey) && /^\/uploads\/messaging\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(attachment.url);
-      const s3Location = attachment.storageKey.startsWith(`uploads/${payload.userId}/messaging/`) && (() => {
+      const ownedMessagingKey = attachment.storageKey.startsWith(`uploads/${payload.userId}/messaging/`);
+      const s3Location = ownedMessagingKey && (() => {
         try {
           const attachmentUrl = new URL(attachment.url);
           const urlPath = attachmentUrl.pathname.split('/').map(decodeURIComponent).join('/');
@@ -475,7 +476,9 @@ export class MessagingService {
           return false;
         }
       })();
-      if (!legacyLocation && !s3Location) {
+      const localLocation = ownedMessagingKey
+        && attachment.url === `/api/uploads/multipart/public/${payload.userId}/messaging/${encodeURIComponent(attachment.storageKey.split('/').pop() || '')}`;
+      if (!legacyLocation && !s3Location && !localLocation) {
         throw new BadRequestException('Invalid attachment location');
       }
     }
