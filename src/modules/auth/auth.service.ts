@@ -710,6 +710,8 @@ export class AuthService {
         isActive: true,
         emailVerified: true,
         accountType: true,
+        avatar: true,
+        coverPhoto: true,
         roles: {
           select: { name: true },
         },
@@ -751,6 +753,8 @@ export class AuthService {
           roles: roleNames,
           isAdmin,
           accountType,
+          avatar: userWithRoles?.avatar ?? null,
+          coverPhoto: userWithRoles?.coverPhoto ?? null,
         },
       },
       accessToken: tokens.accessToken,
@@ -766,6 +770,8 @@ export class AuthService {
         roles: roleNames,
         isAdmin,
         accountType,
+        avatar: userWithRoles?.avatar ?? null,
+        coverPhoto: userWithRoles?.coverPhoto ?? null,
       },
     };
   }

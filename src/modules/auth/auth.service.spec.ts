@@ -1,5 +1,6 @@
 import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '@database/prisma.service';
 import { AuthService } from './auth.service';
 import { JwtTokenService } from './jwt-token.service';
@@ -56,6 +57,57 @@ describe('AuthService', () => {
     );
 
     await expect(service.login({ email: 'user@example.com', password: 'Password123!' })).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('includes saved profile image URLs in login responses', async () => {
+    const passwordHash = await bcrypt.hash('Password123!', 4);
+    const prisma = {
+      user: {
+        findUnique: jest.fn()
+          .mockResolvedValueOnce({
+            id: 'user-1',
+            email: 'user@example.com',
+            firstName: 'Test',
+            lastName: 'User',
+            password: passwordHash,
+            isActive: true,
+            emailVerified: true,
+          })
+          .mockResolvedValueOnce({
+            id: 'user-1',
+            email: 'user@example.com',
+            firstName: 'Test',
+            lastName: 'User',
+            isActive: true,
+            emailVerified: true,
+            accountType: 'COMMUNITY_MEMBER',
+            avatar: '/api/uploads/multipart/profile/user-1/profile-avatar/avatar.png',
+            coverPhoto: '/api/uploads/multipart/profile/user-1/profile-cover/cover.png',
+            roles: [],
+          }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    } as unknown as PrismaService;
+    const jwtTokenService = {
+      issueTokenPair: jest.fn().mockResolvedValue({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        expiresIn: 3600,
+      }),
+    } as unknown as JwtTokenService;
+    const service = new AuthService(
+      prisma,
+      jwtTokenService,
+      {} as MailService,
+      { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService,
+    );
+
+    const response = await service.login({ email: 'user@example.com', password: 'Password123!' });
+
+    expect(response.user.avatar).toBe('/api/uploads/multipart/profile/user-1/profile-avatar/avatar.png');
+    expect(response.user.coverPhoto).toBe('/api/uploads/multipart/profile/user-1/profile-cover/cover.png');
+    expect(response.data?.user?.avatar).toBe(response.user.avatar);
+    expect(response.data?.user?.coverPhoto).toBe(response.user.coverPhoto);
   });
 
   it('returns auth tokens immediately when email verification is disabled', async () => {

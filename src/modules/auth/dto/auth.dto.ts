@@ -106,6 +106,10 @@ export class UserResponseDto {
   accountType?: string;
   roles?: string[];
   isAdmin?: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  avatar?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  coverPhoto?: string | null;
 }
 
 export class AuthTokenResponseDto {

@@ -95,6 +95,19 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
   const coverFileRef = useRef(null);
   const headlineInputRef = useRef(null);
 
+  const openEdit = () => {
+    setMessage(null);
+    setEditOpen(true);
+  };
+
+  useEffect(() => {
+    if (message?.type !== 'success') return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setMessage((current) => current === message ? null : current);
+    }, 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [message]);
+
   useEffect(() => {
     setName(user?.displayName || user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' '));
     setAccountType(user?.accountType || 'COMMUNITY_MEMBER');
@@ -360,8 +373,8 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
         </div>
         <div className="profile-identity">
           <div className="profile-identity-main">
-            <div className="profile-photo-wrap"><div className="profile-photo"><ProfileAvatar person={{ ...user, avatar }} alt={`${name || 'Member'} profile`} style={{ width: '100%', height: '100%' }} /></div><button type="button" className="profile-photo-edit" aria-label="Edit profile photo" title="Edit profile photo" onClick={() => { setEditOpen(true); window.setTimeout(() => fileRef.current?.click(), 0); }}><Pencil size={13} /></button></div>
-            <div className="profile-identity-copy"><div className="profile-name-row"><h1>{name || 'Your name'}</h1></div>{headline && <div className="profile-headline-row"><p>{headline}</p></div>}<div className="profile-meta">{location && <span>{location}</span>}{user?.createdAt && <span>Member since {new Date(user.createdAt).getFullYear()}</span>}</div>{!readOnly && <div className="profile-hero-actions"><button type="button" className="profile-message-button" onClick={onMessage}><MessageCircle size={15} />Message</button>{socialLinks[0] ? <a className="profile-website-button" href={/^https?:\/\//i.test(socialLinks[0]) ? socialLinks[0] : `https://${socialLinks[0]}`} target="_blank" rel="noreferrer"><Globe size={15} />Visit my website</a> : <button type="button" className="profile-website-button" onClick={() => setEditOpen(true)} title="Add a professional link to enable this action"><Globe size={15} />Visit my website</button>}<button type="button" className="profile-more-button" onClick={() => setEditOpen(true)}><MoreHorizontal size={17} />More</button></div>}{readOnly && socialLinks[0] && <div className="profile-hero-actions"><a className="profile-website-button" href={/^https?:\/\//i.test(socialLinks[0]) ? socialLinks[0] : `https://${socialLinks[0]}`} target="_blank" rel="noreferrer"><Globe size={15} />Visit my website</a></div>}</div>
+            <div className="profile-photo-wrap"><div className="profile-photo"><ProfileAvatar person={{ ...user, avatar }} alt={`${name || 'Member'} profile`} style={{ width: '100%', height: '100%' }} /></div><button type="button" className="profile-photo-edit" aria-label="Edit profile photo" title="Edit profile photo" onClick={() => { openEdit(); window.setTimeout(() => fileRef.current?.click(), 0); }}><Pencil size={13} /></button></div>
+            <div className="profile-identity-copy"><div className="profile-name-row"><h1>{name || 'Your name'}</h1></div>{headline && <div className="profile-headline-row"><p>{headline}</p></div>}<div className="profile-meta">{location && <span>{location}</span>}{user?.createdAt && <span>Member since {new Date(user.createdAt).getFullYear()}</span>}</div>{!readOnly && <div className="profile-hero-actions"><button type="button" className="profile-message-button" onClick={onMessage}><MessageCircle size={15} />Message</button>{socialLinks[0] ? <a className="profile-website-button" href={/^https?:\/\//i.test(socialLinks[0]) ? socialLinks[0] : `https://${socialLinks[0]}`} target="_blank" rel="noreferrer"><Globe size={15} />Visit my website</a> : <button type="button" className="profile-website-button" onClick={openEdit} title="Add a professional link to enable this action"><Globe size={15} />Visit my website</button>}<button type="button" className="profile-more-button" onClick={openEdit}><MoreHorizontal size={17} />More</button></div>}{readOnly && socialLinks[0] && <div className="profile-hero-actions"><a className="profile-website-button" href={/^https?:\/\//i.test(socialLinks[0]) ? socialLinks[0] : `https://${socialLinks[0]}`} target="_blank" rel="noreferrer"><Globe size={15} />Visit my website</a></div>}</div>
           </div>
           <aside className="profile-affiliations" aria-label="Profile details">
             <div><img className="profile-detail-mark profile-brand-mark" src="/image.png" alt="" aria-hidden="true" /><span><strong>Community Member</strong><small>Account type</small></span></div>
