@@ -38,9 +38,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       this.logger.warn('Database connection unavailable. Continuing in fallback mode for local development.', error instanceof Error ? error.stack : String(error));
       return;
     }
+    
     // Prisma query middleware to log all queries, durations and errors
     this.$use(async (params, next) => {
       const start = Date.now();
+
       // Log query details (model & action). Avoid logging raw params that may contain secrets.
       const ctx = `[PRISMA] ${params.model || '<generic>'}.${params.action}`;
       this.logger.log(`${new Date().toISOString()} ${ctx} [Q1] Executing`);
