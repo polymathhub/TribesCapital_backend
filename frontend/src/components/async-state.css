@@ -34,6 +34,8 @@
   object-fit: contain;
 }
 
+.async-state.has-illustration { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+
 .async-state-copy { max-width: 420px; }
 .async-state-copy strong { display: block; color: #1f2937; font-size: 14px; font-weight: 700; line-height: 1.4; }
 .async-state-copy p { margin: 5px 0 0; color: #667085; font-size: 12px; line-height: 1.6; }

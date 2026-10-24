@@ -39,10 +39,11 @@ export function AsyncState({
   const Icon = variant === 'error'
     ? AlertCircle
     : (typeof icon === 'function' ? icon : EMPTY_ICONS[icon] || EMPTY_ICONS.default);
+  const hasIllustration = Boolean(illustration);
 
   return (
     <div
-      className={`async-state async-state-${variant}${compact ? ' is-compact' : ''} ${className}`.trim()}
+      className={`async-state async-state-${variant}${compact ? ' is-compact' : ''}${hasIllustration ? ' has-illustration' : ''} ${className}`.trim()}
       role={variant === 'error' ? 'alert' : 'status'}
     >
       {illustration

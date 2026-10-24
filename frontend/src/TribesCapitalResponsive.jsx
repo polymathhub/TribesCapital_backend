@@ -457,7 +457,7 @@ const STYLES = `
 .platform-search-result-copy span{overflow:hidden;color:#667085;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
 .platform-search-result-kind{margin-left:auto;padding:4px 8px;border-radius:999px;background:#f3f0ff;color:#5b21b6;font-size:10px;font-weight:700;white-space:nowrap}
 .platform-search-empty{padding:24px 16px;color:#667085;font-size:13px;text-align:center}
-.platform-search-empty-state{display:flex;min-height:320px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px 20px;border:1px solid #e8eaf0;border-radius:16px;background:#fff;text-align:center}
+.platform-search-empty-state{display:flex;min-height:320px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px 20px;text-align:center}
 .platform-search-empty-state img{display:block;width:min(100%,210px);height:auto;object-fit:contain}
 .platform-search-empty-state strong{color:#1f2937;font-size:17px}
 .platform-search-empty-state p{max-width:400px;margin:0;color:#667085;font-size:13px;line-height:1.55}
@@ -547,7 +547,7 @@ const STYLES = `
 .forum-topic-swatch{width:9px;height:9px;flex:0 0 9px;border-radius:2px;background:#7C3AED}
 .forum-topic-row:nth-child(3n) .forum-topic-swatch,.forum-topic-row:nth-child(3n + 1) .forum-topic-swatch{background:#5B21B6}
 .forum-empty-state{display:flex;width:min(100%,760px);min-height:260px;align-self:center;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-color:#DDD6FE!important;background:#FAF5FF!important;text-align:center}
-.forum-empty-state.forum-empty-illustrated{min-height:320px;padding:28px 24px;border-color:#E8EAF0!important;background:#fff!important;box-shadow:0 10px 28px rgba(46,16,101,.05)}
+.forum-empty-state.forum-empty-illustrated{min-height:320px;padding:28px 24px;border:0!important;background:transparent!important;box-shadow:none}
 .forum-empty-illustration{display:block;width:min(100%,220px);height:auto;margin-bottom:-8px;object-fit:contain}
 .forum-empty-icon{display:grid;place-items:center;width:54px;height:54px;border-radius:12px;background:#EDE9FE}
 .forum-empty-state strong{color:#2E1065;font-size:16px}
