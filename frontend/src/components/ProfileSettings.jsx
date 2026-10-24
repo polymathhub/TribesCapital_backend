@@ -390,14 +390,14 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
             <h2 id="profile-tier-title">Your tier progress</h2>
             <p>Your activity and the progress of projects you submit shape your tier.</p>
           </div>
-          {tierProgress && <span className="profile-tier-current-badge"><span>Current level</span>Tier {tierProgress.currentTier}</span>}
+          {tierProgress && <span className="profile-tier-current-badge">Tier {tierProgress.currentTier}</span>}
         </header>
         {tierProgressLoading ? <p className="profile-tier-loading" role="status">Loading your tier progress…</p>
           : tierProgressError ? <p className="profile-tier-error" role="alert">{tierProgressError}</p>
             : tierProgress && <>
               <div className="profile-tier-track" aria-label={`Tier ${tierProgress.currentTier} of 3`}>
                 {tierProgress.tiers.map((tier) => (
-                  <div key={tier.level} className={`profile-tier-step ${tier.status}`} aria-current={tier.status === 'current' ? 'step' : undefined}>
+                  <div key={tier.level} className={`profile-tier-step ${tier.status}`}>
                     <span className="profile-tier-step-icon">
                       {tier.status === 'current' ? <Activity size={16} aria-hidden="true" />
                         : tier.status === 'kyc_required' ? <LockKeyhole size={16} aria-hidden="true" />
@@ -405,8 +405,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
                     </span>
                     <span className="profile-tier-step-copy">
                       <strong>Tier {tier.level}</strong>
-                      <span className="profile-tier-step-name">{tier.name}</span>
-                      <span className="profile-tier-step-status">{tier.status === 'complete' ? 'Completed' : tier.status === 'current' ? 'Current level' : tier.status === 'kyc_required' ? 'Verification needed' : 'Upcoming'}</span>
+                      <span>{tier.name}</span>
                     </span>
                     {tier.status === 'complete' && <HugeiconsIcon className="profile-tier-step-complete" icon={CheckmarkCircle01Icon} size={22} color="currentColor" strokeWidth={2} aria-label="Completed" />}
                   </div>
@@ -414,10 +413,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
               </div>
               <div className="profile-tier-next">
                 <div className="profile-tier-progress-copy">
-                  <div>
-                    <strong>{tierProgress.currentTier === 3 ? 'Journey complete' : `Progress to Tier ${tierProgress.nextTier}`}</strong>
-                    <span>{tierProgress.progressPercent}%</span>
-                  </div>
+                  <strong>{tierProgress.currentTier === 3 ? 'Journey complete' : `Progress to Tier ${tierProgress.nextTier}`}</strong>
                   <span>{tierProgress.nextStep}</span>
                 </div>
                 <div className="profile-tier-progress-bar" role="progressbar" aria-label="Progress to next tier" aria-valuemin="0" aria-valuemax="100" aria-valuenow={tierProgress.progressPercent}>
@@ -432,14 +428,11 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
                 </div>
                 <span className="profile-tier-kyc-status">Required</span>
               </div>}
-              <div className="profile-tier-activity">
-                <h3>Activity contributing to your tier</h3>
-                <div className="profile-tier-stats" aria-label="Activity counted toward your tier">
+              <div className="profile-tier-stats" aria-label="Activity counted toward your tier">
                 <div><strong>{tierProgress.activity.coursesEnrolled}</strong><span>Courses joined</span></div>
                 <div><strong>{tierProgress.activity.eventRegistrations}</strong><span>Event registrations</span></div>
                 <div><strong>{tierProgress.activity.communityPosts + tierProgress.activity.communityComments}</strong><span>Community contributions</span></div>
                 <div><strong>{tierProgress.projectProgress.projectCount}</strong><span>Projects submitted</span></div>
-                </div>
               </div>
               {tierProgress.projectProgress.projects.length > 0 && <div className="profile-tier-projects">
                 <h3>Your project progress</h3>
