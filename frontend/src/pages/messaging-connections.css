@@ -161,6 +161,7 @@
   overflow: hidden;
 }
 .dash-app.messaging-app .dash-topbar { flex: 0 0 auto; }
+.dash-app.messaging-app .dash-footer { display: none; }
 .dash-app.messaging-app .dash-content {
   display: flex;
   flex-direction: column;
