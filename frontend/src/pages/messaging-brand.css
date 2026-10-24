@@ -372,3 +372,214 @@
     transition: none;
   }
 }
+
+.messaging-page .conversation-panel {
+  background: #fff;
+}
+
+.messaging-page .conversation-heading {
+  min-height: 56px;
+  padding: 14px 16px 8px;
+}
+
+.messaging-page .conversation-heading .panel-title {
+  color: #202124;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  text-transform: none;
+}
+
+.messaging-page .conversation-heading .panel-count {
+  display: none;
+}
+
+.messaging-page .inbox-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: 4px 14px 10px;
+  padding: 0 12px;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  background: #f8f9fb;
+  color: #98a2b3;
+}
+
+.messaging-page .inbox-search:focus-within {
+  border-color: #c4b5fd;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, .08);
+}
+
+.messaging-page .inbox-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #202124;
+  font: inherit;
+  font-size: 13px;
+}
+
+.messaging-page .inbox-search input::placeholder {
+  color: #98a2b3;
+  opacity: 1;
+}
+
+.messaging-page .inbox-search > button {
+  display: grid;
+  flex: 0 0 28px;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+}
+
+.messaging-page .conversation-filters {
+  gap: 0;
+  padding: 0 12px 8px;
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.messaging-page .conversation-filters button {
+  min-height: 38px;
+  border-radius: 10px !important;
+  color: #667085;
+  font-size: 12px !important;
+}
+
+.messaging-page .conversation-filters button.filter-active {
+  background: #f4f1f8;
+  color: #202124;
+}
+
+.messaging-page .conversation-list {
+  gap: 0;
+  padding: 0;
+  background: #fff;
+}
+
+.messaging-page .conversation-item,
+.messaging-page .conversation-item:hover,
+.messaging-page .conversation-item.selected {
+  display: flex;
+  min-height: 72px;
+  gap: 11px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 0 !important;
+  background: #fff;
+  box-shadow: none;
+  transform: none;
+}
+
+.messaging-page .conversation-item + .conversation-item {
+  border-top: 1px solid #f2f3f5;
+}
+
+.messaging-page .conversation-item:hover,
+.messaging-page .conversation-item.selected {
+  background: #f8f9fb;
+}
+
+.messaging-page .conversation-item.selected {
+  box-shadow: inset 3px 0 0 #5b21b6;
+}
+
+.messaging-page .conversation-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+}
+
+.messaging-page .conversation-copy {
+  flex: 1 1 auto;
+  justify-content: center;
+  gap: 5px;
+}
+
+.messaging-page .conversation-copy strong {
+  color: #202124;
+  font-size: 13px !important;
+  font-weight: 700;
+}
+
+.messaging-page .conversation-copy span {
+  color: #747982;
+  font-size: 11px !important;
+}
+
+.messaging-page .conversation-meta {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 7px;
+  min-width: 42px;
+}
+
+.messaging-page .conversation-meta time {
+  color: #8a8f98;
+  font-size: 9px !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.messaging-page .conversation-meta .unread-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #e94265;
+  font-size: 9px !important;
+}
+
+.messaging-page .conversation-receipt {
+  color: #a2a6ae;
+  font-size: 13px !important;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.messaging-page .conversation-receipt.read {
+  color: #d95c85;
+}
+
+@media (max-width: 720px) {
+  .messaging-layout.mobile-list .active-user-panel {
+    display: none;
+  }
+
+  .messaging-page .conversation-heading {
+    min-height: 48px;
+    padding: 10px 16px 6px;
+  }
+
+  .messaging-page .inbox-search {
+    min-height: 44px;
+    margin: 4px 12px 8px;
+  }
+
+  .messaging-page .conversation-filters {
+    padding-inline: 12px;
+  }
+
+  .messaging-page .conversation-item,
+  .messaging-page .conversation-item:hover,
+  .messaging-page .conversation-item.selected {
+    min-height: 72px;
+    padding-inline: 12px;
+  }
+
+  .messaging-page .conversation-avatar {
+    width: 48px;
+    height: 48px;
+  }
+}

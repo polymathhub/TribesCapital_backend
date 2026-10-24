@@ -142,6 +142,8 @@ export class AuthService {
         },
       }), `${ctx} update existing user password`);
 
+      this.logger.log(`${new Date().toISOString()} ${ctx}[7] password was updated for existing account (id=${existingUser.id})`);
+
       return {
         success: true,
         message: 'Account updated successfully. You can now sign in with the password you just set.',
