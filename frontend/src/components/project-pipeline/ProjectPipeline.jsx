@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import AsyncState from "../AsyncState";
+import Skeleton from "../Skeleton";
 import { dueDiligenceAPI, projectsAPI } from '../../api/endpoints';
 import { computeProjectScore } from '../../utils/dashboardMetrics';
 import { uploadFileInChunks } from '../../utils/chunkedUpload';
@@ -608,15 +610,11 @@ function Toast({ msg, onDone }) {
 
 function EmptyState() {
   return (
-    <div style={{ padding: '90px 20px', textAlign: 'center' }}>
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
-        <I k="inbox" s={54} c={T1} sw={1.3} />
-      </div>
-      <h3 style={{ fontSize: 18, fontWeight: 500, margin: '0 0 10px' }}>No approved cases yet</h3>
-      <p style={{ fontSize: 14, color: T3, lineHeight: 1.6, margin: '0 auto', maxWidth: 420 }}>
-        Once an admin approves a due-diligence case, it will appear here automatically.
-      </p>
-    </div>
+    <AsyncState
+      variant="empty"
+      title="No approved cases yet"
+      description="Once an admin approves a due-diligence case, it will appear here automatically."
+    />
   );
 }
 
@@ -986,16 +984,6 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
         ::-webkit-scrollbar{width:6px;height:6px;}
         ::-webkit-scrollbar-thumb{background:#D3D5DA;border-radius:10px;}
         :focus-visible{outline:2px solid ${PL};outline-offset:2px;}
-        @keyframes pipeline-shimmer{to{background-position:-200% 0}}
-        .pipeline-loading-state{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:24px;padding:16px}
-        .pipeline-loading-line,.pipeline-loading-cards span{display:block;height:14px;border-radius:8px;background:linear-gradient(90deg,#F1ECF8 25%,#E6DCF1 50%,#F1ECF8 75%);background-size:200% 100%;animation:pipeline-shimmer 1.3s ease-in-out infinite}
-        .pipeline-loading-line{grid-column:1/-1;width:42%}
-        .pipeline-loading-line.short{width:25%;height:10px}
-        .pipeline-loading-cards{display:contents}
-        .pipeline-loading-cards span{height:150px;margin-top:10px;border-radius:14px}
-        .pipeline-loading-label{grid-column:1/-1;color:${T2};font-size:13px;text-align:center}
-        @media(max-width:639px){.pipeline-loading-state{grid-template-columns:1fr 1fr;gap:10px;padding:8px}.pipeline-loading-cards span{height:115px}}
-        @media(prefers-reduced-motion:reduce){.pipeline-loading-line,.pipeline-loading-cards span{animation:none}}
       `}</style>
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -1057,12 +1045,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
             </div>
 
             {loadingProjects ? (
-              <div className="pipeline-loading-state" role="status" aria-label="Loading projects">
-                <span className="pipeline-loading-line" />
-                <span className="pipeline-loading-line short" />
-                <div className="pipeline-loading-cards"><span /><span /><span /><span /></div>
-                <span className="pipeline-loading-label">Loading projects…</span>
-              </div>
+              <Skeleton variant="cards" rows={4} columns={isMobile ? 2 : 4} label="Loading projects" />
             ) : projectsLoadError ? (
               <div role="alert" style={{ marginTop: 24, padding: 24, border: `1px solid ${BD}`, borderRadius: 16, background: W, textAlign: 'center' }}>
                 <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>Projects couldn’t load</h2>
@@ -1145,14 +1128,16 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
                 {projects.length === 0 && !loadingProjects ? (
                   <EmptyState />
                 ) : stageProjects.length === 0 ? (
-                  <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 16,
-                    padding: '56px 20px', textAlign: 'center' }}>
-                    <p style={{ color: T2, margin: 0, fontSize: 15 }}>
-                      {projects.some(project => project.stage === activeStage)
-                        ? 'No projects match your search or type filter.'
-                        : `No projects are in the ${activeStage} stage yet.`}
-                    </p>
-                  </div>
+                  <AsyncState
+                    variant="empty"
+                    icon={projects.some(project => project.stage === activeStage) ? 'search' : undefined}
+                    title={projects.some(project => project.stage === activeStage)
+                      ? 'No projects match these filters'
+                      : `No projects in ${activeStage} yet`}
+                    description={projects.some(project => project.stage === activeStage)
+                      ? 'Try adjusting your search or project type.'
+                      : 'Projects will appear here as they move into this stage.'}
+                  />
                 ) : (
                   <div style={{ display: 'grid',
                     gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))',

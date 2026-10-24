@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import CorporateMemphisIllustration from '../CorporateMemphisIllustration';
+import AsyncState from '../AsyncState';
 import '../../styles/due-diligence.css';
 
 const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange, pagination }) => {
@@ -150,17 +150,17 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
 
       {/* Table */}
       {loading ? (
-        <div role="status" style={{ minHeight: 'min(58dvh, 620px)', display: 'grid', placeItems: 'center', padding: '40px', textAlign: 'center', color: '#6B7280' }}>Loading...</div>
+        <AsyncState variant="loading" skeleton="table" rows={5} columns={8} title="Loading due diligence entries" />
       ) : items.length === 0 ? (
-        <div style={{ minHeight: 'min(58dvh, 620px)', padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '16px' }}>
-          <CorporateMemphisIllustration variant="data" size={220} />
-          <div style={{ maxWidth: '420px' }}>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>No due diligences yet</div>
-            <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: '#6B7280' }}>
-              Create a diligence entry to track an investment, company, or fund with structure and momentum of your entires.
-            </p>
-          </div>
-        </div>
+        <AsyncState
+          variant="empty"
+          icon={hasActiveFilters ? 'search' : undefined}
+          title={hasActiveFilters ? 'No entries match these filters' : 'No due diligence entries yet'}
+          description={hasActiveFilters
+            ? 'Try adjusting your search or filters to find what you need.'
+            : 'Due diligence entries will appear here when they are created.'}
+          action={hasActiveFilters && <button type="button" className="dd-btn-secondary" onClick={handleClearFilters}>Clear filters</button>}
+        />
       ) : (
         <>
           <div className="dd-table-wrapper">

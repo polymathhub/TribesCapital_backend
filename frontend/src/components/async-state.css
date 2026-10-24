@@ -1,0 +1,67 @@
+.async-state {
+  --async-accent: #5b21b6;
+  display: flex;
+  min-width: 0;
+  min-height: 176px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  border: 1px solid #ece8f4;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff 0%, #fcfbff 100%);
+  color: #475467;
+  text-align: center;
+}
+
+.async-state-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  border: 1px solid #e9ddf8;
+  border-radius: 14px;
+  background: #f7f2ff;
+  color: var(--async-accent);
+}
+
+.async-state-copy { max-width: 420px; }
+.async-state-copy strong { display: block; color: #1f2937; font-size: 14px; font-weight: 700; line-height: 1.4; }
+.async-state-copy p { margin: 5px 0 0; color: #667085; font-size: 12px; line-height: 1.6; }
+.async-state-action { display: flex; justify-content: center; margin-top: 1px; }
+.async-state-action button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 13px;
+  border: 1px solid #e3d7f2;
+  border-radius: 9px;
+  background: #fff;
+  color: #542293;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+.async-state-action button:hover { transform: translateY(-1px); border-color: #cbb8e6; background: #faf7ff; }
+.async-state-action button:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
+
+.async-state-error { border-color: #f1d5d5; background: #fffafa; }
+.async-state-error .async-state-icon { border-color: #f3d3d3; background: #fff1f1; color: #b42318; }
+
+.async-state.is-compact {
+  min-height: 112px;
+  gap: 8px;
+  padding: 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.async-state.is-compact .async-state-icon { width: 36px; height: 36px; flex-basis: 36px; border-radius: 11px; }
+.async-state.is-compact .async-state-copy strong { font-size: 12px; }
+.async-state.is-compact .async-state-copy p { font-size: 11px; }

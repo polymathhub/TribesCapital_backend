@@ -9,6 +9,7 @@ import HelpPage from './HelpPage';
 import MessagingPage from './MessagingPage';
 import ProfileSettings from '../components/ProfileSettings';
 import ProfileAvatar from '../components/ProfileAvatar';
+import AsyncState from '../components/AsyncState';
 import { coursesAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
 import wavingHandIllustration from '../assets/illustrations/waving-hand-skin-4-svgrepo-com.svg';
 import { formatRelativeTime } from '../utils/learningHubProgress';
@@ -331,6 +332,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   const [dashboardCourses, setDashboardCourses] = useState([]);
   const [dashboardEvents, setDashboardEvents] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardLoadErrors, setDashboardLoadErrors] = useState({ courses: false, events: false });
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -506,10 +508,18 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
   }, []);
 
   const loadDashboardData = React.useCallback(async () => {
+    setDashboardLoading(true);
+    setDashboardLoadErrors({ courses: false, events: false });
     try {
       const [coursesRes, eventsRes, enrolledRes] = await Promise.all([
-        coursesAPI.list({ skip: 0, take: 8 }).catch(() => ({ data: [] })),
-        eventsAPI.list({ skip: 0, take: 6 }).catch(() => ({ data: [] })),
+        coursesAPI.list({ skip: 0, take: 8 }).catch(() => {
+          if (isMountedRef.current) setDashboardLoadErrors((current) => ({ ...current, courses: true }));
+          return { data: [] };
+        }),
+        eventsAPI.list({ skip: 0, take: 6 }).catch(() => {
+          if (isMountedRef.current) setDashboardLoadErrors((current) => ({ ...current, events: true }));
+          return { data: [] };
+        }),
         coursesAPI.getEnrolled().catch(() => ({ data: [] })),
       ]);
 
@@ -1013,7 +1023,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                 </div>
                 <div className="notification-list" style={{ maxHeight:'min(360px, calc(100vh - 160px))', overflowY:'auto' }}>
                   {notificationsLoading ? (
-                    <div className="notification-empty" style={{ padding:'18px 16px', color:T2, fontSize:13, textAlign:'center', background:W }}>Loading notifications…</div>
+                    <AsyncState variant="loading" skeleton="rows" rows={2} compact title="Loading notifications" />
                   ) : notifications.length > 0 ? notifications.map((item) => (
                     <button
                       key={item.id || item.title}
@@ -1027,7 +1037,7 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       <div style={{ fontSize:11.5, color:T3 }}>{item.time}</div>
                     </button>
                   )) : (
-                    <div className="notification-empty" style={{ padding:'18px 16px', color:T2, fontSize:13, textAlign:'center', background:W }}>No notifications yet.</div>
+                    <AsyncState variant="empty" compact title="You’re all caught up" description="New notifications will show up here." />
                   )}
                 </div>
               </div>
@@ -1161,13 +1171,25 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                         );
                       })}
                     </div>
+                  ) : dashboardLoading ? (
+                    <AsyncState variant="loading" skeleton="cards" rows={2} compact title="Loading learning content" />
+                  ) : dashboardLoadErrors.courses ? (
+                    <AsyncState
+                      variant="error"
+                      compact
+                      title="Learning content couldn’t load"
+                      description="Please check your connection and try again."
+                      action={<button type="button" onClick={() => void loadDashboardData()}>Try again</button>}
+                    />
                   ) : (
-                    <div className="home-dashboard-empty-state">
-                      <span className="home-dashboard-empty-icon"><Icon name="book" size={22} color={P} /></span>
-                      <strong>{dashboardLoading ? 'Loading your learning space…' : 'Your next learning opportunity starts here'}</strong>
-                      <span>{dashboardLoading ? 'Courses will appear as soon as they are ready.' : 'Explore the Learning Hub to find courses and resources.'}</span>
-                      {!dashboardLoading && <button type="button" onClick={() => onNavigate('learning')}>Visit Learning Hub <Icon name="arrow" size={13} color={P} /></button>}
-                    </div>
+                    <AsyncState
+                      variant="empty"
+                      icon="courses"
+                      compact
+                      title="Your next learning opportunity starts here"
+                      description="Explore the Learning Hub to find courses and resources."
+                      action={<button type="button" onClick={() => onNavigate('learning')}>Visit Learning Hub <Icon name="arrow" size={13} color={P} /></button>}
+                    />
                   )}
                 </section>
 
@@ -1192,11 +1214,25 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                         </span>
                         <Icon name="arrow" size={13} color={T3} />
                       </button>
-                    )) : (
-                      <div className="home-dashboard-event-empty">
-                        <span>{dashboardLoading ? 'Finding upcoming events…' : 'There are no upcoming events to show right now.'}</span>
-                        {!dashboardLoading && <button type="button" onClick={() => onNavigate('events')}>Browse events <Icon name="arrow" size={13} color={P} /></button>}
-                      </div>
+                    )) : dashboardLoading ? (
+                      <AsyncState variant="loading" skeleton="rows" rows={2} compact title="Loading upcoming events" />
+                    ) : dashboardLoadErrors.events ? (
+                      <AsyncState
+                        variant="error"
+                        compact
+                        title="Events couldn’t load"
+                        description="Please check your connection and try again."
+                        action={<button type="button" onClick={() => void loadDashboardData()}>Try again</button>}
+                      />
+                    ) : (
+                      <AsyncState
+                        variant="empty"
+                        icon="events"
+                        compact
+                        title="No upcoming events right now"
+                        description="New sessions are added regularly."
+                        action={<button type="button" onClick={() => onNavigate('events')}>Browse events <Icon name="arrow" size={13} color={P} /></button>}
+                      />
                     )}
                   </div>
                 </section>
@@ -1247,8 +1283,13 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                       </button>
                     );
                   })}
-                  {!dashboardLoading && updatesFeed.length === 0 && <div className="home-dashboard-empty-state">New courses, events, and community updates will appear here.</div>}
-                  {dashboardLoading && updatesFeed.length === 0 && <div className="home-dashboard-empty-state">Loading your latest community activity…</div>}
+                  {dashboardLoading && updatesFeed.length === 0 && <AsyncState variant="loading" skeleton="rows" rows={2} compact title="Loading community activity" />}
+                  {!dashboardLoading && updatesFeed.length === 0 && (dashboardLoadErrors.courses || dashboardLoadErrors.events) ? (
+                    <AsyncState variant="error" compact title="Community activity couldn’t load" description="Please try again in a moment." action={<button type="button" onClick={() => void loadDashboardData()}>Try again</button>} />
+                  ) : null}
+                  {!dashboardLoading && updatesFeed.length === 0 && !dashboardLoadErrors.courses && !dashboardLoadErrors.events && (
+                    <AsyncState variant="empty" icon="default" compact title="Your community is getting started" description="New courses, events, and updates will appear here." />
+                  )}
                 </div>
               </section>
             </div>

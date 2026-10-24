@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { eventsAPI } from '../api/endpoints';
 import { COLORS } from '../constants/colors';
+import Skeleton from '../components/Skeleton';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
 
@@ -81,7 +82,7 @@ export default function AdminEventRequests({ user, isMobile = false }) {
         {error && <div role="alert" style={{ marginBottom: 18, padding: '12px 14px', borderRadius: 8, background: COLORS.AMB, color: '#92400E', border: '1px solid #FCD34D' }}>{error}</div>}
         {notice && <div role="status" style={{ marginBottom: 18, padding: '12px 14px', borderRadius: 8, background: COLORS.GRB, color: '#047857', border: '1px solid #A7F3D0' }}>{notice}</div>}
 
-        {loading ? <div style={{ padding: 28, background: COLORS.W, border: `1px solid ${COLORS.BD}`, borderRadius: 12, color: COLORS.T2 }}>Loading pending requests...</div> : requests.length === 0 ? (
+        {loading ? <Skeleton variant="cards" rows={3} columns={2} label="Loading pending event requests" /> : requests.length === 0 ? (
           <section style={{ padding: isMobile ? 28 : 48, textAlign: 'center', background: COLORS.W, border: `1px solid ${COLORS.BD}`, borderRadius: 12 }}>
             <h2 style={{ margin: '0 0 8px', fontSize: 20 }}>Nothing waiting for review</h2>
             <p style={{ margin: 0, color: COLORS.T2 }}>New event requests will appear here when members submit them.</p>

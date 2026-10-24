@@ -13,6 +13,7 @@ import React, {
 import { authAPI, communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
 import { LEARNING_HUB_VIDEOS } from './data/learningHubVideos';
 import ProfileAvatar from './components/ProfileAvatar';
+import Skeleton from './components/Skeleton';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Activity01Icon, Calendar01Icon, CheckmarkCircle01Icon, EnergyIcon, Location01Icon, UserCircleIcon } from '@hugeicons/core-free-icons';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
@@ -311,7 +312,7 @@ const STYLES = `
 
 .dash-home{display:grid;width:100%;gap:clamp(26px,3vw,38px);color:var(--ink-900)}
 .home-dashboard{gap:22px}
-.home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:246px;padding:24px 420px 24px 28px;overflow:visible;border-radius:16px;background:linear-gradient(108deg,#4C0099 0%,#6D00B5 52%,#8B16E8 100%);box-shadow:0 14px 28px rgba(76,0,153,.3);color:#fff}
+.home-dashboard-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:246px;padding:24px 420px 24px 28px;overflow:visible;border-radius:16px;background:linear-gradient(108deg,#2E1065 0%,#3B0764 55%,#5B21B6 100%);box-shadow:0 14px 28px rgba(46,16,101,.3);color:#fff}
 .home-dashboard-hero::before,.home-dashboard-hero::after{display:none}
 .home-dashboard-hero-copy{position:relative;z-index:1;min-width:0;max-width:560px}
 .home-dashboard-eyebrow{display:flex;align-items:center;margin:0 0 12px}
@@ -367,7 +368,7 @@ const STYLES = `
 .home-dashboard-activity-time{white-space:nowrap}
 .home-dashboard-empty{padding:25px 16px!important;color:#6b7280!important;text-align:center}
 .member-home{gap:22px}
-.member-home-hero{position:relative;display:flex;min-height:190px;align-items:center;justify-content:flex-start;gap:28px;margin:0;padding:28px 32px;overflow:hidden;border-radius:20px;background:linear-gradient(112deg,#35106F 0%,#5B21B6 58%,#7C3AED 100%);box-shadow:0 18px 38px rgba(76,29,149,.2);color:#fff}
+.member-home-hero{position:relative;display:flex;min-height:190px;align-items:center;justify-content:flex-start;gap:28px;margin:0;padding:28px 32px;overflow:hidden;border-radius:20px;background:linear-gradient(112deg,#2E1065 0%,#3B0764 58%,#5B21B6 100%);box-shadow:0 18px 38px rgba(46,16,101,.24);color:#fff}
 .member-home-hero::before,.member-home-hero::after{position:absolute;content:'';border-radius:50%;pointer-events:none}
 .member-home-hero::before{width:330px;height:330px;right:18%;top:-265px;background:rgba(255,255,255,.08)}
 .member-home-hero::after{width:220px;height:220px;right:-90px;bottom:-155px;background:rgba(255,255,255,.08)}
@@ -438,8 +439,8 @@ const STYLES = `
 .member-home button:focus-visible{outline:2px solid #6d28d9;outline-offset:2px}
 @media(max-width:1100px){.member-home .home-dashboard-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.member-home-content-grid{grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr)}.member-home-course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.member-home-content-grid{grid-template-columns:1fr}.member-home-course-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:600px){.member-home{gap:18px}.member-home-hero{width:calc(100% + 2 * var(--tc-page-gutter-x));min-height:0;margin-right:calc(0px - var(--tc-page-gutter-x));margin-left:calc(0px - var(--tc-page-gutter-x));padding:22px;border-radius:0}.member-home-hero-copy>p:not(.member-home-eyebrow){font-size:11px}.member-home .home-dashboard-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.member-home .home-dashboard-shortcut{min-height:58px;padding:8px 9px}.member-home .home-dashboard-shortcut-icon{width:22px;height:22px;flex-basis:22px}.member-home-course-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 11px 12px}.member-home-panel>.home-dashboard-section-head{padding:14px 13px 11px}.member-home-event-list,.member-home-recent-list{padding-right:12px;padding-left:12px}.member-home .home-dashboard-section-head{align-items:flex-start}}
-@media(max-width:420px){.member-home-hero{align-items:flex-start;padding:18px}.member-home-hero h1{font-size:22px}.member-home-actions button{min-height:35px;padding:0 10px;font-size:10px}.member-home-course-grid{gap:8px}.member-home-course-image{min-height:86px}.member-home .home-dashboard-activity-time{font-size:8px}}
+@media(max-width:600px){.member-home{gap:18px}.member-home-hero{width:calc(100% + 2 * var(--tc-page-gutter-x));min-height:320px;margin-right:calc(0px - var(--tc-page-gutter-x));margin-left:calc(0px - var(--tc-page-gutter-x));padding:22px;border-radius:0}.member-home-hero-copy>p:not(.member-home-eyebrow){font-size:11px}.member-home .home-dashboard-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.member-home .home-dashboard-shortcut{min-height:58px;padding:8px 9px}.member-home .home-dashboard-shortcut-icon{width:22px;height:22px;flex-basis:22px}.member-home-course-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 11px 12px}.member-home-panel>.home-dashboard-section-head{padding:14px 13px 11px}.member-home-event-list,.member-home-recent-list{padding-right:12px;padding-left:12px}.member-home .home-dashboard-section-head{align-items:flex-start}}
+@media(max-width:420px){.member-home-hero{align-items:center;padding:18px}.member-home-hero h1{font-size:22px}.member-home-actions button{min-height:35px;padding:0 10px;font-size:10px}.member-home-course-grid{gap:8px}.member-home-course-image{min-height:86px}.member-home .home-dashboard-activity-time{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.member-home *{scroll-behavior:auto!important;transition:none!important}}
 .platform-search{display:grid;gap:18px}
 .platform-search-head h1{margin:0;color:#111827;font-size:26px}
@@ -2271,7 +2272,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (max-width:600px){
   .dash-notif-panel{position:fixed;top:calc(64px + env(safe-area-inset-top));right:8px;left:8px;width:auto;max-height:calc(100dvh - 80px);overflow-y:auto}
 }
-
 /* small phones (<= 360px) */
 @media (max-width:360px){
   .dash-app{--tc-page-gutter-x:max(14px,env(safe-area-inset-left),env(safe-area-inset-right))}
@@ -3232,7 +3232,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
               </button>
             ))}
             {!dashboardData.loading && recentActivity.length === 0 && <div className="member-home-empty">Recent activity will appear here.</div>}
-            {dashboardData.loading && recentActivity.length === 0 && <div className="member-home-empty">Loading activity…</div>}
+            {dashboardData.loading && recentActivity.length === 0 && <Skeleton variant="rows" rows={3} compact label="Loading recent activity" />}
           </div>
         </section>
       </div>
@@ -3685,7 +3685,7 @@ function Contractors({ initQ, go, initProf = null, fromEvent = null }) {
   };
 
   if (prof) {
-    if (profileLoading || !pc) return <div role="status" className="sub">Loading contractor profile…</div>;
+    if (profileLoading || !pc) return <Skeleton variant="profile" rows={4} label="Loading contractor profile" />;
     return <>
       <ContractorProfilePage
         pc={pc}

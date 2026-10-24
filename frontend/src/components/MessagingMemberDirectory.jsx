@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { messagingMembersAPI } from '../api/messagingMembers';
 import ProfileAvatar from './ProfileAvatar';
+import AsyncState from './AsyncState';
 import './messaging-member-directory.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
@@ -25,10 +26,13 @@ export default function MessagingMemberDirectory({ activeUserIds = [], onStartDi
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
+  const [directoryError, setDirectoryError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setDirectoryError('');
     messagingMembersAPI.list({ query: query.trim() || undefined, page, limit: 24 })
       .then((response) => {
         if (cancelled) return;
@@ -36,14 +40,17 @@ export default function MessagingMemberDirectory({ activeUserIds = [], onStartDi
         setMembers(Array.isArray(payload) ? payload : []);
         setMeta(response?.data?.meta || { total: 0, totalPages: 1 });
       })
-      .catch(() => {
-        if (!cancelled) setMembers([]);
+      .catch((error) => {
+        if (!cancelled) {
+          setMembers([]);
+          setDirectoryError(error?.response?.data?.message || 'Members could not be loaded. Please try again.');
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [page, query]);
+  }, [page, query, retryCount]);
 
   const activeSet = useMemo(() => new Set(activeUserIds), [activeUserIds]);
   const sortedMembers = useMemo(() => [...members].sort((a, b) => Number(activeSet.has(b.id)) - Number(activeSet.has(a.id))), [activeSet, members]);
@@ -58,7 +65,23 @@ export default function MessagingMemberDirectory({ activeUserIds = [], onStartDi
       <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search members" aria-label="Search members" />
     </label>
     <div className="member-directory-list">
-      {loading ? <div className="member-directory-empty">Loading members…</div> : sortedMembers.length === 0 ? <div className="member-directory-empty">No members found.</div> : sortedMembers.map((member) => {
+      {loading ? <AsyncState variant="loading" skeleton="rows" rows={4} compact title="Loading members" /> : directoryError ? (
+        <AsyncState
+          variant="error"
+          compact
+          title="Member directory unavailable"
+          description={directoryError}
+          action={<button type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</button>}
+        />
+      ) : sortedMembers.length === 0 ? (
+        <AsyncState
+          variant="empty"
+          icon="search"
+          compact
+          title={query.trim() ? 'No members match your search' : 'No members to show'}
+          description={query.trim() ? 'Try a different name or clear your search.' : 'New members will appear here.'}
+        />
+      ) : sortedMembers.map((member) => {
         const online = activeSet.has(member.id);
         return <button key={member.id} type="button" className="member-directory-item" onClick={() => onStartDirectMessage?.(member)}>
           <span className="member-directory-avatar"><ProfileAvatar person={member} alt={`${displayName(member)} profile`} style={{ width: '100%', height: '100%' }} /><i className={online ? 'online' : ''} /></span>

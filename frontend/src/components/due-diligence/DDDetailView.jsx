@@ -4,6 +4,7 @@ import DDItemsPanel from './DDItemsPanel';
 import DDDocumentsPanel from './DDDocumentsPanel';
 import DDCommentsPanel from './DDCommentsPanel';
 import DDApprovalsPanel from './DDApprovalsPanel';
+import Skeleton from '../Skeleton';
 import '../../styles/due-diligence.css';
 
 const DDDetailView = ({ item, loading = false, onBack, onRefresh }) => {
@@ -54,8 +55,8 @@ const DDDetailView = ({ item, loading = false, onBack, onRefresh }) => {
     }
   };
 
-  if (loading && !data) return <div style={{ padding: '24px', color: '#6B7280' }}>Loading full diligence record…</div>;
-  if (!data) return <div style={{ padding: '24px', color: '#6B7280' }}>Loading...</div>;
+  if (loading && !data) return <Skeleton variant="detail" rows={4} label="Loading due diligence record" />;
+  if (!data) return <Skeleton variant="detail" rows={4} label="Loading due diligence record" />;
 
   const tabCounts = {
     items: data.items?.length || 0,
