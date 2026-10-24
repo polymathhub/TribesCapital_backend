@@ -21,6 +21,7 @@ export function AsyncState({
   columns = 3,
   compact = false,
   className = '',
+  illustration,
 }) {
   if (variant === 'loading') {
     return (
@@ -44,7 +45,9 @@ export function AsyncState({
       className={`async-state async-state-${variant}${compact ? ' is-compact' : ''} ${className}`.trim()}
       role={variant === 'error' ? 'alert' : 'status'}
     >
-      <span className="async-state-icon" aria-hidden="true"><Icon size={compact ? 19 : 22} strokeWidth={1.8} /></span>
+      {illustration
+        ? <img className="async-state-illustration" src={illustration} alt="" aria-hidden="true" />
+        : <span className="async-state-icon" aria-hidden="true"><Icon size={compact ? 19 : 22} strokeWidth={1.8} /></span>}
       <div className="async-state-copy">
         {title && <strong>{title}</strong>}
         {description && <p>{description}</p>}

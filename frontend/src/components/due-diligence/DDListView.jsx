@@ -155,6 +155,7 @@ const DDListView = ({ items, loading, onViewDetail, onFilterChange, onPageChange
         <AsyncState
           variant="empty"
           icon={hasActiveFilters ? 'search' : undefined}
+          illustration={hasActiveFilters ? '/illustrations/no-data.png' : undefined}
           title={hasActiveFilters ? 'No entries match these filters' : 'No due diligence entries yet'}
           description={hasActiveFilters
             ? 'Try adjusting your search or filters to find what you need.'

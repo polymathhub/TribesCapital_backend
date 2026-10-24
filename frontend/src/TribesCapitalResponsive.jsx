@@ -457,6 +457,10 @@ const STYLES = `
 .platform-search-result-copy span{overflow:hidden;color:#667085;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
 .platform-search-result-kind{margin-left:auto;padding:4px 8px;border-radius:999px;background:#f3f0ff;color:#5b21b6;font-size:10px;font-weight:700;white-space:nowrap}
 .platform-search-empty{padding:24px 16px;color:#667085;font-size:13px;text-align:center}
+.platform-search-empty-state{display:flex;min-height:320px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px 20px;border:1px solid #e8eaf0;border-radius:16px;background:#fff;text-align:center}
+.platform-search-empty-state img{display:block;width:min(100%,210px);height:auto;object-fit:contain}
+.platform-search-empty-state strong{color:#1f2937;font-size:17px}
+.platform-search-empty-state p{max-width:400px;margin:0;color:#667085;font-size:13px;line-height:1.55}
 .platform-search-result:focus-visible{outline:2px solid #4f46e5;outline-offset:-2px}
 @media(max-width:1100px){.home-dashboard-shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:680px){.home-dashboard{gap:18px}.home-dashboard-hero{min-height:410px;align-items:flex-start;padding:22px 20px 20px;gap:12px}.home-dashboard-hero-copy{z-index:3;width:58%;max-width:360px}.home-dashboard-hero h1{width:max-content;max-width:calc(100vw - 40px);flex-wrap:nowrap;white-space:nowrap;font-size:25px;letter-spacing:-.03em}.home-dashboard-hero h1 span{flex:0 0 auto}.home-dashboard-hero-copy>p:not(.home-dashboard-eyebrow){max-width:100%;font-size:13px}.home-dashboard-hero-tags{position:relative;z-index:3;flex-direction:column;align-items:flex-start;gap:7px;margin-top:8px}.home-dashboard-hero-tags span{max-width:100%;font-size:11px}.home-dashboard-hero-art{right:-74px;bottom:0;width:320px;height:320px}.home-dashboard-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-dashboard-shortcut{min-height:118px}}
@@ -516,9 +520,26 @@ const STYLES = `
 .forum-visual-foot strong{color:#fff;font-size:14px}
 .forum-filters{margin-bottom:24px}
 .forum-filter-label{width:100%;margin:0 0 2px;color:#4B5563;font-size:12px;font-weight:700}
-.forum-post{padding:28px!important;border-radius:12px!important;transition:border-color .18s ease,box-shadow .18s ease}
-.forum-post:hover{border-color:#C4B5FD;box-shadow:0 10px 26px rgba(46,16,101,.07)}
-.forum-post .disc-title-btn h3{font-size:17px!important;line-height:1.4}
+.forum-post{padding:24px!important;border-radius:18px!important;transition:border-color .18s ease,box-shadow .18s ease}
+.forum-post:hover{border-color:#D8C7F5;box-shadow:0 12px 28px rgba(46,16,101,.07)}
+.forum-post-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}
+.forum-post-author{display:flex;align-items:center;gap:12px;min-width:0}
+.forum-post-byline{min-width:0}
+.forum-post-name-row{display:flex;align-items:baseline;gap:8px;min-width:0}
+.forum-post-name{overflow:hidden;color:#1F2937;font-size:14px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.forum-post-time{flex:0 0 auto;color:#98A2B3;font-size:12px;white-space:nowrap}
+.forum-post-role{margin-top:3px;color:#98A2B3;font-size:12px}
+.forum-post-topic{flex:0 0 auto;max-width:42%;overflow:hidden;padding:7px 12px;border:1px solid #E9D5FF;border-radius:999px;background:#F7F0FF;color:#5B21B6;font-size:11px;font-weight:700;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+.forum-post .disc-title-btn{width:100%}
+.forum-post .disc-title-btn h3{margin:0 0 9px!important;color:#202938;font-size:20px!important;font-weight:700;line-height:1.35}
+.forum-post-excerpt{margin:0!important;color:#596579;font-size:15px;line-height:1.6}
+.forum-post-footer{display:grid;gap:14px;margin-top:20px;padding-top:16px;border-top:1px solid #EAECF0}
+.forum-post-metrics{display:flex;align-items:center;flex-wrap:wrap;gap:10px 22px;color:#98A2B3;font-size:13px}
+.forum-post-metric{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.forum-post-like{padding:0;border:0;background:none;color:#667085;cursor:pointer;font:inherit}
+.forum-post-like:hover,.forum-post-like[aria-pressed="true"]{color:#5B21B6}
+.forum-post-join{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:0;border:0;background:none;color:#7C3AED;cursor:pointer;font:inherit;font-size:16px;font-weight:700}
+.forum-post-join:hover{color:#5B21B6}
 .forum-rail .forum-topic-panel{background:#FAF5FF;border-color:#E9D5FF}
 .forum-rail .forum-member-panel{background:#fff;border-color:#E9D5FF}
 .forum-topic-row{padding:9px 0;border-bottom:1px solid rgba(91,33,182,.1)}
@@ -526,6 +547,8 @@ const STYLES = `
 .forum-topic-swatch{width:9px;height:9px;flex:0 0 9px;border-radius:2px;background:#7C3AED}
 .forum-topic-row:nth-child(3n) .forum-topic-swatch,.forum-topic-row:nth-child(3n + 1) .forum-topic-swatch{background:#5B21B6}
 .forum-empty-state{display:flex;width:min(100%,760px);min-height:260px;align-self:center;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-color:#DDD6FE!important;background:#FAF5FF!important;text-align:center}
+.forum-empty-state.forum-empty-illustrated{min-height:320px;padding:28px 24px;border-color:#E8EAF0!important;background:#fff!important;box-shadow:0 10px 28px rgba(46,16,101,.05)}
+.forum-empty-illustration{display:block;width:min(100%,220px);height:auto;margin-bottom:-8px;object-fit:contain}
 .forum-empty-icon{display:grid;place-items:center;width:54px;height:54px;border-radius:12px;background:#EDE9FE}
 .forum-empty-state strong{color:#2E1065;font-size:16px}
 .forum-loading-state{display:grid;grid-template-columns:1fr 1fr;align-content:center;justify-items:start;padding:28px}
@@ -535,7 +558,20 @@ const STYLES = `
 @keyframes forum-shimmer{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.forum-loading-state span{animation:none}}
 @media(max-width:760px){.forum-hero{grid-template-columns:1fr;gap:26px;padding:26px 22px}.forum-visual{justify-self:stretch;width:100%;max-width:none;padding:18px}.forum-hero h1{font-size:25px}}
-@media(max-width:480px){.forum-visual-foot{gap:14px}.forum-post{padding:20px!important}}
+@media(max-width:480px){
+  .forum-visual-foot{gap:14px}
+  .forum-post{padding:20px!important;border-radius:16px!important}
+  .forum-post-head{gap:10px;margin-bottom:18px}
+  .forum-post-author{gap:10px}
+  .forum-post-name{max-width:34vw;font-size:13px}
+  .forum-post-time,.forum-post-role{font-size:11px}
+  .forum-post-topic{max-width:40%;padding:6px 9px;font-size:10px}
+  .forum-post .disc-title-btn h3{font-size:18px!important}
+  .forum-post-excerpt{font-size:14px}
+  .forum-post-metrics{gap:10px 16px;font-size:12px}
+  .forum-post-footer{gap:13px}
+  .forum-post-join{font-size:15px}
+}
 .submit-project-page{max-width:820px;margin:0 auto;padding:28px 0}
 .submit-project-heading{margin-bottom:24px}
 .submit-project-heading>span{font-size:11px;font-weight:700;letter-spacing:.08em;color:#5B21B6}
@@ -2909,7 +2945,13 @@ function PlatformSearchResults({ query, accountType, onOpenResult }) {
           Some sources couldn’t be searched: {state.errors.join(', ')}. Results may be incomplete.
         </p>
       )}
-      {groups.map((group) => (
+      {!state.loading && state.results.length === 0 ? (
+        <div className="platform-search-empty-state" role="status">
+          <img src="/illustrations/no-data.png" alt="" aria-hidden="true" />
+          <strong>No results found</strong>
+          <p>We couldn’t find anything for “{query}”. Try a different search term.</p>
+        </div>
+      ) : groups.map((group) => (
         <section className="platform-search-section" key={group.title} aria-label={group.title}>
           <h2>{group.title}</h2>
           <div className="platform-search-results">
@@ -2928,7 +2970,7 @@ function PlatformSearchResults({ query, accountType, onOpenResult }) {
                 <span className="platform-search-result-kind">{result.kind}</span>
               </button>
             ))}
-            {!state.loading && group.entries.length === 0 && (
+            {!state.loading && state.results.length > 0 && group.entries.length === 0 && (
               <p className="platform-search-empty">{group.title === 'Pages' ? 'No matching pages.' : 'No matching content found.'}</p>
             )}
             {state.loading && group.entries.length === 0 && (
@@ -3713,7 +3755,7 @@ function Contractors({ initQ, go, initProf = null, fromEvent = null }) {
       {!loading && list.length === 0 && (
         <div className="tca-empty-state-wrap">
           <div className="tca-empty-state-content">
-            <img className="tca-empty-state-illustration" src="/illustrations/business-partnership-deal-illustration.svg" alt="No contractors found illustration" />
+            <img className="tca-empty-state-illustration" src={filtered ? '/illustrations/no-data.png' : '/illustrations/business-partnership-deal-illustration.svg'} alt="" aria-hidden="true" />
             <h3>{filtered ? 'No contractors match your filters' : 'No contractor listings yet'}</h3>
             <p>{filtered ? 'Try a different service, location or search term.' : 'List your business to create the first listing.'}</p>
           </div>
@@ -4223,14 +4265,24 @@ function Community({ open, user, toast, onOpenMessaging }) {
     <div className="lay"><div className="sp forum-post-list" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {loading && <div role="status" aria-label="Loading discussions" className="card forum-empty-state forum-loading-state"><span /><span /><span /><span /><span /><span /></div>}
       {!loading && loadError && <div role="alert" className="card forum-empty-state"><strong>Discussions couldn’t load</strong><p className="sub">{loadError}</p><button type="button" className="btn bo" onClick={() => setReloadKey((key) => key + 1)}>Try again</button></div>}
-      {!loading && !loadError && shown.length === 0 && <div className="card forum-empty-state"><span className="forum-empty-icon"><Icon name="message" size={26} color="#5B21B6" /></span><strong>{f === "Following" ? "Your followed conversations will appear here" : "The next good conversation starts here"}</strong><p className="sub">{f === "Following" ? "Follow members whose ideas you want to keep up with." : "Share a question or perspective with the community."}</p></div>}
+      {!loading && !loadError && shown.length === 0 && <div className="card forum-empty-state forum-empty-illustrated"><img className="forum-empty-illustration" src="/illustrations/no-data.png" alt="" aria-hidden="true" /><strong>{f === "Following" ? "Your followed conversations will appear here" : "The next good conversation starts here"}</strong><p className="sub">{f === "Following" ? "Follow members whose ideas you want to keep up with." : "Share a question or perspective with the community."}</p></div>}
       {!loading && !loadError && shown.map((p) => <div className="card forum-post" key={p.id}>
-        <div className="row" style={{ justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start" }}><div className="row"><Ava c={p.c} t={p.n[0]} person={p.creator} /><div><b style={{ fontSize: 13.5 }}>{p.n} <span className="mut" style={{ fontWeight: 400 }}>· {p.w}</span></b><div className="mut">{p.r}</div></div></div><span className="tp">{p.tag}</span></div>
-        <button className="disc-title-btn" onClick={() => void openPost(p.id)}><h3 style={{ fontSize: 15, marginBottom: 8 }}>{p.t}</h3></button>
-        <p className="sub" style={{ marginBottom: 14 }}>{p.b.split("\n\n")[0]}</p>
-        <div className="row wrap" style={{ justifyContent: "space-between", gap: 14 }}>
-          <div className="row wrap mut" style={{ gap: 18 }}><span className="row" style={{ gap: 6 }}><Icon name="message" size={16} />{p.rp} replies</span><button className="lk" style={{ color: liked[p.id] ? "var(--p7)" : "var(--i4)", fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={() => void toggleLike(p.id)}><Icon name={liked[p.id] ? "heartFilled" : "heart"} size={16} />{p.lk} likes</button><span className="row" style={{ gap: 6 }}><Icon name="eye" size={16} />{p.vw} views</span></div>
-          <button className="lk" onClick={() => void openPost(p.id)}>Join discussion →</button>
+        <div className="forum-post-head">
+          <div className="forum-post-author"><Ava c={p.c} t={p.n[0]} s={42} person={p.creator} /><div className="forum-post-byline">
+            <div className="forum-post-name-row"><span className="forum-post-name">{p.n}</span><span className="forum-post-time">{p.w}</span></div>
+            <div className="forum-post-role">{p.r}</div>
+          </div></div>
+          <span className="forum-post-topic">{p.tag}</span>
+        </div>
+        <button className="disc-title-btn" onClick={() => void openPost(p.id)}><h3>{p.t}</h3></button>
+        <p className="forum-post-excerpt">{p.b.split("\n\n")[0]}</p>
+        <div className="forum-post-footer">
+          <div className="forum-post-metrics">
+            <span className="forum-post-metric"><Icon name="message" size={16} />{p.rp} replies</span>
+            <button className="forum-post-metric forum-post-like" aria-pressed={!!liked[p.id]} onClick={() => void toggleLike(p.id)}><Icon name={liked[p.id] ? "heartFilled" : "heart"} size={16} />{p.lk} likes</button>
+            <span className="forum-post-metric"><Icon name="eye" size={16} />{p.vw} views</span>
+          </div>
+          <button className="forum-post-join" onClick={() => void openPost(p.id)}>Join discussion <Icon name="arrowRight" size={18} /></button>
         </div>
       </div>)}
     </div>

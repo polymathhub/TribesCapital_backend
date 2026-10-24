@@ -916,8 +916,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   </div>
                 )}
                 {isSearchOpen && normalizedSearch && searchResults.length === 0 && (
-                  <div style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', padding:'12px 14px', zIndex:40, fontSize:13, color:T2 }}>
-                    No matches found for “{searchQuery}”.
+                  <div role="status" style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, display:'flex', alignItems:'center', gap:10, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', padding:'10px 12px', zIndex:40, fontSize:13, color:T2 }}>
+                    <img src="/illustrations/no-data.png" alt="" aria-hidden="true" style={{ width:52, height:52, objectFit:'contain', flex:'0 0 auto' }} />
+                    <span>No matches found for “{searchQuery}”. Try a different search.</span>
                   </div>
                 )}
               </>
@@ -963,8 +964,9 @@ export default function HomePage({ user, currentPage = 'home', onNavigate = () =
                   </div>
                 )}
                 {isSearchOpen && normalizedSearch && searchResults.length === 0 && (
-                  <div style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', padding:'12px 14px', zIndex:40, fontSize:13, color:T2 }}>
-                    No matches found for “{searchQuery}”.
+                  <div role="status" style={{ position:'absolute', top:'calc(100% + 8px)', left:0, right:0, display:'flex', alignItems:'center', gap:10, background:W, border:`1px solid ${BD}`, borderRadius:12, boxShadow:'0 16px 40px rgba(17,24,39,0.12)', padding:'10px 12px', zIndex:40, fontSize:13, color:T2 }}>
+                    <img src="/illustrations/no-data.png" alt="" aria-hidden="true" style={{ width:52, height:52, objectFit:'contain', flex:'0 0 auto' }} />
+                    <span>No matches found for “{searchQuery}”. Try a different search.</span>
                   </div>
                 )}
               </>

@@ -27,6 +27,13 @@
   color: var(--async-accent);
 }
 
+.async-state-illustration {
+  display: block;
+  width: min(100%, 176px);
+  height: auto;
+  object-fit: contain;
+}
+
 .async-state-copy { max-width: 420px; }
 .async-state-copy strong { display: block; color: #1f2937; font-size: 14px; font-weight: 700; line-height: 1.4; }
 .async-state-copy p { margin: 5px 0 0; color: #667085; font-size: 12px; line-height: 1.6; }
@@ -63,5 +70,6 @@
   background: transparent;
 }
 .async-state.is-compact .async-state-icon { width: 36px; height: 36px; flex-basis: 36px; border-radius: 11px; }
+.async-state.is-compact .async-state-illustration { width: min(100%, 104px); }
 .async-state.is-compact .async-state-copy strong { font-size: 12px; }
 .async-state.is-compact .async-state-copy p { font-size: 11px; }

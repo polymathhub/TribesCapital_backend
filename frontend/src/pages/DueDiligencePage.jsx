@@ -1657,8 +1657,10 @@ export default function DueDiligenceVault() {
               </div>
 
               {filtered.length === 0 ? (
-                <div style={{ background: W, border: `1px solid ${BD}`, borderRadius: 12, padding: '60px 20px', textAlign: 'center' }}>
-                  <p style={{ color: T2, margin: 0, fontSize: 15 }}>No documents match your filters.</p>
+                <div role="status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 280, background: W, border: `1px solid ${BD}`, borderRadius: 12, padding: '32px 20px', textAlign: 'center' }}>
+                  <img src="/illustrations/no-data.png" alt="" aria-hidden="true" style={{ width: 'min(100%, 176px)', height: 'auto', objectFit: 'contain' }} />
+                  <strong style={{ color: T1, fontSize: 16 }}>No documents found</strong>
+                  <p style={{ color: T2, margin: 0, fontSize: 14 }}>Try adjusting your search or filters.</p>
                 </div>
               ) : view === 'grid' ? (
                 <div style={{

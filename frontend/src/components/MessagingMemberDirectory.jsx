@@ -77,6 +77,7 @@ export default function MessagingMemberDirectory({ activeUserIds = [], onStartDi
         <AsyncState
           variant="empty"
           icon="search"
+          illustration={query.trim() ? '/illustrations/no-data.png' : undefined}
           compact
           title={query.trim() ? 'No members match your search' : 'No members to show'}
           description={query.trim() ? 'Try a different name or clear your search.' : 'New members will appear here.'}
