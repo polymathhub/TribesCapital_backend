@@ -12,6 +12,7 @@
 }
 
 .message-row.mine {
+  flex-direction: row;
   justify-content: flex-end;
 }
 
@@ -284,6 +285,10 @@
     margin-bottom: 15px;
   }
 
+  .message-row.mine {
+    justify-content: flex-end;
+  }
+
   .message-content-wrap {
     max-width: min(82%, 620px);
   }
@@ -293,6 +298,7 @@
   }
 
   .message-composer {
+    width: auto;
     gap: 5px;
     padding: 8px 10px max(8px, env(safe-area-inset-bottom));
     border: 0;
