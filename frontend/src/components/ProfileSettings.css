@@ -80,10 +80,10 @@
 .profile-message-button,
 .profile-website-button,
 .profile-more-button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 8px 15px; border: 1px solid #98a2b3; border-radius: 999px; background: transparent; color: #344054; cursor: pointer; font-size: 12px; font-weight: 700; text-decoration: none; }
-.profile-message-button { border-color: #1769aa; background: #1769aa; color: #fff; }
-.profile-message-button:hover { background: #0f568e; }
+.profile-message-button { border-color: var(--profile-purple); background: var(--profile-purple); color: #fff; }
+.profile-message-button:hover { background: #4c1d95; }
 .profile-website-button:hover,
-.profile-more-button:hover { border-color: #1769aa; color: #1769aa; }
+.profile-more-button:hover { border-color: var(--profile-purple); color: var(--profile-purple); }
 .profile-more-wrap { position: relative; }
 .profile-more-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 5; display: grid; min-width: 190px; padding: 5px; border: 1px solid var(--profile-line); border-radius: 8px; background: #fff; box-shadow: 0 12px 30px rgba(16,24,40,.16); }
 .profile-more-menu button { padding: 9px 10px; border: 0; border-radius: 5px; background: transparent; color: var(--profile-ink); text-align: left; cursor: pointer; font-size: 12px; }
@@ -167,7 +167,7 @@
 .profile-social-item a { display: inline-flex; align-items: center; gap: 7px; color: #344054; font-size: 11px; font-weight: 600; text-decoration: none; }
 .profile-social-item a:hover { color: var(--profile-purple); }
 .profile-social-item > button { display: grid; width: 22px; height: 22px; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--profile-muted); cursor: pointer; }
-.profile-social-add { display: inline-flex; align-items: center; justify-content: flex-start; gap: 6px; min-height: 30px; margin: 0; padding: 4px 0; border: 0; border-radius: 0; background: transparent; color: #1769aa; cursor: pointer; font-size: 11px; font-weight: 700; }
+.profile-social-add { display: inline-flex; align-items: center; justify-content: flex-start; gap: 6px; min-height: 30px; margin: 0; padding: 4px 0; border: 0; border-radius: 0; background: transparent; color: var(--profile-purple); cursor: pointer; font-size: 11px; font-weight: 700; }
 .profile-social-add:hover { color: #0f568e; }
 .profile-social-add-form { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
 .profile-social-platforms { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -210,6 +210,8 @@
 .profile-field input,
 .profile-field select,
 .profile-field textarea { width: 100%; min-width: 0; border: 1px solid #d0d5dd; border-radius: 7px; padding: 9px 11px; outline: none; background: #fff; color: var(--profile-ink); font: inherit; font-size: 12px; }
+.profile-settings-page :is(button, a, input, textarea, select):focus-visible,
+.profile-edit-backdrop :is(button, a, input, textarea, select):focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 .profile-field textarea { min-height: 92px; resize: vertical; line-height: 1.5; }
 .profile-field input:focus,
 .profile-field select:focus,

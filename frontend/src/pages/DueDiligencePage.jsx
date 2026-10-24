@@ -415,7 +415,7 @@ function TopBar({ onMenu, isMobile, isTablet, sidebarOpen, search, setSearch }) 
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{
-            width: 36, height: 36, borderRadius: '50%', background: '#A21CAF', color: W,
+            width: 36, height: 36, borderRadius: '50%', background: '#5B21B6', color: W,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600,
           }}>A</div>
           {!isMobile && <span style={{ fontSize: 14, color: T1 }}>Ali</span>}

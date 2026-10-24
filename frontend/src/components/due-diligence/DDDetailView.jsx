@@ -65,7 +65,7 @@ const DDDetailView = ({ item, loading = false, onBack, onRefresh }) => {
   };
 
   return (
-    <div>
+    <div className="dd-detail-view">
       {/* Header */}
       <div className="dd-detail-header">
         <button onClick={onBack} className="dd-back-button">

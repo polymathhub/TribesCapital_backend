@@ -2,21 +2,22 @@
 /*                     DUE DILIGENCE STYLING (Senior-Level)                   */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-:root {
-  --primary: #8B21B6;
-  --primary-dark: #5B21B6;
-  --primary-light: #C084FC;
-  --success: #10B981;
-  --warning: #F59E0B;
-  --danger: #EF4444;
-  --info: #3B82F6;
+.dd-list-container,
+.dd-detail-view {
+  --primary: #5B21B6;
+  --primary-dark: #4C1D95;
+  --primary-light: #7C3AED;
+  --success: #059669;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --info: #1D4ED8;
   --critical: #7C3AED;
   --bg: #FFFFFF;
   --surface: #FFFFFF;
   --border: #E5E7EB;
   --text-primary: #111827;
   --text-secondary: #6B7280;
-  --text-muted: #9CA3AF;
+  --text-muted: #667085;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -74,6 +75,12 @@
 
 .dd-btn-primary:active {
   transform: translateY(0);
+}
+
+.dd-list-container :focus-visible,
+.dd-detail-view :focus-visible {
+  outline: 2px solid #7C3AED;
+  outline-offset: 2px;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */

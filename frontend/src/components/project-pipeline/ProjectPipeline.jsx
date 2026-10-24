@@ -714,7 +714,10 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
 
   const [projects, setProjects] = useState([]);
-  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [approvedProjectsError, setApprovedProjectsError] = useState('');
+  const [savedProjectsError, setSavedProjectsError] = useState('');
+  const projectsLoadError = [approvedProjectsError, savedProjectsError].filter(Boolean).join(' ');
   const [activeStage, setActiveStage] = useState(null);
   const [fType, setFType] = useState('');
   const [topSearch, setTop] = useState('');
@@ -730,7 +733,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const [toast, setToast] = useState(null);
 
   const syncApprovedPipelineProjects = async () => {
-    setLoadingProjects(true);
+    setApprovedProjectsError('');
     try {
       const response = await dueDiligenceAPI.list({ page: 1, limit: 100, status: 'approved' });
       const payload = unwrapApiData(response);
@@ -755,12 +758,12 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
       });
     } catch (error) {
       console.error('Failed to load approved due diligence projects:', error);
-    } finally {
-      setLoadingProjects(false);
+      setApprovedProjectsError('Approved projects could not be loaded.');
     }
   };
 
   const syncSavedPipelineProjects = async () => {
+    setSavedProjectsError('');
     try {
       const response = await projectsAPI.list({ take: 100 });
       const payload = unwrapApiData(response);
@@ -769,12 +772,18 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
       setProjects((previous) => [...savedProjects, ...previous.filter((project) => project.dueDiligenceId)]);
     } catch (error) {
       console.error('Failed to load saved pipeline projects:', error);
+      setSavedProjectsError('Saved projects could not be loaded.');
     }
   };
 
+  const loadProjects = async () => {
+    setLoadingProjects(true);
+    await Promise.all([syncApprovedPipelineProjects(), syncSavedPipelineProjects()]);
+    setLoadingProjects(false);
+  };
+
   useEffect(() => {
-    void syncApprovedPipelineProjects();
-    void syncSavedPipelineProjects();
+    void loadProjects();
   }, []);
 
   useEffect(() => {
@@ -977,6 +986,16 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
         ::-webkit-scrollbar{width:6px;height:6px;}
         ::-webkit-scrollbar-thumb{background:#D3D5DA;border-radius:10px;}
         :focus-visible{outline:2px solid ${PL};outline-offset:2px;}
+        @keyframes pipeline-shimmer{to{background-position:-200% 0}}
+        .pipeline-loading-state{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:24px;padding:16px}
+        .pipeline-loading-line,.pipeline-loading-cards span{display:block;height:14px;border-radius:8px;background:linear-gradient(90deg,#F1ECF8 25%,#E6DCF1 50%,#F1ECF8 75%);background-size:200% 100%;animation:pipeline-shimmer 1.3s ease-in-out infinite}
+        .pipeline-loading-line{grid-column:1/-1;width:42%}
+        .pipeline-loading-line.short{width:25%;height:10px}
+        .pipeline-loading-cards{display:contents}
+        .pipeline-loading-cards span{height:150px;margin-top:10px;border-radius:14px}
+        .pipeline-loading-label{grid-column:1/-1;color:${T2};font-size:13px;text-align:center}
+        @media(max-width:639px){.pipeline-loading-state{grid-template-columns:1fr 1fr;gap:10px;padding:8px}.pipeline-loading-cards span{height:115px}}
+        @media(prefers-reduced-motion:reduce){.pipeline-loading-line,.pipeline-loading-cards span{animation:none}}
       `}</style>
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -1037,7 +1056,20 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               ))}
             </div>
 
-            {!activeStage ? (
+            {loadingProjects ? (
+              <div className="pipeline-loading-state" role="status" aria-label="Loading projects">
+                <span className="pipeline-loading-line" />
+                <span className="pipeline-loading-line short" />
+                <div className="pipeline-loading-cards"><span /><span /><span /><span /></div>
+                <span className="pipeline-loading-label">Loading projects…</span>
+              </div>
+            ) : projectsLoadError ? (
+              <div role="alert" style={{ marginTop: 24, padding: 24, border: `1px solid ${BD}`, borderRadius: 16, background: W, textAlign: 'center' }}>
+                <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>Projects couldn’t load</h2>
+                <p style={{ margin: '0 0 16px', color: T2, fontSize: 14 }}>{projectsLoadError}</p>
+                <button type="button" onClick={() => void loadProjects()} style={{ minHeight: 44, padding: '10px 18px', border: 0, borderRadius: 10, background: P, color: W, fontWeight: 700, cursor: 'pointer' }}>Try again</button>
+              </div>
+            ) : !activeStage ? (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '28px 0 16px', flexWrap: 'wrap' }}>
                   <div>

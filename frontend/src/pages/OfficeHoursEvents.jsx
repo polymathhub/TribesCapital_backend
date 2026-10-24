@@ -749,6 +749,9 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [eventsError, setEventsError] = useState(null);
   const [hosts, setHosts] = useState([]);
+  const [hostsLoading, setHostsLoading] = useState(true);
+  const [hostsError, setHostsError] = useState(false);
+  const [eventsRetryKey, setEventsRetryKey] = useState(0);
   const [activeFilter,setFilter]      = useState('all');
   const [showCreate,  setCreate]      = useState(false);
   const [editEv,      setEdit]        = useState(null);
@@ -763,6 +766,8 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
     let isMounted = true;
     const authToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     const loadEvents = async () => {
+      setLoadingEvents(true);
+      setEventsError(null);
       try {
         const response = await eventsAPI.list({ skip: 0, take: 20 });
         const eventItems = unwrapApiData(response);
@@ -814,16 +819,23 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [eventsRetryKey]);
 
   useEffect(() => {
     let isMounted = true;
+    setHostsLoading(true);
+    setHostsError(false);
     communityAPI.listMembers({ take: 3 }).then((response) => {
       const payload = unwrapApiData(response);
       const members = Array.isArray(payload) ? payload : payload?.data || [];
       if (isMounted) setHosts(members.slice(0, 3));
     }).catch(() => {
-      if (isMounted) setHosts([]);
+      if (isMounted) {
+        setHosts([]);
+        setHostsError(true);
+      }
+    }).finally(() => {
+      if (isMounted) setHostsLoading(false);
     });
     return () => { isMounted = false; };
   }, []);
@@ -1053,7 +1065,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
               <button type="button" className="oe-nextup-primary" onClick={() => handleRsvp(featuredEvent.id)}>{featuredEvent.rsvped ? 'Registered' : 'Register'}</button>
               <button type="button" className="oe-nextup-secondary" onClick={() => setDetail(featuredEvent)}>View details</button>
             </div>
-          </> : <div><span className="oe-eyebrow">COMMUNITY CALENDAR</span><h2>{eventsError ? 'Events are temporarily unavailable' : 'No upcoming events right now'}</h2><p>{eventsError || 'New sessions with contractors and energy experts are added regularly.'}</p></div>}
+          </> : eventsError ? <div><span className="oe-eyebrow">COMMUNITY CALENDAR</span><h2>Events are temporarily unavailable</h2><p>{eventsError}</p><button type="button" className="oe-nextup-primary" onClick={() => setEventsRetryKey((key) => key + 1)}>Try again</button></div> : <div><span className="oe-eyebrow">COMMUNITY CALENDAR</span><h2>No upcoming events right now</h2><p>New sessions with contractors and energy experts are added regularly.</p></div>}
         </section>
 
         <div className="oe-filter-row" role="group" aria-label="Filter events by type">
@@ -1062,9 +1074,9 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
 
         <div className="oe-layout" style={{ gridTemplateColumns: pageGrid }}>
           <section className="oe-main-list" aria-labelledby="oe-upcoming-title">
-            <div className="oe-list-heading"><h2 id="oe-upcoming-title">Upcoming events <span>({displayEvents.length})</span></h2><button type="button" onClick={() => setViewAll(true)}>View all <I k="arr" s={14} c={C.pu}/></button></div>
-            {loadingEvents && <div className="oe-list-empty" role="status">Loading events…</div>}
-            {!loadingEvents && displayEvents.length === 0 && <div className="oe-list-empty"><h3>{eventsError ? 'Could not load events' : 'No events in this category yet'}</h3><p>{eventsError || 'Try another category or get notified when a new session is scheduled.'}</p><button type="button" onClick={handleNotifyMe} disabled={notifyLoading}>Notify me about new events</button></div>}
+            <div className="oe-list-heading"><h2 id="oe-upcoming-title">Upcoming events <span>({eventsError ? '—' : displayEvents.length})</span></h2>{!eventsError && <button type="button" onClick={() => setViewAll(true)}>View all <I k="arr" s={14} c={C.pu}/></button>}</div>
+            {loadingEvents && <div className="oe-loading-skeleton" role="status" aria-label="Loading events"><span/><span/><span/><span/></div>}
+            {!loadingEvents && !eventsError && displayEvents.length === 0 && <div className="oe-list-empty"><h3>No events in this category yet</h3><p>Try another category or get notified when a new session is scheduled.</p><button type="button" onClick={handleNotifyMe} disabled={notifyLoading}>Notify me about new events</button></div>}
             {!loadingEvents && displayEvents.length > 0 && remainingEvents.length === 0 && <div className="oe-list-empty"><h3>Your next session is featured above</h3><p>More sessions will appear here as they are scheduled.</p></div>}
             {remainingEvents.map((event) => <EventCard key={event.id} ev={event} isMobile={isMobile} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onApprove={handleApprove} onRsvp={handleRsvp} isAdmin={isAdmin}/>)}
           </section>
@@ -1072,11 +1084,11 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
           <aside className="oe-sidebar">
             <section className="oe-side-panel">
               <div className="oe-side-heading"><h2>Your registrations</h2>{rsvpedEvents.length > 0 && <button type="button" onClick={() => setViewAll(true)}>View all</button>}</div>
-              {rsvpedEvents.length ? rsvpedEvents.map((event) => <button type="button" className="oe-registration" key={event.id} onClick={() => setDetail(event)}><span className="oe-small-date"><b>{event.month}</b><strong>{event.day}</strong></span><span className="oe-registration-copy"><b>{event.title}</b><small>{event.dateShort}</small></span><span className="oe-rsvped">Registered</span></button>) : <p className="oe-side-empty">You haven't registered for any upcoming events yet.</p>}
+              {loadingEvents ? <p className="oe-side-empty" role="status">Loading registrations…</p> : eventsError ? <p className="oe-side-empty">Registrations are unavailable while events can’t load.</p> : rsvpedEvents.length ? rsvpedEvents.map((event) => <button type="button" className="oe-registration" key={event.id} onClick={() => setDetail(event)}><span className="oe-small-date"><b>{event.month}</b><strong>{event.day}</strong></span><span className="oe-registration-copy"><b>{event.title}</b><small>{event.dateShort}</small></span><span className="oe-rsvped">Registered</span></button>) : <p className="oe-side-empty">You haven't registered for any upcoming events yet.</p>}
             </section>
             <section className="oe-side-panel">
               <div className="oe-side-heading"><h2>Hosts to follow</h2></div>
-              {hosts.length ? hosts.map((host) => { const name = [host.firstName, host.lastName].filter(Boolean).join(' ') || host.displayName || 'Member'; return <div className="oe-host-row" key={host.id}><span className="oe-host-avatar">{name.slice(0, 1).toUpperCase()}</span><span className="oe-host-copy"><b>{name}</b><small>{host.occupation || 'Community member'}</small></span><button type="button" className="oe-follow-button" onClick={() => void handleToggleHostFollow(host)}>{host.isFollowedByMe ? 'Following' : 'Follow'}</button></div>; }) : <p className="oe-side-empty">Community hosts will appear here.</p>}
+              {hostsLoading ? <p className="oe-side-empty" role="status">Loading community hosts…</p> : hostsError ? <p className="oe-side-empty">Community hosts are unavailable right now.</p> : hosts.length ? hosts.map((host) => { const name = [host.firstName, host.lastName].filter(Boolean).join(' ') || host.displayName || 'Member'; return <div className="oe-host-row" key={host.id}><span className="oe-host-avatar">{name.slice(0, 1).toUpperCase()}</span><span className="oe-host-copy"><b>{name}</b><small>{host.occupation || 'Community member'}</small></span><button type="button" className="oe-follow-button" onClick={() => void handleToggleHostFollow(host)}>{host.isFollowedByMe ? 'Following' : 'Follow'}</button></div>; }) : <p className="oe-side-empty">Community hosts will appear here.</p>}
             </section>
             <section className="oe-side-panel oe-recordings-panel"><h2>Missed a session?</h2><p>Recordings from past webinars and workshops are available to watch on demand.</p><button type="button" onClick={() => setFilter('rp')}>Browse replays <I k="arr" s={13} c={C.pu}/></button></section>
           </aside>
@@ -1110,11 +1122,11 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
         @media(max-width:639px){
           .hide-mobile{display:none!important;}
         }
-          .tc-events-nextup{display:flex;align-items:center;justify-content:space-between;gap:28px;min-height:172px;margin-bottom:22px;padding:26px 30px;border-radius:12px;background:linear-gradient(100deg,#6700A6 0%,#8A22C8 100%);color:#fff;}
+          .tc-events-nextup{display:flex;align-items:center;justify-content:space-between;gap:28px;min-height:172px;margin-bottom:22px;padding:26px 30px;border-radius:12px;background:linear-gradient(100deg,#4C1D95 0%,#5B21B6 58%,#7C3AED 100%);color:#fff;}
           .tc-events-empty{display:flex;min-height:310px;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;border:1px solid #ECECF0;border-radius:12px;background:#fff;}
           .tc-events-empty-icon{display:grid;place-items:center;width:52px;height:52px;margin-bottom:16px;border-radius:50%;background:#FAF5FF;}
           .tc-events-empty h3{margin:0 0 8px;color:#1A1A1A;font-size:18px;font-weight:600;}
-          .tc-events-empty p{max-width:460px;margin:0;color:#7A7A85;font-size:13px;line-height:1.6;}
+          .tc-events-empty p{max-width:460px;margin:0;color:#667085;font-size:13px;line-height:1.6;}
           .tc-events-empty-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:18px;}
           .tc-events-button-solid,.tc-events-button-quiet{min-height:38px;padding:0 16px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;}
           .tc-events-button-solid{border:1px solid #6700A6;background:#6700A6;color:#fff;}
@@ -1142,9 +1154,9 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
           .tc-events-registration-date strong{color:#1A1A1A;font-size:17px;font-weight:600;line-height:20px;}
           .tc-events-registration-copy{display:grid;flex:1;min-width:0;gap:3px;}
           .tc-events-registration-copy b{overflow:hidden;color:#1A1A1A;font-size:12px;font-weight:500;text-overflow:ellipsis;white-space:nowrap;}
-          .tc-events-registration-copy small{color:#8A8A93;font-size:11px;}
+          .tc-events-registration-copy small{color:#667085;font-size:11px;}
           .tc-events-rsvped{padding:3px 7px;border-radius:6px;background:#DDF6E8;color:#0F8A5F;font-size:10px;font-weight:500;}
-          .tc-events-empty-registration,.tc-events-info-card p{margin:12px 0 0;color:#8A8A93;font-size:12px;line-height:1.55;}
+          .tc-events-empty-registration,.tc-events-info-card p{margin:12px 0 0;color:#667085;font-size:12px;line-height:1.55;}
           .tc-events-info-card{background:#FAF5FF;border-color:#E9D5FF;}
           .tc-events-info-card h3{color:#6700A6;font-size:13px;}
           .tc-events-info-card button{margin-top:14px;font-size:12px;}
@@ -1152,7 +1164,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
           .tc-events-expect-card li{display:flex;align-items:flex-start;gap:10px;}
           .tc-events-expect-card li>span:last-child{display:grid;gap:3px;}
           .tc-events-expect-card li b{color:#1A1A1A;font-size:12px;font-weight:500;}
-          .tc-events-expect-card li small{color:#8A8A93;font-size:11px;line-height:1.5;}
+          .tc-events-expect-card li small{color:#667085;font-size:11px;line-height:1.5;}
           .tc-events-dot{width:8px;height:8px;margin-top:4px;border-radius:50%;background:#6700A6;flex:none;}
           .tc-events-dot.green{background:#16A34A;}.tc-events-dot.amber{background:#D97706;}
           @media(max-width:760px){.tc-events-nextup{align-items:flex-start;flex-direction:column;gap:18px;padding:22px 20px}.tc-events-nextup h2{font-size:20px}.tc-events-nextup-actions{width:100%}.tc-events-button-light,.tc-events-button-outline{flex:1}.tc-events-calendar-link{width:auto}.tc-event-card{gap:12px!important;padding:12px!important}.tc-event-date{width:48px!important;min-width:48px!important;height:62px!important}.tc-events-registration{align-items:flex-start}.tc-events-rsvped{margin-top:4px}.tc-events-empty{min-height:260px;padding:22px 16px}.tc-events-empty-actions{width:100%;flex-direction:column}.tc-events-empty-actions button{width:100%}}
@@ -1160,11 +1172,11 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
         .oe-page-content{max-width:1240px;width:100%;margin:0 auto}
         .oe-page-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
         .oe-page-header h1{margin:0 0 4px;color:#1F2937;font-size:24px;line-height:32px;font-weight:600}
-        .oe-page-header p{max-width:700px;margin:0;color:#6B6B76;font-size:14px;line-height:20px}
+        .oe-page-header p{max-width:700px;margin:0;color:#667085;font-size:14px;line-height:20px}
         .oe-page-actions{display:flex;flex:none;gap:10px}
         .oe-notify-button,.oe-create-button{display:inline-flex;min-height:40px;align-items:center;justify-content:center;gap:7px;padding:0 16px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
         .oe-notify-button{border:1px solid #DCDCE2;background:#fff;color:#4A4A55}.oe-create-button{border:1px solid #6700A6;background:#6700A6;color:#fff}
-        .oe-nextup{display:flex;align-items:center;justify-content:space-between;gap:28px;min-height:148px;margin-bottom:22px;padding:24px 28px;border-radius:12px;background:linear-gradient(100deg,#6700A6 0%,#8A22C8 100%);color:#fff}
+        .oe-nextup{display:flex;align-items:center;justify-content:space-between;gap:28px;min-height:148px;margin-bottom:22px;padding:24px 28px;border-radius:12px;background:linear-gradient(100deg,#4C1D95 0%,#5B21B6 58%,#7C3AED 100%);color:#fff}
         .oe-nextup-copy{min-width:0;max-width:760px}.oe-eyebrow{display:block;margin-bottom:8px;color:#F1E4FA;font-size:11px;font-weight:600;letter-spacing:.04em}
         .oe-nextup h2{margin:0 0 5px;color:#fff;font-size:22px;line-height:30px;font-weight:600}.oe-nextup p{margin:0;color:#F1E4FA;font-size:13px;line-height:18px}
         .oe-nextup-actions{display:flex;flex:none;align-items:center;gap:10px}.oe-nextup-primary,.oe-nextup-secondary{min-height:40px;padding:0 18px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
@@ -1181,7 +1193,8 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
         .oe-event-meta{display:flex;flex-wrap:wrap;gap:8px 16px;color:#8A8A93;font-size:12px;line-height:18px}.oe-event-meta span{display:inline-flex;align-items:center;gap:6px}
         .oe-event-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid #ECECF0}.oe-event-actions>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}.oe-spots{color:#6700A6;font-size:11px;font-weight:500}
         .oe-secondary-action,.oe-rsvp-action{min-height:32px;padding:0 11px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:500;cursor:pointer}.oe-secondary-action{border:1px solid #D9C2EC;background:#fff;color:#6700A6}.oe-rsvp-action{border:1px solid #6700A6;background:#6700A6;color:#fff}.oe-rsvp-action.registered{border-color:#D9C2EC;background:#fff;color:#6700A6}
-        .oe-list-empty{display:grid;min-height:220px;place-content:center;justify-items:center;gap:9px;padding:24px;border:1px solid #ECECF0;border-radius:12px;background:#fff;text-align:center}.oe-list-empty h3{margin:0;color:#1A1A1A;font-size:16px;font-weight:500}.oe-list-empty p{max-width:460px;margin:0;color:#7A7A85;font-size:12px;line-height:1.6}.oe-list-empty button{min-height:36px;margin-top:5px;padding:0 14px;border:1px solid #6700A6;border-radius:6px;background:#6700A6;color:#fff;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer}
+        .oe-list-empty{display:grid;min-height:220px;place-content:center;justify-items:center;gap:9px;padding:24px;border:1px solid #ECECF0;border-radius:12px;background:#fff;text-align:center}.oe-list-empty h3{margin:0;color:#1A1A1A;font-size:16px;font-weight:500}.oe-list-empty p{max-width:460px;margin:0;color:#667085;font-size:12px;line-height:1.6}.oe-list-empty button{min-height:36px;margin-top:5px;padding:0 14px;border:1px solid #5B21B6;border-radius:6px;background:#5B21B6;color:#fff;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer}
+        .oe-loading-skeleton{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px;border:1px solid #E5E7EB;border-radius:12px;background:#fff}.oe-loading-skeleton span{height:84px;border-radius:8px;background:linear-gradient(90deg,#F1ECF8 25%,#E6DCF1 50%,#F1ECF8 75%);background-size:200% 100%;animation:oe-shimmer 1.3s ease-in-out infinite}.oe-loading-skeleton span:first-child{grid-column:1/-1;height:18px;width:42%}.oe-loading-skeleton span:nth-child(2){grid-column:1/-1;height:12px;width:26%}@keyframes oe-shimmer{to{background-position:-200% 0}}@media(prefers-reduced-motion:reduce){.oe-loading-skeleton span{animation:none}}
         .oe-sidebar{display:grid;min-width:0;gap:18px}.oe-side-panel{padding:20px;border:1px solid #ECECF0;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(17,17,20,.04)}.oe-side-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.oe-side-panel h2{margin:0;color:#1A1A1A;font-size:15px;line-height:20px;font-weight:500}.oe-side-heading button{padding:0;border:0;background:none;color:#6700A6;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer}
         .oe-registration{display:flex;width:100%;align-items:center;gap:10px;margin-bottom:12px;padding:0;border:0;background:none;text-align:left;cursor:pointer}.oe-small-date{display:flex;width:46px;height:43px;flex:none;flex-direction:column;align-items:center;justify-content:center;border:1px solid #E6D6F2;border-radius:6px;background:#FAF5FF}.oe-small-date b{color:#6700A6;font-size:9px;line-height:11px;font-weight:500}.oe-small-date strong{color:#1A1A1A;font-size:17px;line-height:20px}
         .oe-registration-copy,.oe-host-copy{display:grid;flex:1;min-width:0;gap:3px}.oe-registration-copy b,.oe-host-copy b{overflow:hidden;color:#1A1A1A;font-size:12px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}.oe-registration-copy small,.oe-host-copy small{color:#8A8A93;font-size:11px}.oe-rsvped{padding:3px 7px;border-radius:6px;background:#DDF6E8;color:#0F8A5F;font-size:10px}.oe-side-empty{margin:0;color:#8A8A93;font-size:12px;line-height:1.55}

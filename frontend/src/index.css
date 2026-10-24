@@ -7,12 +7,29 @@
   --green-50: #ECFDF5;
   --blue: #1D4ED8;
   --blue-50: #EFF6FF;
+  --warning: #D97706;
+  --warning-50: #FFFBEB;
+  --teal: #0D9488;
+  --teal-50: #F0FDFA;
   --text-900: #111827;
   --text-600: #6B7280;
-  --text-400: #9CA3AF;
+  --text-400: #667085;
+  --text-primary: var(--text-900);
+  --text-secondary: var(--text-600);
+  --text-tertiary: var(--text-400);
   --border: #E5E7EB;
   --background: #F9FAFB;
+  --bg: var(--background);
   --white: #FFFFFF;
+  --success: var(--green);
+  --success-light: var(--green-50);
+  --warning-light: var(--warning-50);
+  --blue-light: var(--blue-50);
+  --teal-light: var(--teal-50);
+  --glass-blur: blur(10px);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --focus-ring: #7C3AED;
 }
 
 * {
@@ -60,7 +77,16 @@ button {
   font-family: inherit;
   cursor: pointer;
   border: none;
-  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 input, textarea, select {

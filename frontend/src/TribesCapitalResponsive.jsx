@@ -43,7 +43,7 @@ const STYLES = `
 .tca{
   --purple-900:#2E1065; --purple-800:#3B0764; --purple-700:#5B21B6; --purple-600:#7C3AED;
   --purple-300:#C4B5FD; --purple-100:#F3E8FF; --purple-50:#FAF5FF;
-  --ink-900:#1F2937; --ink-700:#374151; --ink-600:#4B5563; --ink-400:#9CA3AF;
+  --ink-900:#1F2937; --ink-700:#374151; --ink-600:#4B5563; --ink-400:#667085;
   --line:#E7E7EA; --bg:#F7F7F8; --white:#FFFFFF; --mint:#10B981; --mint-bg:#ECFDF5; --mint-text:#047857;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -527,6 +527,12 @@ const STYLES = `
 .forum-empty-state{display:flex;width:min(100%,760px);min-height:260px;align-self:center;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-color:#DDD6FE!important;background:#FAF5FF!important;text-align:center}
 .forum-empty-icon{display:grid;place-items:center;width:54px;height:54px;border-radius:12px;background:#EDE9FE}
 .forum-empty-state strong{color:#2E1065;font-size:16px}
+.forum-loading-state{display:grid;grid-template-columns:1fr 1fr;align-content:center;justify-items:start;padding:28px}
+.forum-loading-state span{display:block;width:100%;height:16px;border-radius:8px;background:linear-gradient(90deg,#F1ECF8 25%,#E6DCF1 50%,#F1ECF8 75%);background-size:200% 100%;animation:forum-shimmer 1.3s ease-in-out infinite}
+.forum-loading-state span:nth-child(3n){width:72%}
+.forum-loading-state span:last-child{width:48%}
+@keyframes forum-shimmer{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.forum-loading-state span{animation:none}}
 @media(max-width:760px){.forum-hero{grid-template-columns:1fr;gap:26px;padding:26px 22px}.forum-visual{justify-self:stretch;width:100%;max-width:none;padding:18px}.forum-hero h1{font-size:25px}}
 @media(max-width:480px){.forum-visual-foot{gap:14px}.forum-post{padding:20px!important}}
 .submit-project-page{max-width:820px;margin:0 auto;padding:28px 0}
@@ -2219,6 +2225,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* phones: sidebar becomes an off-canvas drawer opened from the top bar */
 @media (max-width:767px){
   .dash-app{--tc-page-gutter-x:max(18px,env(safe-area-inset-left),env(safe-area-inset-right));--tc-page-gutter-y:24px}
+  .dash-content.dash-content-home{padding-top:0}
   .dash-main{width:100%;margin-left:0}
   .dash-sidebar.collapsed+.dash-main{width:100%;margin-left:0}
   .dash-mobile-menu{display:flex}
@@ -2232,8 +2239,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .dash-sidebar.open .dash-navitem,.dash-sidebar.open.collapsed .dash-navitem{justify-content:flex-start;padding:12px}
   .dash-sidebar.open .dash-logo-crop,.dash-sidebar.open.collapsed .dash-logo-crop{width:155px}
   .dash-topbar{gap:10px;padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
-  .dash-content{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
-  .dash-searchbar{padding:8px 12px;min-width:0}
+  .dash-content{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x);padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  .dash-searchbar{padding:8px 10px;min-width:0}
+  .dash-searchbar input::placeholder{color:var(--ink-600)}
   .dash-page-head h1,.tcx .ph h1{font-size:22px}
   .dash-banner h1{font-size:21px}
   .dash-banner{padding:26px 22px;margin-bottom:28px}
@@ -2256,6 +2264,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .tcx .md{padding:22px 18px}
   .tour-card{padding:56px 18px 18px}
   .tour-desc{min-height:0;margin-bottom:22px}
+}
+@media (max-width:767px){
+  .dash-footer{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 }
 @media (max-width:600px){
   .dash-notif-panel{position:fixed;top:calc(64px + env(safe-area-inset-top));right:8px;left:8px;width:auto;max-height:calc(100dvh - 80px);overflow-y:auto}
@@ -2789,14 +2800,14 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
           <button className="dash-mobile-menu" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}><Menu size={20} /></button>
           <form className="dash-searchbar" role="search" onSubmit={(e) => { e.preventDefault(); onSearch(q.trim()); setQ(''); }}>
             <Search size={18} color="#9CA3AF" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search contractors, topics, people, events…" aria-label="Search" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people, projects…" aria-label="Search people, projects, topics, or events" />
           </form>
           <div className="dash-topbar-right">
             <NotificationsMenu onOpenMessaging={() => go('messaging')} onNavigate={go} />
             <button className="dash-user" title={user.name} onClick={onOpenProfile}><ProfileAvatar person={user} className="dash-avatar" fallbackText={user.initial} decorative /><span className="dash-user-name">{user.name.split(' ')[0]}</span></button>
           </div>
         </header>
-        <main className={`dash-content${activeKey === 'learning' ? ' learning-hub-content' : ''}${contentOwnsPageGutter ? ' dash-content-page-inset' : ''}`}>{children}</main>
+        <main className={`dash-content${activeKey === 'learning' ? ' learning-hub-content' : ''}${activeKey === 'home' ? ' dash-content-home' : ''}${contentOwnsPageGutter ? ' dash-content-page-inset' : ''}`}>{children}</main>
         <footer className="dash-footer">
           <span>© {new Date().getFullYear()} Tribes Capital</span>
           <a href="mailto:hello@tribes.capital">Contact us</a>
@@ -4084,9 +4095,13 @@ function Community({ open, user, toast, onOpenMessaging }) {
   const [f, setF] = useState('All'), [m, setM] = useState(open || null);
   const [liked, setLiked] = useState({}), [saved, setSaved] = useState({});
   const [detailId, setDetailId] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let isCurrent = true;
+    setLoading(true);
+    setLoadError('');
     Promise.allSettled([
       communityAPI.listPosts({ take: 100 }),
       communityAPI.listMembers({ take: 5 }),
@@ -4100,7 +4115,7 @@ function Community({ open, user, toast, onOpenMessaging }) {
         setLiked(Object.fromEntries(nextPosts.filter((post) => post.userVote === 1).map((post) => [post.id, true])));
         setSaved(Object.fromEntries(nextPosts.filter((post) => post.savedByMe).map((post) => [post.id, true])));
       } else {
-        setError(postsResult.reason.response?.data?.message || 'Unable to load community discussions.');
+        setLoadError(postsResult.reason.response?.data?.message || 'Unable to load community discussions.');
       }
       if (membersResult.status === 'fulfilled') {
         const payload = membersResult.value?.data?.data ?? membersResult.value?.data ?? [];
@@ -4109,7 +4124,7 @@ function Community({ open, user, toast, onOpenMessaging }) {
       setLoading(false);
     });
     return () => { isCurrent = false; };
-  }, []);
+  }, [reloadKey]);
 
   const categoryByFilter = { Solar: 'Solar', Policy: 'Policy & regulation', Learning: 'Learning', Energy: 'Energy community' };
   const shown = f === 'Following'
@@ -4206,9 +4221,10 @@ function Community({ open, user, toast, onOpenMessaging }) {
     {error && <p role="alert" className="sub">{error}</p>}
     <div className="pills forum-filters"><span className="forum-filter-label">Browse discussions by topic</span>{FILTER_PILLS.map((x) => <button key={x.key} className={"pl" + (f === x.key ? " on" : "")} onClick={() => setF(x.key)}>{x.label}</button>)}</div>
     <div className="lay"><div className="sp forum-post-list" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {loading && <div role="status" className="card sub forum-empty-state">Loading discussions…</div>}
-      {!loading && shown.length === 0 && <div className="card forum-empty-state"><span className="forum-empty-icon"><Icon name="message" size={26} color="#5B21B6" /></span><strong>{f === "Following" ? "Your followed conversations will appear here" : "The next good conversation starts here"}</strong><p className="sub">{f === "Following" ? "Follow members whose ideas you want to keep up with." : "Share a question or perspective with the community."}</p></div>}
-      {shown.map((p) => <div className="card forum-post" key={p.id}>
+      {loading && <div role="status" aria-label="Loading discussions" className="card forum-empty-state forum-loading-state"><span /><span /><span /><span /><span /><span /></div>}
+      {!loading && loadError && <div role="alert" className="card forum-empty-state"><strong>Discussions couldn’t load</strong><p className="sub">{loadError}</p><button type="button" className="btn bo" onClick={() => setReloadKey((key) => key + 1)}>Try again</button></div>}
+      {!loading && !loadError && shown.length === 0 && <div className="card forum-empty-state"><span className="forum-empty-icon"><Icon name="message" size={26} color="#5B21B6" /></span><strong>{f === "Following" ? "Your followed conversations will appear here" : "The next good conversation starts here"}</strong><p className="sub">{f === "Following" ? "Follow members whose ideas you want to keep up with." : "Share a question or perspective with the community."}</p></div>}
+      {!loading && !loadError && shown.map((p) => <div className="card forum-post" key={p.id}>
         <div className="row" style={{ justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start" }}><div className="row"><Ava c={p.c} t={p.n[0]} person={p.creator} /><div><b style={{ fontSize: 13.5 }}>{p.n} <span className="mut" style={{ fontWeight: 400 }}>· {p.w}</span></b><div className="mut">{p.r}</div></div></div><span className="tp">{p.tag}</span></div>
         <button className="disc-title-btn" onClick={() => void openPost(p.id)}><h3 style={{ fontSize: 15, marginBottom: 8 }}>{p.t}</h3></button>
         <p className="sub" style={{ marginBottom: 14 }}>{p.b.split("\n\n")[0]}</p>
@@ -4219,8 +4235,8 @@ function Community({ open, user, toast, onOpenMessaging }) {
       </div>)}
     </div>
       <div className="rail forum-rail">
-        <div className="card forum-topic-panel"><h4 style={{ marginBottom: 12, fontSize: 14 }}>Popular topics</h4>{Object.entries(popularTopics).map(([topic, count]) => <div key={topic} className="row forum-topic-row" style={{ justifyContent: "space-between", fontSize: 13 }}><span className="row" style={{ color: "var(--p9)", fontWeight: 600 }}><i className="forum-topic-swatch" aria-hidden="true" />{topic}</span><span className="mut">{count} posts</span></div>)}</div>
-        <div className="card forum-member-panel"><h4 style={{ marginBottom: 14, fontSize: 14 }}>Active members</h4>{members.map((member) => { const name = [member.firstName, member.lastName].filter(Boolean).join(' ') || 'Member'; return <div key={member.id} className="row" style={{ marginBottom: 14 }}><Ava c="#5B21B6" t={name[0]} s={32} person={member} /><div className="sp"><b style={{ fontSize: 13 }}>{name}</b><div className="mut">{member.occupation || 'Community member'}</div></div><button className="btn sm" style={{ background: member.isFollowedByMe ? "var(--bg)" : "var(--p0)", color: member.isFollowedByMe ? "var(--i4)" : "var(--p7)", borderRadius: 999 }} onClick={() => void toggleFollow(member)}>{member.isFollowedByMe ? "Following" : "Follow"}</button></div>; })}</div>
+        <div className="card forum-topic-panel"><h4 style={{ marginBottom: 12, fontSize: 14 }}>Popular topics</h4>{Object.entries(popularTopics).map(([topic, count]) => <div key={topic} className="row forum-topic-row" style={{ justifyContent: "space-between", fontSize: 13 }}><span className="row" style={{ color: "var(--p9)", fontWeight: 600 }}><i className="forum-topic-swatch" aria-hidden="true" />{topic}</span><span className="mut">{count} posts</span></div>)}{!loading && !loadError && !Object.keys(popularTopics).length && <p className="sub">Topics will appear as members start discussions.</p>}</div>
+        <div className="card forum-member-panel"><h4 style={{ marginBottom: 14, fontSize: 14 }}>Active members</h4>{members.map((member) => { const name = [member.firstName, member.lastName].filter(Boolean).join(' ') || 'Member'; return <div key={member.id} className="row" style={{ marginBottom: 14 }}><Ava c="#5B21B6" t={name[0]} s={32} person={member} /><div className="sp"><b style={{ fontSize: 13 }}>{name}</b><div className="mut">{member.occupation || 'Community member'}</div></div><button className="btn sm" style={{ background: member.isFollowedByMe ? "var(--bg)" : "var(--p0)", color: member.isFollowedByMe ? "var(--i4)" : "var(--p7)", borderRadius: 999 }} onClick={() => void toggleFollow(member)}>{member.isFollowedByMe ? "Following" : "Follow"}</button></div>; })}{!loading && !loadError && !members.length && <p className="sub">Member suggestions will appear here.</p>}</div>
         <div className="card"><h4 style={{ color: "var(--p9)", marginBottom: 8, fontSize: 14 }}>Community guidelines</h4><p className="sub" style={{ marginBottom: 10 }}>Be respectful, stay on topic and share knowledge that helps others learn and take action.</p><button className="lk" onClick={() => setM("guide")}>Read the guidelines →</button></div>
       </div></div>
     {m === "ask" && <AskQuestionModal categories={CATS} onClose={close} onSubmit={(v) => add(v)} />}

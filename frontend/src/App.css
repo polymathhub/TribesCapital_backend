@@ -2,29 +2,6 @@
 /* DESIGN SYSTEM: GLASSMORPHISM + MICRO-INTERACTIONS    */
 /* ═══════════════════════════════════════════════════════ */
 
-:root {
-  --primary: #7C3AED;
-  --primary-dark: #5B21B6;
-  --primary-light: #EDE9FE;
-  --success: #059669;
-  --success-light: #ECFDF5;
-  --warning: #D97706;
-  --warning-light: #FFFBEB;
-  --blue: #1D4ED8;
-  --blue-light: #EFF6FF;
-  --teal: #0D9488;
-  --teal-light: #F0FDFA;
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --text-tertiary: #9CA3AF;
-  --border: #E5E7EB;
-  --bg: #F9FAFB;
-  --white: #FFFFFF;
-  --glass-blur: blur(10px);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.3);
-}
-
 /* ─────────────────────────────────────────────────────── */
 /* BASE & GLOBALS                                         */
 /* ─────────────────────────────────────────────────────── */
