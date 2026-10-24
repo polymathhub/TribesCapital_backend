@@ -111,16 +111,20 @@
 .message-composer {
   align-items: flex-end;
   gap: 7px;
-  border-color: #e4e0ec;
+  border: 0;
   border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 4px 14px rgba(16, 24, 40, .06);
+  background: transparent;
+  box-shadow: none;
   transform: none;
 }
 
+.messaging-page .composer-hint {
+  display: none;
+}
+
 .message-composer:focus-within {
-  border-color: #a78bfa;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, .1);
+  border-color: transparent;
+  box-shadow: none;
   transform: none;
 }
 
@@ -179,6 +183,10 @@
   border-radius: 14px;
   background: #5b21b6;
   box-shadow: none;
+}
+
+.messaging-page .send-button {
+  color: #000;
 }
 
 .send-button:not(:disabled):hover {
@@ -302,9 +310,8 @@
     gap: 5px;
     padding: 8px 10px max(8px, env(safe-area-inset-bottom));
     border: 0;
-    border-top: 1px solid #eaecf0;
     border-radius: 0;
-    background: #fff;
+    background: transparent;
     box-shadow: none;
   }
 

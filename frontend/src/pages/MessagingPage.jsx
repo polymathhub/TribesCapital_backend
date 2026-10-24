@@ -491,7 +491,7 @@ export default function MessagingPage({ user, onViewProfile = () => {} }) {
             <button type="button" className="composer-tool emoji-tool" onClick={() => setDraft((value) => `${value}${value ? ' ' : ''}👍`)} aria-label="Add emoji"><Smile size={19} /></button>
           </div>
           <button type="submit" className="send-button" disabled={!draft.trim() && !pendingFile} aria-label={editingMessage ? 'Save message' : 'Send message'} title={editingMessage ? 'Save message' : 'Send message'}>
-            {editingMessage ? <span>Save</span> : <SendHorizontal size={19} />}
+            {editingMessage ? <span>Save</span> : <SendHorizontal size={19} strokeWidth={2.75} />}
           </button>
         </form>
         <div className="composer-hint">{uploadProgress !== null ? 'Uploading your attachment securely…' : 'Enter to send · Shift + Enter for a new line'}</div>
