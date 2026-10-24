@@ -129,7 +129,7 @@ function MessageRow({ message, user, onReply, onReact, onEdit, onDelete, onRetry
   const profilePerson = message.sender || (mine ? user : null);
   const readByAnotherUser = Array.isArray(message.reads) ? message.reads.some((receipt) => receipt.userId !== user?.id) : Boolean(message.isRead);
   return <article className={`message-row ${mine ? 'mine' : ''} ${message.sendFailed ? 'send-failed' : ''}`}>
-    {!mine && <Avatar person={profilePerson} onClick={profilePerson && onOpenProfile ? () => onOpenProfile(profilePerson) : undefined} />}
+    <Avatar person={profilePerson} onClick={profilePerson && onOpenProfile ? () => onOpenProfile(profilePerson) : undefined} />
     <div className="message-content-wrap">
       <div className="message-meta"><strong onClick={profilePerson && onOpenProfile ? () => onOpenProfile(profilePerson) : undefined} style={{ cursor: profilePerson && onOpenProfile ? 'pointer' : 'default' }}>{mine ? 'You' : displayName(message.sender)}</strong>{message.isOptimistic && <span className="message-state">Sending…</span>}{message.sendFailed && <span className="message-state error">Not sent</span>}{message.isEdited && <span className="message-edited">edited</span>}</div>
       {message.replyTo && <button className="reply-context" type="button" onClick={() => onReply(message.replyTo)}><span>Replying to {displayName(message.replyTo.sender)}</span><strong>{message.replyTo.content || '[attachment]'}</strong></button>}
