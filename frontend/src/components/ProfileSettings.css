@@ -244,9 +244,10 @@
 @media (max-width: 480px) {
   .profile-tier-card { gap: 15px; padding: 14px 0; }
   .profile-tier-header h2 { font-size: 19px; }
-  .profile-tier-step { align-items: flex-start; gap: 7px; padding: 9px; }
+  .profile-tier-step { align-items: flex-start; gap: 7px; padding: 9px 36px 9px 9px; }
   .profile-tier-step-icon { width: 26px; height: 26px; flex-basis: 26px; }
   .profile-tier-step-copy>span { white-space: normal; }
+  .profile-tier-step-complete { right: 8px; }
   .profile-tier-kyc { flex-wrap: wrap; }
   .profile-tier-projects li { align-items: flex-start; flex-direction: column; gap: 5px; }
   .profile-settings-heading { flex-direction: column; }
