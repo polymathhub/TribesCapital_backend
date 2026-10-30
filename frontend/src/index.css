@@ -1,4 +1,9 @@
 :root {
+  --tc-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  --tc-font-size-body: 14px;
+  --tc-font-size-navigation: 13px;
   --primary: #5B21B6;
   --primary-light: #7C3AED;
   --primary-dark: #4C1D95;
@@ -42,9 +47,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--tc-font-family);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--background);
@@ -52,6 +55,7 @@ html, body {
 }
 
 body {
+  font-size: var(--tc-font-size-body);
   line-height: 1.5;
 }
 

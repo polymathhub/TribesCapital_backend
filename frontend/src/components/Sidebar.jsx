@@ -173,7 +173,7 @@ function Sidebar({ sidebarRef, activePage = 'home', onNavigate = () => {}, onClo
                 background: isActive ? COLORS.PF : isHovered ? 'rgba(123, 58, 237, 0.08)' : 'transparent',
                 color: isActive ? COLORS.P : COLORS.T2,
                 fontWeight: isActive ? 600 : 400,
-                fontSize: 13,
+                fontSize: 'var(--tc-font-size-navigation, 13px)',
                 borderLeft: isActive ? `3px solid ${COLORS.P}` : '3px solid transparent',
                 boxShadow: isHovered ? '0 8px 18px rgba(123, 58, 237, 0.12)' : 'none',
                 transition: 'all 0.18s cubic-bezier(0.2,0.9,0.2,1)',

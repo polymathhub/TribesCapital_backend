@@ -217,7 +217,7 @@ function Sidebar({ open, onClose, isMobile, isTablet }) {
             if (!item) return <div key={i} style={{height:1,background:BD,margin:'4px 14px'}}/>;
             return (
               <div key={i} onClick={isOverlay ? onClose : undefined}
-                style={{display:'flex',alignItems:'center',gap:9,padding:'8px 14px',margin:'1px 6px',borderRadius:8,cursor:'pointer',background:item.active?PUF:'transparent',color:item.active?PU:T2,fontSize:13,fontWeight:item.active?500:400,borderLeft:item.active?`3px solid ${PU}`:'3px solid transparent'}}>
+                style={{display:'flex',alignItems:'center',gap:9,padding:'8px 14px',margin:'1px 6px',borderRadius:8,cursor:'pointer',background:item.active?PUF:'transparent',color:item.active?PU:T2,fontSize:'var(--tc-font-size-navigation, 13px)',fontWeight:item.active?500:400,borderLeft:item.active?`3px solid ${PU}`:'3px solid transparent'}}>
                 <Ico name={item.icon} size={15} color={item.active?PU:T3} sw={item.active?2:1.5}/>
                 <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.label}</span>
               </div>
@@ -1771,7 +1771,7 @@ export default function App({ onBack, onToggleSidebar, isMobile, isTablet }) {
   }
 
   return (
-    <div style={{flex: 1, display:'flex', height:'100%', background:BG, fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', fontSize:14, overflow:'hidden', flexDirection:'column'}}>
+    <div style={{flex: 1, display:'flex', height:'100%', background:BG, fontFamily:'var(--tc-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)', fontSize:'var(--tc-font-size-body, 14px)', overflow:'hidden', flexDirection:'column'}}>
       {screen === 'hub'
         ? <HubView
             onPlay={handlePlay}

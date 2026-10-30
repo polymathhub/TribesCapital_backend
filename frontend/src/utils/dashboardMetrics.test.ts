@@ -60,3 +60,4 @@ describe('dashboardMetrics', () => {
     expect(mid).toBeLessThanOrEqual(high);
   });
 });
+

@@ -46,7 +46,8 @@ const STYLES = `
   --purple-300:#C4B5FD; --purple-100:#F3E8FF; --purple-50:#FAF5FF;
   --ink-900:#1F2937; --ink-700:#374151; --ink-600:#4B5563; --ink-400:#667085;
   --line:#E7E7EA; --bg:#F7F7F8; --white:#FFFFFF; --mint:#10B981; --mint-bg:#ECFDF5; --mint-text:#047857;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family:var(--tc-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+  font-size:var(--tc-font-size-body, 14px);
 }
 .tca *{ box-sizing:border-box; }
 .tca button{ font-family:inherit; }
@@ -247,7 +248,7 @@ const STYLES = `
 .dash-brand .word{ text-transform:uppercase; letter-spacing:.03em; font-size:15.5px; }
 .dash-navgroup{ margin-bottom:18px; }
 .dash-navlabel{ font-size:11px; color:var(--ink-400); font-weight:600; letter-spacing:.06em; padding:0 10px 8px; }
-.dash-navitem{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; color:var(--ink-600); font-size:14px; text-decoration:none; margin-bottom:2px; background:none; border:none; width:100%; text-align:left; cursor:pointer; position:relative; }
+.dash-navitem{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; color:var(--ink-600); font-size:var(--tc-font-size-navigation, 13px); text-decoration:none; margin-bottom:2px; background:none; border:none; width:100%; text-align:left; cursor:pointer; position:relative; }
 .submit-project-nav-icon{display:block;width:22px;height:22px;flex:0 0 22px}
 .dash-navitem.active{ background:var(--purple-50); color:var(--purple-700); font-weight:600; }
 .dash-navitem:not(.active):hover{ background:#FAFAFA; }
