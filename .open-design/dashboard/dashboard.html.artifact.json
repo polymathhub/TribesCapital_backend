@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "Tribes Capital project marketplace",
+  "entry": ".open-design/dashboard/dashboard.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "standalone",
+    "site",
+    "png",
+    "jpeg",
+    "pdf"
+  ],
+  "supportingFiles": [],
+  "createdAt": "2026-10-30T08:06:40.557Z",
+  "updatedAt": "2026-10-30T08:06:40.557Z",
+  "sourceSkillId": "od:prototype:dashboard:example",
+  "metadata": {
+    "remixedFrom": "od:prototype:dashboard:example"
+  }
+}

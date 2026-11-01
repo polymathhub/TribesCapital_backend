@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Q
 import { Request, Response } from 'express';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
+import { GuestReadable } from '@common/decorators/account-type-access.decorator';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { UploadsService } from './uploads.service';
 
@@ -12,6 +13,7 @@ export class UploadsController {
 
   @Get('profile/:userId/:purpose/:fileName')
   @Public()
+  @GuestReadable()
   async getProfileImage(
     @Param('userId') userId: string,
     @Param('purpose') purpose: string,
@@ -29,6 +31,7 @@ export class UploadsController {
 
   @Get('public/:userId/messaging/:fileName')
   @Public()
+  @GuestReadable()
   async getPublicMessagingFile(
     @Param('userId') userId: string,
     @Param('fileName') fileName: string,

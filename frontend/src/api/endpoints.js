@@ -74,12 +74,6 @@ export const eventsAPI = {
   cancelRSVP: (eventId) => apiClient.delete(`/events/${eventId}/rsvp`),
 };
 
-export const documentsAPI = {
-  list: (params) => apiClient.get('/documents', { params }),
-  getById: (id) => apiClient.get(`/documents/${id}`),
-  upload: (formData) => apiClient.post('/documents', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-};
-
 export const notificationsAPI = {
   list: () => apiClient.get('/notifications'),
   create: (data) => apiClient.post('/notifications', data),
@@ -121,6 +115,12 @@ export const projectsAPI = {
   delete: (id) => apiClient.delete(`/projects/${id}`),
   getAttachmentDownloadUrl: (id, index) => apiClient.get(`/projects/${id}/attachments/${index}/download`),
   submit: (data) => apiClient.post('/project-submissions', data),
+};
+
+export const projectMarketplaceAPI = {
+  list: (params) => apiClient.get('/project-marketplace', { params }),
+  joinWaitlist: (projectId) => apiClient.post(`/project-marketplace/${encodeURIComponent(projectId)}/waitlist`),
+  leaveWaitlist: (projectId) => apiClient.delete(`/project-marketplace/${encodeURIComponent(projectId)}/waitlist`),
 };
 
 export const communityAPI = {

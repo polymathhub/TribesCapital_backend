@@ -10,7 +10,7 @@ import React, {
   forwardRef,
   useImperativeHandle 
 } from 'react';
-import { authAPI, communityAPI, coursesAPI, documentsAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
+import { authAPI, communityAPI, coursesAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
 import { LEARNING_HUB_VIDEOS } from './data/learningHubVideos';
 import ProfileAvatar from './components/ProfileAvatar';
 import Skeleton from './components/Skeleton';
@@ -19,6 +19,7 @@ import { Activity01Icon, Calendar01Icon, CheckmarkCircle01Icon, EnergyIcon, Loca
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
 const OfficeHoursEvents = lazy(() => import('./pages/OfficeHoursEvents.jsx'));
 const MessagingPage = lazy(() => import('./pages/MessagingPage.jsx'));
+const ProjectMarketplace = lazy(() => import('./pages/ProjectMarketplace.jsx'));
 const DueDiligenceVault = lazy(() => import('./pages/DueDiligencePage.jsx'));
 const ProfileSettings = lazy(() => import('./components/ProfileSettings.jsx'));
 const PublicProfilePage = lazy(() => import('./components/ProfileSettings.jsx').then((module) => ({ default: module.PublicProfilePage })));
@@ -2670,6 +2671,7 @@ const NAV_ITEMS = [
   { key: 'events', label: 'Office Hours & Events', icon: 'calendar' },
   { key: 'submit-project', label: 'Submit Your Project', icon: 'upload' },
   { key: 'pipeline', label: 'Portfolio', icon: 'briefcase' },
+  { key: 'marketplace', label: 'Project Marketplace', icon: 'grid' },
 ];
 const INVESTOR_NAV_ITEMS = [
   { key: 'vault', label: 'Due Diligence Vault', icon: 'shield' },
@@ -2815,7 +2817,7 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
     ? NAV_ITEMS.filter((navItem) => navItem.key !== 'submit-project')
     : NAV_ITEMS;
   const visibleInvestorItems = user?.accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : [];
-  const contentOwnsPageGutter = ['events', 'pipeline', 'vault'].includes(activeKey);
+  const contentOwnsPageGutter = ['events', 'pipeline', 'vault', 'marketplace'].includes(activeKey);
   return (
     <div className={`dash-app${activeKey === 'messaging' ? ' messaging-app' : ''}`}>
       {open && <div className="dash-scrim" onClick={() => setOpen(false)} />}
@@ -2884,8 +2886,7 @@ function PlatformSearchResults({ query, accountType, onOpenResult }) {
       ['Courses', 'learning', coursesAPI.list({ take: 100 })],
       ['Events', 'events', eventsAPI.list({ take: 100 })],
       ['Projects', 'pipeline', projectsAPI.list({ take: 100 })],
-      ['Due diligence', 'vault', dueDiligenceAPI.list({ take: 100 })],
-      ['Documents', 'vault', documentsAPI.list({ take: 100 })],
+      ...(accountType === 'INVESTOR' ? [['Due diligence', 'vault', dueDiligenceAPI.list({ take: 100 })]] : []),
       ['Community members', 'community', communityAPI.listMembers({ search: query, take: 25 })],
       ['Forum posts', 'community', communityAPI.listPosts({ search: query, take: 25 })],
       ['Contractors', 'contractors', marketplaceAPI.listContractors({ search: query, take: 25 })],
@@ -3011,17 +3012,17 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
   useEffect(() => {
     let isCurrent = true;
     const requests = [
-      coursesAPI.list({ take: 100 }),
-      coursesAPI.getEnrolled(),
-      eventsAPI.list({ take: 100 }),
-      projectsAPI.list({ take: 100 }),
-      dueDiligenceAPI.list({ take: 100 }),
-      documentsAPI.list({ take: 100 }),
-      communityAPI.getStats(),
+      ['courses', coursesAPI.list({ take: 100 })],
+      ['enrolledCourses', coursesAPI.getEnrolled()],
+      ['events', eventsAPI.list({ take: 100 })],
+      ['projects', projectsAPI.list({ take: 100 })],
+      ...(accountType === 'INVESTOR' ? [['dueDiligence', dueDiligenceAPI.list({ take: 100 })]] : []),
+      ['community', communityAPI.getStats()],
     ];
 
-    Promise.allSettled(requests).then((results) => {
+    Promise.allSettled(requests.map(([, request]) => request)).then((results) => {
       if (!isCurrent) return;
+      const responses = Object.fromEntries(requests.map(([key], index) => [key, results[index]]));
       const getItems = (result) => {
         const payload = result.status === 'fulfilled' ? result.value?.data?.data ?? result.value?.data ?? [] : [];
         if (Array.isArray(payload)) return payload;
@@ -3029,17 +3030,17 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
         if (Array.isArray(payload?.data)) return payload.data;
         return [];
       };
-      const events = getItems(results[2]);
-      const memberPayload = results[6].status === 'fulfilled'
-        ? results[6].value?.data?.data ?? results[6].value?.data ?? {}
+      const events = getItems(responses.events);
+      const memberPayload = responses.community.status === 'fulfilled'
+        ? responses.community.value?.data?.data ?? responses.community.value?.data ?? {}
         : null;
       const memberCount = Number(memberPayload?.memberCount ?? memberPayload?.totalMembers ?? memberPayload?.membersCount);
-      const enrolledCourses = getItems(results[1]);
+      const enrolledCourses = getItems(responses.enrolledCourses);
       const enrolledByCourseId = new Map(enrolledCourses.map((enrollment) => [
         String(enrollment.courseId || enrollment.course?.id || enrollment.id || ''),
         enrollment,
       ]));
-      const courses = getItems(results[0]).map((course) => {
+      const courses = getItems(responses.courses).map((course) => {
         const enrollment = enrolledByCourseId.get(String(course.id));
         const storedProgress = (() => {
           try {
@@ -3052,19 +3053,27 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
         return { ...course, enrolled: Boolean(enrollment), progress };
       });
 
+      const documents = accountType === 'INVESTOR'
+        ? getItems(responses.dueDiligence).flatMap((record) => (
+          Array.isArray(record.documents)
+            ? record.documents.map((document) => ({ ...document, targetName: record.targetName || record.title }))
+            : []
+        ))
+        : [];
+
       setDashboardData({
         loading: false,
         courses,
         enrolledCourses,
         events: events.filter((event) => !event.startDate || new Date(event.startDate).getTime() >= Date.now()),
-        projects: getItems(results[3]),
-        documents: [...getItems(results[4]), ...getItems(results[5])],
+        projects: getItems(responses.projects),
+        documents,
         members: Number.isFinite(memberCount) ? memberCount : null,
       });
     });
 
     return () => { isCurrent = false; };
-  }, []);
+  }, [accountType]);
 
   const firstName = String(userName || 'Member').trim().split(/\s+/)[0];
   const shortcutDetails = {
@@ -3150,7 +3159,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
             <button type="button" className="member-home-primary-action" onClick={() => onGo('learning')}>
               {inProgressCourses.length > 0 ? 'Continue learning' : 'Explore the Learning Hub'}
             </button>
-            <button type="button" className="member-home-secondary-action" onClick={() => onGo('pipeline')}>Explore projects</button>
+            <button type="button" className="member-home-secondary-action" onClick={() => onGo('marketplace')}>Explore projects</button>
           </div>
         </div>
       </section>
@@ -5441,7 +5450,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   function reopenTour() { setTourStep(1); setTourOpen(true); }
   function openHelp() { navigate('help'); }
 
-  const PAGES = ['learning', 'events', 'community', 'contractors', 'messaging', 'vault', 'pipeline', 'submit-project', 'settings', 'search'];
+  const PAGES = ['learning', 'events', 'community', 'contractors', 'messaging', 'vault', 'pipeline', 'marketplace', 'submit-project', 'settings', 'search'];
   function handleSidebarNav(key) {
     const [k, arg] = key.split(':');
     if (k === 'home') { navigate('dashboard'); return; }
@@ -5732,6 +5741,12 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
     bodyEl = (
       <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="pipeline" onNavigate={handleSidebarNav} {...shellProps}>
         <div className="tcx"><Pipeline go={goApp} /></div>
+      </AppShell>
+    );
+  } else if (screen === 'marketplace') {
+    bodyEl = (
+      <AppShell navRefs={navRefs} sidebarRef={sidebarRef} onOpenHelp={openHelp} activeKey="marketplace" onNavigate={handleSidebarNav} {...shellProps}>
+        <div className="tcx"><ProjectMarketplace user={user} /></div>
       </AppShell>
     );
   } else if (screen === 'submit-project') {

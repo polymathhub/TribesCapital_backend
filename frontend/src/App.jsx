@@ -188,7 +188,12 @@ function App() {
     return <LoadingScreen isVisible />;
   }
 
-  if (!isAuthenticated) {
+  const isGuestSignupRoute = isAuthenticated
+    && user?.accountType === 'GUEST'
+    && typeof window !== 'undefined'
+    && window.location.pathname.includes('/signup');
+
+  if (!isAuthenticated || isGuestSignupRoute) {
     return (
       <>
         <LoadingScreen isVisible={isLoading && !hasBootstrapped} />

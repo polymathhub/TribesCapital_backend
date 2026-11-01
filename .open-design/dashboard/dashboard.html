@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tribes Capital — Project Marketplace</title>
+  <style>
+    :root {
+      --bg: #f3f5f7;
+      --fg: #172033;
+      --muted: #667085;
+      --border: #e5e7eb;
+      --accent: #5b21b6;
+      --accent-soft: #f3edfb;
+      --surface: #ffffff;
+      --night: #111b2e;
+      --night-soft: #1b2940;
+      --good: #059669;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .page {
+      width: min(100%, 1500px);
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+
+    .page-header h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.2;
+      letter-spacing: -0.035em;
+    }
+
+    .page-header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .page-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+      padding: 9px 12px;
+      border: 1px solid #e1d5f1;
+      border-radius: 999px;
+      background: #fff;
+      color: #4c1d95;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .page-note span:first-child {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .market-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      align-items: start;
+      gap: 20px;
+    }
+
+    .market-main,
+    .right-rail { min-width: 0; }
+
+    .right-rail {
+      position: sticky;
+      top: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .feature-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      min-height: 320px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 10px 28px rgba(20, 33, 54, 0.06);
+    }
+
+    .feature-image {
+      display: grid;
+      min-height: 320px;
+      padding: 18px;
+      place-items: center;
+      background: linear-gradient(145deg, #dce8ed, #e8e9f1 54%, #e0eee8);
+    }
+
+    .ph-img {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      min-height: 284px;
+      padding: 24px;
+      place-items: center;
+      border: 1px dashed rgba(23, 32, 51, 0.24);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.44);
+      color: #475467;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .feature-copy {
+      display: flex;
+      flex-direction: column;
+      padding: 22px 24px;
+    }
+
+    .feature-tabs {
+      display: flex;
+      width: fit-content;
+      gap: 4px;
+      margin-bottom: 24px;
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #f8fafc;
+    }
+
+    .feature-tabs span {
+      padding: 6px 12px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .feature-tabs span:first-child {
+      background: #fff;
+      color: var(--accent);
+      box-shadow: 0 1px 5px rgba(16, 24, 40, 0.12);
+    }
+
+    .feature-kicker,
+    .eyebrow {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .feature-copy h2 {
+      margin: 7px 0 9px;
+      font-size: 23px;
+      line-height: 1.2;
+      letter-spacing: -0.025em;
+    }
+
+    .feature-copy > p {
+      max-width: 450px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .feature-fact {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 18px;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .feature-fact strong { color: var(--fg); }
+
+    .feature-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #4c1d95;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      min-height: 38px;
+      padding: 0 15px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: #fff; color: var(--accent); }
+
+    .section-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 26px 0 13px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.3;
+    }
+
+    .section-heading p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .result-count { color: var(--muted); font-size: 12px; }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) 160px 190px;
+      gap: 9px;
+      margin-bottom: 14px;
+    }
+
+    .control {
+      display: flex;
+      min-width: 0;
+      height: 40px;
+      align-items: center;
+      padding: 0 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--muted);
+    }
+
+    .control input,
+    .control select {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--fg);
+      font-size: 12px;
+    }
+
+    .control input::placeholder { color: #98a2b3; }
+
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .project-card {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: #fff;
+      box-shadow: 0 5px 16px rgba(20, 33, 54, 0.04);
+    }
+
+    .project-card .ph-img {
+      min-height: 145px;
+      height: 145px;
+      padding: 14px;
+      border: 0;
+      border-radius: 0;
+      background: linear-gradient(145deg, #e8edf2, #f1eef6);
+      font-size: 11px;
+    }
+
+    .project-copy { padding: 13px; }
+    .project-copy .type { margin: 0 0 4px; color: var(--muted); font-size: 11px; }
+    .project-copy h3 { margin: 0; font-size: 15px; line-height: 1.3; }
+    .project-copy .capacity { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; color: var(--muted); font-size: 11px; }
+    .project-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+    .project-actions button { min-height: 33px; padding: 0 7px; font-size: 11px; }
+
+    .empty-state {
+      display: grid;
+      min-height: 150px;
+      padding: 24px;
+      place-items: center;
+      border: 1px dashed #d2d7df;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty-state strong { display: block; margin-bottom: 4px; color: var(--fg); }
+
+    .interest-panel {
+      padding: 19px;
+      border: 1px solid #25334b;
+      border-radius: 16px;
+      background: linear-gradient(150deg, var(--night), var(--night-soft));
+      color: #fff;
+      box-shadow: 0 12px 26px rgba(17, 27, 46, 0.14);
+    }
+
+    .interest-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .interest-heading h2 { margin: 0; font-size: 16px; }
+    .interest-heading .eyebrow { color: #aab8ca; }
+
+    .interest-panel .interest-state {
+      margin: 18px 0 5px;
+      color: #d7e1ef;
+      font-size: 12px;
+    }
+
+    .interest-panel .interest-count {
+      margin: 0;
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .interest-panel .interest-note {
+      margin: 12px 0 0;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      color: #c2cede;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .rail-panel {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .rail-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .rail-heading h2 { margin: 0; font-size: 14px; }
+    .rail-heading span { color: var(--muted); font-size: 11px; }
+
+    .type-list { display: flex; flex-wrap: wrap; gap: 7px; }
+
+    .type-chip {
+      padding: 6px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #fff;
+      color: #475467;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .type-chip.active {
+      border-color: #d7c6ea;
+      background: var(--accent-soft);
+      color: #4c1d95;
+    }
+
+    .waitlist-placeholder {
+      display: grid;
+      min-height: 84px;
+      place-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .waitlist-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid #f0f1f3;
+    }
+
+    .waitlist-row:first-of-type { border-top: 0; }
+    .waitlist-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; background: #f1edfa; color: var(--accent); }
+    .waitlist-row strong { display: block; font-size: 12px; }
+    .waitlist-row small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+
+    @media (max-width: 1150px) {
+      .market-layout { grid-template-columns: minmax(0, 1fr) 270px; gap: 16px; }
+      .project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .controls { grid-template-columns: minmax(150px, 1fr) 130px; }
+      .controls .control:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 900px) {
+      .market-layout { grid-template-columns: 1fr; }
+      .right-rail { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .interest-panel { grid-row: span 2; }
+    }
+
+    @media (max-width: 620px) {
+      .page { padding: 18px 14px 30px; }
+      .page-header { align-items: flex-start; flex-direction: column; }
+      .page-header h1 { font-size: 24px; }
+      .feature-card { grid-template-columns: 1fr; }
+      .feature-image { min-height: 190px; }
+      .ph-img { min-height: 154px; }
+      .feature-copy { padding: 18px; }
+      .feature-tabs { margin-bottom: 16px; }
+      .feature-copy h2 { font-size: 20px; }
+      .project-grid,
+      .right-rail { grid-template-columns: 1fr; }
+      .interest-panel { grid-row: auto; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      .controls .control:first-child,
+      .controls .control:last-child { grid-column: 1 / -1; }
+      .project-card .ph-img { height: 170px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header" data-od-id="marketplace-heading">
+      <div>
+        <h1>Project marketplace</h1>
+        <p>Explore published cleanenergy projects and register nonbinding interest.</p>
+      </div>
+      
+    </header>
+
+    <div class="market-layout">
+      <main class="market-main">
+        <section class="feature-card" data-od-id="project-spotlight">
+          <div class="feature-image">
+            
+          </div>
+          <div class="feature-copy">
+            <div class="feature-tabs" aria-label="Project information" style="background-color: rgb(55, 39, 69);">
+              <span>Overview</span>
+              <span style="color: rgb(255, 255, 255);">Project details</span>
+            </div>
+            <span class="feature-kicker">Clean energy project</span>
+            <h2>Project details appear here when published</h2>
+            <p>
+              Only approved public information is shown. Project documents, financial terms,
+              return figures, and purchase actions are not part of this marketplace.
+            </p>
+            <div class="feature-fact">
+              <span>Indicative system size</span>
+              <strong>Provided by published listing</strong>
+            </div>
+            <div class="feature-action">
+              <span class="status-pill" style="background-color: rgb(38, 20, 87); color: rgb(255, 255, 255);">Funding stage</span>
+              <button class="btn-primary" type="button" disabled="">Join waitlist</button>
+            </div>
+          </div>
+        </section>
+
+        <section data-od-id="project-browse">
+          <div class="section-heading">
+            <div>
+              <h2>All projects</h2>
+              <p>Published listings only  project information is carefully limited</p>
+            </div>
+            
+          </div>
+          <div class="controls" role="group" aria-label="Project filters">
+            <label class="control"><input type="search" aria-label="Search projects" placeholder="Search projects or technology"></label>
+            <label class="control">
+              <select aria-label="Filter by project type">
+                <option>All project types</option>
+                <option>Solar</option>
+                <option>Storage</option>
+                <option>Mini-grid</option>
+              </select>
+            </label>
+            <label class="control">
+              <select aria-label="Sort projects">
+                <option>Name: A to Z</option>
+                <option>System size: largest first</option>
+              </select>
+            </label>
+          </div>
+          <div class="empty-state">
+            <div>
+              <strong>No published projects in this preview</strong>
+              Approved marketplace listings will appear here when available.
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="right-rail" aria-label="Project marketplace side panel">
+        <section class="interest-panel" data-od-id="waitlist-summary" style="background-color: rgb(93, 74, 191);">
+          <div class="interest-heading">
+            <h2>My waitlist</h2>
+            
+          </div>
+          <p class="interest-state">Your waitlist status</p>
+          <p class="interest-count">Interest only</p>
+          <p class="interest-note">
+            Joining is non-binding, reserves no units, and does not create an order.
+            You can leave a waitlist at any time.
+          </p>
+        </section>
+
+        <section class="rail-panel" data-od-id="project-types">
+          <div class="rail-heading">
+            <h2>Browse project types</h2>
+            <span>Filters</span>
+          </div>
+          <div class="type-list">
+            <span class="type-chip active">All types</span>
+            <span class="type-chip">Solar</span>
+            <span class="type-chip">Storage</span>
+            <span class="type-chip">Mini-grid</span>
+          </div>
+        </section>
+
+        <section class="rail-panel" data-od-id="waitlist-projects">
+          <div class="rail-heading">
+            <h2>Joined projects</h2>
+            <span>Current listings</span>
+          </div>
+          <div class="waitlist-placeholder">
+            Your waitlisted projects will appear here.
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+
+</body></html>

@@ -13,6 +13,11 @@ enum ConnectionRequestStatus {
   DECLINED
 }
 
+enum ProjectWaitlistStatus {
+  JOINED
+  WITHDRAWN
+}
+
 model User {
   id                    String      @id @default(cuid())
   email                 String      @unique
@@ -58,6 +63,7 @@ model User {
   projectTeam           Project[]   @relation("ProjectTeam")
   projectReviews        Project[]   @relation("ProjectReviewer")
   projectAuditEntries   ProjectAuditLog[] @relation("ProjectAuditActor")
+  projectWaitlistEntries ProjectWaitlistEntry[] @relation("ProjectWaitlistUser")
   leadSubmissions       LeadSubmission[] @relation("LeadSubmitter")
   leadReviews           LeadSubmission[] @relation("LeadReviewer")
   leadEvents            LeadEvent[] @relation("LeadEventActor")
@@ -332,11 +338,42 @@ model Project {
   diligenceCases  DueDiligence[]
   auditLogs       ProjectAuditLog[]
   marketplaceItem MarketplaceItem?
+  waitlistEntries ProjectWaitlistEntry[] @relation("ProjectWaitlistProject")
 
   @@index([creatorId])
   @@index([reviewerId])
   @@index([status])
   @@index([isPublished])
+}
+
+model ProjectWaitlistEntry {
+  id          String               @id @default(cuid())
+  userId      String
+  projectId   String
+  status      ProjectWaitlistStatus @default(JOINED)
+  joinedAt    DateTime             @default(now())
+  withdrawnAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  user        User                 @relation("ProjectWaitlistUser", fields: [userId], references: [id], onDelete: Cascade)
+  project     Project              @relation("ProjectWaitlistProject", fields: [projectId], references: [id], onDelete: Cascade)
+  events      ProjectWaitlistEvent[]
+
+  @@unique([projectId, userId])
+  @@index([userId, status])
+  @@index([projectId, status])
+}
+
+model ProjectWaitlistEvent {
+  id        String               @id @default(cuid())
+  entryId   String
+  action    ProjectWaitlistStatus
+  createdAt DateTime             @default(now())
+
+  entry     ProjectWaitlistEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId, createdAt])
 }
 
 model ProjectAuditLog {
