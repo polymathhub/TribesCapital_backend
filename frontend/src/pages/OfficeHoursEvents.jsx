@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { communityAPI, eventsAPI, notificationsAPI } from '../api/endpoints';
+import { ToastNotice } from '../components/AppToast';
+import { showToast as notifyToast } from '../utils/toast';
 
 /* ─── DESIGN TOKENS ─── */
 const C = {
@@ -644,18 +646,6 @@ function ViewAllModal({ events, onClose, onOpen, onEdit, onDelete, onApprove, on
   );
 }
 
-/* ═══════════════════════════════════════════
-   TOAST
-═══════════════════════════════════════════ */
-function Toast({ msg, onDone }) {
-  useEffect(()=>{const t=setTimeout(onDone,2800);return()=>clearTimeout(t);},[]);
-  return (
-    <div style={{position:'fixed',top:16,right:16,background:'#1F2937',color:C.w,fontSize:13,fontWeight:500,padding:'10px 18px',borderRadius:10,display:'flex',alignItems:'center',gap:8,zIndex:200,boxShadow:'0 8px 24px rgba(0,0,0,.2)',maxWidth:'90vw'}}>
-      <I k="check" s={14} c='#34D399' sw={2.5}/>{msg}
-    </div>
-  );
-}
-
 function normalizeEventType(value) {
   const raw = String(value || '').trim().toLowerCase();
   if (!raw) return 'Office hours';
@@ -758,9 +748,9 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
   const [deleteEv,    setDel]         = useState(null);
   const [detailEv,    setDetail]      = useState(null);
   const [viewAll,     setViewAll]     = useState(false);
-  const [toast,       setToast]       = useState(null);
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(() => isStoredAdmin());
+  const rsvpRequestsRef = useRef(new Set());
 
   useEffect(() => {
     let isMounted = true;
@@ -800,7 +790,9 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
             .map(result => result.status === 'fulfilled' ? [result.value.id, result.value.attending] : []));
 
           if (isMounted) {
-            setEvents((prev) => prev.map((event) => ({ ...event, rsvped: statusMap.get(event.id) || event.rsvped })));
+            setEvents((prev) => prev.map((event) => (
+              statusMap.has(event.id) ? { ...event, rsvped: statusMap.get(event.id) } : event
+            )));
           }
         }
       } catch (error) {
@@ -850,7 +842,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
     };
   }, []);
 
-  const showToast = msg => setToast(msg);
+  const showToast = (msg, type = 'success') => notifyToast(msg, { type });
 
   const handleToggleHostFollow = async (member) => {
     try {
@@ -858,7 +850,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
       const result = unwrapApiData(response);
       setHosts((current) => current.map((host) => host.id === member.id ? { ...host, isFollowedByMe: result.following } : host));
     } catch (error) {
-      showToast(error?.response?.data?.message || 'Unable to update this follow right now.');
+      showToast(error?.response?.data?.message || 'Unable to update this follow right now.', 'error');
     }
   };
 
@@ -880,16 +872,18 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
       showToast('You are now subscribed to event updates.');
     } catch (error) {
       const message = error?.response?.data?.message || error?.message || 'Unable to subscribe to event updates right now.';
-      showToast(`Notification failed: ${message}`);
+      showToast(`Notification failed: ${message}`, 'error');
     } finally {
       setNotifyLoading(false);
     }
   };
 
   const handleRsvp = async id => {
+    if (rsvpRequestsRef.current.has(id)) return;
     const event = events.find(e => e.id === id);
     if (!event) return;
 
+    rsvpRequestsRef.current.add(id);
     try {
       if (!event.rsvped) {
         await eventsAPI.rsvp(id, 1);
@@ -916,7 +910,15 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
       }
       showToast(event.rsvped ? 'RSVP cancelled.' : 'RSVP confirmed.');
     } catch (error) {
-      showToast('Unable to update your RSVP right now.');
+      if (error?.response?.status === 409 && !event.rsvped) {
+        setEvents(previous => previous.map(item => item.id === id ? { ...item, rsvped: true } : item));
+        setDetail(previous => previous?.id === id ? { ...previous, rsvped: true } : previous);
+        showToast("You're already registered for this event.");
+      } else {
+        showToast(error?.response?.data?.message || 'Unable to update your RSVP right now.', 'error');
+      }
+    } finally {
+      rsvpRequestsRef.current.delete(id);
     }
   };
 
@@ -927,7 +929,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
       setEvents(previous => previous.map(item => item.id === event.id ? { ...approved, rsvped: item.rsvped } : item));
       showToast('Office hours approved and published.');
     } catch (error) {
-      showToast(`Unable to approve event: ${error?.response?.data?.message || error?.message || 'Please try again.'}`);
+      showToast(`Unable to approve event: ${error?.response?.data?.message || error?.message || 'Please try again.'}`, 'error');
     }
   };
 
@@ -948,17 +950,17 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
     const normalizedCapacity = Number.isInteger(parsedCapacity) && parsedCapacity >= 1 ? parsedCapacity : 100;
 
     if (!title || !form.date || !time || Number.isNaN(startDate.getTime())) {
-      showToast('Please provide a valid title, date, and time for this event.');
+      showToast('Please provide a valid title, date, and time for this event.', 'error');
       return;
     }
 
     if (!durationMinutes || Number.isNaN(durationMinutes)) {
-      showToast('Enter a valid duration, such as 90 min or 1 hour 30 min.');
+      showToast('Enter a valid duration, such as 90 min or 1 hour 30 min.', 'error');
       return;
     }
 
     if (form.registrationDeadline && Number.isNaN(registrationDeadline.getTime())) {
-      showToast('Please provide a valid registration deadline date.');
+      showToast('Please provide a valid registration deadline date.', 'error');
       return;
     }
 
@@ -1015,7 +1017,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
       }
     } catch (error) {
       const message = error?.response?.data?.message || error?.message || 'Unable to save this event right now.';
-      showToast(`Unable to save event: ${message}`);
+      showToast(`Unable to save event: ${message}`, 'error');
     }
   };
 
@@ -1046,6 +1048,15 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
   return (
     <div className="oe-page" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <main className="oe-page-content" style={{ flex: 1, overflowY: 'auto', padding: mainPad }}>
+        {eventsError && (
+          <ToastNotice
+            message={eventsError}
+            type="error"
+            action={{ label: 'Retry', onClick: () => setEventsRetryKey((key) => key + 1) }}
+            duration={0}
+          />
+        )}
+        {hostsError && <ToastNotice message="Community hosts are unavailable right now." type="error" />}
         <header className="oe-page-header">
           <div><h1>Office Hours &amp; Events</h1><p>Join live sessions, workshops and Q&amp;As with contractors and energy experts.</p></div>
           <div className="oe-page-actions">
@@ -1065,7 +1076,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
               <button type="button" className="oe-nextup-primary" onClick={() => handleRsvp(featuredEvent.id)}>{featuredEvent.rsvped ? 'Registered' : 'Register'}</button>
               <button type="button" className="oe-nextup-secondary" onClick={() => setDetail(featuredEvent)}>View details</button>
             </div>
-          </> : eventsError ? <div><span className="oe-eyebrow">COMMUNITY CALENDAR</span><h2>Events are temporarily unavailable</h2><p>{eventsError}</p><button type="button" className="oe-nextup-primary" onClick={() => setEventsRetryKey((key) => key + 1)}>Try again</button></div> : <div><span className="oe-eyebrow">COMMUNITY CALENDAR</span><h2>No upcoming events right now</h2><p>New sessions with contractors and energy experts are added regularly.</p></div>}
+          </> : eventsError ? <div><span className="oe-eyebrow">COMMUNITY CALENDAR</span><h2>Events are temporarily unavailable</h2><p>Use Retry in the notification to try again.</p></div> : <div><span className="oe-eyebrow">COMMUNITY CALENDAR</span><h2>No upcoming events right now</h2><p>New sessions with contractors and energy experts are added regularly.</p></div>}
         </section>
 
         <div className="oe-filter-row" role="group" aria-label="Filter events by type">
@@ -1088,7 +1099,7 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
             </section>
             <section className="oe-side-panel">
               <div className="oe-side-heading"><h2>Hosts to follow</h2></div>
-              {hostsLoading ? <p className="oe-side-empty" role="status">Loading community hosts…</p> : hostsError ? <p className="oe-side-empty">Community hosts are unavailable right now.</p> : hosts.length ? hosts.map((host) => { const name = [host.firstName, host.lastName].filter(Boolean).join(' ') || host.displayName || 'Member'; return <div className="oe-host-row" key={host.id}><span className="oe-host-avatar">{name.slice(0, 1).toUpperCase()}</span><span className="oe-host-copy"><b>{name}</b><small>{host.occupation || 'Community member'}</small></span><button type="button" className="oe-follow-button" onClick={() => void handleToggleHostFollow(host)}>{host.isFollowedByMe ? 'Following' : 'Follow'}</button></div>; }) : <p className="oe-side-empty">Community hosts will appear here.</p>}
+              {hostsLoading ? <p className="oe-side-empty" role="status">Loading community hosts…</p> : hostsError ? <p className="oe-side-empty">Host information isn’t available.</p> : hosts.length ? hosts.map((host) => { const name = [host.firstName, host.lastName].filter(Boolean).join(' ') || host.displayName || 'Member'; return <div className="oe-host-row" key={host.id}><span className="oe-host-avatar">{name.slice(0, 1).toUpperCase()}</span><span className="oe-host-copy"><b>{name}</b><small>{host.occupation || 'Community member'}</small></span><button type="button" className="oe-follow-button" onClick={() => void handleToggleHostFollow(host)}>{host.isFollowedByMe ? 'Following' : 'Follow'}</button></div>; }) : <p className="oe-side-empty">Community hosts will appear here.</p>}
             </section>
             <section className="oe-side-panel oe-recordings-panel"><h2>Missed a session?</h2><p>Recordings from past webinars and workshops are available to watch on demand.</p><button type="button" onClick={() => setFilter('rp')}>Browse replays <I k="arr" s={13} c={C.pu}/></button></section>
           </aside>
@@ -1106,13 +1117,12 @@ export default function OfficeHoursEvents({ isMobile: isMobileProp, isMobilePara
           showToast('Event deleted successfully');
           window.dispatchEvent(new CustomEvent('tribes:data-update',{detail:{type:'events-updated', id:deleteEv.id}}));
         } catch (error) {
-          showToast(`Unable to delete event: ${error?.response?.data?.message || error?.message || 'Please try again.'}`);
+          showToast(`Unable to delete event: ${error?.response?.data?.message || error?.message || 'Please try again.'}`, 'error');
         }
       }}/>
       }
       {detailEv   && <DetailModal ev={detailEv} isMobile={isMobile} onClose={()=>setDetail(null)} onRsvp={handleRsvp}/>}
       {viewAll    && <ViewAllModal events={displayEvents} isMobile={isMobile} isAdmin={isAdmin} onClose={()=>setViewAll(false)} onOpen={setDetail} onEdit={setEdit} onDelete={setDel} onApprove={handleApprove} onRsvp={handleRsvp}/>}
-      {toast      && <Toast msg={toast} onDone={()=>setToast(null)}/>}
 
       <style>{`
         *{box-sizing:border-box;}

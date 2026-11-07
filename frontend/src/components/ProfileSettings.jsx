@@ -5,6 +5,7 @@ import { Activity, Check, Globe, LockKeyhole, MessageCircle, MoreHorizontal, Pen
 import { usersAPI } from '../api/endpoints';
 import { uploadFileInChunks } from '../utils/chunkedUpload';
 import ProfileAvatar from './ProfileAvatar';
+import { ToastNotice } from './AppToast';
 import { resolveProfileImageUrl } from '../utils/profileImageUrl';
 import './ProfileSettings.css';
 
@@ -365,7 +366,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
 
   return (
     <main className={`profile-settings-page${readOnly ? ' read-only' : ''}`}>
-      {message && <div className={`profile-save-notice ${message.type}`} role={message.type === 'error' ? 'alert' : 'status'}>{message.text}</div>}
+      {message && <ToastNotice message={message.text} type={message.type} />}
       <section className="profile-hero-card">
         <div className="profile-cover" style={coverPhoto ? { backgroundImage: `url("${resolveProfileImageUrl(coverPhoto)}")` } : undefined}>
           {!readOnly && <button type="button" className="profile-cover-edit" aria-label="Edit cover photo" title="Edit cover photo" onClick={() => coverFileRef.current?.click()}><Pencil size={15} /></button>}
@@ -393,7 +394,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
           {tierProgress && <span className="profile-tier-current-badge">Tier {tierProgress.currentTier}</span>}
         </header>
         {tierProgressLoading ? <p className="profile-tier-loading" role="status">Loading your tier progress…</p>
-          : tierProgressError ? <p className="profile-tier-error" role="alert">{tierProgressError}</p>
+          : tierProgressError ? <ToastNotice message={tierProgressError} type="error" />
             : tierProgress && <>
               <div className="profile-tier-track" aria-label={`Tier ${tierProgress.currentTier} of 3`}>
                 {tierProgress.tiers.map((tier) => (
@@ -492,7 +493,7 @@ function ProfileSettings({ user = {}, avatarDataUrl = null, onAvatarChange = () 
             <label className="profile-field"><span>About <small>{bio.length}/{BIO_MAX}</small></span><textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={BIO_MAX} rows={4} placeholder="Share your experience and what you are working on." /></label>
             <fieldset className="profile-field profile-interest-field"><legend>Energy interests <small>{interests.length} selected</small></legend><div className="profile-interest-list">{INTEREST_OPTIONS.map((interest) => { const selected = interests.includes(interest); return <button type="button" key={interest} aria-pressed={selected} className={`profile-interest-option${selected ? ' selected' : ''}`} onClick={() => toggleInterest(interest)}>{interest}</button>; })}</div></fieldset>
             <label className="profile-field"><span>Professional profile links</span><input value={socialLinks.join(', ')} onChange={(event) => setSocialLinks(event.target.value.split(',').map((item) => item.trim()).filter(Boolean))} maxLength={1000} placeholder="linkedin.com/in/yourname, github.com/username" autoComplete="url" /></label>
-            {message?.type === 'error' && <div className="profile-save-notice error" role="alert">{message.text}</div>}
+            {message?.type === 'error' && <ToastNotice message={message.text} type="error" />}
           </div>
           <footer>{uploadProgress && <div className="profile-upload-progress" role="status"><span>Uploading {uploadProgress.percent}%</span><progress value={uploadProgress.percent} max="100" /></div>}<button type="button" className="profile-secondary-button" disabled={saving} onClick={() => setEditOpen(false)}>Cancel</button><button type="button" className="profile-save-button" disabled={saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Save profile'}</button></footer>
         </section>

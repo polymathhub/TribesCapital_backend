@@ -1,6 +1,6 @@
 # File Upload Storage
 
-Profile images, chat attachments, due-diligence files, and project-pipeline files use multipart uploads. S3 remains the default provider: the browser sends 8 MiB parts directly to S3 and the API issues short-lived URLs. Deployments without cloud-storage credentials can instead store uploads on the application server.
+Profile images, chat attachments, due-diligence files, and project-pipeline files use multipart uploads. In production, the application server's local disk is the default storage provider unless `UPLOAD_STORAGE_PROVIDER=s3` is explicitly set. In non-production environments, S3 remains the default provider unless `UPLOAD_STORAGE_PROVIDER=local` is set.
 
 ## Application settings
 
@@ -12,12 +12,14 @@ For S3 storage, configure these backend environment variables:
 - `AWS_S3_BUCKET`
 - `AWS_S3_URL` (optional custom asset base URL)
 
-To use local disk storage, set:
+To select local disk storage explicitly (recommended on a persistent Plesk server), set:
 
 - `UPLOAD_STORAGE_PROVIDER=local`
-- `UPLOADS_STORAGE_PATH` (optional absolute path; defaults to `<application-root>/storage/uploads`)
+- `UPLOADS_STORAGE_PATH` to an absolute path in a private directory outside the release/application directory (for example, `/var/www/vhosts/<domain>/private/tribes-uploads`)
 
-The application process must be able to write to `UPLOADS_STORAGE_PATH`. Choose a persistent directory that is not removed during deployments, monitor available disk space, and include it in regular backups. Local storage does not require AWS credentials. Files are stored outside the directory served as legacy `/uploads` static content. Profile images and messaging attachments use public routes; due-diligence and project-pipeline downloads require an authenticated API request. Protect server access and backups accordingly. Incomplete multipart sessions are stored under `.multipart` and should be removed periodically after confirming they are no longer active.
+The application process must be able to write to `UPLOADS_STORAGE_PATH`. Confirm the directory survives both PM2 restarts and deployments, monitor available disk space, and include it in regular backups. Local storage does not require AWS credentials for new uploads. When local mode is enabled, existing objects not present on disk continue to be read from S3 if S3 is configured; this allows a gradual transition without breaking saved profile and document URLs. If an older S3 object is missing locally, serving it still requires valid S3 credentials and permissions. Profile images and messaging attachments use public routes; due-diligence and project-pipeline downloads require an authenticated API request. Protect server access and backups accordingly. Incomplete multipart sessions are stored under `.multipart` and should be removed periodically after confirming they are no longer active.
+
+For PM2, set `UPLOADS_STORAGE_PATH` in the application's environment (for example, its ecosystem configuration or the environment used by the Plesk Node.js app), create the directory, and grant the PM2 process user write access. Production defaults to local storage unless `UPLOAD_STORAGE_PROVIDER=s3` is set. Restart PM2 after changing environment variables. If PM2 runs multiple hosts/containers rather than multiple processes on the same Plesk filesystem, local storage must be a shared persistent mount; otherwise use S3.
 
 - `API_PUBLIC_URL` (public backend origin used to build OAuth callback URLs)
 - `SOCIAL_PROFILE_CALLBACK_URL` (optional exact OAuth callback URL override)

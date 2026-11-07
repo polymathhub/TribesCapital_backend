@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { analyticsAPI } from '../api/endpoints';
 import { COLORS } from '../constants/colors';
+import { ToastNotice } from '../components/AppToast';
 
 const RANGE_OPTIONS = [
   ['7d', 'Last 7 days'],
@@ -114,6 +115,7 @@ export default function AdminAnalytics({ isMobile = false, isTablet = false }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const customDatesInvalid = range === 'custom' && (!from || !to || from > to);
   const query = useMemo(() => ({
     range,
@@ -143,7 +145,7 @@ export default function AdminAnalytics({ isMobile = false, isTablet = false }) {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [query, customDatesInvalid, from, to]);
+  }, [query, customDatesInvalid, from, to, retryCount]);
 
   const exportCsv = () => {
     if (!report) return;
@@ -265,8 +267,8 @@ export default function AdminAnalytics({ isMobile = false, isTablet = false }) {
             {(report?.filters?.eventTypes || []).map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </div>
-        {error && <div className="admin-analytics-error" role="alert">{error}</div>}
-        {range === 'custom' && !error && customDatesInvalid && <div className="admin-analytics-error" role="status">Choose a start and end date to load a custom report.</div>}
+        {error && <ToastNotice message={error} type="error" action={{ label: 'Retry', onClick: () => setRetryCount((count) => count + 1) }} />}
+        {range === 'custom' && !error && customDatesInvalid && <ToastNotice message="Choose a start and end date to load a custom report." type="error" />}
         <section className="admin-analytics-metrics" aria-label="Analytics summary">
           {metricCards.map(([label, value, note, accent]) => <MetricCard key={label} label={label} value={loading || !report ? '—' : formatNumber(value)} note={note || ''} accent={accent} />)}
         </section>

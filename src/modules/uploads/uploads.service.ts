@@ -38,7 +38,11 @@ export class UploadsService {
     this.region = config?.region || 'us-east-1';
     this.publicBaseUrl = config?.s3Url?.replace(/\/$/, '');
     this.apiPrefix = String(configService.get('app.apiPrefix') || 'api').replace(/^\/+|\/+$/g, '');
-    this.storageProvider = process.env.UPLOAD_STORAGE_PROVIDER?.trim().toLowerCase() === 'local' ? 'local' : 's3';
+    const configuredStorageProvider = process.env.UPLOAD_STORAGE_PROVIDER?.trim().toLowerCase();
+    this.storageProvider = configuredStorageProvider === 'local'
+      || (!configuredStorageProvider && process.env.NODE_ENV === 'production')
+      ? 'local'
+      : 's3';
     this.localStoragePath = resolve(process.env.UPLOADS_STORAGE_PATH || join(process.cwd(), 'storage', 'uploads'));
     this.s3 = new AWS.S3({
       ...(config?.accessKeyId ? { accessKeyId: config.accessKeyId } : {}),
@@ -229,8 +233,8 @@ export class UploadsService {
   async getSignedDownloadUrl(key: string) {
     this.assertStorageKey(key);
     if (this.storageProvider === 'local') {
-      await this.getLocalFilePath(key);
-      return this.localFileUrl(key);
+      const localPath = await this.tryGetLocalFilePath(key);
+      if (localPath) return this.localFileUrl(key);
     }
     this.ensureConfigured();
     return this.s3.getSignedUrlPromise('getObject', { Bucket: this.bucket, Key: key, Expires: 900 });
@@ -295,7 +299,12 @@ export class UploadsService {
 
   async tryGetLocalFilePath(key: string) {
     if (this.storageProvider !== 'local') return undefined;
-    return this.getLocalFilePath(key);
+    try {
+      return await this.getLocalFilePath(key);
+    } catch (error) {
+      if (error instanceof BadRequestException && error.message === 'Uploaded file not found') return undefined;
+      throw error;
+    }
   }
 
   private async readLocalManifest(userId: string, uploadId: string) {

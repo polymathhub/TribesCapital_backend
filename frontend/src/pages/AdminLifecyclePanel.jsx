@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminOperationsAPI } from '../api/endpoints';
 import { COLORS } from '../constants/colors';
+import { ToastNotice } from '../components/AppToast';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? {};
 const fullName = (person) => [person?.firstName, person?.lastName].filter(Boolean).join(' ') || person?.email || 'Unknown';
@@ -12,8 +13,7 @@ function Panel({ children }) {
 }
 
 function Notice({ children, error = false }) {
-  if (!children) return null;
-  return <div role={error ? 'alert' : 'status'} style={{ padding: 11, margin: '12px 0', borderRadius: 8, background: error ? '#FEF3F2' : '#ECFDF3', color: error ? '#B42318' : '#027A48', fontSize: 13 }}>{children}</div>;
+  return children ? <ToastNotice message={children} type={error ? 'error' : 'success'} /> : null;
 }
 
 function PageControls({ page, total, limit, setPage }) {

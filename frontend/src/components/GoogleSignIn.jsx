@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/endpoints';
+import { ToastNotice } from './AppToast';
 
 /**
  * GoogleSignIn Component
@@ -187,43 +188,7 @@ export function GoogleSignIn({
 
   return (
     <div>
-      {/* Error message display */}
-      {error && (
-        <div
-          style={{
-            padding: '12px 16px',
-            marginBottom: '16px',
-            backgroundColor: '#FEE2E2',
-            border: '1px solid #FCA5A5',
-            borderRadius: '8px',
-            color: '#991B1B',
-            fontSize: '14px',
-            lineHeight: '1.5',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '12px',
-          }}
-          role="alert"
-        >
-          <span>{error}</span>
-          <button
-            onClick={() => setError(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#991B1B',
-              cursor: 'pointer',
-              fontSize: '18px',
-              padding: '0',
-              flexShrink: 0,
-            }}
-            aria-label="Dismiss error"
-          >
-            ×
-          </button>
-        </div>
-      )}
+      {error && <ToastNotice message={error} type="error" onDismiss={() => setError(null)} />}
 
       {/* Google Sign-In button container */}
       <div

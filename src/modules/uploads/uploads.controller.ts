@@ -45,8 +45,9 @@ export class UploadsController {
 
   @Get('file')
   async getFile(@Query('key') key: string, @Res() response: Response) {
-    const filePath = await this.uploadsService.getLocalFilePath(key);
-    return response.sendFile(filePath);
+    const filePath = await this.uploadsService.tryGetLocalFilePath(key);
+    if (filePath) return response.sendFile(filePath);
+    return response.redirect(await this.uploadsService.getSignedDownloadUrl(key));
   }
 
   @Post('initiate')

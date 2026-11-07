@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
 import { uploadFileInChunks } from '../../utils/chunkedUpload';
 import Icon from '../Icon';
+import { ToastNotice } from '../AppToast';
 
 const MAX_ATTACHMENTS = 5;
 
@@ -159,7 +160,7 @@ const DDCommentsPanel = ({ dueDiligenceId, comments = [], onRefresh }) => {
           </button>
         </div>
         {uploadProgress !== null && <div role="status" style={{ margin: '8px 0', color: '#475467', fontSize: 12 }}>Uploading: {uploadProgress}%<progress value={uploadProgress} max="100" style={{ display: 'block', width: '100%', marginTop: 5 }} /></div>}
-        {uploadError && <p role="alert" style={{ color: '#B42318', fontSize: 12 }}>{uploadError}</p>}
+        {uploadError && <ToastNotice message={uploadError} type="error" />}
 
         {attachments.length > 0 && (
           <div className="dd-file-chip-group">

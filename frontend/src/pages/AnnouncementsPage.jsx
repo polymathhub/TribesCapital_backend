@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { notificationsAPI } from '../api/endpoints';
 import { COLORS } from '../constants/colors';
+import { ToastNotice } from '../components/AppToast';
 
 const isAdminUser = (user) => {
   const roles = Array.isArray(user?.roles) ? user.roles : [];
@@ -67,6 +68,8 @@ export default function AnnouncementsPage({ user, onBack, onToggleSidebar, isMob
 
       <div style={{ flex: 1, overflowY: 'auto', padding: isMobileLocal ? 16 : 30, background: COLORS.BG }}>
         <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          {broadcastState.error && <ToastNotice message={broadcastState.error} type="error" onDismiss={() => setBroadcastState((current) => ({ ...current, error: '' }))} />}
+          {broadcastState.notice && <ToastNotice message={broadcastState.notice} type="success" onDismiss={() => setBroadcastState((current) => ({ ...current, notice: '' }))} />}
           {isAdminUser(user) && <form onSubmit={submitBroadcast} style={{ padding: isMobileLocal ? 18 : 24, borderRadius: 12, background: COLORS.W, color: COLORS.T1, border: `1px solid ${COLORS.BD}`, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}>
             <div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 8 }}>Admin broadcast</div>
             <h2 style={{ margin: '0 0 6px', fontSize: 20 }}>Send an announcement to everyone</h2>
@@ -75,11 +78,12 @@ export default function AnnouncementsPage({ user, onBack, onToggleSidebar, isMob
             <div style={{ display: 'grid', gap: 10 }}>
               <input required placeholder="Announcement title" value={broadcast.title} onChange={(event) => setBroadcast({ ...broadcast, title: event.target.value })} style={{ border: `1px solid ${COLORS.BD}`, borderRadius: 8, padding: '10px 12px', font: 'inherit', color: COLORS.T1, background: COLORS.W }} />
               <textarea required rows={4} placeholder="Write the announcement..." value={broadcast.message} onChange={(event) => setBroadcast({ ...broadcast, message: event.target.value })} style={{ border: `1px solid ${COLORS.BD}`, borderRadius: 8, padding: '10px 12px', font: 'inherit', color: COLORS.T1, background: COLORS.W, resize: 'vertical' }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}><span role={broadcastState.error ? 'alert' : 'status'} style={{ color: broadcastState.error ? COLORS.AM : COLORS.GR, fontSize: 12 }}>{broadcastState.error || broadcastState.notice}</span><button type="submit" disabled={broadcastState.busy} style={{ border: 0, borderRadius: 8, background: COLORS.P, color: COLORS.W, padding: '10px 14px', fontWeight: 800, cursor: broadcastState.busy ? 'wait' : 'pointer' }}>{broadcastState.busy ? 'Sending...' : 'Broadcast announcement'}</button></div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}><button type="submit" disabled={broadcastState.busy} style={{ border: 0, borderRadius: 8, background: COLORS.P, color: COLORS.W, padding: '10px 14px', fontWeight: 800, cursor: broadcastState.busy ? 'wait' : 'pointer' }}>{broadcastState.busy ? 'Sending...' : 'Broadcast announcement'}</button></div>
             </div>
           </form>}
           {!isAdminUser(user) && <section aria-label="Community announcements" style={{ display: 'grid', gap: 12 }}>
-            {announcementsState.loading ? <div style={{ padding: 22, borderRadius: 12, background: COLORS.W, border: `1px solid ${COLORS.BD}`, color: COLORS.T2 }}>Loading announcements...</div> : announcementsState.error ? <div role="alert" style={{ padding: 14, borderRadius: 10, background: COLORS.AMB, border: '1px solid #FCD34D', color: COLORS.AM }}>{announcementsState.error}</div> : announcements.length === 0 ? <div style={{ padding: 22, borderRadius: 12, background: COLORS.W, border: `1px solid ${COLORS.BD}`, color: COLORS.T2 }}>No announcements yet.</div> : announcements.map((announcement) => <article key={announcement.id} style={{ padding: isMobileLocal ? 18 : 22, borderRadius: 12, background: COLORS.W, border: `1px solid ${COLORS.BD}`, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}>
+            {announcementsState.error && <ToastNotice message={announcementsState.error} type="error" action={{ label: 'Retry', onClick: loadAnnouncements }} duration={0} />}
+            {announcementsState.loading ? <div style={{ padding: 22, borderRadius: 12, background: COLORS.W, border: `1px solid ${COLORS.BD}`, color: COLORS.T2 }}>Loading announcements...</div> : announcementsState.error ? <div style={{ padding: 14, borderRadius: 10, background: COLORS.W, border: `1px solid ${COLORS.BD}`, color: COLORS.T2 }}>Announcements are temporarily unavailable.</div> : announcements.length === 0 ? <div style={{ padding: 22, borderRadius: 12, background: COLORS.W, border: `1px solid ${COLORS.BD}`, color: COLORS.T2 }}>No announcements yet.</div> : announcements.map((announcement) => <article key={announcement.id} style={{ padding: isMobileLocal ? 18 : 22, borderRadius: 12, background: COLORS.W, border: `1px solid ${COLORS.BD}`, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}>
               <div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 8 }}>Announcement</div>
               <h2 style={{ margin: '0 0 8px', fontSize: isMobileLocal ? 19 : 22, color: COLORS.T1 }}>{announcement.title}</h2>
               <p style={{ margin: 0, color: COLORS.T2, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{announcement.message}</p>

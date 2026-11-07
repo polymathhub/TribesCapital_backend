@@ -12,8 +12,11 @@ import React, {
 } from 'react';
 import { authAPI, communityAPI, coursesAPI, dueDiligenceAPI, eventsAPI, marketplaceAPI, messagingAPI, notificationsAPI, projectsAPI } from './api/endpoints';
 import { LEARNING_HUB_VIDEOS } from './data/learningHubVideos';
+import { COMMUNITY_DISCUSSION_STARTERS } from './data/communityDiscussionStarters';
 import ProfileAvatar from './components/ProfileAvatar';
 import Skeleton from './components/Skeleton';
+import { ToastNotice } from './components/AppToast';
+import { showToast as showAppToast } from './utils/toast';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Activity01Icon, Calendar01Icon, CheckmarkCircle01Icon, EnergyIcon, Location01Icon, UserCircleIcon } from '@hugeicons/core-free-icons';
 const LearningHub = lazy(() => import('./pages/LearningHub.jsx'));
@@ -233,13 +236,6 @@ const STYLES = `
 .tca-mock-mini .dot{ width:11px; height:11px; border-radius:4px; margin-bottom:5px; }
 .tca-mock-mini .a{ background:#D1D5DB; height:4px; width:100%; border-radius:999px; margin-bottom:4px; }
 .tca-mock-mini .b{ background:#E5E7EB; height:4px; width:65%; border-radius:999px; }
-
-.tca-toast{ position:fixed; bottom:22px; right:22px; z-index:100; max-width:300px; background:#fff; border:1px solid var(--line);
-  border-radius:14px; box-shadow:0 16px 34px rgba(17,17,20,.16); padding:13px 16px; display:flex; align-items:center; gap:11px;
-  transition:all .2s ease; opacity:0; transform:translateY(12px); pointer-events:none; }
-.tca-toast.show{ opacity:1; transform:translateY(0); }
-.tca-toast .chip{ width:30px; height:30px; border-radius:8px; background:transparent; color:var(--purple-700); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.tca-toast .msg{ font-size:12.8px; font-weight:600; color:#1F2937; }
 
 /* ---------- Dashboard shell ---------- */
 .dash-app{ --tc-page-gutter-x:32px; --tc-page-gutter-y:32px; --tc-page-gutter-bottom:64px; display:flex; min-height:100vh; background:var(--bg); }
@@ -542,6 +538,23 @@ const STYLES = `
 .forum-post-like:hover,.forum-post-like[aria-pressed="true"]{color:#5B21B6}
 .forum-post-join{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:0;border:0;background:none;color:#7C3AED;cursor:pointer;font:inherit;font-size:16px;font-weight:700}
 .forum-post-join:hover{color:#5B21B6}
+.forum-starter-library{display:grid;gap:28px}
+.forum-starter-heading{padding:4px 0}
+.forum-starter-heading span{color:#7C3AED;font-size:10px;font-weight:800;letter-spacing:.1em}
+.forum-starter-heading h2{margin:5px 0;color:#2E1065;font-size:23px}
+.forum-starter-heading p{margin:0;color:#667085;font-size:13px;line-height:1.55}
+.forum-starter-category{display:grid;gap:12px}
+.forum-starter-category>h3{margin:0;color:#344054;font-size:16px}
+.forum-starter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.forum-starter-card{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:12px;padding:18px!important;border-radius:14px!important}
+.forum-starter-thumbnail{display:flex;width:100%;min-height:88px;flex-direction:column;justify-content:flex-end;gap:5px;padding:12px;border-radius:10px;background:linear-gradient(130deg,#F3E8FF,#E0F2FE 55%,#DCFCE7);color:#475467}
+.forum-starter-thumbnail span{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.forum-starter-thumbnail strong{font-size:12px;line-height:1.4}
+.forum-starter-card h4{margin:0;color:#202938;font-size:15px;line-height:1.4}
+.forum-starter-card>p{margin:0;color:#596579;font-size:12.5px;line-height:1.55}
+.forum-starter-card blockquote{margin:0;padding:10px 12px;border-left:3px solid #C4B5FD;border-radius:0 7px 7px 0;background:#FAF5FF;color:#4B5563;font-size:12px;line-height:1.5}
+.forum-starter-card blockquote strong{color:#5B21B6}
+.forum-starter-card .forum-post-join{margin-top:auto;font-size:13px}
 .forum-rail .forum-topic-panel{background:#FAF5FF;border-color:#E9D5FF}
 .forum-rail .forum-member-panel{background:#fff;border-color:#E9D5FF}
 .forum-topic-row{padding:9px 0;border-bottom:1px solid rgba(91,33,182,.1)}
@@ -561,6 +574,8 @@ const STYLES = `
 @media(prefers-reduced-motion:reduce){.forum-loading-state span{animation:none}}
 @media(max-width:760px){.forum-hero{grid-template-columns:1fr;gap:26px;padding:26px 22px}.forum-visual{justify-self:stretch;width:100%;max-width:none;padding:18px}.forum-hero h1{font-size:25px}}
 @media(max-width:480px){
+  .forum-starter-grid{grid-template-columns:1fr}
+  .forum-starter-card{padding:16px!important}
   .forum-visual-foot{gap:14px}
   .forum-post{padding:20px!important;border-radius:16px!important}
   .forum-post-head{gap:10px;margin-bottom:18px}
@@ -2256,7 +2271,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (max-width:1023px){
   .dash-topbar{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x)}
   .dash-content{padding-left:var(--tc-page-gutter-x);padding-right:var(--tc-page-gutter-x);padding-bottom:calc(64px + env(safe-area-inset-bottom))}
-  .tca-toast{bottom:calc(22px + env(safe-area-inset-bottom));right:max(22px,env(safe-area-inset-right))}
   .dash-sidebar{padding-top:calc(22px + env(safe-area-inset-top));padding-bottom:calc(22px + env(safe-area-inset-bottom))}
   .dash-topbar{padding-top:calc(11px + env(safe-area-inset-top))}
 }
@@ -2292,7 +2306,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .learn-fpill{flex-shrink:0;white-space:nowrap}
   .learn-continue-banner .bar{width:100%}
   .learn-resume-btn{width:100%;justify-content:center}
-  .tca-toast{left:12px;right:12px;max-width:none;bottom:calc(16px + env(safe-area-inset-bottom))}
   .tca-otp-row{gap:8px}
   .lb-modal.ok{max-width:100%}
   .vt-proj-right{min-width:0;text-align:left;width:100%}
@@ -2362,7 +2375,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .homepage-hero-dot.active{width:20px;border-radius:999px;background:#fff}
 .homepage-hero-dot:focus-visible{outline:2px solid #fff;outline-offset:3px}
 @media (max-width:640px){.dash-banner.homepage-hero{aspect-ratio:2.94/1}.homepage-hero-slide.intro-slide img{object-fit:contain;background:#f7f7f8}.homepage-hero-caption{padding:12px 14px 34px}.homepage-hero-caption h2{max-width:260px;font-size:17px}.homepage-hero-dots{right:12px;bottom:10px}}
-@media print{.dash-sidebar,.dash-topbar,.tca-toast,.tour-card,.tour-dim,.tour-click-block{display:none!important}.dash-content{max-width:none;padding:0}}
+@media print{.dash-sidebar,.dash-topbar,.tour-card,.tour-dim,.tour-click-block{display:none!important}.dash-content{max-width:none;padding:0}}
 `;
 
 /* ============================================================
@@ -2651,15 +2664,6 @@ function OnboardingShell({ onSkip, children }) {
   );
 }
 
-function Toast({ message }) {
-  return (
-    <div className={`tca-toast${message ? ' show' : ''}`}>
-      <span className="chip"><Check size={15} color="#5B21B6" strokeWidth={2.5} /></span>
-      <span className="msg">{message}</span>
-    </div>
-  );
-}
-
 /* ============================================================
    App shell (sidebar + topbar), shared by Dashboard & Learning
    ============================================================ */
@@ -2767,7 +2771,7 @@ function NotificationsMenu({ onOpenMessaging, onNavigate }) {
           </div>
           <div className="dash-notif-list">
             {loading && <p role="status" className="dash-notif-empty">Loading notifications…</p>}
-            {error && <div role="alert" className="dash-notif-error-card"><div><strong>Couldn’t load notifications</strong><p>Check your connection and try again.</p></div><button type="button" disabled={loading} onClick={() => void loadNotifications(true)}>{loading ? 'Retrying…' : 'Retry'}</button></div>}
+            {error && <ToastNotice message="Couldn’t load notifications. Check your connection and try again." type="error" action={{ label: 'Retry', onClick: () => loadNotifications(true) }} />}
             {!loading && !error && items.length === 0 && <p className="dash-notif-empty">No notifications yet.</p>}
             {items.map((notification) => (
               <button type="button" className={`dash-notif-item${notification.isRead ? '' : ' unread'}`} key={notification.id} onClick={() => void openNotification(notification)}>
@@ -3384,7 +3388,7 @@ function SubmitYourProjectPage() {
         <h1>Submit Your Project</h1>
         <p>Tell us about your clean energy project. Submissions are saved securely for the Tribes Capital team to review.</p>
       </header>
-      {submissionState.error && <div role="alert" className="submit-project-alert error">{submissionState.error}</div>}
+      {submissionState.error && <ToastNotice message={submissionState.error} type="error" />}
       {submissionState.success && <ProjectSubmissionSuccessLightbox message={submissionState.success} onClose={closeSuccess} />}
       <form className="submit-project-form" onSubmit={submit}>
         <label>Project name<input required value={project.name} onChange={update('name')} placeholder="e.g. Community solar in Accra" /></label>
@@ -3471,7 +3475,7 @@ function ContractorProfilePage({ pc, onBack, onContact, onMessage, onReview, bac
           <section className="cp-card"><h3>Reviews ({pc.rv})</h3>{pc.reviews.length ? pc.reviews.map((review) => <article className="cp-review" key={review.id}><b>{[review.author?.firstName, review.author?.lastName].filter(Boolean).join(' ') || 'Member'} · {review.rating}/5</b><p>{review.content || 'Rating submitted.'}</p></article>) : <p className="sub">No reviews yet.</p>}
             <div className="lb-field"><label className="lb-label" htmlFor="contractor-review-rating">Your rating</label><select id="contractor-review-rating" value={rating} onChange={(event) => setRating(Number(event.target.value))}>{[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{value} / 5</option>)}</select></div>
             <div className="lb-field"><label className="lb-label" htmlFor="contractor-review-text">Review</label><textarea id="contractor-review-text" className="lb-control" value={reviewText} onChange={(event) => setReviewText(event.target.value)} maxLength={2000} /></div>
-            {reviewError && <p role="alert" className="lb-msg">{reviewError}</p>}
+            {reviewError && <ToastNotice message={reviewError} type="error" />}
             <button className="btn bp" disabled={reviewLoading} onClick={() => void submitReview()}>{reviewLoading ? 'Submitting…' : 'Submit review'}</button>
           </section>
         </div>
@@ -3539,7 +3543,7 @@ function ListBusinessModal({ onClose, onSubmit }) {
         ) : (
           <>
             <div className="lb-head"><h2 id="lb-title">List your business</h2><p>Reach verified clean-energy buyers across the Tribes Capital network.</p></div>
-            {requestError && <p role="alert" className="lb-msg">{requestError}</p>}
+            {requestError && <ToastNotice message={requestError} type="error" />}
             <div className="lb-body">
               <div className="lb-field">
                 <label className="lb-label" htmlFor="lb-n">Business name *</label>
@@ -3642,7 +3646,7 @@ function ContactContractorModal({ contractor, onClose, onSubmit, onOpenMessaging
         ) : (
           <>
             <div className="lb-head"><h2 id="ct-title">Contact {contractor.n}</h2><p>Typically replies within 24 hours.</p></div>
-            {requestError && <p role="alert" className="lb-msg">{requestError}</p>}
+            {requestError && <ToastNotice message={requestError} type="error" />}
             <div className="lb-body">
               <div className="lb-field">
                 <label className="lb-label" htmlFor="ct-n">Full name *</label>
@@ -3759,7 +3763,8 @@ function Contractors({ initQ, go, initProf = null, fromEvent = null }) {
     <div className="ph"><div><h1>Contractor Directory</h1><p>Find clean-energy and energy professionals for your project.</p></div><button className="btn bp" onClick={() => setBiz(true)}>List your business</button></div>
     <div className="tool"><input placeholder="Search by business or service…" value={q} onChange={(event) => { setPage(1); setQ(event.target.value); }} />
       {select(svc, setSvc, serviceOptions, 'All services')}{select(loc, setLoc, locationOptions, 'All locations')}{select(sort, setSort, ['verified', 'rating', 'reviews', 'name'], 'Sort: Verified first')}</div>
-    <div className="row wrap sub" style={{ marginBottom: 16 }}><span><b style={{ color: 'var(--i9)' }}>{total}</b> contractors</span>{error && <span role="alert">{error}</span>}{(q || svc !== 'all' || loc !== 'all') && <button className="lk" onClick={clear}>Clear filters</button>}</div>
+    <div className="row wrap sub" style={{ marginBottom: 16 }}><span><b style={{ color: 'var(--i9)' }}>{total}</b> contractors</span>{(q || svc !== 'all' || loc !== 'all') && <button className="lk" onClick={clear}>Clear filters</button>}</div>
+    {error && <ToastNotice message={error} type="error" />}
     {loading && <p role="status" className="sub">Loading contractors…</p>}
     <div className="g3">
       {!loading && list.length === 0 && (
@@ -3862,7 +3867,7 @@ function DiscussionDetail({ post, user, liked, saved, onBack, onToggleLike, onTo
             <input ref={inputRef} className="dd-input" placeholder="Write a reply…" value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void submit()} aria-label="Write a reply" />
             <button className="dd-send" onClick={() => void submit()}>Post reply</button>
           </div>
-          {replyError && <p role="alert" className="sub">{replyError}</p>}
+          {replyError && <ToastNotice message={replyError} type="error" />}
 
           <div className="dd-rhead"><b>{post.rp} replies</b><span>Sorted by: Top</span></div>
           {(post.replies || []).map((rp) => {
@@ -3964,7 +3969,7 @@ function AskQuestionModal({ categories, onClose, onSubmit }) {
         ) : (
           <>
             <div className="lb-head"><h2 id="ask-title">Ask a question</h2><p>Get input from other members across the energy community.</p></div>
-            {requestError && <p role="alert" className="lb-msg">{requestError}</p>}
+            {requestError && <ToastNotice message={requestError} type="error" />}
             <div className="lb-body">
               <div className="lb-field" ref={menuRef}>
                 <div className="lb-label"><span>Category *</span></div>
@@ -4003,8 +4008,13 @@ function AskQuestionModal({ categories, onClose, onSubmit }) {
   );
 }
 
-function StartDiscussionModal({ categories, onClose, onSubmit }) {
-  const [v, setV] = useState({ t: "", c: "", b: "", tags: "" });
+function StartDiscussionModal({ categories, onClose, onSubmit, initialValues = {} }) {
+  const [v, setV] = useState(() => ({
+    t: initialValues.t || '',
+    c: initialValues.c || '',
+    b: initialValues.b || '',
+    tags: initialValues.tags || '',
+  }));
   const [errs, setErrs] = useState({});
   const [menu, setMenu] = useState(false);
   const [sent, setSent] = useState(false);
@@ -4058,7 +4068,7 @@ function StartDiscussionModal({ categories, onClose, onSubmit }) {
         ) : (
           <>
             <div className="lb-head"><h2 id="disc-title">Start a discussion</h2><p>Share knowledge, a resource, or start a conversation with the community.</p></div>
-            {requestError && <p role="alert" className="lb-msg">{requestError}</p>}
+            {requestError && <ToastNotice message={requestError} type="error" />}
             <div className="lb-body">
               <div className="lb-field">
                 <label className="lb-label" htmlFor="disc-t">Title</label>
@@ -4149,6 +4159,7 @@ function Community({ open, user, toast, onOpenMessaging }) {
   const [detailId, setDetailId] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [starterDraft, setStarterDraft] = useState(null);
 
   useEffect(() => {
     let isCurrent = true;
@@ -4182,7 +4193,11 @@ function Community({ open, user, toast, onOpenMessaging }) {
   const shown = f === 'Following'
     ? posts.filter((post) => post.followedByMe)
     : posts.filter((post) => f === 'All' || post.tag === (categoryByFilter[f] || f));
-  const close = () => setM(null);
+  const close = () => { setM(null); setStarterDraft(null); };
+  const startFromPrompt = (starter) => {
+    setStarterDraft(starter);
+    setM('start');
+  };
   const current = posts.find((p) => p.id === detailId);
 
   const add = async (values) => {
@@ -4266,16 +4281,53 @@ function Community({ open, user, toast, onOpenMessaging }) {
   }
 
   const popularTopics = posts.reduce((counts, post) => ({ ...counts, [post.tag]: (counts[post.tag] || 0) + 1 }), {});
+  const starterFilterCategory = { Solar: 'Solar', Policy: 'Policy & regulation', Learning: 'Learning', Energy: 'Energy community' };
+  const visibleStarters = COMMUNITY_DISCUSSION_STARTERS.filter((starter) => (
+    f === 'All' || starter.category === (starterFilterCategory[f] || f)
+  ));
+  const starterCategories = [...new Set(visibleStarters.map((starter) => starter.category))];
   return <>
     <div className="ph forum-page-head"><div><h1>Community</h1><p>Ask questions, share knowledge and connect with the energy community.</p></div>
       <div className="row wrap"><button type="button" className="btn bo" onClick={() => setM('ask')}>Ask a question</button><button type="button" className="btn bp" onClick={() => setM('start')}>Start a discussion</button>{user?.accountType !== 'GUEST' && <button type="button" className="btn bo" onClick={onOpenMessaging}>Messaging</button>}</div>
     </div>
-    {error && <p role="alert" className="sub">{error}</p>}
+    {error && <ToastNotice message={error} type="error" />}
     <div className="pills forum-filters"><span className="forum-filter-label">Browse discussions by topic</span>{FILTER_PILLS.map((x) => <button key={x.key} className={"pl" + (f === x.key ? " on" : "")} onClick={() => setF(x.key)}>{x.label}</button>)}</div>
     <div className="lay"><div className="sp forum-post-list" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {loading && <div role="status" aria-label="Loading discussions" className="card forum-empty-state forum-loading-state"><span /><span /><span /><span /><span /><span /></div>}
-      {!loading && loadError && <div role="alert" className="card forum-empty-state"><strong>Discussions couldn’t load</strong><p className="sub">{loadError}</p><button type="button" className="btn bo" onClick={() => setReloadKey((key) => key + 1)}>Try again</button></div>}
-      {!loading && !loadError && shown.length === 0 && <div className="card forum-empty-state forum-empty-illustrated"><img className="forum-empty-illustration" src="/illustrations/no-data.png" alt="" aria-hidden="true" /><strong>{f === "Following" ? "Your followed conversations will appear here" : "The next good conversation starts here"}</strong><p className="sub">{f === "Following" ? "Follow members whose ideas you want to keep up with." : "Share a question or perspective with the community."}</p></div>}
+      {!loading && loadError && <ToastNotice message={`Discussions couldn’t load: ${loadError}`} type="error" action={{ label: 'Retry', onClick: () => setReloadKey((key) => key + 1) }} />}
+      {!loading && !loadError && shown.length === 0 && posts.length === 0 && f !== 'Following' && (
+        <section className="forum-starter-library" aria-labelledby="forum-starter-title">
+          <header className="forum-starter-heading">
+            <div>
+              <span>GET THE CONVERSATION STARTED</span>
+              <h2 id="forum-starter-title">Discussion starters</h2>
+              <p>Choose a ready-made topic to open a discussion. You can edit it before posting.</p>
+            </div>
+          </header>
+          {starterCategories.map((category) => (
+            <section className="forum-starter-category" key={category} aria-label={`${category} discussion starters`}>
+              <h3>{category}</h3>
+              <div className="forum-starter-grid">
+                {visibleStarters.filter((starter) => starter.category === category).map((starter) => (
+                  <article className="card forum-starter-card" key={starter.title}>
+                    <span className="forum-starter-thumbnail">
+                      <span>Suggested thumbnail</span>
+                      <strong>{starter.thumbnail}</strong>
+                    </span>
+                    <h4>{starter.title}</h4>
+                    <p>{starter.answer.split('\n\n')[0]}</p>
+                    <blockquote><strong>Let’s discuss:</strong> {starter.question}</blockquote>
+                    <button type="button" className="forum-post-join" onClick={() => startFromPrompt(starter)}>
+                      Use this discussion <Icon name="arrowRight" size={18} />
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+        </section>
+      )}
+      {!loading && !loadError && shown.length === 0 && !(posts.length === 0 && f !== 'Following') && <div className="card forum-empty-state forum-empty-illustrated"><img className="forum-empty-illustration" src="/illustrations/no-data.png" alt="" aria-hidden="true" /><strong>{f === "Following" ? "Your followed conversations will appear here" : "The next good conversation starts here"}</strong><p className="sub">{f === "Following" ? "Follow members whose ideas you want to keep up with." : "Share a question or perspective with the community."}</p></div>}
       {!loading && !loadError && shown.map((p) => <div className="card forum-post" key={p.id}>
         <div className="forum-post-head">
           <div className="forum-post-author"><Ava c={p.c} t={p.n[0]} s={42} person={p.creator} /><div className="forum-post-byline">
@@ -4302,7 +4354,18 @@ function Community({ open, user, toast, onOpenMessaging }) {
         <div className="card"><h4 style={{ color: "var(--p9)", marginBottom: 8, fontSize: 14 }}>Community guidelines</h4><p className="sub" style={{ marginBottom: 10 }}>Be respectful, stay on topic and share knowledge that helps others learn and take action.</p><button className="lk" onClick={() => setM("guide")}>Read the guidelines →</button></div>
       </div></div>
     {m === "ask" && <AskQuestionModal categories={CATS} onClose={close} onSubmit={(v) => add(v)} />}
-    {m === "start" && <StartDiscussionModal categories={CATS} onClose={close} onSubmit={add} />}
+    {m === "start" && <StartDiscussionModal
+      key={starterDraft?.title || 'new-discussion'}
+      categories={CATS}
+      initialValues={starterDraft ? {
+        t: starterDraft.title,
+        c: starterDraft.category,
+        b: `${starterDraft.answer}\n\nLet's discuss: ${starterDraft.question}`,
+        tags: starterDraft.category.toLowerCase(),
+      } : undefined}
+      onClose={close}
+      onSubmit={add}
+    />}
     {m === "guide" && <Modal onClose={close} w={560}><h2>Community guidelines</h2><p className="sub" style={{ marginBottom: 16 }}>A few simple principles that keep this community useful for everyone.</p>
       {[["Be respectful", "Disagree with ideas, not people."], ["Stay on topic", "Post in the category that best fits."], ["Share real experience", "Back up claims with experience, data or credible sources."], ["No spam or unsolicited promotion", "Sales pitches belong in Contact, not Community."], ["Protect privacy", "Don't share personal contact details or confidential project information."], ["Report, don't retaliate", "Flag content that breaks these guidelines."]].map(([a, b], i) => <div className="row" key={a} style={{ alignItems: "flex-start", marginBottom: 14 }}><div className="ava" style={{ background: "var(--p1)", color: "var(--p7)", width: 26, height: 26, borderRadius: 8, fontSize: 12.5 }}>{i + 1}</div><div><b style={{ fontSize: 13.5 }}>{a}</b><p className="sub">{b}</p></div></div>)}
       <button className="btn bp blk" onClick={close}>Got it</button></Modal>}
@@ -4412,7 +4475,7 @@ function AddProjectModal({ types, stages, onClose, onSubmit }) {
         ) : (
           <>
             <div className="lb-head"><h2 id="ap-title">Add project</h2><p>Add a new clean energy project to track through the pipeline.</p></div>
-            {requestError && <p role="alert" className="lb-msg">{requestError}</p>}
+            {requestError && <ToastNotice message={requestError} type="error" />}
             <div className="lb-body">
               <div className="lb-field">
                 <label className="lb-label" htmlFor="ap-n">Project name *</label>
@@ -4566,7 +4629,7 @@ function Pipeline({ go }) {
   };
   return <div className="pipeline-page">
     {activeStage === null && <div className="ph"><div><h1>Project Pipeline</h1><p>Track clean energy projects as they move from concept to operation.</p></div></div>}
-    {error && <p role="alert" className="sub">{error}</p>}
+    {error && <ToastNotice message={error} type="error" />}
     {activeStage === null && (
       <div className="pipeline-stats-grid" aria-label="Portfolio summary">
         {[[ps.length, "Visible projects"], [ps.filter(x => x.s >= 1 && x.s <= 2).length, "In development"], [ps.filter(x => x.s === 6).length, "Operating"], [`${ps.reduce((total, project) => total + project.c, 0).toLocaleString()} kWp`, "Total capacity tracked"]].map(([value, label]) => (
@@ -4824,7 +4887,7 @@ function SettingsPage({ user, onOpenProfile, onOpenNotifications, onLogout }) {
 
   return <>
     <div className="ph"><div><h1>Settings</h1><p>Manage your account, preferences and security.</p></div></div>
-    {notice && <div role={notice.type === 'error' ? 'alert' : 'status'} className={`settings-notice ${notice.type}`}>{notice.text}</div>}
+    {notice && <ToastNotice message={notice.text} type={notice.type} />}
     <div className="settings-layout">
       <nav className="settings-tabs" aria-label="Settings sections">
         {tabs.map((item) => <button type="button" key={item} className={`settings-tab${tab === item ? ' active' : ''}`} aria-current={tab === item ? 'page' : undefined} onClick={() => setTab(item)}>{item}</button>)}
@@ -5311,9 +5374,7 @@ class RouteErrorBoundary extends React.Component {
 export default function TribesCapitalApp({ initialScreen = 'signin', user: authenticatedUser, onLogout: onAuthenticatedLogout, onUpdateUser = () => {} } = {}) {
   const [screen, setScreen] = useState(initialScreen);
   const [viewedProfileId, setViewedProfileId] = useState(null);
-  const [toastMsg, setToastMsg] = useState(null);
   const [avatarDataUrl, setAvatarDataUrl] = useState(authenticatedUser?.avatar || null);
-  const toastTimer = useRef(null);
 
   // Make sure mobile browsers render at device width and let the layout extend under notches
   useEffect(() => {
@@ -5370,9 +5431,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
     window.scrollTo(0, 0);
   }
   function showToast(msg) {
-    setToastMsg(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastMsg(null), 3000);
+    showAppToast(msg);
   }
 
   useEffect(() => {
@@ -5382,7 +5441,6 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
     return () => clearInterval(id);
   }, [screen]);
 
-  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const signInValid = siEmail.includes('@') && siPassword.length > 0;
   const createValid = caName.trim().length > 0 && caEmail.includes('@') && caPassword.length >= 6;
@@ -5813,7 +5871,6 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
           onClose={tourSkip}
         />
       )}
-      <Toast message={toastMsg} />
     </div>
   );
 }

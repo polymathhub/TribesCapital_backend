@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { dueDiligenceAPI } from '../../api/endpoints';
 import { uploadFileInChunks } from '../../utils/chunkedUpload';
 import { downloadFileFromApi } from '../../utils/chunkedUpload';
 import DDCommentsPanel from './DDCommentsPanel';
 import Icon from '../Icon';
+import { ToastNotice } from '../AppToast';
+import FilePreviewModal from '../FilePreviewModal';
 
 const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRefresh }) => {
   const [showForm, setShowForm] = useState(false);
@@ -11,6 +13,8 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [downloadStatus, setDownloadStatus] = useState(null);
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const previewRequestId = useRef(0);
   const [formData, setFormData] = useState({
     fileName: '',
     fileUrl: '',
@@ -112,13 +116,51 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
     }
   };
 
+  const handlePreview = async (document) => {
+    const requestId = ++previewRequestId.current;
+    setPreviewDocument({ document, url: '', loading: true, error: '' });
+    try {
+      const response = await dueDiligenceAPI.downloadDocument(dueDiligenceId, document.id);
+      if (!(response?.data instanceof Blob)) {
+        throw new Error('The document preview could not be loaded.');
+      }
+      const url = URL.createObjectURL(response.data);
+      if (requestId !== previewRequestId.current) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setPreviewDocument({ document, url, loading: false, error: '' });
+    } catch (error) {
+      if (requestId === previewRequestId.current) {
+        setPreviewDocument({
+          document,
+          url: '',
+          loading: false,
+          error: error?.message || 'Unable to preview this document.',
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    const url = previewDocument?.url;
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [previewDocument?.url]);
+
+  const closePreview = () => {
+    previewRequestId.current += 1;
+    setPreviewDocument(null);
+  };
+
   return (
     <div>
       {showForm ? (
         <div style={{ marginBottom: '24px', padding: '16px', background: '#F9FAFB', borderRadius: '8px' }}>
           <form onSubmit={handleSubmit}>
             {uploadProgress !== null && <div role="status" style={{ marginBottom: 12, color: '#475467', fontSize: 12 }}>Uploading: {uploadProgress}%<progress value={uploadProgress} max="100" style={{ display: 'block', width: '100%', marginTop: 5 }} /></div>}
-            {uploadError && <p role="alert" style={{ color: '#B42318', fontSize: 12 }}>{uploadError}</p>}
+            {uploadError && <ToastNotice message={uploadError} type="error" />}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '12px' }}>
               <div>
                 <label htmlFor="dd-doc-file" style={{ display: 'block', marginBottom: '6px', fontWeight: 600, color: '#111827', fontSize: '13px' }}>File upload</label>
@@ -344,7 +386,7 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
               <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6B7280' }}>
                 {doc.fileSize || 'Unknown size'}
               </p>
-              {doc.fileUrl && <div><button type="button" onClick={() => void handleDownload(doc)} style={{ marginBottom: 8, border: 0, padding: 0, background: 'transparent', color: '#4338CA', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}>{downloadStatus?.id === doc.id && downloadStatus.percent < 100 ? `Downloading ${downloadStatus.percent || ''}%` : 'Download document'}</button>{downloadStatus?.id === doc.id && downloadStatus.percent < 100 && <progress value={downloadStatus.percent || undefined} max="100" style={{ display: 'block', width: '100%', marginBottom: 8 }} />}</div>}
+              {doc.fileUrl && <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 8 }}><button type="button" onClick={() => void handlePreview(doc)} style={{ border: 0, padding: 0, background: 'transparent', color: '#4338CA', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}>Preview</button><button type="button" onClick={() => void handleDownload(doc)} style={{ border: 0, padding: 0, background: 'transparent', color: '#4338CA', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}>{downloadStatus?.id === doc.id && downloadStatus.percent < 100 ? `Downloading ${downloadStatus.percent || ''}%` : 'Download document'}</button></div>}
               {doc.description && (
                 <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6B7280' }}>
                   {doc.description}
@@ -375,6 +417,16 @@ const DDDocumentsPanel = ({ dueDiligenceId, documents = [], comments = [], onRef
           </div>
           <div>No documents yet. Upload one to get started.</div>
         </div>
+      )}
+      {previewDocument && (
+        <FilePreviewModal
+          fileName={previewDocument.document.fileName}
+          mimeType={previewDocument.document.fileType}
+          url={previewDocument.url}
+          loading={previewDocument.loading}
+          error={previewDocument.error}
+          onClose={closePreview}
+        />
       )}
     </div>
   );

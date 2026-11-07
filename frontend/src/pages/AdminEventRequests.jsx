@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { eventsAPI } from '../api/endpoints';
 import { COLORS } from '../constants/colors';
 import Skeleton from '../components/Skeleton';
+import { ToastNotice } from '../components/AppToast';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
 
@@ -79,8 +80,8 @@ export default function AdminEventRequests({ user, isMobile = false }) {
           </button>
         </header>
 
-        {error && <div role="alert" style={{ marginBottom: 18, padding: '12px 14px', borderRadius: 8, background: COLORS.AMB, color: '#92400E', border: '1px solid #FCD34D' }}>{error}</div>}
-        {notice && <div role="status" style={{ marginBottom: 18, padding: '12px 14px', borderRadius: 8, background: COLORS.GRB, color: '#047857', border: '1px solid #A7F3D0' }}>{notice}</div>}
+        {error && <ToastNotice message={error} type="error" />}
+        {notice && <ToastNotice message={notice} type="success" />}
 
         {loading ? <Skeleton variant="cards" rows={3} columns={2} label="Loading pending event requests" /> : requests.length === 0 ? (
           <section style={{ padding: isMobile ? 28 : 48, textAlign: 'center', background: COLORS.W, border: `1px solid ${COLORS.BD}`, borderRadius: 12 }}>

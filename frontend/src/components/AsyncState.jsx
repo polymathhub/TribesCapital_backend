@@ -1,6 +1,7 @@
-import React from 'react';
-import { AlertCircle, BookOpen, CalendarDays, Inbox, SearchX } from 'lucide-react';
+import React, { isValidElement } from 'react';
+import { BookOpen, CalendarDays, Inbox, SearchX } from 'lucide-react';
 import Skeleton from './Skeleton';
+import { ToastNotice } from './AppToast';
 import './async-state.css';
 
 const EMPTY_ICONS = {
@@ -36,9 +37,19 @@ export function AsyncState({
     );
   }
 
-  const Icon = variant === 'error'
-    ? AlertCircle
-    : (typeof icon === 'function' ? icon : EMPTY_ICONS[icon] || EMPTY_ICONS.default);
+  if (variant === 'error') {
+    const retryButton = isValidElement(action) ? action : null;
+    const retryAction = typeof retryButton?.props?.onClick === 'function'
+      ? {
+        label: typeof retryButton.props.children === 'string' ? retryButton.props.children : 'Retry',
+        onClick: retryButton.props.onClick,
+      }
+      : undefined;
+    const message = [title, description].filter(Boolean).join('. ');
+    return <ToastNotice message={message} type="error" action={retryAction} />;
+  }
+
+  const Icon = typeof icon === 'function' ? icon : EMPTY_ICONS[icon] || EMPTY_ICONS.default;
   const hasIllustration = Boolean(illustration);
 
   return (

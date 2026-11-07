@@ -5,6 +5,8 @@ import { dueDiligenceAPI, projectsAPI } from '../../api/endpoints';
 import { computeProjectScore } from '../../utils/dashboardMetrics';
 import { uploadFileInChunks } from '../../utils/chunkedUpload';
 import { downloadFileFromApi, downloadFileFromUrl } from '../../utils/chunkedUpload';
+import { ToastNotice } from '../AppToast';
+import { showToast } from '../../utils/toast';
 
 /* ═══════════════════════════════════════════════════════════
    TRIBES CAPITAL — PROJECT PIPELINE
@@ -436,7 +438,7 @@ function ProjectPanel({ initial, onClose, onSave, isMobile, offset }) {
               {[...(f.attachments || []), ...selectedFiles].length > 0 && <div style={{ marginTop: 8, display: 'grid', gap: 5, fontSize: 12, color: T2 }}>{[...(f.attachments || []), ...selectedFiles].map((file, index) => <span key={`${file.name || file.fileName}-${index}`}>{file.name || file.fileName}</span>)}</div>}
             </Field>
             {uploadProgress !== null && <div role="status" style={{ marginBottom: 12, color: T2, fontSize: 12 }}>Uploading project files: {uploadProgress}%<progress value={uploadProgress} max="100" style={{ display: 'block', width: '100%', marginTop: 5 }} /></div>}
-            {uploadError && <p role="alert" style={{ color: RED, fontSize: 12 }}>{uploadError}</p>}
+            {uploadError && <ToastNotice message={uploadError} type="error" />}
           </div>
         )}
 
@@ -596,18 +598,6 @@ function DeleteModal({ p, onClose, onConfirm, isMobile, offset }) {
   );
 }
 
-function Toast({ msg, onDone }) {
-  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, [msg, onDone]);
-  return (
-    <div role="status" style={{ position: 'fixed', top: 20, right: 20, zIndex: 500, maxWidth: '90vw',
-      background: GRN_BG, border: `1px solid ${GRN_BD}`, color: '#14532D',
-      borderRadius: 10, padding: '12px 18px', fontSize: 14, fontWeight: 500,
-      display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 10px 30px rgba(0,0,0,.12)' }}>
-      <I k="check" s={16} c={GRN} sw={2.6} />{msg}
-    </div>
-  );
-}
-
 function EmptyState() {
   return (
     <AsyncState
@@ -709,7 +699,7 @@ const BLANK = { name:'', type:'', stage:'', country:'', city:'', capacity:'', va
                 irr:'', sponsor:'', progress:'', tags:'', description:'', attachments:[] };
 
 export default function ProjectPipeline({ onNavigate = () => {} }) {
-  const { isMobile, isTablet, isDesktop } = useBreakpoint();
+  const { isMobile, isDesktop } = useBreakpoint();
 
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
@@ -728,7 +718,6 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
   const [editP, setEditP] = useState(null);
   const [detail, setDetail] = useState(null);
   const [toDelete, setToDelete] = useState(null);
-  const [toast, setToast] = useState(null);
 
   const syncApprovedPipelineProjects = async () => {
     setApprovedProjectsError('');
@@ -886,20 +875,20 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
       setProjects(ps => ps.map(x => x.id === editP.id ? saved : x));
       setDetail(d => (d && d.id === editP.id ? saved : d));
       setEditP(null);
-      setToast('Changes saved');
+      showToast('Changes saved');
     } else {
       const response = await projectsAPI.create(payload);
       const saved = mapApiProjectToPipeline(unwrapApiData(response));
       setProjects(ps => [saved, ...ps]);
       setAdding(false);
-      setToast('Project added to pipeline');
+      showToast('Project added to pipeline');
     }
   };
 
   const remove = p => {
     setProjects(ps => ps.filter(x => x.id !== p.id));
     setToDelete(null); setDetail(null);
-    setToast('Project deleted');
+    showToast('Project deleted');
   };
 
   const download = p => {
@@ -920,7 +909,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     const a = document.createElement('a');
     a.href = url; a.download = `${p.name.replace(/[^\w\s-]/g, '').trim()}.txt`;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    setToast('Download started');
+    showToast('Download started');
   };
 
   const filtered = useMemo(() => {
@@ -938,10 +927,10 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
 
   const exportCsv = () => {
     if (!PERMS.canExport) {
-      setToast('Only admins can export the pipeline');
+      showToast('Only admins can export the pipeline', { type: 'error' });
       return;
     }
-    if (!filtered.length) { setToast('Nothing to export'); return; }
+    if (!filtered.length) { showToast('Nothing to export', { type: 'error' }); return; }
     const head = ['Name','Type','Stage','Country','City','Capacity (MW)','Deal value (USD)','IRR (%)','Sponsor','Progress (%)','Tags'];
     const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const rows = filtered.map(p => [p.name,p.type,p.stage,p.country,p.city,p.capacity,p.value,p.irr,p.sponsor,p.progress,(p.tags||[]).join('; ')].map(esc).join(','));
@@ -950,7 +939,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     const a = document.createElement('a');
     a.href = url; a.download = 'tribes-project-pipeline.csv';
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    setToast(`Exported ${filtered.length} project${filtered.length !== 1 ? 's' : ''}`);
+    showToast(`Exported ${filtered.length} project${filtered.length !== 1 ? 's' : ''}`);
   };
 
   const stats = useMemo(() => {
@@ -972,6 +961,7 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
     ? '24px var(--tc-page-gutter-x, 18px) 32px'
     : '32px var(--tc-page-gutter-x, 32px) 44px';
   const stageProjects = activeStage ? filtered.filter(project => project.stage === activeStage) : [];
+  const overviewProjects = filtered;
 
   return (
     <div style={{ display: 'flex', minHeight: '100%', width: '100%', background: PAGE,
@@ -984,6 +974,26 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
         ::-webkit-scrollbar{width:6px;height:6px;}
         ::-webkit-scrollbar-thumb{background:#D3D5DA;border-radius:10px;}
         :focus-visible{outline:2px solid ${PL};outline-offset:2px;}
+        .pipeline-overview-list{display:grid;gap:0;overflow:hidden;border:1px solid ${BD};border-radius:16px;background:${W};}
+        .pipeline-overview-row{display:grid;grid-template-columns:minmax(180px,1.5fr) minmax(110px,.9fr) minmax(110px,.8fr) minmax(100px,.7fr) auto;align-items:center;gap:16px;padding:15px 18px;border-bottom:1px solid #EEF0F3;}
+        .pipeline-overview-row:last-child{border-bottom:0}
+        .pipeline-overview-row:hover{background:#FAF9FC}
+        .pipeline-overview-title{min-width:0;padding:0;border:0;background:none;color:${T1};font-size:13px;font-weight:700;text-align:left;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;cursor:pointer}
+        .pipeline-overview-subtitle{margin-top:4px;color:${T2};font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .pipeline-overview-label{display:none;color:${T3};font-size:10px;font-weight:600}
+        .pipeline-overview-actions{display:flex;justify-content:flex-end;gap:6px}
+        .pipeline-overview-action{display:grid;width:32px;height:32px;place-items:center;border:1px solid ${BD};border-radius:8px;background:${W};cursor:pointer}
+        .pipeline-stage-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+        .pipeline-stage-tile{min-width:0;padding:14px;border:1px solid ${BD};border-radius:13px;background:${W};text-align:left;cursor:pointer}
+        .pipeline-stage-tile:hover,.pipeline-stage-tile.is-active{border-color:${PL};box-shadow:0 0 0 2px rgba(124,58,237,.08)}
+        .pipeline-stage-tile.is-active{background:#FAF7FF}
+        .pipeline-stage-tile-name{display:block;overflow:hidden;color:${T1};font-size:12px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+        .pipeline-stage-tile-count{display:block;margin-top:8px;color:${P};font-size:21px;font-weight:700}
+        .pipeline-stage-tile-value{display:block;overflow:hidden;margin-top:3px;color:${T2};font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+        .pipeline-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 12px}
+        .pipeline-filter-controls{display:flex;gap:10px}
+        @media(max-width:900px){.pipeline-stage-strip{grid-template-columns:repeat(3,minmax(0,1fr))}.pipeline-overview-row{grid-template-columns:minmax(140px,1.4fr) minmax(90px,.7fr) minmax(95px,.8fr) minmax(80px,.7fr) auto}}
+        @media(max-width:640px){.pipeline-stage-strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pipeline-stage-tile{padding:12px}.pipeline-stage-tile-count{font-size:18px}.pipeline-filter-bar{align-items:stretch;flex-direction:column}.pipeline-filter-controls{display:grid;grid-template-columns:1fr 1fr}.pipeline-overview-row{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:13px}.pipeline-overview-row>.pipeline-overview-data{display:none}.pipeline-overview-row>.pipeline-overview-details{grid-column:1}.pipeline-overview-actions{grid-column:2;grid-row:1 / span 2}.pipeline-overview-label{display:block;margin-bottom:3px}}
       `}</style>
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -1024,19 +1034,19 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, padding: '18px 20px', background: PF, border: `1px solid ${PB}`, borderRadius: 16, color: T2 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: T1 }}>Projects in the Due Diligence stage stay connected to the Due Diligence Vault workflow.</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, padding: '16px 18px', background: '#FAF7FF', border: '1px solid #E9D5FF', borderRadius: 14, color: T2 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T1 }}>Due Diligence projects stay connected to the Vault workflow.</div>
               <button onClick={() => onNavigate('vault')} style={{ background: W, border: `1px solid ${BD}`, color: P, borderRadius: 999, padding: '10px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 600, minWidth: 170 }}>
                 Open Due Diligence Vault
               </button>
             </div>
 
             <div style={{ display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr 1fr' : isTablet ? 'repeat(3,1fr)' : 'repeat(6,1fr)',
-              gap: isMobile ? 10 : 14, marginBottom: 22 }}>
+              gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, minmax(0, 1fr))',
+              gap: isMobile ? 10 : 12, marginBottom: 24 }}>
               {stats.map(s => (
                 <div key={s.l} style={{ background: W, border: `1px solid ${BD}`, borderRadius: 16,
-                  padding: isMobile ? '15px' : '18px 20px', boxShadow: '0 10px 24px rgba(15,23,42,0.05)' }}>
+                  padding: isMobile ? '14px' : '17px 19px', boxShadow: '0 5px 16px rgba(15,23,42,0.035)' }}>
                   <div style={{ fontSize: 12.5, color: T2, marginBottom: 6 }}>{s.l}</div>
                   <div style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, marginBottom: 10, letterSpacing: -0.5 }}>{s.v}</div>
                   <Tag tone={s.tone}>{s.tag}</Tag>
@@ -1054,46 +1064,85 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
               </div>
             ) : !activeStage ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '28px 0 16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '28px 0 14px', flexWrap: 'wrap' }}>
                   <div>
-                    <h2 style={{ fontSize: 21, fontWeight: 600, margin: '0 0 5px' }}>Explore by stage</h2>
-                    <p style={{ margin: 0, color: T2, fontSize: 14 }}>Choose a stage to browse its projects.</p>
+                    <h2 style={{ fontSize: 19, fontWeight: 700, margin: '0 0 5px' }}>Pipeline stages</h2>
+                    <p style={{ margin: 0, color: T2, fontSize: 13 }}>Select a stage to focus the project list.</p>
                   </div>
                   <span style={{ color: T2, fontSize: 14 }}>{projects.length} total projects</span>
                 </div>
                 {projects.length === 0 && !loadingProjects ? (
                   <EmptyState />
                 ) : (
-                  <div style={{ display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
-                    gap: isMobile ? 12 : 18 }}>
+                  <div className="pipeline-stage-strip">
                     {STAGES.map(stageName => {
                       const items = projects.filter(project => project.stage === stageName);
                       const value = items.reduce((total, project) => total + (Number(project.value) || 0), 0);
                       return (
-                        <button key={stageName} type="button" onClick={() => setActiveStage(stageName)}
-                          style={{ minHeight: isMobile ? 164 : 196, textAlign: 'left', padding: isMobile ? 20 : 24,
-                            border: `1px solid ${BD}`, borderRadius: 18, background: W, color: T1,
-                            boxShadow: '0 10px 24px rgba(15,23,42,0.06)', cursor: 'pointer',
-                            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                            transition: 'transform 160ms ease, box-shadow 160ms ease' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                            <span style={{ fontSize: isMobile ? 19 : 21, fontWeight: 600 }}>{stageName}</span>
-                            <span style={{ minWidth: 38, height: 38, borderRadius: 12, background: PF, color: P,
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 16, fontWeight: 700 }}>{items.length}</span>
-                          </span>
-                          <span>
-                            <span style={{ display: 'block', color: T2, fontSize: 14, marginBottom: 8 }}>
-                              {items.length === 1 ? '1 project' : `${items.length} projects`}
-                            </span>
-                            <span style={{ display: 'block', color: T3, fontSize: 13 }}>
-                              {value > 0 ? `${money(value)} total deal value` : 'Open this stage to view projects'}
-                            </span>
-                          </span>
+                        <button key={stageName} type="button" onClick={() => setActiveStage(stageName)} className="pipeline-stage-tile">
+                          <span className="pipeline-stage-tile-name">{stageName}</span>
+                          <span className="pipeline-stage-tile-count">{items.length}</span>
+                          <span className="pipeline-stage-tile-value">{value > 0 ? money(value) : 'No deal value'}</span>
                         </button>
                       );
                     })}
+                  </div>
+                )}
+                <div className="pipeline-filter-bar">
+                  <div>
+                    <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700 }}>Projects</h2>
+                    <span style={{ color: T2, fontSize: 12 }}>
+                      {filtered.length} {filtered.length === 1 ? 'project' : 'projects'} matching filters
+                    </span>
+                  </div>
+                  <div className="pipeline-filter-controls">
+                    <input aria-label="Search projects" value={topSearch} onChange={event => setTop(event.target.value)}
+                      placeholder="Search projects"
+                      style={{ ...inputStyle, width: isMobile ? '100%' : 220, height: 40 }} />
+                    <div style={{ width: isMobile ? '100%' : 180, flexShrink: 0 }}>
+                      <Select value={fType} onChange={setFType} options={TYPES} placeholder="All types" />
+                    </div>
+                  </div>
+                </div>
+                {overviewProjects.length === 0 ? (
+                  projects.length === 0 ? null : (
+                    <AsyncState variant="empty" icon="search" title="No projects match these filters"
+                      description="Try adjusting your search or project type." />
+                  )
+                ) : (
+                  <div className="pipeline-overview-list" role="list" aria-label="Pipeline projects">
+                    {overviewProjects.map(project => (
+                      <article key={project.id} className="pipeline-overview-row" role="listitem">
+                        <div className="pipeline-overview-details" style={{ minWidth: 0 }}>
+                          <button type="button" className="pipeline-overview-title" onClick={() => setDetail(project)}>{project.name}</button>
+                          <div className="pipeline-overview-subtitle">
+                            {project.type} · {[project.city, project.country].filter(Boolean).join(', ') || 'Location not set'}
+                          </div>
+                        </div>
+                        <div className="pipeline-overview-data">
+                          <span className="pipeline-overview-label">Stage</span>
+                          <Tag>{project.stage}</Tag>
+                        </div>
+                        <div className="pipeline-overview-data">
+                          <span className="pipeline-overview-label">Deal value</span>
+                          <strong style={{ color: T1, fontSize: 12 }}>{money(project.value)}</strong>
+                        </div>
+                        <div className="pipeline-overview-data">
+                          <span className="pipeline-overview-label">Progress</span>
+                          <strong style={{ color: T2, fontSize: 12 }}>
+                            {project.progress ?? '—'}{project.progress != null ? '%' : ''}
+                          </strong>
+                        </div>
+                        <div className="pipeline-overview-actions">
+                          <button type="button" className="pipeline-overview-action" onClick={() => setDetail(project)} aria-label={`View ${project.name}`}>
+                            <I k="eye" s={15} c={T2} />
+                          </button>
+                          <button type="button" className="pipeline-overview-action" onClick={() => download(project)} aria-label={`Download ${project.name}`}>
+                            <I k="download" s={14} c={T2} />
+                          </button>
+                        </div>
+                      </article>
+                    ))}
                   </div>
                 )}
               </>
@@ -1161,7 +1210,6 @@ export default function ProjectPipeline({ onNavigate = () => {} }) {
           onDelete={setToDelete} onDownload={download} isMobile={isMobile} offset={overlayOffset} />
       )}
       {toDelete && <DeleteModal p={toDelete} onClose={() => setToDelete(null)} onConfirm={remove} isMobile={isMobile} offset={overlayOffset} />}
-      {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
     </div>
   );
 }

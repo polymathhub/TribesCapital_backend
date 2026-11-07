@@ -6,6 +6,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { BubbleChatIcon } from '@hugeicons/core-free-icons';
 import { Paperclip, SendHorizontal, Smile, X } from 'lucide-react';
 import { communityAPI, messagingAPI } from '../api/endpoints';
+import { ToastNotice } from '../components/AppToast';
 import { uploadFileInChunks } from '../utils/chunkedUpload';
 import { downloadFileFromUrl } from '../utils/chunkedUpload';
 import { messagingMembersAPI } from '../api/messagingMembers';
@@ -210,7 +211,7 @@ function ConversationModal({ open, mode, setMode, members, query, setQuery, sele
 
 function InlineNetworkError({ message, onDismiss }) {
   if (!message) return null;
-  return <div className="conversation-load-error network-inline-error" role="alert"><span>{message}</span><button type="button" onClick={onDismiss}>Dismiss</button></div>;
+  return <ToastNotice message={message} type="error" onDismiss={onDismiss} />;
 }
 
 function NetworkDirectoryModal({ open, refreshKey, onClose, onViewProfile, onConnect, onMessage, busyId, error, onClearError }) {
@@ -524,8 +525,8 @@ export default function MessagingPage({ user, onViewProfile = () => {} }) {
   const typingNames = [...typingUsers].map((id) => displayName(activeUsers.find((person) => person.id === id) || { id, displayName: 'Someone' }));
   return <main className="messaging-page">
     <header className="messaging-header"><div className="messaging-heading-copy"><div className="messaging-title-row"><span className="messaging-mark"><HugeiconsIcon icon={BubbleChatIcon} size={24} color="currentColor" strokeWidth={2} /></span><div><h1>Messages</h1><p>Focused conversations for teams, communities, and direct collaboration.</p></div></div></div><div className="messaging-header-actions"><div className="network-toolbar"><button type="button" onClick={() => { setNetworkError(''); setNetworkOpen(true); }}>Find people</button><button type="button" onClick={() => { setNetworkError(''); setRequestsOpen(true); }}>Invitations{connectionRequests.received?.length > 0 && <b>{connectionRequests.received.length}</b>}</button></div><button className="messaging-primary-button" type="button" onClick={() => openNewConversation('direct')}><Icon name="plus" size={15} color="#fff" /> New conversation</button></div></header>
-    {error && !networkOpen && !requestsOpen && !selectedPerson && <div className="messaging-alert conversation-load-error" role="alert"><span><strong>Messaging error</strong><small>{error}</small></span><button type="button" onClick={() => setError('')}>Dismiss</button></div>}
-    {conversationLoadError && !networkOpen && !requestsOpen && !selectedPerson && <div className="conversation-load-error" role="alert"><span><strong>Conversations couldn’t load</strong><small>Check your connection, then try again. Your existing messages are unchanged.</small></span><button type="button" onClick={retryLoadConversations} disabled={loading}>{loading ? 'Retrying…' : 'Try again'}</button></div>}
+    {error && !networkOpen && !requestsOpen && !selectedPerson && <ToastNotice message={`Messaging error: ${error}`} type="error" onDismiss={() => setError('')} />}
+    {conversationLoadError && !networkOpen && !requestsOpen && !selectedPerson && <ToastNotice message="Conversations couldn’t load. Check your connection, then try again. Your existing messages are unchanged." type="error" action={{ label: loading ? 'Retrying' : 'Retry', onClick: retryLoadConversations }} />}
     <div className={`messaging-layout mobile-${mobileView}`}>
       <aside className="conversation-panel">
         <div className="conversation-heading"><div><span className="panel-title">Inbox</span><span className="panel-count">{conversations.length}</span></div></div>

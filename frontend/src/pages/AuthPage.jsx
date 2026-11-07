@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/endpoints';
+import { ToastNotice } from '../components/AppToast';
 import { LogoFull } from '../components/Logo';
 import cardImageOne from '../assets/image.png';
 import cardImageTwo from '../assets/illustrations/Artist Woman (1).png';
@@ -181,16 +182,6 @@ function CheckIcon() {
   );
 }
 
-function AlertIcon() {
-  return (
-    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx={12} cy={12} r={10} />
-      <line x1={12} y1={8} x2={12} y2={12} />
-      <line x1={12} y1={16} x2={12.01} y2={16} />
-    </svg>
-  );
-}
-
 function Spinner({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -202,38 +193,7 @@ function Spinner({ size = 16 }) {
 
 /* ─── UI COMPONENTS ────────────────────────────────── */
 function Alert({ type = 'error', message }) {
-  if (type === 'error') {
-    return (
-      <p style={{ color: COLORS.error, fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
-        {message}
-      </p>
-    );
-  }
-
-  const colors = {
-    success: { bg: COLORS.successLight, border: '#86EFAC', text: COLORS.success, icon: <CheckIcon /> },
-    warning: { bg: COLORS.warningLight, border: '#FDE68A', text: COLORS.warning, icon: <AlertIcon /> },
-  };
-  const color = colors[type] || colors.warning;
-  return (
-    <div
-      style={{
-        background: color.bg,
-        border: `1px solid ${color.border}`,
-        borderRadius: 8,
-        padding: '12px 14px',
-        marginBottom: 16,
-        fontSize: 13,
-        color: color.text,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-      }}
-    >
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{color.icon}</div>
-      <div style={{ flex: 1 }}>{message}</div>
-    </div>
-  );
+  return <ToastNotice message={message} type={type === 'success' ? 'success' : 'error'} />;
 }
 
 function FormField({ label, required = false, error = null, children }) {

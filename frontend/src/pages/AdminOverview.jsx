@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { analyticsAPI } from '../api/endpoints';
 import { COLORS } from '../constants/colors';
 import AdminLifecyclePanel from './AdminLifecyclePanel';
+import { ToastNotice } from '../components/AppToast';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? [];
 
@@ -50,7 +51,7 @@ export default function AdminOverview({ isMobile = false, isTablet = false, onNa
         <div><div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Admin control room</div><h1 style={{ margin: 0, fontSize: isMobile ? 26 : 38, letterSpacing: '-.04em' }}>What is happening across Tribes</h1><p style={{ margin: '10px 0 0', color: COLORS.T2, maxWidth: 620, lineHeight: 1.6 }}>A live view of the community, learning content, events, and review queues.</p></div>
         <button className="overview-action" type="button" onClick={() => onNavigate('admin-analytics')} style={{ border: `1px solid ${COLORS.BD}`, borderRadius: 9, background: COLORS.W, padding: '11px 15px', cursor: 'pointer', color: COLORS.P, fontWeight: 700 }}>Explore analytics →</button>
       </header>
-      {metrics.error && <div role="status" style={{ marginBottom: 18, padding: 11, borderRadius: 8, background: COLORS.AMB, border: '1px solid #FCD34D', color: COLORS.AM, fontSize: 13 }}>{metrics.error}</div>}
+      {metrics.error && <ToastNotice message={metrics.error} type="error" />}
       <section style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 22 }}>{cards.map(([label, value, note, color]) => <Metric key={label} label={label} value={metrics.loading ? '—' : value} note={note} color={color} />)}</section>
       <section style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr .9fr', gap: 16 }}>
         <div style={{ background: COLORS.W, color: COLORS.T1, border: `1px solid ${COLORS.BD}`, borderRadius: 14, padding: isMobile ? 20 : 28, minHeight: 240, boxShadow: '0 12px 28px rgba(15,23,42,.05)' }}><div style={{ color: COLORS.P, fontSize: 11, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase' }}>Live activity</div><h2 style={{ margin: '12px 0 10px', fontSize: 24, maxWidth: 430 }}>Stay close to the community pulse.</h2><p style={{ color: COLORS.T2, lineHeight: 1.6, fontSize: 13, maxWidth: 470 }}>There are {metrics.loading ? '—' : metrics.publishedCourses} published courses, {metrics.loading ? '—' : metrics.publishedEvents} live events, and {metrics.loading ? '—' : metrics.pendingEvents} pending event reviews in the platform.</p></div>
