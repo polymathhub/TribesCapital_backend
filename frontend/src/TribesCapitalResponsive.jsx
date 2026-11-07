@@ -527,7 +527,7 @@ const STYLES = `
 .forum-post-name{overflow:hidden;color:#1F2937;font-size:14px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
 .forum-post-time{flex:0 0 auto;color:#98A2B3;font-size:12px;white-space:nowrap}
 .forum-post-role{margin-top:3px;color:#98A2B3;font-size:12px}
-.forum-post-topic{flex:0 0 auto;max-width:42%;overflow:hidden;padding:7px 12px;border:1px solid #E9D5FF;border-radius:999px;background:#F7F0FF;color:#5B21B6;font-size:11px;font-weight:700;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+.forum-post-topic{flex:0 0 auto;max-width:42%;overflow:hidden;padding:7px 12px;border:1px solid #111827;border-radius:999px;background:#111827;color:#fff;font-size:11px;font-weight:700;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
 .forum-post .disc-title-btn{width:100%}
 .forum-post .disc-title-btn h3{margin:0 0 9px!important;color:#202938;font-size:20px!important;font-weight:700;line-height:1.35}
 .forum-post-excerpt{margin:0!important;color:#596579;font-size:15px;line-height:1.6}
@@ -538,23 +538,19 @@ const STYLES = `
 .forum-post-like:hover,.forum-post-like[aria-pressed="true"]{color:#5B21B6}
 .forum-post-join{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:0;border:0;background:none;color:#7C3AED;cursor:pointer;font:inherit;font-size:16px;font-weight:700}
 .forum-post-join:hover{color:#5B21B6}
-.forum-starter-library{display:grid;gap:28px}
+.forum-starter-library{display:grid;gap:20px}
 .forum-starter-heading{padding:4px 0}
-.forum-starter-heading span{color:#7C3AED;font-size:10px;font-weight:800;letter-spacing:.1em}
 .forum-starter-heading h2{margin:5px 0;color:#2E1065;font-size:23px}
 .forum-starter-heading p{margin:0;color:#667085;font-size:13px;line-height:1.55}
 .forum-starter-category{display:grid;gap:12px}
-.forum-starter-category>h3{margin:0;color:#344054;font-size:16px}
-.forum-starter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.forum-starter-card{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:12px;padding:18px!important;border-radius:14px!important}
-.forum-starter-thumbnail{display:flex;width:100%;min-height:88px;flex-direction:column;justify-content:flex-end;gap:5px;padding:12px;border-radius:10px;background:linear-gradient(130deg,#F3E8FF,#E0F2FE 55%,#DCFCE7);color:#475467}
-.forum-starter-thumbnail span{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-.forum-starter-thumbnail strong{font-size:12px;line-height:1.4}
-.forum-starter-card h4{margin:0;color:#202938;font-size:15px;line-height:1.4}
-.forum-starter-card>p{margin:0;color:#596579;font-size:12.5px;line-height:1.55}
-.forum-starter-card blockquote{margin:0;padding:10px 12px;border-left:3px solid #C4B5FD;border-radius:0 7px 7px 0;background:#FAF5FF;color:#4B5563;font-size:12px;line-height:1.5}
-.forum-starter-card blockquote strong{color:#5B21B6}
-.forum-starter-card .forum-post-join{margin-top:auto;font-size:13px}
+.forum-starter-list{display:grid;gap:14px}
+.forum-starter-card{padding:24px!important;border-radius:18px!important}
+.forum-starter-card .forum-post-head{align-items:center;margin-bottom:14px}
+.forum-starter-label{color:#98A2B3;font-size:12px}
+.forum-starter-title{margin:0 0 9px;color:#202938;font-size:20px;line-height:1.35}
+.forum-starter-question{margin:12px 0 0;color:#596579;font-size:14px;line-height:1.55}
+.forum-starter-question strong{color:#344054}
+.forum-starter-card .forum-post-footer{margin-top:16px}
 .forum-rail .forum-topic-panel{background:#FAF5FF;border-color:#E9D5FF}
 .forum-rail .forum-member-panel{background:#fff;border-color:#E9D5FF}
 .forum-topic-row{padding:9px 0;border-bottom:1px solid rgba(91,33,182,.1)}
@@ -574,8 +570,8 @@ const STYLES = `
 @media(prefers-reduced-motion:reduce){.forum-loading-state span{animation:none}}
 @media(max-width:760px){.forum-hero{grid-template-columns:1fr;gap:26px;padding:26px 22px}.forum-visual{justify-self:stretch;width:100%;max-width:none;padding:18px}.forum-hero h1{font-size:25px}}
 @media(max-width:480px){
-  .forum-starter-grid{grid-template-columns:1fr}
-  .forum-starter-card{padding:16px!important}
+  .forum-starter-card{padding:20px!important}
+  .forum-starter-title{font-size:18px}
   .forum-visual-foot{gap:14px}
   .forum-post{padding:20px!important;border-radius:16px!important}
   .forum-post-head{gap:10px;margin-bottom:18px}
@@ -2677,6 +2673,9 @@ const NAV_ITEMS = [
   { key: 'pipeline', label: 'Portfolio', icon: 'briefcase' },
   { key: 'marketplace', label: 'Project Marketplace', icon: 'grid' },
 ];
+const AVAILABLE_NAV_ITEMS = import.meta.env.DEV
+  ? NAV_ITEMS
+  : NAV_ITEMS.filter((item) => item.key !== 'marketplace');
 const INVESTOR_NAV_ITEMS = [
   { key: 'vault', label: 'Due Diligence Vault', icon: 'shield' },
 ];
@@ -2818,8 +2817,8 @@ function AppShell({ navRefs, sidebarRef, onOpenHelp, activeKey, onNavigate, onSe
     </button>
   );
   const visibleNavItems = user?.accountType === 'GUEST'
-    ? NAV_ITEMS.filter((navItem) => navItem.key !== 'submit-project')
-    : NAV_ITEMS;
+    ? AVAILABLE_NAV_ITEMS.filter((navItem) => navItem.key !== 'submit-project')
+    : AVAILABLE_NAV_ITEMS;
   const visibleInvestorItems = user?.accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : [];
   const contentOwnsPageGutter = ['events', 'pipeline', 'vault', 'marketplace'].includes(activeKey);
   return (
@@ -2871,7 +2870,7 @@ function PlatformSearchResults({ query, accountType, onOpenResult }) {
     let isCurrent = true;
     const term = query.trim().toLocaleLowerCase();
     const pageEntries = [
-      ...NAV_ITEMS.filter((item) => item.key !== 'home' && (accountType !== 'GUEST' || item.key !== 'submit-project')),
+      ...AVAILABLE_NAV_ITEMS.filter((item) => item.key !== 'home' && (accountType !== 'GUEST' || item.key !== 'submit-project')),
       ...(accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : []),
       { key: 'settings', label: 'Settings', icon: 'settings' },
       { key: 'help', label: 'Help and support', icon: 'help' },
@@ -3089,7 +3088,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
     vault: { count: dashboardData.documents.length, unit: 'documents', detail: 'Documents', tone: 'amber' },
   };
   const shortcuts = [
-    ...NAV_ITEMS.filter((item) => item.key !== 'home' && (accountType !== 'GUEST' || item.key !== 'submit-project')),
+    ...AVAILABLE_NAV_ITEMS.filter((item) => item.key !== 'home' && (accountType !== 'GUEST' || item.key !== 'submit-project')),
     ...(accountType === 'INVESTOR' ? INVESTOR_NAV_ITEMS : []),
   ].map((item) => ({
     ...item,
@@ -3163,7 +3162,7 @@ function DashboardHomeContent({ onGo, userName, accountType }) {
             <button type="button" className="member-home-primary-action" onClick={() => onGo('learning')}>
               {inProgressCourses.length > 0 ? 'Continue learning' : 'Explore the Learning Hub'}
             </button>
-            <button type="button" className="member-home-secondary-action" onClick={() => onGo('marketplace')}>Explore projects</button>
+            {import.meta.env.DEV && <button type="button" className="member-home-secondary-action" onClick={() => onGo('marketplace')}>Explore projects</button>}
           </div>
         </div>
       </section>
@@ -4119,6 +4118,11 @@ const communityRelativeTime = (value) => {
   return `${Math.floor(minutes / 1440)}d ago`;
 };
 
+const discussionStarterExcerpt = (answer) => {
+  const excerpt = answer.split('\n\n')[0].trim();
+  return excerpt.length > 180 ? `${excerpt.slice(0, 177).trimEnd()}…` : excerpt;
+};
+
 const toCommunityComment = (comment) => ({
   ...comment,
   c: '#5B21B6',
@@ -4295,31 +4299,31 @@ function Community({ open, user, toast, onOpenMessaging }) {
     <div className="lay"><div className="sp forum-post-list" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {loading && <div role="status" aria-label="Loading discussions" className="card forum-empty-state forum-loading-state"><span /><span /><span /><span /><span /><span /></div>}
       {!loading && loadError && <ToastNotice message={`Discussions couldn’t load: ${loadError}`} type="error" action={{ label: 'Retry', onClick: () => setReloadKey((key) => key + 1) }} />}
-      {!loading && !loadError && shown.length === 0 && posts.length === 0 && f !== 'Following' && (
+      {f !== 'Following' && (
         <section className="forum-starter-library" aria-labelledby="forum-starter-title">
           <header className="forum-starter-heading">
             <div>
-              <span>GET THE CONVERSATION STARTED</span>
               <h2 id="forum-starter-title">Discussion starters</h2>
               <p>Choose a ready-made topic to open a discussion. You can edit it before posting.</p>
             </div>
           </header>
           {starterCategories.map((category) => (
             <section className="forum-starter-category" key={category} aria-label={`${category} discussion starters`}>
-              <h3>{category}</h3>
-              <div className="forum-starter-grid">
+              <div className="forum-starter-list">
                 {visibleStarters.filter((starter) => starter.category === category).map((starter) => (
-                  <article className="card forum-starter-card" key={starter.title}>
-                    <span className="forum-starter-thumbnail">
-                      <span>Suggested thumbnail</span>
-                      <strong>{starter.thumbnail}</strong>
-                    </span>
-                    <h4>{starter.title}</h4>
-                    <p>{starter.answer.split('\n\n')[0]}</p>
-                    <blockquote><strong>Let’s discuss:</strong> {starter.question}</blockquote>
-                    <button type="button" className="forum-post-join" onClick={() => startFromPrompt(starter)}>
-                      Use this discussion <Icon name="arrowRight" size={18} />
-                    </button>
+                  <article className="card forum-post forum-starter-card" key={starter.title}>
+                    <div className="forum-post-head">
+                      <span className="forum-post-topic">{category}</span>
+                      <span className="forum-starter-label">Discussion starter</span>
+                    </div>
+                    <h3 className="forum-starter-title">{starter.title}</h3>
+                    <p className="forum-post-excerpt">{discussionStarterExcerpt(starter.answer)}</p>
+                    <p className="forum-starter-question"><strong>Question:</strong> {starter.question}</p>
+                    <div className="forum-post-footer">
+                      <button type="button" className="forum-post-join" onClick={() => startFromPrompt(starter)}>
+                        Use starter <Icon name="arrowRight" size={18} />
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -5372,7 +5376,9 @@ class RouteErrorBoundary extends React.Component {
 }
 
 export default function TribesCapitalApp({ initialScreen = 'signin', user: authenticatedUser, onLogout: onAuthenticatedLogout, onUpdateUser = () => {} } = {}) {
-  const [screen, setScreen] = useState(initialScreen);
+  const [screen, setScreen] = useState(
+    !import.meta.env.DEV && initialScreen === 'marketplace' ? 'dashboard' : initialScreen,
+  );
   const [viewedProfileId, setViewedProfileId] = useState(null);
   const [avatarDataUrl, setAvatarDataUrl] = useState(authenticatedUser?.avatar || null);
 
@@ -5426,6 +5432,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   const [rpShowConfirm, setRpShowConfirm] = useState(false);
 
   function navigate(next) {
+    if (!import.meta.env.DEV && next === 'marketplace') return;
     if (next === 'profile' && screen !== 'profile') profileReturn.current = screen;
     setScreen(next);
     window.scrollTo(0, 0);
@@ -5508,7 +5515,7 @@ export default function TribesCapitalApp({ initialScreen = 'signin', user: authe
   function reopenTour() { setTourStep(1); setTourOpen(true); }
   function openHelp() { navigate('help'); }
 
-  const PAGES = ['learning', 'events', 'community', 'contractors', 'messaging', 'vault', 'pipeline', 'marketplace', 'submit-project', 'settings', 'search'];
+  const PAGES = ['learning', 'events', 'community', 'contractors', 'messaging', 'vault', 'pipeline', ...(import.meta.env.DEV ? ['marketplace'] : []), 'submit-project', 'settings', 'search'];
   function handleSidebarNav(key) {
     const [k, arg] = key.split(':');
     if (k === 'home') { navigate('dashboard'); return; }

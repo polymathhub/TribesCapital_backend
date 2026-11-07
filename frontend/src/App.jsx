@@ -192,6 +192,11 @@ function App() {
     && user?.accountType === 'GUEST'
     && typeof window !== 'undefined'
     && window.location.pathname.includes('/signup');
+  const initialScreen = import.meta.env.DEV
+    && typeof window !== 'undefined'
+    && window.location.pathname.startsWith('/marketplace')
+    ? 'marketplace'
+    : 'dashboard';
 
   if (!isAuthenticated || isGuestSignupRoute) {
     return (
@@ -210,7 +215,7 @@ function App() {
       <div style={{ animation: isLoading ? 'none' : 'fadeIn 0.6s ease-out' }}>
         {isAdminUser(user)
           ? <AdminConsole user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
-          : <TribesCapitalResponsive initialScreen="dashboard" user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />}
+          : <TribesCapitalResponsive initialScreen={initialScreen} user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />}
       </div>
     </>
   );
